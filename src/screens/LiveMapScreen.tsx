@@ -452,42 +452,65 @@ const LiveMapScreen: React.FC = () => {
         />
       </View>
 
-      {/* Selected Listing Popup */}
+      {/* Selected Listing Popup - Wider Card Version */}
       {selectedListing && (
         <View style={styles.popupOverlay}>
           <TouchableOpacity style={styles.popupBackground} onPress={handleClosePopup} />
-          <View style={styles.popup}>
-            <View style={styles.popupHeader}>
-              <View style={styles.popupTitleRow}>
-                <Text style={styles.popupEmoji}>
+          <View style={styles.popupCard}>
+            {/* Card Image */}
+            <View style={styles.popupImageContainer}>
+              <View style={styles.popupImagePlaceholder}>
+                <Text style={styles.popupImageEmoji}>
                   {categories.find(c => c.key === selectedListing.category)?.emoji}
                 </Text>
-                <Text style={styles.popupTitle}>{selectedListing.title}</Text>
               </View>
-              <TouchableOpacity style={styles.popupCloseButton} onPress={handleClosePopup}>
-                <Text style={styles.popupCloseText}>×</Text>
+              <View style={styles.popupTag}>
+                <Text style={styles.popupTagText}>
+                  {categories.find(c => c.key === selectedListing.category)?.label}
+                </Text>
+              </View>
+              <TouchableOpacity style={styles.popupHeartButton}>
+                <Text style={styles.popupHeartIcon}>♡</Text>
               </TouchableOpacity>
             </View>
-            
-            <Text style={styles.popupDescription} numberOfLines={2}>
-              {selectedListing.description}
-            </Text>
-            
-            <View style={styles.popupInfo}>
-              <Text style={styles.popupRating}>
-                {selectedListing.rating ? `⭐ ${selectedListing.rating}` : 'No rating'}
-              </Text>
-              <Text style={styles.popupDistance}>
-                {selectedListing.distance ? `${selectedListing.distance.toFixed(1)}mi` : ''}
-              </Text>
+
+            {/* Card Content */}
+            <View style={styles.popupContent}>
+              {/* Title and Rating Row */}
+              <View style={styles.popupTitleRow}>
+                <Text style={styles.popupTitle} numberOfLines={1}>
+                  {selectedListing.title}
+                </Text>
+                <View style={styles.popupRatingContainer}>
+                  <Text style={styles.popupRating}>
+                    {selectedListing.rating ? `⭐ ${selectedListing.rating}` : 'No rating'}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Description and Distance Row */}
+              <View style={styles.popupInfoRow}>
+                <Text style={styles.popupDescription} numberOfLines={2}>
+                  {selectedListing.description}
+                </Text>
+                <Text style={styles.popupDistance}>
+                  {selectedListing.distance ? `${selectedListing.distance.toFixed(1)}mi` : ''}
+                </Text>
+              </View>
+
+              {/* Action Buttons */}
+              <View style={styles.popupActions}>
+                <TouchableOpacity 
+                  style={styles.popupActionButton} 
+                  onPress={() => handleViewDetails(selectedListing)}
+                >
+                  <Text style={styles.popupActionButtonText}>View Details</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.popupCloseButton} onPress={handleClosePopup}>
+                  <Text style={styles.popupCloseText}>×</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-            
-            <TouchableOpacity 
-              style={styles.popupButton} 
-              onPress={() => handleViewDetails(selectedListing)}
-            >
-              <Text style={styles.popupButtonText}>View Details</Text>
-            </TouchableOpacity>
           </View>
         </View>
       )}
@@ -597,8 +620,9 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    justifyContent: 'center',
+    justifyContent: 'flex-end',
     alignItems: 'center',
+    paddingBottom: 20,
   },
   popupBackground: {
     position: 'absolute',
@@ -608,17 +632,64 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
-  popup: {
+  popupCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 20,
-    marginHorizontal: 20,
-    maxWidth: screenWidth - 40,
+    borderRadius: 20,
+    marginHorizontal: 16,
+    width: screenWidth - 32,
+    maxHeight: screenHeight * 0.6,
     shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 12,
+    overflow: 'hidden',
+  },
+  popupImageContainer: {
+    position: 'relative',
+    height: 200,
+    backgroundColor: '#F5F5F5',
+  },
+  popupImagePlaceholder: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F8F8F8',
+  },
+  popupImageEmoji: {
+    fontSize: 48,
+  },
+  popupTag: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  popupTagText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  popupHeartButton: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  popupHeartIcon: {
+    fontSize: 16,
+    color: '#FF6B6B',
+  },
+  popupContent: {
+    padding: 16,
   },
   popupHeader: {
     flexDirection: 'row',
@@ -628,62 +699,77 @@ const styles = StyleSheet.create({
   },
   popupTitleRow: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    flex: 1,
-  },
-  popupEmoji: {
-    fontSize: 24,
-    marginRight: 8,
+    marginBottom: 8,
   },
   popupTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: '#000000',
     flex: 1,
+    marginRight: 12,
   },
-  popupCloseButton: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+  popupRatingContainer: {
     backgroundColor: '#F2F2F7',
-    justifyContent: 'center',
-    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
-  popupCloseText: {
-    fontSize: 16,
+  popupRating: {
+    fontSize: 14,
     fontWeight: '600',
-    color: '#8E8E93',
+    color: '#000000',
+  },
+  popupInfoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 16,
   },
   popupDescription: {
     fontSize: 14,
     color: '#8E8E93',
     lineHeight: 20,
-    marginBottom: 12,
-  },
-  popupInfo: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  popupRating: {
-    fontSize: 14,
-    color: '#000000',
-    fontWeight: '500',
+    flex: 1,
+    marginRight: 12,
   },
   popupDistance: {
     fontSize: 14,
     color: '#8E8E93',
+    fontWeight: '500',
   },
-  popupButton: {
-    backgroundColor: '#007AFF',
-    borderRadius: 12,
-    paddingVertical: 12,
+  popupActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
   },
-  popupButtonText: {
+  popupActionButton: {
+    backgroundColor: '#74e1a0',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    flex: 1,
+    marginRight: 12,
+    alignItems: 'center',
+  },
+  popupActionButtonText: {
     fontSize: 16,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+  popupCloseButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F2F2F7',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  popupCloseText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#8E8E93',
   },
   instructions: {
     paddingHorizontal: 16,
