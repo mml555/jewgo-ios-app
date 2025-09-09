@@ -519,9 +519,6 @@ const LiveMapScreen: React.FC = () => {
               <TouchableOpacity style={styles.popupHeartButton}>
                 <Text style={styles.popupHeartIcon}>♡</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.popupCloseButton} onPress={handleClosePopup}>
-                <Text style={styles.popupCloseText}>×</Text>
-              </TouchableOpacity>
             </View>
 
             {/* Card Content */}
@@ -721,7 +718,7 @@ const styles = StyleSheet.create({
   popupHeartButton: {
     position: 'absolute',
     top: 12,
-    right: 50,
+    right: 12,
     width: 32,
     height: 32,
     borderRadius: 16,
