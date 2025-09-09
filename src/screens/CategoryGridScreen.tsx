@@ -9,6 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import { useCategoryData, CategoryItem } from '../hooks/useCategoryData';
+import { useFilters } from '../hooks/useFilters';
 import CategoryCard from '../components/CategoryCard';
 
 interface CategoryGridScreenProps {
@@ -20,6 +21,8 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
   categoryKey,
   query = '',
 }) => {
+  const { filters } = useFilters();
+  
   const {
     data,
     loading,
@@ -33,6 +36,38 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
     query,
     pageSize: 20,
   });
+
+  // Apply filters to the data
+  const filteredData = useMemo(() => {
+    return data.filter(item => {
+      // Distance filter
+      if (item.distance && item.distance > filters.maxDistance) {
+        return false;
+      }
+
+      // Rating filter
+      if (filters.minRating > 0 && (!item.rating || item.rating < filters.minRating)) {
+        return false;
+      }
+
+      // Price range filter
+      if (filters.priceRange !== 'any' && item.price !== filters.priceRange) {
+        return false;
+      }
+
+      // Open now filter
+      if (filters.openNow && !item.isOpen) {
+        return false;
+      }
+
+      // Weekend filter
+      if (filters.openWeekends && !item.openWeekends) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [data, filters]);
 
   // Memoized render item to prevent unnecessary re-renders
   const renderItem = useCallback(
@@ -146,7 +181,7 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
   return (
     <View style={styles.container}>
       <FlatList
-        data={data}
+        data={filteredData}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
         numColumns={2}

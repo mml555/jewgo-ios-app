@@ -7,8 +7,15 @@ export interface CategoryItem {
   imageUrl: string;
   category: string;
   rating?: number;
-  distance?: string;
+  distance?: number; // Changed to number for filtering
   price?: string;
+  isOpen?: boolean;
+  openWeekends?: boolean;
+  kosherLevel?: 'glatt' | 'chalav-yisrael' | 'pas-yisrael';
+  hasParking?: boolean;
+  hasWifi?: boolean;
+  hasAccessibility?: boolean;
+  hasDelivery?: boolean;
 }
 
 interface UseCategoryDataOptions {
@@ -94,6 +101,9 @@ const generateMockData = (
       continue;
     }
 
+    const kosherLevels: Array<'glatt' | 'chalav-yisrael' | 'pas-yisrael'> = ['glatt', 'chalav-yisrael', 'pas-yisrael'];
+    const priceRanges = ['$', '$$', '$$$', '$$$$'];
+    
     items.push({
       id: `${categoryKey}-${index}`,
       title: `${categoryEmojis[categoryKey]} ${title}`,
@@ -101,8 +111,15 @@ const generateMockData = (
       imageUrl: `https://picsum.photos/300/225?random=${index}`,
       category: categoryNames[categoryKey],
       rating: Math.round((Math.random() * 2 + 3) * 10) / 10, // 3.0-5.0
-      distance: `${Math.round(Math.random() * 10 + 0.5) * 10}0m`,
-      price: Math.random() > 0.5 ? `$${Math.round(Math.random() * 50 + 10)}` : undefined,
+      distance: Math.round((Math.random() * 20 + 0.1) * 10) / 10, // 0.1-20.0 miles
+      price: Math.random() > 0.3 ? priceRanges[Math.floor(Math.random() * priceRanges.length)] : undefined,
+      isOpen: Math.random() > 0.3, // 70% chance of being open
+      openWeekends: Math.random() > 0.2, // 80% chance of being open weekends
+      kosherLevel: Math.random() > 0.4 ? kosherLevels[Math.floor(Math.random() * kosherLevels.length)] : undefined,
+      hasParking: Math.random() > 0.3, // 70% chance of having parking
+      hasWifi: Math.random() > 0.4, // 60% chance of having wifi
+      hasAccessibility: Math.random() > 0.5, // 50% chance of being accessible
+      hasDelivery: Math.random() > 0.6, // 40% chance of having delivery
     });
   }
 

@@ -6,6 +6,8 @@ import {
   StyleSheet,
   Dimensions,
 } from 'react-native';
+import { useFilters } from '../hooks/useFilters';
+import FiltersModal from './FiltersModal';
 
 const { width: screenWidth } = Dimensions.get('window');
 const BUTTON_WIDTH = (screenWidth - 48) / 3; // 48 for padding and gaps
@@ -16,10 +18,23 @@ interface ActionBarProps {
 }
 
 const ActionBar: React.FC<ActionBarProps> = ({ onActionPress, currentCategory = 'Place' }) => {
+  const {
+    filters,
+    showFiltersModal,
+    applyFilters,
+    openFiltersModal,
+    closeFiltersModal,
+    getActiveFiltersCount,
+  } = useFilters();
+
   const handleActionPress = useCallback((action: string) => {
-    onActionPress?.(action);
+    if (action === 'filters') {
+      openFiltersModal();
+    } else {
+      onActionPress?.(action);
+    }
     console.log('Action pressed:', action);
-  }, [onActionPress]);
+  }, [onActionPress, openFiltersModal]);
 
   return (
     <View style={styles.container}>
@@ -48,7 +63,10 @@ const ActionBar: React.FC<ActionBarProps> = ({ onActionPress, currentCategory = 
       </TouchableOpacity>
 
       <TouchableOpacity
-        style={styles.actionButton}
+        style={[
+          styles.actionButton,
+          getActiveFiltersCount() > 0 && styles.actionButtonActive
+        ]}
         onPress={() => handleActionPress('filters')}
         accessible={true}
         accessibilityRole="button"
@@ -56,9 +74,20 @@ const ActionBar: React.FC<ActionBarProps> = ({ onActionPress, currentCategory = 
         accessibilityHint="Tap to open filter options"
       >
         <Text style={styles.actionIcon}>🔍</Text>
-        <Text style={styles.actionText}>Filters</Text>
+        <Text style={styles.actionText}>
+          Filters{getActiveFiltersCount() > 0 ? ` (${getActiveFiltersCount()})` : ''}
+        </Text>
       </TouchableOpacity>
     </View>
+
+    {/* Filters Modal */}
+    <FiltersModal
+      visible={showFiltersModal}
+      onClose={closeFiltersModal}
+      onApplyFilters={applyFilters}
+      currentFilters={filters}
+      category={currentCategory}
+    />
   );
 };
 
@@ -95,6 +124,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#000000',
     flexShrink: 1,
+  },
+  actionButtonActive: {
+    backgroundColor: '#74e1a0',
   },
 });
 

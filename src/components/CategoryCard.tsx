@@ -94,7 +94,7 @@ const CategoryCard: React.FC<CategoryCardProps> = memo(({ item, categoryKey }) =
             {item.description.substring(0, 10)}
           </Text>
           <Text style={styles.additionalText} numberOfLines={1}>
-            {item.distance || item.price || ''}
+            {item.distance ? `${item.distance.toFixed(1)}mi` : item.price || ''}
           </Text>
         </View>
       </View>
