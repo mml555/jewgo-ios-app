@@ -519,6 +519,9 @@ const LiveMapScreen: React.FC = () => {
               <TouchableOpacity style={styles.popupHeartButton}>
                 <Text style={styles.popupHeartIcon}>♡</Text>
               </TouchableOpacity>
+              <TouchableOpacity style={styles.popupCloseButton} onPress={handleClosePopup}>
+                <Text style={styles.popupCloseText}>×</Text>
+              </TouchableOpacity>
             </View>
 
             {/* Card Content */}
@@ -545,18 +548,13 @@ const LiveMapScreen: React.FC = () => {
                 </Text>
               </View>
 
-              {/* Action Buttons */}
-              <View style={styles.popupActions}>
-                <TouchableOpacity 
-                  style={styles.popupActionButton} 
-                  onPress={() => handleViewDetails(selectedListing)}
-                >
-                  <Text style={styles.popupActionButtonText}>View Details</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.popupCloseButton} onPress={handleClosePopup}>
-                  <Text style={styles.popupCloseText}>×</Text>
-                </TouchableOpacity>
-              </View>
+              {/* Action Button */}
+              <TouchableOpacity 
+                style={styles.popupActionButton} 
+                onPress={() => handleViewDetails(selectedListing)}
+              >
+                <Text style={styles.popupActionButtonText}>View Details</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </View>
@@ -669,7 +667,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     justifyContent: 'flex-end',
     alignItems: 'center',
-    paddingBottom: 20,
+    paddingBottom: 60,
   },
   popupBackground: {
     position: 'absolute',
@@ -723,7 +721,7 @@ const styles = StyleSheet.create({
   popupHeartButton: {
     position: 'absolute',
     top: 12,
-    right: 12,
+    right: 50,
     width: 32,
     height: 32,
     borderRadius: 16,
@@ -796,8 +794,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 24,
-    flex: 1,
-    marginRight: 12,
     alignItems: 'center',
   },
   popupActionButtonText: {
@@ -806,10 +802,13 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   popupCloseButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F2F2F7',
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
     justifyContent: 'center',
     alignItems: 'center',
   },
