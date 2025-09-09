@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -38,6 +38,7 @@ const LiveMapScreen: React.FC = () => {
   const route = useRoute();
   const insets = useSafeAreaInsets();
   const { filters } = useFilters();
+  const webViewRef = useRef<WebView>(null);
   
   // Get current category from route params, default to 'all'
   const currentCategory = (route.params as any)?.category || 'all';
@@ -120,100 +121,43 @@ const LiveMapScreen: React.FC = () => {
     return cat?.color || '#74e1a0';
   };
 
-  // Generate Google Maps HTML with markers
-  const generateMapHTML = () => {
-    const markers = filteredListings.map((listing, index) => {
-      const category = categories.find(c => c.key === listing.category);
-      return `
-        {
-          position: { lat: ${listing.coordinate.latitude}, lng: ${listing.coordinate.longitude} },
-          title: "${listing.title}",
-          description: "${listing.description}",
-          category: "${listing.category}",
-          emoji: "${category?.emoji || '📍'}",
-          color: "${getCategoryColor(listing.category)}",
-          rating: ${listing.rating || 0},
-          distance: ${listing.distance || 0}
-        }
-      `;
-    }).join(',');
+  // Generate static Google Maps HTML (only once)
+  const mapHTML = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <style>
+        body { margin: 0; padding: 0; }
+        #map { width: 100%; height: 100vh; }
+      </style>
+    </head>
+    <body>
+      <div id="map"></div>
+      <script>
+        let map;
+        let markers = [];
+        let currentListings = [];
 
-    return `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <style>
-          body { margin: 0; padding: 0; }
-          #map { width: 100%; height: 100vh; }
-        </style>
-      </head>
-      <body>
-        <div id="map"></div>
-        <script>
-          let map;
-          let markers = [];
-          const listings = [${markers}];
+        function initMap() {
+          map = new google.maps.Map(document.getElementById("map"), {
+            zoom: 13,
+            center: { lat: ${mapRegion.latitude}, lng: ${mapRegion.longitude} },
+            mapTypeId: google.maps.MapTypeId.ROADMAP,
+            styles: [
+              {
+                featureType: "poi",
+                elementType: "labels",
+                stylers: [{ visibility: "off" }]
+              }
+            ]
+          });
 
-          function initMap() {
-            map = new google.maps.Map(document.getElementById("map"), {
-              zoom: 13,
-              center: { lat: ${mapRegion.latitude}, lng: ${mapRegion.longitude} },
-              mapTypeId: google.maps.MapTypeId.ROADMAP,
-              styles: [
-                {
-                  featureType: "poi",
-                  elementType: "labels",
-                  stylers: [{ visibility: "off" }]
-                }
-              ]
-            });
-
-            // Add markers
-            listings.forEach((listing, index) => {
-              const marker = new google.maps.Marker({
-                position: listing.position,
-                map: map,
-                title: listing.title,
-                icon: {
-                  path: google.maps.SymbolPath.CIRCLE,
-                  scale: 8,
-                  fillColor: listing.color,
-                  fillOpacity: 1,
-                  strokeColor: '#FFFFFF',
-                  strokeWeight: 2
-                }
-              });
-
-              const infoWindow = new google.maps.InfoWindow({
-                content: \`
-                  <div style="padding: 10px; max-width: 200px;">
-                    <div style="display: flex; align-items: center; margin-bottom: 8px;">
-                      <span style="font-size: 20px; margin-right: 8px;">\${listing.emoji}</span>
-                      <strong>\${listing.title}</strong>
-                    </div>
-                    <p style="margin: 0 0 8px 0; color: #666; font-size: 12px;">\${listing.description}</p>
-                    <div style="display: flex; justify-content: space-between; font-size: 12px;">
-                      <span>\${listing.rating ? '⭐ ' + listing.rating : 'No rating'}</span>
-                      <span>\${listing.distance ? listing.distance.toFixed(1) + 'mi' : ''}</span>
-                    </div>
-                  </div>
-                \`
-              });
-
-              marker.addListener('click', () => {
-                infoWindow.open(map, marker);
-                window.ReactNativeWebView.postMessage(JSON.stringify({
-                  type: 'marker_click',
-                  listing: listing
-                }));
-              });
-
-              markers.push(marker);
-            });
-
-            // Handle map region changes
-            map.addListener('bounds_changed', () => {
+          // Handle map region changes (debounced)
+          let regionChangeTimeout;
+          map.addListener('bounds_changed', () => {
+            clearTimeout(regionChangeTimeout);
+            regionChangeTimeout = setTimeout(() => {
               const center = map.getCenter();
               window.ReactNativeWebView.postMessage(JSON.stringify({
                 type: 'region_changed',
@@ -224,16 +168,73 @@ const LiveMapScreen: React.FC = () => {
                   longitudeDelta: 0.0421
                 }
               }));
+            }, 500);
+          });
+        }
+
+        function updateMarkers(listings) {
+          // Clear existing markers
+          markers.forEach(marker => marker.setMap(null));
+          markers = [];
+          currentListings = listings;
+
+          // Add new markers
+          listings.forEach((listing, index) => {
+            const marker = new google.maps.Marker({
+              position: listing.position,
+              map: map,
+              title: listing.title,
+              icon: {
+                path: google.maps.SymbolPath.CIRCLE,
+                scale: 8,
+                fillColor: listing.color,
+                fillOpacity: 1,
+                strokeColor: '#FFFFFF',
+                strokeWeight: 2
+              }
             });
+
+            const infoWindow = new google.maps.InfoWindow({
+              content: \`
+                <div style="padding: 10px; max-width: 200px;">
+                  <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                    <span style="font-size: 20px; margin-right: 8px;">\${listing.emoji}</span>
+                    <strong>\${listing.title}</strong>
+                  </div>
+                  <p style="margin: 0 0 8px 0; color: #666; font-size: 12px;">\${listing.description}</p>
+                  <div style="display: flex; justify-content: space-between; font-size: 12px;">
+                    <span>\${listing.rating ? '⭐ ' + listing.rating : 'No rating'}</span>
+                    <span>\${listing.distance ? listing.distance.toFixed(1) + 'mi' : ''}</span>
+                  </div>
+                </div>
+              \`
+            });
+
+            marker.addListener('click', () => {
+              infoWindow.open(map, marker);
+              window.ReactNativeWebView.postMessage(JSON.stringify({
+                type: 'marker_click',
+                listing: listing
+              }));
+            });
+
+            markers.push(marker);
+          });
+        }
+
+        // Listen for messages from React Native
+        window.addEventListener('message', function(event) {
+          if (event.data && event.data.type === 'update_markers') {
+            updateMarkers(event.data.listings);
           }
-        </script>
-        <script async defer
-          src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCl7ryK-cp9EtGoYMJ960P1jZO-nnTCCqM&callback=initMap">
-        </script>
-      </body>
-      </html>
-    `;
-  };
+        });
+      </script>
+      <script async defer
+        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCl7ryK-cp9EtGoYMJ960P1jZO-nnTCCqM&callback=initMap">
+      </script>
+    </body>
+    </html>
+  `;
 
   const handleWebViewMessage = useCallback((event: any) => {
     try {
@@ -248,6 +249,32 @@ const LiveMapScreen: React.FC = () => {
       console.log('Error parsing WebView message:', error);
     }
   }, [handleMarkerPress]);
+
+  // Send marker updates to WebView when filteredListings change
+  useEffect(() => {
+    if (webViewRef.current && filteredListings.length > 0) {
+      const markers = filteredListings.map((listing) => {
+        const category = categories.find(c => c.key === listing.category);
+        return {
+          position: { lat: listing.coordinate.latitude, lng: listing.coordinate.longitude },
+          title: listing.title,
+          description: listing.description,
+          category: listing.category,
+          emoji: category?.emoji || '📍',
+          color: getCategoryColor(listing.category),
+          rating: listing.rating || 0,
+          distance: listing.distance || 0
+        };
+      });
+
+      const message = JSON.stringify({
+        type: 'update_markers',
+        listings: markers
+      });
+
+      webViewRef.current.postMessage(message);
+    }
+  }, [filteredListings, categories]);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -270,7 +297,8 @@ const LiveMapScreen: React.FC = () => {
       {/* Map */}
       <View style={styles.mapContainer}>
         <WebView
-          source={{ html: generateMapHTML() }}
+          ref={webViewRef}
+          source={{ html: mapHTML }}
           style={styles.map}
           onMessage={handleWebViewMessage}
           javaScriptEnabled={true}
