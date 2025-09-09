@@ -130,10 +130,6 @@ const LiveMapScreen: React.FC = () => {
     { key: 'social', label: 'Social', emoji: '👥', color: '#98D8C8' },
   ];
 
-  const handleCategorySelect = useCallback((category: string) => {
-    setSelectedCategory(category);
-    setSelectedListing(null);
-  }, []);
 
   const handleMarkerPress = useCallback((listing: MapListing) => {
     setSelectedListing(listing);
@@ -176,34 +172,6 @@ const LiveMapScreen: React.FC = () => {
     ));
   };
 
-  const renderCategoryFilter = () => (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      style={styles.categoryFilter}
-      contentContainerStyle={styles.categoryFilterContent}
-    >
-      {categories.map((category) => (
-        <TouchableOpacity
-          key={category.key}
-          style={[
-            styles.categoryChip,
-            selectedCategory === category.key && styles.categoryChipActive,
-            { borderColor: category.color }
-          ]}
-          onPress={() => handleCategorySelect(category.key)}
-        >
-          <Text style={styles.categoryEmoji}>{category.emoji}</Text>
-          <Text style={[
-            styles.categoryLabel,
-            selectedCategory === category.key && styles.categoryLabelActive
-          ]}>
-            {category.label}
-          </Text>
-        </TouchableOpacity>
-      ))}
-    </ScrollView>
-  );
 
   const renderListingPopup = () => {
     if (!selectedListing) return null;
@@ -283,8 +251,6 @@ const LiveMapScreen: React.FC = () => {
         <View style={styles.headerSpacer} />
       </View>
 
-      {/* Category Filter */}
-      {renderCategoryFilter()}
 
       {/* Map */}
       <View style={styles.mapContainer}>
@@ -379,40 +345,6 @@ const styles = StyleSheet.create({
   },
   headerSpacer: {
     width: 40,
-  },
-  categoryFilter: {
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
-  },
-  categoryFilterContent: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  categoryChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    marginRight: 8,
-    backgroundColor: '#FFFFFF',
-  },
-  categoryChipActive: {
-    backgroundColor: '#74e1a0',
-  },
-  categoryEmoji: {
-    fontSize: 16,
-    marginRight: 6,
-  },
-  categoryLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#000000',
-  },
-  categoryLabelActive: {
-    color: '#FFFFFF',
   },
   mapContainer: {
     flex: 1,
