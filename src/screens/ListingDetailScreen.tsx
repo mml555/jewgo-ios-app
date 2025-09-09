@@ -78,10 +78,10 @@ const ListingDetailScreen: React.FC = () => {
       // Generate mock detailed data
       const mockItem: ListingItem = {
         id: itemId,
-        title: `${categoryKey.charAt(0).toUpperCase() + categoryKey.slice(1)} Item ${itemId}`,
-        description: `A wonderful ${categoryKey} location with excellent service and atmosphere. This place offers a unique experience that you won't forget.`,
-        imageUrl: `https://picsum.photos/seed/${categoryKey}-${itemId}/800/600`,
-        category: categoryKey,
+        title: `${(categoryKey || 'restaurants').charAt(0).toUpperCase() + (categoryKey || 'restaurants').slice(1)} Item ${itemId || 'default'}`,
+        description: `A wonderful ${categoryKey || 'restaurants'} location with excellent service and atmosphere. This place offers a unique experience that you won't forget.`,
+        imageUrl: `https://picsum.photos/seed/${categoryKey || 'restaurants'}-${itemId || 'default'}/800/600`,
+        category: categoryKey || 'restaurants',
         rating: parseFloat((Math.random() * (5 - 3) + 3).toFixed(1)),
         distance: Math.random() > 0.3 ? `${(Math.random() * 10).toFixed(1)} mi` : undefined, // Simulate no location permission
         price: ['$', '$$', '$$$'][Math.floor(Math.random() * 3)],
@@ -97,11 +97,11 @@ const ListingDetailScreen: React.FC = () => {
           sunday: { open: '10:00 AM', close: '8:00 PM', closed: false },
         },
         images: [
-          `https://picsum.photos/seed/${categoryKey}-${itemId}-1/800/600`,
-          `https://picsum.photos/seed/${categoryKey}-${itemId}-2/800/600`,
-          `https://picsum.photos/seed/${categoryKey}-${itemId}-3/800/600`,
-          `https://picsum.photos/seed/${categoryKey}-${itemId}-4/800/600`,
-          `https://picsum.photos/seed/${categoryKey}-${itemId}-5/800/600`,
+          `https://picsum.photos/seed/${categoryKey || 'restaurants'}-${itemId || 'default'}-1/800/600`,
+          `https://picsum.photos/seed/${categoryKey || 'restaurants'}-${itemId || 'default'}-2/800/600`,
+          `https://picsum.photos/seed/${categoryKey || 'restaurants'}-${itemId || 'default'}-3/800/600`,
+          `https://picsum.photos/seed/${categoryKey || 'restaurants'}-${itemId || 'default'}-4/800/600`,
+          `https://picsum.photos/seed/${categoryKey || 'restaurants'}-${itemId || 'default'}-5/800/600`,
         ],
         reviews: [
           {

@@ -365,6 +365,20 @@ const LiveMapScreen: React.FC = () => {
             console.log('Error parsing message:', error);
           }
         });
+
+        // Also listen for React Native WebView messages
+        document.addEventListener('message', function(event) {
+          console.log('Received document message:', event.data);
+          try {
+            const data = JSON.parse(event.data);
+            if (data.type === 'update_markers') {
+              console.log('Updating markers with document data:', data.listings);
+              updateMarkers(data.listings);
+            }
+          } catch (error) {
+            console.log('Error parsing document message:', error);
+          }
+        });
       </script>
       <script async defer
         src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCl7ryK-cp9EtGoYMJ960P1jZO-nnTCCqM&callback=initMap">
@@ -434,13 +448,16 @@ const LiveMapScreen: React.FC = () => {
       console.log('Marker data sample:', markerData[0]);
       
       // Send immediately and also with a delay
+      console.log('Posting message to WebView:', message);
       webViewRef.current.postMessage(message);
       
       setTimeout(() => {
+        console.log('Posting delayed message to WebView (500ms)');
         webViewRef.current?.postMessage(message);
       }, 500);
       
       setTimeout(() => {
+        console.log('Posting delayed message to WebView (2000ms)');
         webViewRef.current?.postMessage(message);
       }, 2000);
     }
