@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Dimensions,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { useFilters } from '../hooks/useFilters';
 import FiltersModal from './FiltersModal';
 
@@ -18,6 +19,7 @@ interface ActionBarProps {
 }
 
 const ActionBar: React.FC<ActionBarProps> = ({ onActionPress, currentCategory = 'Place' }) => {
+  const navigation = useNavigation();
   const {
     filters,
     showFiltersModal,
@@ -30,11 +32,13 @@ const ActionBar: React.FC<ActionBarProps> = ({ onActionPress, currentCategory = 
   const handleActionPress = useCallback((action: string) => {
     if (action === 'filters') {
       openFiltersModal();
+    } else if (action === 'addCategory') {
+      (navigation as any).navigate('AddCategory', { category: currentCategory });
     } else {
       onActionPress?.(action);
     }
     console.log('Action pressed:', action);
-  }, [onActionPress, openFiltersModal]);
+  }, [onActionPress, openFiltersModal, navigation, currentCategory]);
 
   return (
     <>
