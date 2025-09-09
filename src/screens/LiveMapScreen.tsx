@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useRef, useEffect, memo } from 'react';
 import {
   View,
   Text,
@@ -19,6 +19,37 @@ import { useCategoryData } from '../hooks/useCategoryData';
 // for a real map experience without native dependencies
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+
+// Memoized WebView component to prevent unnecessary re-renders
+const MemoizedWebView = memo(({ 
+  mapHTML, 
+  onMessage, 
+  webViewRef 
+}: { 
+  mapHTML: string; 
+  onMessage: (event: any) => void; 
+  webViewRef: React.RefObject<WebView>; 
+}) => (
+  <WebView
+    ref={webViewRef}
+    source={{ html: mapHTML }}
+    style={styles.map}
+    onMessage={onMessage}
+    javaScriptEnabled={true}
+    domStorageEnabled={true}
+    startInLoadingState={true}
+    scalesPageToFit={false}
+    allowsInlineMediaPlayback={true}
+    mediaPlaybackRequiresUserAction={false}
+    mixedContentMode="compatibility"
+    thirdPartyCookiesEnabled={false}
+    sharedCookiesEnabled={false}
+    onShouldStartLoadWithRequest={() => true}
+    onLoadEnd={() => {
+      // Map is loaded, we can start sending marker updates
+    }}
+  />
+));
 
 interface MapListing {
   id: string;
@@ -44,6 +75,9 @@ const LiveMapScreen: React.FC = () => {
   const currentCategory = (route.params as any)?.category || 'all';
   const [selectedCategory, setSelectedCategory] = useState<string>(currentCategory);
   const [selectedListing, setSelectedListing] = useState<MapListing | null>(null);
+  const [mapLoaded, setMapLoaded] = useState(false);
+  
+  // Memoize map region to prevent unnecessary updates
   const [mapRegion, setMapRegion] = useState({
     latitude: 40.7128, // New York City
     longitude: -74.0060,
@@ -121,8 +155,8 @@ const LiveMapScreen: React.FC = () => {
     return cat?.color || '#74e1a0';
   };
 
-  // Generate static Google Maps HTML (only once)
-  const mapHTML = `
+  // Generate static Google Maps HTML (memoized to prevent re-renders)
+  const mapHTML = useMemo(() => `
     <!DOCTYPE html>
     <html>
     <head>
@@ -150,10 +184,23 @@ const LiveMapScreen: React.FC = () => {
                 elementType: "labels",
                 stylers: [{ visibility: "off" }]
               }
-            ]
+            ],
+            gestureHandling: 'greedy',
+            disableDefaultUI: false,
+            zoomControl: true,
+            mapTypeControl: false,
+            scaleControl: false,
+            streetViewControl: false,
+            rotateControl: false,
+            fullscreenControl: false
           });
 
-          // Handle map region changes (debounced)
+          // Send map loaded message
+          window.ReactNativeWebView.postMessage(JSON.stringify({
+            type: 'map_loaded'
+          }));
+
+          // Handle map region changes (heavily debounced to prevent re-renders)
           let regionChangeTimeout;
           map.addListener('bounds_changed', () => {
             clearTimeout(regionChangeTimeout);
@@ -168,7 +215,7 @@ const LiveMapScreen: React.FC = () => {
                   longitudeDelta: 0.0421
                 }
               }));
-            }, 500);
+            }, 1000); // Increased debounce time
           });
         }
 
@@ -234,7 +281,7 @@ const LiveMapScreen: React.FC = () => {
       </script>
     </body>
     </html>
-  `;
+  `, [mapRegion.latitude, mapRegion.longitude]);
 
   const handleWebViewMessage = useCallback((event: any) => {
     try {
@@ -243,38 +290,55 @@ const LiveMapScreen: React.FC = () => {
       if (data.type === 'marker_click') {
         handleMarkerPress(data.listing);
       } else if (data.type === 'region_changed') {
-        setMapRegion(data.region);
+        // Don't update state on every region change to prevent re-renders
+        // Only update if the change is significant
+        const newRegion = data.region;
+        const currentRegion = mapRegion;
+        const latDiff = Math.abs(newRegion.latitude - currentRegion.latitude);
+        const lngDiff = Math.abs(newRegion.longitude - currentRegion.longitude);
+        
+        if (latDiff > 0.01 || lngDiff > 0.01) {
+          setMapRegion(newRegion);
+        }
+      } else if (data.type === 'map_loaded') {
+        setMapLoaded(true);
       }
     } catch (error) {
       console.log('Error parsing WebView message:', error);
     }
-  }, [handleMarkerPress]);
+  }, [handleMarkerPress, mapRegion]);
 
-  // Send marker updates to WebView when filteredListings change
+  // Memoize marker data to prevent unnecessary updates
+  const markerData = useMemo(() => {
+    return filteredListings.map((listing) => {
+      const category = categories.find(c => c.key === listing.category);
+      return {
+        position: { lat: listing.coordinate.latitude, lng: listing.coordinate.longitude },
+        title: listing.title,
+        description: listing.description,
+        category: listing.category,
+        emoji: category?.emoji || '📍',
+        color: getCategoryColor(listing.category),
+        rating: listing.rating || 0,
+        distance: listing.distance || 0
+      };
+    });
+  }, [filteredListings, categories]);
+
+  // Send marker updates to WebView when markerData changes
   useEffect(() => {
-    if (webViewRef.current && filteredListings.length > 0) {
-      const markers = filteredListings.map((listing) => {
-        const category = categories.find(c => c.key === listing.category);
-        return {
-          position: { lat: listing.coordinate.latitude, lng: listing.coordinate.longitude },
-          title: listing.title,
-          description: listing.description,
-          category: listing.category,
-          emoji: category?.emoji || '📍',
-          color: getCategoryColor(listing.category),
-          rating: listing.rating || 0,
-          distance: listing.distance || 0
-        };
-      });
-
+    if (webViewRef.current && mapLoaded && markerData.length > 0) {
       const message = JSON.stringify({
         type: 'update_markers',
-        listings: markers
+        listings: markerData
       });
 
-      webViewRef.current.postMessage(message);
+      // Use setTimeout to ensure the message is sent after the WebView is ready
+      setTimeout(() => {
+        webViewRef.current?.postMessage(message);
+      }, 100);
     }
-  }, [filteredListings, categories]);
+  }, [markerData, mapLoaded]);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -296,15 +360,10 @@ const LiveMapScreen: React.FC = () => {
 
       {/* Map */}
       <View style={styles.mapContainer}>
-        <WebView
-          ref={webViewRef}
-          source={{ html: mapHTML }}
-          style={styles.map}
+        <MemoizedWebView
+          mapHTML={mapHTML}
           onMessage={handleWebViewMessage}
-          javaScriptEnabled={true}
-          domStorageEnabled={true}
-          startInLoadingState={true}
-          scalesPageToFit={false}
+          webViewRef={webViewRef}
         />
         
         {/* Map Controls */}
