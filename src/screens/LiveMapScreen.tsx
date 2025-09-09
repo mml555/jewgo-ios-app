@@ -9,22 +9,25 @@ import {
   ScrollView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { useFilters } from '../hooks/useFilters';
 import { useCategoryData } from '../hooks/useCategoryData';
 
-// Mock map component since we don't have react-native-maps installed
-const MockMapView = ({ children, style, onPress }: any) => (
-  <View style={[style, { backgroundColor: '#E8F5E8' }]}>
+// Mock Google Maps components
+const GoogleMapView = ({ children, style, onPress, initialRegion, onRegionChangeComplete, showsUserLocation, showsMyLocationButton, showsCompass, showsScale, mapType }: any) => (
+  <View style={[style, { backgroundColor: '#E8F5E8', position: 'relative' }]}>
     {children}
   </View>
 );
 
-const MockMarker = ({ coordinate, onPress, children }: any) => (
+const GoogleMarker = ({ coordinate, onPress, title, description, children }: any) => (
   <TouchableOpacity
     style={[
       styles.marker,
-      { left: coordinate.longitude * 2, top: coordinate.latitude * 2 }
+      { 
+        left: (coordinate.longitude + 74.1) * 200, 
+        top: (40.8 - coordinate.latitude) * 200 
+      }
     ]}
     onPress={onPress}
   >
@@ -51,10 +54,13 @@ interface MapListing {
 
 const LiveMapScreen: React.FC = () => {
   const navigation = useNavigation();
+  const route = useRoute();
   const insets = useSafeAreaInsets();
   const { filters } = useFilters();
   
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  // Get current category from route params, default to 'all'
+  const currentCategory = (route.params as any)?.category || 'all';
+  const [selectedCategory, setSelectedCategory] = useState<string>(currentCategory);
   const [selectedListing, setSelectedListing] = useState<MapListing | null>(null);
   const [mapRegion, setMapRegion] = useState({
     latitude: 40.7128, // New York City
@@ -151,10 +157,12 @@ const LiveMapScreen: React.FC = () => {
 
   const renderMapMarkers = () => {
     return filteredListings.map((listing) => (
-      <MockMarker
+      <GoogleMarker
         key={listing.id}
         coordinate={listing.coordinate}
         onPress={() => handleMarkerPress(listing)}
+        title={listing.title}
+        description={`${categories.find(c => c.key === listing.category)?.label} • ${listing.rating ? `${listing.rating}⭐` : 'No rating'}`}
       >
         <View style={[
           styles.markerContent,
@@ -164,7 +172,7 @@ const LiveMapScreen: React.FC = () => {
             {categories.find(c => c.key === listing.category)?.emoji}
           </Text>
         </View>
-      </MockMarker>
+      </GoogleMarker>
     ));
   };
 
@@ -265,7 +273,9 @@ const LiveMapScreen: React.FC = () => {
           <Text style={styles.backButtonText}>←</Text>
         </TouchableOpacity>
         <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>Live Map</Text>
+          <Text style={styles.headerTitle}>
+            {selectedCategory === 'all' ? 'Live Map' : `${categories.find(c => c.key === selectedCategory)?.label} Map`}
+          </Text>
           <Text style={styles.headerSubtitle}>
             {filteredListings.length} places found
           </Text>
@@ -278,13 +288,33 @@ const LiveMapScreen: React.FC = () => {
 
       {/* Map */}
       <View style={styles.mapContainer}>
-        <MockMapView style={styles.map} onPress={handleClosePopup}>
+        <GoogleMapView
+          style={styles.map}
+          initialRegion={mapRegion}
+          onRegionChangeComplete={setMapRegion}
+          onPress={handleClosePopup}
+          showsUserLocation={true}
+          showsMyLocationButton={true}
+          showsCompass={true}
+          showsScale={true}
+          mapType="standard"
+        >
           {renderMapMarkers()}
-        </MockMapView>
+        </GoogleMapView>
         
         {/* Map Controls */}
         <View style={styles.mapControls}>
-          <TouchableOpacity style={styles.mapControlButton}>
+          <TouchableOpacity 
+            style={styles.mapControlButton}
+            onPress={() => {
+              setMapRegion({
+                latitude: 40.7128,
+                longitude: -74.0060,
+                latitudeDelta: 0.0922,
+                longitudeDelta: 0.0421,
+              });
+            }}
+          >
             <Text style={styles.mapControlText}>📍</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.mapControlButton}>
@@ -390,7 +420,6 @@ const styles = StyleSheet.create({
   },
   map: {
     flex: 1,
-    position: 'relative',
   },
   marker: {
     position: 'absolute',

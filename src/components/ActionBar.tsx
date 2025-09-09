@@ -35,7 +35,7 @@ const ActionBar: React.FC<ActionBarProps> = ({ onActionPress, currentCategory = 
     } else if (action === 'addCategory') {
       (navigation as any).navigate('AddCategory', { category: currentCategory });
     } else if (action === 'liveMap') {
-      (navigation as any).navigate('LiveMap');
+      (navigation as any).navigate('LiveMap', { category: currentCategory.toLowerCase() });
     } else {
       onActionPress?.(action);
     }
