@@ -116,14 +116,14 @@ const LiveMapScreen: React.FC = () => {
       { title: '🍽️ Kosher Bakery', description: 'Fresh-baked challah and pastries daily', category: 'restaurants', rating: 4.3, distance: 0.9 },
       
       // Synagogues
-      { title: '🕍 Chabad House', description: 'Warm and welcoming community center for all ages', category: 'shul', rating: 4.6, distance: 0.3 },
-      { title: '🕍 Young Israel', description: 'Traditional Orthodox synagogue with daily services', category: 'shul', rating: 4.4, distance: 1.1 },
-      { title: '🕍 Sephardic Center', description: 'Modern Sephardic community with rich heritage', category: 'shul', rating: 4.5, distance: 1.5 },
-      { title: '🕍 Synagogue Beth Israel', description: 'Historic synagogue with beautiful architecture', category: 'shul', rating: 4.7, distance: 2.1 },
+      { title: '🕍 Chabad House', description: 'Warm and welcoming community center for all ages', category: 'shuls', rating: 4.6, distance: 0.3 },
+      { title: '🕍 Young Israel', description: 'Traditional Orthodox synagogue with daily services', category: 'shuls', rating: 4.4, distance: 1.1 },
+      { title: '🕍 Sephardic Center', description: 'Modern Sephardic community with rich heritage', category: 'shuls', rating: 4.5, distance: 1.5 },
+      { title: '🕍 Synagogue Beth Israel', description: 'Historic synagogue with beautiful architecture', category: 'shuls', rating: 4.7, distance: 2.1 },
       
       // Mikvahs
-      { title: '🛁 Mikvah Chaya', description: 'Beautiful mikvah facility with private appointments', category: 'mikvah', rating: 4.8, distance: 0.7 },
-      { title: '🛁 Community Mikvah', description: 'Modern mikvah with excellent facilities', category: 'mikvah', rating: 4.6, distance: 1.4 },
+      { title: '🛁 Mikvah Chaya', description: 'Beautiful mikvah facility with private appointments', category: 'mikvahs', rating: 4.8, distance: 0.7 },
+      { title: '🛁 Community Mikvah', description: 'Modern mikvah with excellent facilities', category: 'mikvahs', rating: 4.6, distance: 1.4 },
       
       // Stores
       { title: '🏪 Kosher Grocery', description: 'Complete kosher grocery with fresh produce', category: 'stores', rating: 4.4, distance: 0.6 },
@@ -131,16 +131,16 @@ const LiveMapScreen: React.FC = () => {
       { title: '🏪 Jewish Bookstore', description: 'Comprehensive selection of Jewish books and gifts', category: 'stores', rating: 4.3, distance: 1.3 },
       
       // Community Centers
-      { title: '👥 Jewish Community Center', description: 'Full-service Jewish community center', category: 'social', rating: 4.6, distance: 1.7 },
-      { title: '👥 Jewish Senior Center', description: 'Activities and programs for Jewish seniors', category: 'social', rating: 4.4, distance: 2.0 },
-      { title: '👥 Kollel Torah', description: 'Torah study center for serious learning', category: 'social', rating: 4.8, distance: 0.4 },
+      { title: '👥 Jewish Community Center', description: 'Full-service Jewish community center', category: 'services', rating: 4.6, distance: 1.7 },
+      { title: '👥 Jewish Senior Center', description: 'Activities and programs for Jewish seniors', category: 'services', rating: 4.4, distance: 2.0 },
+      { title: '👥 Kollel Torah', description: 'Torah study center for serious learning', category: 'services', rating: 4.8, distance: 0.4 },
       
       // Education
-      { title: '📚 Jewish Day School', description: 'Excellent Jewish education for children', category: 'education', rating: 4.7, distance: 1.6 },
-      { title: '📚 Jewish Library', description: 'Extensive collection of Jewish literature', category: 'education', rating: 4.5, distance: 0.9 },
+      { title: '📚 Jewish Day School', description: 'Excellent Jewish education for children', category: 'schools', rating: 4.7, distance: 1.6 },
+      { title: '📚 Jewish Library', description: 'Extensive collection of Jewish literature', category: 'schools', rating: 4.5, distance: 0.9 },
       
       // Culture
-      { title: '🎭 Jewish Museum', description: 'Educational exhibits on Jewish history', category: 'culture', rating: 4.6, distance: 2.3 },
+      { title: '🎭 Jewish Museum', description: 'Educational exhibits on Jewish history', category: 'events', rating: 4.6, distance: 2.3 },
       
       // Services
       { title: '🎉 Kosher Catering', description: 'Catering for all Jewish celebrations', category: 'services', rating: 4.5, distance: 1.8 },
@@ -165,7 +165,7 @@ const LiveMapScreen: React.FC = () => {
 
   // Filter listings based on search query and global filters
   const filteredListings = useMemo(() => {
-    return mapListings.filter((listing) => {
+    const filtered = mapListings.filter((listing) => {
       // Search filter
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase().trim();
@@ -190,6 +190,9 @@ const LiveMapScreen: React.FC = () => {
       }
       return true;
     });
+    
+    console.log('Filtered listings:', filtered.length, 'out of', mapListings.length);
+    return filtered;
   }, [mapListings, filters, searchQuery]);
 
   const handleBackPress = useCallback(() => {
@@ -259,6 +262,23 @@ const LiveMapScreen: React.FC = () => {
             type: 'map_loaded'
           }));
 
+          // Add a test marker to verify the map is working
+          const testMarker = new google.maps.Marker({
+            position: { lat: 40.7128, lng: -74.0060 },
+            map: map,
+            title: 'Test Marker',
+            icon: {
+              path: google.maps.SymbolPath.CIRCLE,
+              scale: 10,
+              fillColor: '#FF0000',
+              fillOpacity: 1,
+              strokeColor: '#FFFFFF',
+              strokeWeight: 2
+            }
+          });
+          
+          console.log('Test marker added to map');
+
           // Handle map region changes (heavily debounced to prevent re-renders)
           let regionChangeTimeout;
           map.addListener('bounds_changed', () => {
@@ -279,6 +299,8 @@ const LiveMapScreen: React.FC = () => {
         }
 
         function updateMarkers(listings) {
+          console.log('updateMarkers called with:', listings.length, 'listings');
+          
           // Clear existing markers
           markers.forEach(marker => marker.setMap(null));
           markers = [];
@@ -286,6 +308,8 @@ const LiveMapScreen: React.FC = () => {
 
           // Add new markers
           listings.forEach((listing, index) => {
+            console.log('Adding marker:', listing.title, 'at', listing.position);
+            
             const marker = new google.maps.Marker({
               position: listing.position,
               map: map,
@@ -330,8 +354,15 @@ const LiveMapScreen: React.FC = () => {
 
         // Listen for messages from React Native
         window.addEventListener('message', function(event) {
-          if (event.data && event.data.type === 'update_markers') {
-            updateMarkers(event.data.listings);
+          console.log('Received message from React Native:', event.data);
+          try {
+            const data = JSON.parse(event.data);
+            if (data.type === 'update_markers') {
+              console.log('Updating markers with data:', data.listings);
+              updateMarkers(data.listings);
+            }
+          } catch (error) {
+            console.log('Error parsing message:', error);
           }
         });
       </script>
@@ -386,18 +417,34 @@ const LiveMapScreen: React.FC = () => {
 
   // Send marker updates to WebView when markerData changes
   useEffect(() => {
-    if (webViewRef.current && mapLoaded && markerData.length > 0) {
+    console.log('Marker update effect:', { 
+      hasWebView: !!webViewRef.current, 
+      mapLoaded, 
+      markerDataLength: markerData.length,
+      filteredListingsLength: filteredListings.length 
+    });
+    
+    if (webViewRef.current && markerData.length > 0) {
       const message = JSON.stringify({
         type: 'update_markers',
         listings: markerData
       });
 
-      // Use setTimeout to ensure the message is sent after the WebView is ready
+      console.log('Sending markers to WebView:', markerData.length, 'markers');
+      console.log('Marker data sample:', markerData[0]);
+      
+      // Send immediately and also with a delay
+      webViewRef.current.postMessage(message);
+      
       setTimeout(() => {
         webViewRef.current?.postMessage(message);
-      }, 100);
+      }, 500);
+      
+      setTimeout(() => {
+        webViewRef.current?.postMessage(message);
+      }, 2000);
     }
-  }, [markerData, mapLoaded]);
+  }, [markerData, mapLoaded, filteredListings.length]);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
