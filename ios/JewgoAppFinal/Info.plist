@@ -23,7 +23,7 @@
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>GMSApiKey</key>
-	<string>YOUR_GOOGLE_MAPS_API_KEY_HERE</string>
+	<string>AIzaSyCl7ryK-cp9EtGoYMJ960P1jZO-nnTCCqM</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSAppTransportSecurity</key>
