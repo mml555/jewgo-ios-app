@@ -34,6 +34,8 @@ const ActionBar: React.FC<ActionBarProps> = ({ onActionPress, currentCategory = 
       openFiltersModal();
     } else if (action === 'addCategory') {
       (navigation as any).navigate('AddCategory', { category: currentCategory });
+    } else if (action === 'liveMap') {
+      (navigation as any).navigate('LiveMap');
     } else {
       onActionPress?.(action);
     }

@@ -3,6 +3,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import RootTabs from './RootTabs';
 import ListingDetailScreen from '../screens/ListingDetailScreen';
 import AddCategoryScreen from '../screens/AddCategoryScreen';
+import LiveMapScreen from '../screens/LiveMapScreen';
 
 const Stack = createStackNavigator();
 
@@ -28,6 +29,14 @@ const AppNavigator: React.FC = () => {
         options={{
           headerShown: false,
           presentation: 'modal',
+        }}
+      />
+      <Stack.Screen 
+        name="LiveMap" 
+        component={LiveMapScreen}
+        options={{
+          headerShown: false,
+          presentation: 'card',
         }}
       />
     </Stack.Navigator>
