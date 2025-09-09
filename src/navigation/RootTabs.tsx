@@ -1,0 +1,184 @@
+import React, { useCallback } from 'react';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { Text, View, StyleSheet, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Vibration } from 'react-native';
+import { Keyboard } from 'react-native';
+
+// Import screens
+import HomeScreen from '../screens/HomeScreen';
+import FavoritesScreen from '../screens/FavoritesScreen';
+import SpecialsScreen from '../screens/SpecialsScreen';
+import NotificationsScreen from '../screens/NotificationsScreen';
+import ProfileScreen from '../screens/ProfileScreen';
+
+const Tab = createBottomTabNavigator();
+
+// Tab icon component with haptic feedback
+const TabIcon: React.FC<{
+  icon: string;
+  focused: boolean;
+  label: string;
+}> = ({ icon, focused, label }) => {
+  const handlePress = useCallback(() => {
+    // Haptic feedback on tab press
+    if (Platform.OS === 'ios') {
+      Vibration.vibrate(10); // Light haptic feedback
+    } else {
+      Vibration.vibrate(50); // Short vibration for Android
+    }
+    
+    // Dismiss keyboard when switching tabs
+    Keyboard.dismiss();
+  }, []);
+
+  return (
+    <View 
+      style={styles.tabIconContainer}
+      onTouchStart={handlePress}
+      accessible={true}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityHint={`Navigate to ${label} tab`}
+    >
+      <Text style={[styles.tabIcon, focused && styles.tabIconFocused]}>
+        {icon}
+      </Text>
+    </View>
+  );
+};
+
+function RootTabs() {
+  const insets = useSafeAreaInsets();
+
+  return (
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        tabBarIcon: ({ focused }) => {
+          let icon: string;
+          let label: string;
+
+          switch (route.name) {
+            case 'Home':
+              icon = '🏠';
+              label = 'Home';
+              break;
+            case 'Favorites':
+              icon = '❤️';
+              label = 'Favorites';
+              break;
+            case 'Specials':
+              icon = '⭐';
+              label = 'Specials';
+              break;
+            case 'Notifications':
+              icon = '🔔';
+              label = 'Notifications';
+              break;
+            case 'Profile':
+              icon = '👤';
+              label = 'Profile';
+              break;
+            default:
+              icon = '❓';
+              label = 'Unknown';
+          }
+
+          return <TabIcon icon={icon} focused={focused} label={label} />;
+        },
+        tabBarLabel: ({ focused }) => (
+          <Text style={[styles.tabLabel, focused && styles.tabLabelFocused]}>
+            {route.name}
+          </Text>
+        ),
+        tabBarStyle: {
+          ...styles.tabBar,
+          paddingBottom: Math.max(insets.bottom, 8),
+          height: 60 + Math.max(insets.bottom, 8),
+        },
+        tabBarActiveTintColor: '#007AFF',
+        tabBarInactiveTintColor: '#8E8E93',
+        headerShown: false,
+        tabBarHideOnKeyboard: true,
+      })}
+    >
+      <Tab.Screen 
+        name="Home" 
+        component={HomeScreen}
+        options={{
+          tabBarAccessibilityLabel: 'Home tab',
+        }}
+      />
+      <Tab.Screen 
+        name="Favorites" 
+        component={FavoritesScreen}
+        options={{
+          tabBarAccessibilityLabel: 'Favorites tab',
+        }}
+      />
+      <Tab.Screen 
+        name="Specials" 
+        component={SpecialsScreen}
+        options={{
+          tabBarAccessibilityLabel: 'Specials tab',
+        }}
+      />
+      <Tab.Screen 
+        name="Notifications" 
+        component={NotificationsScreen}
+        options={{
+          tabBarAccessibilityLabel: 'Notifications tab',
+        }}
+      />
+      <Tab.Screen 
+        name="Profile" 
+        component={ProfileScreen}
+        options={{
+          tabBarAccessibilityLabel: 'Profile tab',
+        }}
+      />
+    </Tab.Navigator>
+  );
+}
+
+const styles = StyleSheet.create({
+  tabBar: {
+    backgroundColor: '#F2F2F7',
+    borderTopWidth: 0,
+    paddingTop: 8,
+    elevation: 0,
+    shadowColor: 'transparent',
+    shadowOffset: {
+      width: 0,
+      height: 0,
+    },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+  },
+  tabIconContainer: {
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 22,
+  },
+  tabIcon: {
+    fontSize: 24,
+    textAlign: 'center',
+  },
+  tabIconFocused: {
+    transform: [{ scale: 1.1 }],
+  },
+  tabLabel: {
+    fontSize: 10,
+    fontWeight: '500',
+    marginTop: 2,
+    textAlign: 'center',
+  },
+  tabLabelFocused: {
+    fontWeight: '600',
+    color: '#007AFF',
+  },
+});
+
+export default RootTabs;
