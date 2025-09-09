@@ -106,16 +106,59 @@ const LiveMapScreen: React.FC = () => {
 
   // Convert listings to map format with coordinates
   const mapListings: MapListing[] = useMemo(() => {
-    return allListings.map((item, index) => ({
-      id: item.id,
+    // Create more diverse sample data for the map
+    const sampleLocations = [
+      // Restaurants
+      { title: '🍽️ Kosher Deli & Market', description: 'Authentic kosher cuisine with traditional recipes', category: 'restaurants', rating: 4.5, distance: 0.8 },
+      { title: '🍽️ Kosher Pizza Palace', description: 'Best kosher pizza in the neighborhood', category: 'restaurants', rating: 4.2, distance: 1.2 },
+      { title: '🍽️ Shabbat Takeout', description: 'Fresh Shabbat meals for pickup', category: 'restaurants', rating: 4.7, distance: 0.5 },
+      { title: '🍽️ Kosher Restaurant', description: 'Fine dining with kosher certification', category: 'restaurants', rating: 4.8, distance: 1.8 },
+      { title: '🍽️ Kosher Bakery', description: 'Fresh-baked challah and pastries daily', category: 'restaurants', rating: 4.3, distance: 0.9 },
+      
+      // Synagogues
+      { title: '🕍 Chabad House', description: 'Warm and welcoming community center for all ages', category: 'shul', rating: 4.6, distance: 0.3 },
+      { title: '🕍 Young Israel', description: 'Traditional Orthodox synagogue with daily services', category: 'shul', rating: 4.4, distance: 1.1 },
+      { title: '🕍 Sephardic Center', description: 'Modern Sephardic community with rich heritage', category: 'shul', rating: 4.5, distance: 1.5 },
+      { title: '🕍 Synagogue Beth Israel', description: 'Historic synagogue with beautiful architecture', category: 'shul', rating: 4.7, distance: 2.1 },
+      
+      // Mikvahs
+      { title: '🛁 Mikvah Chaya', description: 'Beautiful mikvah facility with private appointments', category: 'mikvah', rating: 4.8, distance: 0.7 },
+      { title: '🛁 Community Mikvah', description: 'Modern mikvah with excellent facilities', category: 'mikvah', rating: 4.6, distance: 1.4 },
+      
+      // Stores
+      { title: '🏪 Kosher Grocery', description: 'Complete kosher grocery with fresh produce', category: 'stores', rating: 4.4, distance: 0.6 },
+      { title: '🏪 Kosher Butcher', description: 'Premium kosher meats and poultry', category: 'stores', rating: 4.5, distance: 1.0 },
+      { title: '🏪 Jewish Bookstore', description: 'Comprehensive selection of Jewish books and gifts', category: 'stores', rating: 4.3, distance: 1.3 },
+      
+      // Community Centers
+      { title: '👥 Jewish Community Center', description: 'Full-service Jewish community center', category: 'social', rating: 4.6, distance: 1.7 },
+      { title: '👥 Jewish Senior Center', description: 'Activities and programs for Jewish seniors', category: 'social', rating: 4.4, distance: 2.0 },
+      { title: '👥 Kollel Torah', description: 'Torah study center for serious learning', category: 'social', rating: 4.8, distance: 0.4 },
+      
+      // Education
+      { title: '📚 Jewish Day School', description: 'Excellent Jewish education for children', category: 'education', rating: 4.7, distance: 1.6 },
+      { title: '📚 Jewish Library', description: 'Extensive collection of Jewish literature', category: 'education', rating: 4.5, distance: 0.9 },
+      
+      // Culture
+      { title: '🎭 Jewish Museum', description: 'Educational exhibits on Jewish history', category: 'culture', rating: 4.6, distance: 2.3 },
+      
+      // Services
+      { title: '🎉 Kosher Catering', description: 'Catering for all Jewish celebrations', category: 'services', rating: 4.5, distance: 1.8 },
+    ];
+
+    // Combine sample data with existing listings
+    const combinedListings = [...sampleLocations, ...allListings];
+    
+    return combinedListings.map((item, index) => ({
+      id: item.id || `sample-${index}`,
       title: item.title,
       description: item.description,
       category: item.category,
       rating: item.rating,
       distance: item.distance,
       coordinate: {
-        latitude: 40.7128 + (Math.random() - 0.5) * 0.1, // NYC area with some spread
-        longitude: -74.0060 + (Math.random() - 0.5) * 0.1,
+        latitude: 40.7128 + (Math.random() - 0.5) * 0.15, // NYC area with more spread
+        longitude: -74.0060 + (Math.random() - 0.5) * 0.15,
       },
     }));
   }, [allListings]);
