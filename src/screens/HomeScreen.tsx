@@ -5,6 +5,7 @@ import TopBar from '../components/TopBar';
 import CategoryRail from '../components/CategoryRail';
 import ActionBar from '../components/ActionBar';
 import CategoryGridScreen from './CategoryGridScreen';
+import { Colors } from '../styles/designSystem';
 
 interface HomeScreenProps {
   onSearchChange?: (query: string) => void;
@@ -68,7 +69,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F2F2F7',
+    backgroundColor: Colors.background,
   },
   scrollContent: {
     flexGrow: 1,

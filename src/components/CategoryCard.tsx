@@ -10,6 +10,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { CategoryItem } from '../hooks/useCategoryData';
 import { useLocation, calculateDistance } from '../hooks/useLocation';
+import { Colors, Typography, Spacing, BorderRadius, Shadows, TouchTargets } from '../styles/designSystem';
 
 interface CategoryCardProps {
   item: CategoryItem;
@@ -83,6 +84,7 @@ const CategoryCard: React.FC<CategoryCardProps> = memo(({ item, categoryKey }) =
           accessibilityRole="button"
           accessibilityLabel={isFavorited ? "Remove from favorites" : "Add to favorites"}
           accessibilityHint="Tap to toggle favorite status"
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
           <Text style={[styles.heartIcon, isFavorited && styles.heartIconActive]}>
             {isFavorited ? '♥' : '♡'}
@@ -94,7 +96,7 @@ const CategoryCard: React.FC<CategoryCardProps> = memo(({ item, categoryKey }) =
         {/* Main content line with title and rating */}
         <View style={styles.mainContentRow}>
           <Text style={styles.title} numberOfLines={1}>
-            {item.title.replace(/^[^\w\s]*\s*/, '').substring(0, 10)}
+            {item.title.replace(/^[^\w\s]*\s*/, '').substring(0, 20)}
           </Text>
           {item.rating && (
             <View style={styles.ratingTag}>
@@ -106,7 +108,7 @@ const CategoryCard: React.FC<CategoryCardProps> = memo(({ item, categoryKey }) =
         {/* Subtitle line with description and additional info */}
         <View style={styles.subtitleRow}>
           <Text style={styles.subtitle} numberOfLines={1}>
-            {item.description.substring(0, 10)}
+            {item.description.substring(0, 25)}
           </Text>
           <Text style={styles.additionalText} numberOfLines={1}>
             {realDistance ? `${realDistance.toFixed(1)}mi` : item.price || ''}
@@ -123,16 +125,16 @@ const styles = StyleSheet.create({
   container: {
     width: CARD_WIDTH,
     backgroundColor: 'transparent',
-    borderRadius: 12,
-    padding: 6,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.xs,
   },
   imageContainer: {
     position: 'relative',
     width: '100%',
     height: IMAGE_HEIGHT,
-    borderRadius: 20,
+    borderRadius: BorderRadius.lg,
     overflow: 'hidden',
-    marginBottom: 8,
+    marginBottom: Spacing.sm,
   },
   image: {
     width: '100%',
@@ -140,46 +142,44 @@ const styles = StyleSheet.create({
   },
   tagContainer: {
     position: 'absolute',
-    top: 8,
-    left: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 16,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    top: Spacing.sm,
+    left: Spacing.sm,
+    backgroundColor: 'rgba(45, 80, 22, 0.9)', // Primary with high opacity for better contrast
+    borderRadius: BorderRadius.full,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.3)',
-    backdropFilter: 'blur(10px)',
   },
   tagText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: '600',
+    ...Typography.styles.caption,
+    color: Colors.white,
+    fontWeight: '700',
     textTransform: 'uppercase',
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
   },
   heartButton: {
     position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 32,
-    height: 32,
+    top: Spacing.sm,
+    right: Spacing.sm,
+    width: TouchTargets.minimum,
+    height: TouchTargets.minimum,
+    borderRadius: TouchTargets.minimum / 2,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
     justifyContent: 'center',
     alignItems: 'center',
-    alignSelf: 'center',
+    ...Shadows.sm,
   },
   heartIcon: {
     fontSize: 20,
-    color: '#FFFFFF',
-    textShadowColor: 'rgba(0, 0, 0, 0.5)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    color: Colors.textPrimary,
     textAlign: 'center',
     lineHeight: 20,
   },
   heartIconActive: {
-    color: '#FF3B30',
+    color: Colors.error,
   },
   contentContainer: {
     flex: 1,
@@ -188,25 +188,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 8,
+    marginBottom: Spacing.sm,
   },
   title: {
-    fontSize: 16,
+    ...Typography.styles.bodyLarge,
     fontWeight: '600',
-    color: '#000000',
-    lineHeight: 20,
+    color: Colors.textPrimary,
     flex: 1,
-    marginRight: 8,
+    marginRight: Spacing.sm,
   },
   ratingTag: {
-    backgroundColor: '#F2F2F7',
-    borderRadius: 8,
-    paddingHorizontal: 6,
+    backgroundColor: Colors.gray200,
+    borderRadius: BorderRadius.sm,
+    paddingHorizontal: Spacing.xs,
     paddingVertical: 2,
   },
   ratingText: {
-    color: '#000000',
-    fontSize: 11,
+    ...Typography.styles.caption,
+    color: Colors.textPrimary,
     fontWeight: '600',
   },
   subtitleRow: {
@@ -215,21 +214,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   subtitle: {
-    fontSize: 13,
-    color: '#8E8E93',
-    lineHeight: 16,
+    ...Typography.styles.bodySmall,
+    color: Colors.textSecondary,
     flex: 1,
-    marginRight: 8,
+    marginRight: Spacing.sm,
   },
   additionalInfo: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   additionalText: {
-    fontSize: 11,
-    color: '#8E8E93',
-    fontWeight: '500',
-    marginLeft: 4,
+    ...Typography.styles.caption,
+    color: Colors.textSecondary,
+    fontWeight: '600',
   },
 });
 

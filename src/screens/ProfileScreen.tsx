@@ -9,6 +9,7 @@ import {
   Image,
   Alert,
 } from 'react-native';
+import { Colors, Typography, Spacing, BorderRadius, Shadows, TouchTargets } from '../styles/designSystem';
 
 const ProfileScreen: React.FC = () => {
   const [user] = useState({
@@ -192,17 +193,10 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: '#00AA00',
+    backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 5,
+    ...Shadows.lg,
   },
   avatarText: {
     color: '#FFFFFF',
@@ -270,9 +264,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statNumber: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#00AA00',
+    ...Typography.styles.h1,
+    color: Colors.primary,
     marginBottom: 4,
   },
   statLabel: {
@@ -354,21 +347,16 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   logoutButton: {
-    backgroundColor: '#FF3B30',
-    borderRadius: 25,
-    paddingVertical: 16,
-    paddingHorizontal: 32,
+    backgroundColor: Colors.error,
+    borderRadius: BorderRadius.lg,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.xl,
     alignItems: 'center',
-    marginHorizontal: 20,
-    marginBottom: 30,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    marginHorizontal: Spacing.md,
+    marginBottom: Spacing.xl,
+    minHeight: TouchTargets.minimum,
+    justifyContent: 'center',
+    ...Shadows.md,
   },
   logoutText: {
     color: '#FFFFFF',

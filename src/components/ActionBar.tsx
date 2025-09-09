@@ -9,6 +9,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { useFilters } from '../hooks/useFilters';
 import FiltersModal from './FiltersModal';
+import { Colors, Typography, Spacing, BorderRadius, Shadows, TouchTargets } from '../styles/designSystem';
 
 const { width: screenWidth } = Dimensions.get('window');
 const BUTTON_WIDTH = (screenWidth - 48) / 3; // 48 for padding and gaps
@@ -104,37 +105,37 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 8,
-    backgroundColor: '#FFFFFF',
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.sm,
+    backgroundColor: Colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
+    borderBottomColor: Colors.border,
   },
   actionButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F2F2F7',
-    borderRadius: 20,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    marginHorizontal: 4,
-    minHeight: 48, // Accessibility: minimum touch target
+    backgroundColor: Colors.gray200,
+    borderRadius: BorderRadius.lg,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.sm,
+    marginHorizontal: Spacing.xs,
+    minHeight: TouchTargets.minimum,
   },
   actionIcon: {
     fontSize: 16,
-    marginRight: 6,
+    marginRight: Spacing.xs,
   },
   actionText: {
-    fontSize: 12,
+    ...Typography.styles.bodySmall,
     fontWeight: '600',
-    color: '#000000',
+    color: Colors.textPrimary,
     flexShrink: 1,
   },
   actionButtonActive: {
-    backgroundColor: '#74e1a0',
+    backgroundColor: Colors.accent,
   },
 });
 

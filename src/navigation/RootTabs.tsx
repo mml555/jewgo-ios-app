@@ -4,6 +4,7 @@ import { Text, View, StyleSheet, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Vibration } from 'react-native';
 import { Keyboard } from 'react-native';
+import { Colors, Typography, Spacing, TouchTargets } from '../styles/designSystem';
 
 // Import screens
 import HomeScreen from '../screens/HomeScreen';
@@ -96,8 +97,8 @@ function RootTabs() {
           paddingBottom: Math.max(insets.bottom, 8),
           height: 60 + Math.max(insets.bottom, 8),
         },
-        tabBarActiveTintColor: '#007AFF',
-        tabBarInactiveTintColor: '#8E8E93',
+        tabBarActiveTintColor: Colors.primary,
+        tabBarInactiveTintColor: Colors.textTertiary,
         headerShown: false,
         tabBarHideOnKeyboard: true,
       })}
@@ -143,9 +144,9 @@ function RootTabs() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    backgroundColor: '#F2F2F7',
+    backgroundColor: Colors.background,
     borderTopWidth: 0,
-    paddingTop: 8,
+    paddingTop: Spacing.sm,
     elevation: 0,
     shadowColor: 'transparent',
     shadowOffset: {
@@ -156,11 +157,11 @@ const styles = StyleSheet.create({
     shadowRadius: 0,
   },
   tabIconContainer: {
-    width: 44,
-    height: 44,
+    width: TouchTargets.minimum,
+    height: TouchTargets.minimum,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 22,
+    borderRadius: TouchTargets.minimum / 2,
   },
   tabIcon: {
     fontSize: 24,
@@ -170,14 +171,14 @@ const styles = StyleSheet.create({
     transform: [{ scale: 1.1 }],
   },
   tabLabel: {
-    fontSize: 10,
+    ...Typography.styles.caption,
     fontWeight: '500',
     marginTop: 2,
     textAlign: 'center',
   },
   tabLabelFocused: {
     fontWeight: '600',
-    color: '#007AFF',
+    color: Colors.primary,
   },
 });
 

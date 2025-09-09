@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import JewgoLogo from './JewgoLogo';
+import { Colors, Typography, Spacing, BorderRadius, Shadows, TouchTargets } from '../styles/designSystem';
 
 interface TopBarProps {
   onQueryChange: (query: string) => void;
@@ -103,6 +104,7 @@ const TopBar: React.FC<TopBarProps> = ({
               accessibilityRole="button"
               accessibilityLabel="Clear search"
               accessibilityHint="Clears the search input"
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
               <Text style={styles.clearButtonText}>✕</Text>
             </TouchableOpacity>
@@ -115,27 +117,20 @@ const TopBar: React.FC<TopBarProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    borderBottomColor: Colors.border,
+    ...Shadows.sm,
   },
   content: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    minHeight: 44,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    minHeight: TouchTargets.minimum,
   },
   logoContainer: {
-    marginRight: 12,
+    marginRight: Spacing.sm,
     width: 32,
     height: 32,
     justifyContent: 'center',
@@ -145,16 +140,16 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F2F2F7',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    minHeight: 36,
+    backgroundColor: Colors.gray200,
+    borderRadius: BorderRadius.lg,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    minHeight: TouchTargets.minimum,
   },
   searchInput: {
     flex: 1,
-    fontSize: 16,
-    color: '#000000',
+    ...Typography.styles.bodyLarge,
+    color: Colors.textPrimary,
     paddingVertical: 0,
     ...Platform.select({
       ios: {
@@ -163,28 +158,21 @@ const styles = StyleSheet.create({
     }),
   },
   searchInputFocused: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#007AFF',
-    shadowOffset: {
-      width: 0,
-      height: 0,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 2,
+    backgroundColor: Colors.surface,
+    ...Shadows.sm,
   },
   clearButton: {
-    width: 24,
-    height: 24,
+    width: TouchTargets.minimum,
+    height: TouchTargets.minimum,
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 8,
-    borderRadius: 12,
-    backgroundColor: '#C7C7CC',
+    marginLeft: Spacing.sm,
+    borderRadius: TouchTargets.minimum / 2,
+    backgroundColor: Colors.gray400,
   },
   clearButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
+    ...Typography.styles.body,
+    color: Colors.white,
     fontWeight: '600',
     textAlign: 'center',
   },
