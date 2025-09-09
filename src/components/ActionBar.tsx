@@ -37,57 +37,59 @@ const ActionBar: React.FC<ActionBarProps> = ({ onActionPress, currentCategory = 
   }, [onActionPress, openFiltersModal]);
 
   return (
-    <View style={styles.container}>
-      <TouchableOpacity
-        style={styles.actionButton}
-        onPress={() => handleActionPress('liveMap')}
-        accessible={true}
-        accessibilityRole="button"
-        accessibilityLabel="Open live map"
-        accessibilityHint="Tap to view live map"
-      >
-        <Text style={styles.actionIcon}>🗺️</Text>
-        <Text style={styles.actionText}>Live Map</Text>
-      </TouchableOpacity>
+    <>
+      <View style={styles.container}>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => handleActionPress('liveMap')}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel="Open live map"
+          accessibilityHint="Tap to view live map"
+        >
+          <Text style={styles.actionIcon}>🗺️</Text>
+          <Text style={styles.actionText}>Live Map</Text>
+        </TouchableOpacity>
 
-      <TouchableOpacity
-        style={styles.actionButton}
-        onPress={() => handleActionPress('addCategory')}
-        accessible={true}
-        accessibilityRole="button"
-        accessibilityLabel={`Add new ${currentCategory}`}
-        accessibilityHint={`Tap to add a new ${currentCategory.toLowerCase()}`}
-      >
-        <Text style={styles.actionIcon}>➕</Text>
-        <Text style={styles.actionText}>Add {currentCategory}</Text>
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => handleActionPress('addCategory')}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel={`Add new ${currentCategory}`}
+          accessibilityHint={`Tap to add a new ${currentCategory.toLowerCase()}`}
+        >
+          <Text style={styles.actionIcon}>➕</Text>
+          <Text style={styles.actionText}>Add {currentCategory}</Text>
+        </TouchableOpacity>
 
-      <TouchableOpacity
-        style={[
-          styles.actionButton,
-          getActiveFiltersCount() > 0 && styles.actionButtonActive
-        ]}
-        onPress={() => handleActionPress('filters')}
-        accessible={true}
-        accessibilityRole="button"
-        accessibilityLabel="Open filters"
-        accessibilityHint="Tap to open filter options"
-      >
-        <Text style={styles.actionIcon}>🔍</Text>
-        <Text style={styles.actionText}>
-          Filters{getActiveFiltersCount() > 0 ? ` (${getActiveFiltersCount()})` : ''}
-        </Text>
-      </TouchableOpacity>
-    </View>
+        <TouchableOpacity
+          style={[
+            styles.actionButton,
+            getActiveFiltersCount() > 0 && styles.actionButtonActive
+          ]}
+          onPress={() => handleActionPress('filters')}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel="Open filters"
+          accessibilityHint="Tap to open filter options"
+        >
+          <Text style={styles.actionIcon}>🔍</Text>
+          <Text style={styles.actionText}>
+            Filters{getActiveFiltersCount() > 0 ? ` (${getActiveFiltersCount()})` : ''}
+          </Text>
+        </TouchableOpacity>
+      </View>
 
-    {/* Filters Modal */}
-    <FiltersModal
-      visible={showFiltersModal}
-      onClose={closeFiltersModal}
-      onApplyFilters={applyFilters}
-      currentFilters={filters}
-      category={currentCategory}
-    />
+      {/* Filters Modal */}
+      <FiltersModal
+        visible={showFiltersModal}
+        onClose={closeFiltersModal}
+        onApplyFilters={applyFilters}
+        currentFilters={filters}
+        category={currentCategory}
+      />
+    </>
   );
 };
 
