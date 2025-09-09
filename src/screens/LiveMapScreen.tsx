@@ -7,6 +7,7 @@ import {
   Dimensions,
   Alert,
   ScrollView,
+  TextInput,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -76,6 +77,8 @@ const LiveMapScreen: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>(currentCategory);
   const [selectedListing, setSelectedListing] = useState<MapListing | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
   
   // Memoize map region to prevent unnecessary updates
   const [mapRegion, setMapRegion] = useState({
@@ -117,9 +120,22 @@ const LiveMapScreen: React.FC = () => {
     }));
   }, [allListings]);
 
-  // Filter listings based on global filters
+  // Filter listings based on search query and global filters
   const filteredListings = useMemo(() => {
     return mapListings.filter((listing) => {
+      // Search filter
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase().trim();
+        const matchesSearch = 
+          listing.title.toLowerCase().includes(query) ||
+          listing.description.toLowerCase().includes(query) ||
+          listing.category.toLowerCase().includes(query);
+        if (!matchesSearch) {
+          return false;
+        }
+      }
+
+      // Global filters
       if (filters.maxDistance && listing.distance && listing.distance > filters.maxDistance) {
         return false;
       }
@@ -131,7 +147,7 @@ const LiveMapScreen: React.FC = () => {
       }
       return true;
     });
-  }, [mapListings, filters]);
+  }, [mapListings, filters, searchQuery]);
 
   const handleBackPress = useCallback(() => {
     navigation.goBack();
@@ -358,6 +374,32 @@ const LiveMapScreen: React.FC = () => {
         </View>
       </View>
 
+      {/* Search Bar */}
+      <View style={styles.searchContainer}>
+        <View style={[styles.searchBar, isSearchFocused && styles.searchBarFocused]}>
+          <Text style={styles.searchIcon}>🔍</Text>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search places..."
+            placeholderTextColor="#999"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            onFocus={() => setIsSearchFocused(true)}
+            onBlur={() => setIsSearchFocused(false)}
+            returnKeyType="search"
+            clearButtonMode="while-editing"
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity 
+              onPress={() => setSearchQuery('')} 
+              style={styles.clearButton}
+            >
+              <Text style={styles.clearButtonText}>✕</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+
       {/* Map */}
       <View style={styles.mapContainer}>
         <MemoizedWebView
@@ -365,16 +407,6 @@ const LiveMapScreen: React.FC = () => {
           onMessage={handleWebViewMessage}
           webViewRef={webViewRef}
         />
-        
-        {/* Map Controls */}
-        <View style={styles.mapControls}>
-          <TouchableOpacity style={styles.mapControlButton}>
-            <Text style={styles.mapControlText}>📍</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.mapControlButton}>
-            <Text style={styles.mapControlText}>🔍</Text>
-          </TouchableOpacity>
-        </View>
       </View>
 
       {/* Selected Listing Popup */}
@@ -468,34 +500,53 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#8E8E93',
   },
+  searchContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5EA',
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+  },
+  searchBarFocused: {
+    borderColor: '#74e1a0',
+    backgroundColor: '#FFFFFF',
+  },
+  searchIcon: {
+    fontSize: 16,
+    marginRight: 8,
+    color: '#666',
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#333',
+    paddingVertical: 4,
+  },
+  clearButton: {
+    padding: 4,
+    marginLeft: 8,
+  },
+  clearButtonText: {
+    fontSize: 16,
+    color: '#666',
+    fontWeight: 'bold',
+  },
   mapContainer: {
     flex: 1,
     position: 'relative',
   },
   map: {
     flex: 1,
-  },
-  mapControls: {
-    position: 'absolute',
-    bottom: 20,
-    right: 16,
-    gap: 12,
-  },
-  mapControlButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  mapControlText: {
-    fontSize: 20,
   },
   popupOverlay: {
     position: 'absolute',
