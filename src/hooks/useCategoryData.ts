@@ -8,6 +8,10 @@ export interface CategoryItem {
   category: string;
   rating?: number;
   distance?: number; // Changed to number for filtering
+  coordinate?: {
+    latitude: number;
+    longitude: number;
+  };
   price?: string;
   isOpen?: boolean;
   openWeekends?: boolean;
@@ -154,6 +158,10 @@ const generateMockData = (
       category: categoryNames[categoryKey],
       rating: Math.round((Math.random() * 2 + 3) * 10) / 10, // 3.0-5.0
       distance: Math.round((Math.random() * 20 + 0.1) * 10) / 10, // 0.1-20.0 miles
+      coordinate: {
+        latitude: 40.7128 + (Math.random() - 0.5) * 0.2, // NYC area with variation
+        longitude: -74.0060 + (Math.random() - 0.5) * 0.2,
+      },
       price: Math.random() > 0.3 ? priceRanges[Math.floor(Math.random() * priceRanges.length)] : undefined,
       isOpen: Math.random() > 0.3, // 70% chance of being open
       openWeekends: Math.random() > 0.2, // 80% chance of being open weekends

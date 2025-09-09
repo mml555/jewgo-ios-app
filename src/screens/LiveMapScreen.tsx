@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { WebView } from 'react-native-webview';
 import { useFilters } from '../hooks/useFilters';
+import { useLocation, calculateDistance } from '../hooks/useLocation';
 import { useCategoryData } from '../hooks/useCategoryData';
 
 // Google Maps API Key: AIzaSyCl7ryK-cp9EtGoYMJ960P1jZO-nnTCCqM
@@ -71,6 +72,7 @@ const LiveMapScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const { filters } = useFilters();
   const webViewRef = useRef<WebView>(null);
+  const { location, getCurrentLocation, permissionGranted, loading: locationLoading } = useLocation();
   
   // Get current category from route params, default to 'all'
   const currentCategory = (route.params as any)?.category || 'all';
@@ -79,13 +81,11 @@ const LiveMapScreen: React.FC = () => {
   const [mapLoaded, setMapLoaded] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
-  
-  // Memoize map region to prevent unnecessary updates
   const [mapRegion, setMapRegion] = useState({
-    latitude: 40.7128, // New York City
+    latitude: 40.7128, // Default to NYC
     longitude: -74.0060,
-    latitudeDelta: 0.0922,
-    longitudeDelta: 0.0421,
+    latitudeDelta: 0.1,
+    longitudeDelta: 0.1,
   });
 
   // Categories configuration
@@ -156,7 +156,7 @@ const LiveMapScreen: React.FC = () => {
       category: item.category,
       rating: item.rating,
       distance: item.distance,
-      coordinate: {
+      coordinate: item.coordinate || {
         latitude: 40.7128 + (Math.random() - 0.5) * 0.15, // NYC area with more spread
         longitude: -74.0060 + (Math.random() - 0.5) * 0.15,
       },
@@ -262,19 +262,20 @@ const LiveMapScreen: React.FC = () => {
             type: 'map_loaded'
           }));
 
-          // Add a test marker to verify the map is working
-          const testMarker = new google.maps.Marker({
-            position: { lat: 40.7128, lng: -74.0060 },
+          // Add user location marker if available
+          const userLocationMarker = new google.maps.Marker({
+            position: { lat: ${location?.latitude || mapRegion.latitude}, lng: ${location?.longitude || mapRegion.longitude} },
             map: map,
-            title: 'Test Marker',
+            title: 'Your Location',
             icon: {
               path: google.maps.SymbolPath.CIRCLE,
-              scale: 10,
-              fillColor: '#FF0000',
+              scale: 12,
+              fillColor: '#4285F4',
               fillOpacity: 1,
               strokeColor: '#FFFFFF',
-              strokeWeight: 2
-            }
+              strokeWeight: 3
+            },
+            zIndex: 1000
           });
           
           console.log('Test marker added to map');
@@ -416,6 +417,18 @@ const LiveMapScreen: React.FC = () => {
   const markerData = useMemo(() => {
     return filteredListings.map((listing) => {
       const category = categories.find(c => c.key === listing.category);
+      
+      // Calculate real distance if user location is available
+      let realDistance = listing.distance || 0;
+      if (location) {
+        realDistance = calculateDistance(
+          location.latitude,
+          location.longitude,
+          listing.coordinate.latitude,
+          listing.coordinate.longitude
+        );
+      }
+      
       return {
         position: { lat: listing.coordinate.latitude, lng: listing.coordinate.longitude },
         title: listing.title,
@@ -424,10 +437,29 @@ const LiveMapScreen: React.FC = () => {
         emoji: category?.emoji || '📍',
         color: getCategoryColor(listing.category),
         rating: listing.rating || 0,
-        distance: listing.distance || 0
+        distance: realDistance
       };
     });
-  }, [filteredListings, categories]);
+  }, [filteredListings, categories, location]);
+
+  // Get user's current location on mount
+  useEffect(() => {
+    const initializeLocation = async () => {
+      if (permissionGranted) {
+        const userLocation = await getCurrentLocation();
+        if (userLocation) {
+          setMapRegion({
+            latitude: userLocation.latitude,
+            longitude: userLocation.longitude,
+            latitudeDelta: 0.05, // Closer zoom when we have user location
+            longitudeDelta: 0.05,
+          });
+        }
+      }
+    };
+
+    initializeLocation();
+  }, [permissionGranted, getCurrentLocation]);
 
   // Send marker updates to WebView when markerData changes
   useEffect(() => {

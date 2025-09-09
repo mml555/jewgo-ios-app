@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import {
   Modal,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
+import { useLocation, calculateDistance } from '../hooks/useLocation';
 
 // Types
 interface ListingDetailParams {
@@ -55,6 +56,7 @@ const ListingDetailScreen: React.FC = () => {
   const route = useRoute();
   const navigation = useNavigation();
   const { itemId, categoryKey } = route.params as ListingDetailParams;
+  const { location } = useLocation();
 
   const [item, setItem] = useState<ListingItem | null>(null);
   const [loading, setLoading] = useState(true);
@@ -65,6 +67,19 @@ const ListingDetailScreen: React.FC = () => {
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'rating'>('newest');
   const [currentPage, setCurrentPage] = useState(1);
   const [showHoursDropdown, setShowHoursDropdown] = useState(false);
+
+  // Calculate real distance if user location is available
+  const realDistance = useMemo(() => {
+    if (location && item?.coordinate) {
+      return calculateDistance(
+        location.latitude,
+        location.longitude,
+        item.coordinate.latitude,
+        item.coordinate.longitude
+      );
+    }
+    return item?.distance || 0;
+  }, [location, item?.coordinate, item?.distance]);
 
   // Mock data generation - replace with actual API call
   const fetchItemDetails = useCallback(async () => {
@@ -84,6 +99,10 @@ const ListingDetailScreen: React.FC = () => {
         category: categoryKey || 'restaurants',
         rating: parseFloat((Math.random() * (5 - 3) + 3).toFixed(1)),
         distance: Math.random() > 0.3 ? `${(Math.random() * 10).toFixed(1)} mi` : undefined, // Simulate no location permission
+        coordinate: {
+          latitude: 40.7128 + (Math.random() - 0.5) * 0.1, // NYC area with some variation
+          longitude: -74.0060 + (Math.random() - 0.5) * 0.1,
+        },
         price: ['$', '$$', '$$$'][Math.floor(Math.random() * 3)],
         address: '123 Main Street, City, State 12345',
         phone: '(555) 123-4567',
@@ -508,7 +527,7 @@ const ListingDetailScreen: React.FC = () => {
             <View style={styles.distanceContainer}>
               <Text style={styles.distanceIcon}>📍</Text>
               <Text style={styles.distanceText}>
-                {item.distance || '10001'}
+                {realDistance ? `${realDistance.toFixed(1)}mi` : '10001'}
               </Text>
             </View>
           </View>

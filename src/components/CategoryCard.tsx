@@ -1,4 +1,4 @@
-import React, { memo, useState } from 'react';
+import React, { memo, useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { CategoryItem } from '../hooks/useCategoryData';
+import { useLocation, calculateDistance } from '../hooks/useLocation';
 
 interface CategoryCardProps {
   item: CategoryItem;
@@ -24,6 +25,20 @@ const IMAGE_HEIGHT = (CARD_WIDTH * 3) / 4; // 4:3 aspect ratio
 const CategoryCard: React.FC<CategoryCardProps> = memo(({ item, categoryKey }) => {
   const [isFavorited, setIsFavorited] = useState(false);
   const navigation = useNavigation();
+  const { location } = useLocation();
+
+  // Calculate real distance if user location is available
+  const realDistance = useMemo(() => {
+    if (location && item.coordinate) {
+      return calculateDistance(
+        location.latitude,
+        location.longitude,
+        item.coordinate.latitude,
+        item.coordinate.longitude
+      );
+    }
+    return item.distance || 0;
+  }, [location, item.coordinate, item.distance]);
 
   const handlePress = () => {
     (navigation as any).navigate('ListingDetail', {
@@ -94,7 +109,7 @@ const CategoryCard: React.FC<CategoryCardProps> = memo(({ item, categoryKey }) =
             {item.description.substring(0, 10)}
           </Text>
           <Text style={styles.additionalText} numberOfLines={1}>
-            {item.distance ? `${item.distance.toFixed(1)}mi` : item.price || ''}
+            {realDistance ? `${realDistance.toFixed(1)}mi` : item.price || ''}
           </Text>
         </View>
       </View>
