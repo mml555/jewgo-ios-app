@@ -1,97 +1,202 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# JEWGO - Jewish Community iOS App
 
-# Getting Started
+A React Native iOS application for the Jewish community, providing easy access to local Jewish businesses, services, and community resources.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+## 🏗️ Features
 
-## Step 1: Start Metro
+### Core Functionality
+- **Bottom Tab Navigation**: Home, Favorites, Specials, Notifications, Profile
+- **Search Functionality**: Debounced search with real-time filtering
+- **Category System**: 8 categories (Mikvah, Eatery, Shul, Stores, Shuk, Shtetl, Shidduch, Social)
+- **Grid Layout**: 2-column responsive grid with infinite scroll
+- **Pull-to-Refresh**: Smooth refresh functionality
+- **Detailed Views**: Comprehensive listing detail pages
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+### User Interface
+- **Custom Branding**: JEWGO logo and app icon integration
+- **Modern Design**: Clean, iOS-native interface
+- **Accessibility**: Full accessibility support with proper labels and touch targets
+- **Performance**: Optimized with React.memo, useCallback, and efficient rendering
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+### Listing Features
+- **Image Carousels**: Swipeable image galleries
+- **Reviews System**: Comprehensive review modal with sorting and pagination
+- **Hours Display**: Dynamic hours with open/closed status
+- **Contact Actions**: Call, Website, Email integration
+- **Favorites**: Heart button with persistent state
+- **Location**: Distance calculation and address display
 
-```sh
-# Using npm
-npm start
+## 🛠️ Technical Stack
 
-# OR using Yarn
-yarn start
+- **React Native 0.73**: Latest stable version
+- **TypeScript**: Full type safety
+- **React Navigation**: Tab and stack navigation
+- **React Native SVG**: Custom logo and icon components
+- **React Native Safe Area Context**: Safe area handling
+- **iOS 18.5**: Compatible with latest iOS versions
+
+## 📱 Screenshots
+
+The app features:
+- Custom JEWGO branding with green color scheme
+- Category-based browsing with horizontal scroll
+- Action buttons for Live Map, Add Category, and Filters
+- Card-based listing display with images and ratings
+- Detailed listing pages with comprehensive information
+
+## 🚀 Getting Started
+
+### Prerequisites
+- Node.js 18+
+- React Native CLI
+- Xcode 16+ (for iOS development)
+- iOS Simulator or physical iOS device
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/yourusername/jewgo-ios-app.git
+   cd jewgo-ios-app
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   cd ios && pod install && cd ..
+   ```
+
+3. **Run the app**
+   ```bash
+   npx react-native run-ios
+   ```
+
+### Development
+
+- **Start Metro bundler**: `npx react-native start`
+- **Run on iOS**: `npx react-native run-ios --simulator="iPhone 16"`
+- **Clean build**: `npx react-native run-ios --simulator="iPhone 16" --reset-cache`
+
+## 📁 Project Structure
+
+```
+src/
+├── components/          # Reusable UI components
+│   ├── ActionBar.tsx   # Action buttons (Live Map, Add Category, Filters)
+│   ├── CategoryCard.tsx # Individual listing cards
+│   ├── CategoryRail.tsx # Horizontal category scroll
+│   ├── JewgoLogo.tsx   # Custom JEWGO logo component
+│   └── TopBar.tsx      # Search bar and logo
+├── hooks/              # Custom React hooks
+│   └── useCategoryData.ts # Data fetching and pagination
+├── navigation/         # Navigation configuration
+│   ├── AppNavigator.tsx # Main stack navigator
+│   └── RootTabs.tsx    # Bottom tab navigator
+└── screens/           # Screen components
+    ├── HomeScreen.tsx  # Main home screen
+    ├── CategoryGridScreen.tsx # Category listing grid
+    ├── ListingDetailScreen.tsx # Detailed listing view
+    ├── ProfileScreen.tsx # User profile
+    └── ...            # Other screens
 ```
 
-## Step 2: Build and run your app
+## 🎨 Design System
 
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
+### Colors
+- **Primary Green**: `#74e1a0` (JEWGO logo)
+- **Light Green**: `#a5ffc6` (App icon)
+- **Dark Background**: `#292b2d` (Logo background)
+- **Background**: `#F2F2F7` (iOS system gray)
+- **Text**: `#000000` (Primary), `#666666` (Secondary)
 
-### Android
+### Typography
+- **System Font**: iOS San Francisco font family
+- **Sizes**: 12px (small), 14px (body), 16px (large), 18px+ (headers)
 
-```sh
-# Using npm
-npm run android
+### Components
+- **Cards**: Rounded corners, subtle shadows, floating design
+- **Buttons**: Pill-shaped with proper touch targets (44px minimum)
+- **Icons**: Unicode characters and custom SVG components
 
-# OR using Yarn
-yarn android
+## 🔧 Configuration
+
+### iOS Setup
+- **Deployment Target**: iOS 13.0+
+- **Xcode Version**: 16+
+- **Simulator**: iPhone 16 (tested)
+- **App Icon**: Custom JEWGO logo integrated
+
+### Dependencies
+- `react-native-svg`: Custom logo rendering
+- `react-native-safe-area-context`: Safe area handling
+- `react-native-screens`: Navigation optimization
+- `react-native-gesture-handler`: Touch interactions
+
+## 📋 Features in Detail
+
+### Category System
+- **Mikvah**: Ritual baths and facilities
+- **Eatery**: Kosher restaurants and food
+- **Shul**: Synagogues and prayer spaces
+- **Stores**: Jewish retail and services
+- **Shuk**: Markets and shopping
+- **Shtetl**: Community centers
+- **Shidduch**: Matchmaking services
+- **Social**: Community events and groups
+
+### Search & Filtering
+- **Real-time Search**: 250ms debounced input
+- **Category Filtering**: Dynamic content based on selection
+- **Infinite Scroll**: Efficient pagination
+- **Pull-to-Refresh**: Manual data refresh
+
+### Listing Details
+- **Image Gallery**: Up to 5 swipeable images
+- **Reviews Modal**: Sortable reviews with pagination
+- **Hours Display**: Current status with weekly schedule
+- **Contact Integration**: Direct call, website, email access
+- **Location Services**: Distance calculation and mapping
+
+## 🚀 Deployment
+
+### App Store Preparation
+- App icon assets generated for all required sizes
+- Proper iOS bundle configuration
+- Accessibility compliance
+- Performance optimizations
+
+### Build Process
+```bash
+# Development build
+npx react-native run-ios
+
+# Production build (requires Xcode)
+# Open ios/JewgoAppFinal.xcworkspace in Xcode
+# Select Product > Archive for App Store submission
 ```
 
-### iOS
+## 🤝 Contributing
 
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
+## 📄 License
 
-```sh
-bundle install
-```
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-Then, and every time you update your native dependencies, run:
+## 🙏 Acknowledgments
 
-```sh
-bundle exec pod install
-```
+- React Native community for excellent documentation
+- iOS design guidelines for UI/UX inspiration
+- Jewish community for feedback and requirements
 
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
+## 📞 Support
 
-```sh
-# Using npm
-npm run ios
+For support and questions, please open an issue in the GitHub repository.
 
-# OR using Yarn
-yarn ios
-```
+---
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
-
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
-
-## Step 3: Modify your app
-
-Now that you have successfully run the app, let's make changes!
-
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
-
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
-
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
-
-## Congratulations! :tada:
-
-You've successfully run and modified your React Native App. :partying_face:
-
-### Now what?
-
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
-
-# Troubleshooting
-
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+**JEWGO** - Connecting the Jewish community, one tap at a time. 🕍
