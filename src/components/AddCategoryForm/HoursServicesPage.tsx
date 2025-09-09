@@ -138,54 +138,57 @@ const HoursServicesPage: React.FC<HoursServicesPageProps> = ({
           Tap on times to change them, or toggle days closed
         </Text>
         
-        {days.map((day) => {
-          const dayHours = formData.hours?.[day.key] || { open: '09:00', close: '17:00', closed: false };
-          
-          return (
-            <View key={day.key} style={styles.dayRow}>
-              <View style={styles.dayInfo}>
-                <Text style={styles.dayLabel}>{day.label}</Text>
-                <Switch
-                  value={!dayHours.closed}
-                  onValueChange={() => handleDayToggle(day.key)}
-                  trackColor={{ false: '#E5E5EA', true: '#74e1a0' }}
-                  thumbColor="#FFFFFF"
-                />
-              </View>
-              
-              {!dayHours.closed && (
-                <View style={styles.timeRow}>
-                  <TouchableOpacity
-                    style={styles.timeButton}
-                    onPress={() => setShowTimePicker(`${day.key}-open`)}
-                  >
-                    <Text style={styles.timeButtonText}>
-                      {formatTime(dayHours.open)}
-                    </Text>
-                  </TouchableOpacity>
-                  
-                  <Text style={styles.timeSeparator}>to</Text>
-                  
-                  <TouchableOpacity
-                    style={styles.timeButton}
-                    onPress={() => setShowTimePicker(`${day.key}-close`)}
-                  >
-                    <Text style={styles.timeButtonText}>
-                      {formatTime(dayHours.close)}
-                    </Text>
-                  </TouchableOpacity>
+        <View style={styles.hoursContainer}>
+          {days.map((day) => {
+            const dayHours = formData.hours?.[day.key] || { open: '09:00', close: '17:00', closed: false };
+            
+            return (
+              <View key={day.key} style={styles.dayRow}>
+                <View style={styles.dayInfo}>
+                  <Text style={styles.dayLabel}>{day.label}</Text>
+                  <Switch
+                    value={!dayHours.closed}
+                    onValueChange={() => handleDayToggle(day.key)}
+                    trackColor={{ false: '#E5E5EA', true: '#74e1a0' }}
+                    thumbColor="#FFFFFF"
+                    style={styles.daySwitch}
+                  />
                 </View>
-              )}
-              
-              {dayHours.closed && (
-                <Text style={styles.closedText}>Closed</Text>
-              )}
-              
-              {renderTimePicker(day.key, 'open')}
-              {renderTimePicker(day.key, 'close')}
-            </View>
-          );
-        })}
+                
+                {!dayHours.closed && (
+                  <View style={styles.timeRow}>
+                    <TouchableOpacity
+                      style={styles.timeButton}
+                      onPress={() => setShowTimePicker(`${day.key}-open`)}
+                    >
+                      <Text style={styles.timeButtonText}>
+                        {formatTime(dayHours.open)}
+                      </Text>
+                    </TouchableOpacity>
+                    
+                    <Text style={styles.timeSeparator}>to</Text>
+                    
+                    <TouchableOpacity
+                      style={styles.timeButton}
+                      onPress={() => setShowTimePicker(`${day.key}-close`)}
+                    >
+                      <Text style={styles.timeButtonText}>
+                        {formatTime(dayHours.close)}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+                
+                {dayHours.closed && (
+                  <Text style={styles.closedText}>Closed</Text>
+                )}
+                
+                {renderTimePicker(day.key, 'open')}
+                {renderTimePicker(day.key, 'close')}
+              </View>
+            );
+          })}
+        </View>
       </View>
 
       {/* Amenities */}
@@ -259,28 +262,28 @@ const styles = StyleSheet.create({
   },
   headerSection: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 20,
     paddingHorizontal: 20,
   },
   headerEmoji: {
-    fontSize: 48,
-    marginBottom: 16,
+    fontSize: 40,
+    marginBottom: 12,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '700',
     color: '#000000',
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   headerSubtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#8E8E93',
     textAlign: 'center',
-    lineHeight: 22,
+    lineHeight: 20,
   },
   section: {
-    marginBottom: 32,
+    marginBottom: 24,
   },
   sectionTitle: {
     fontSize: 18,
@@ -291,68 +294,81 @@ const styles = StyleSheet.create({
   sectionSubtitle: {
     fontSize: 14,
     color: '#8E8E93',
-    marginBottom: 16,
+    marginBottom: 12,
   },
-  dayRow: {
+  hoursContainer: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    padding: 16,
-    marginBottom: 8,
+    padding: 12,
+  },
+  dayRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F2F2F7',
   },
   dayInfo: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    flex: 1,
   },
   dayLabel: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '500',
     color: '#000000',
+    minWidth: 80,
+  },
+  daySwitch: {
+    transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }],
   },
   timeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    flex: 1,
+    justifyContent: 'flex-end',
   },
   timeButton: {
     backgroundColor: '#F2F2F7',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    minWidth: 80,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    minWidth: 60,
     alignItems: 'center',
   },
   timeButtonText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '500',
     color: '#000000',
   },
   timeSeparator: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#8E8E93',
-    marginHorizontal: 12,
+    marginHorizontal: 6,
   },
   closedText: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#FF3B30',
-    textAlign: 'center',
+    textAlign: 'right',
     fontWeight: '500',
+    flex: 1,
   },
   timePickerContainer: {
     backgroundColor: '#F8F9FA',
-    borderRadius: 8,
-    marginTop: 8,
-    paddingVertical: 8,
+    borderRadius: 6,
+    marginTop: 4,
+    paddingVertical: 6,
   },
   timePicker: {
-    maxHeight: 120,
+    maxHeight: 80,
   },
   timeSlot: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginHorizontal: 4,
-    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginHorizontal: 2,
+    borderRadius: 4,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E5E5EA',
@@ -372,15 +388,15 @@ const styles = StyleSheet.create({
   amenitiesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: 8,
   },
   amenityButton: {
     flex: 1,
     minWidth: '45%',
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    paddingVertical: 16,
-    paddingHorizontal: 12,
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#E5E5EA',
@@ -390,11 +406,11 @@ const styles = StyleSheet.create({
     borderColor: '#74e1a0',
   },
   amenityEmoji: {
-    fontSize: 20,
-    marginBottom: 8,
+    fontSize: 16,
+    marginBottom: 4,
   },
   amenityLabel: {
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: '500',
     color: '#000000',
     textAlign: 'center',
