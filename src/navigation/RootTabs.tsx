@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Vibration } from 'react-native';
 import { Keyboard } from 'react-native';
 import { Colors, Typography, Spacing, TouchTargets } from '../styles/designSystem';
+import SpecialsIcon from '../components/SpecialsIcon';
 
 // Import screens
 import HomeScreen from '../screens/HomeScreen';
@@ -20,7 +21,8 @@ const TabIcon: React.FC<{
   icon: string;
   focused: boolean;
   label: string;
-}> = ({ icon, focused, label }) => {
+  iconComponent?: React.ComponentType<{ size?: number; color?: string }>;
+}> = ({ icon, focused, label, iconComponent }) => {
   const handlePress = useCallback(() => {
     // Haptic feedback on tab press
     if (Platform.OS === 'ios') {
@@ -42,9 +44,13 @@ const TabIcon: React.FC<{
       accessibilityLabel={label}
       accessibilityHint={`Navigate to ${label} tab`}
     >
-      <Text style={[styles.tabIcon, focused && styles.tabIconFocused]}>
-        {icon}
-      </Text>
+      {iconComponent ? (
+        React.createElement(iconComponent, { size: 24, color: focused ? Colors.primary : Colors.textSecondary })
+      ) : (
+        <Text style={[styles.tabIcon, focused && styles.tabIconFocused]}>
+          {icon}
+        </Text>
+      )}
     </View>
   );
 };
@@ -58,6 +64,7 @@ function RootTabs() {
         tabBarIcon: ({ focused }) => {
           let icon: string;
           let label: string;
+          let iconComponent: React.ComponentType<{ size?: number; color?: string }> | undefined;
 
           switch (route.name) {
             case 'Home':
@@ -71,6 +78,7 @@ function RootTabs() {
             case 'Specials':
               icon = '⭐';
               label = 'Specials';
+              iconComponent = SpecialsIcon;
               break;
             case 'Notifications':
               icon = '🔔';
@@ -85,7 +93,7 @@ function RootTabs() {
               label = 'Unknown';
           }
 
-          return <TabIcon icon={icon} focused={focused} label={label} />;
+          return <TabIcon icon={icon} focused={focused} label={label} iconComponent={iconComponent} />;
         },
         tabBarLabel: ({ focused }) => (
           <Text style={[styles.tabLabel, focused && styles.tabLabelFocused]}>

@@ -101,8 +101,10 @@ jspm_packages/
 # Yarn Integrity file
 .yarn-integrity
 
-# dotenv environment variables file
-.env
+# Environment variables
+# Keep .env for development defaults, but ignore environment-specific files
+.env.local
+.env.*.local
 
 # next.js build output
 .next

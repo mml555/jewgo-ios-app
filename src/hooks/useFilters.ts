@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { FilterOptions } from '../components/FiltersModal';
 
 const defaultFilters: FilterOptions = {
-  maxDistance: 10,
+  maxDistance: 100,
   showOpenNow: false,
   minRating: 0,
   kosherLevel: 'any',
@@ -44,8 +44,8 @@ export const useFilters = (initialFilters?: Partial<FilterOptions>) => {
   const getActiveFiltersCount = useCallback(() => {
     let count = 0;
     
-    // Check distance (if not default 10)
-    if (filters.maxDistance !== 10) count++;
+    // Check distance (if not default 100)
+    if (filters.maxDistance !== 100) count++;
     
     // Check rating (if not 0)
     if (filters.minRating > 0) count++;

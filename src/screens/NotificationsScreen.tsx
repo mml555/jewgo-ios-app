@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Typography, Spacing, BorderRadius, Shadows, TouchTargets } from '../styles/designSystem';
+import EateryIcon from '../components/EateryIcon';
+import StoreIcon from '../components/StoreIcon';
+import SpecialsIcon from '../components/SpecialsIcon';
 
 const NotificationsScreen: React.FC = () => {
   const [notifications, setNotifications] = useState([
@@ -15,7 +18,8 @@ const NotificationsScreen: React.FC = () => {
     },
     {
       id: '2',
-      title: '🍽️ New Restaurant Added',
+      title: 'New Restaurant Added',
+      icon: EateryIcon,
       description: 'Kosher Deli & Market has been added to your area',
       time: '5 hours ago',
       isRead: false,
@@ -23,7 +27,8 @@ const NotificationsScreen: React.FC = () => {
     },
     {
       id: '3',
-      title: '⭐ Special Offer Available',
+      title: 'Special Offer Available',
+      icon: SpecialsIcon,
       description: '20% off your next meal at Kosher Deli & Market',
       time: '1 day ago',
       isRead: true,
@@ -39,7 +44,8 @@ const NotificationsScreen: React.FC = () => {
     },
     {
       id: '5',
-      title: '🛒 Grocery Delivery Available',
+      title: 'Grocery Delivery Available',
+      icon: StoreIcon,
       description: 'Kosher Grocery now offers delivery to your area',
       time: '3 days ago',
       isRead: true,
@@ -92,6 +98,15 @@ const NotificationsScreen: React.FC = () => {
       case 'education': return '📚';
       case 'service': return '🛒';
       default: return '🔔';
+    }
+  };
+
+  const getNotificationIconComponent = (type: string) => {
+    switch (type) {
+      case 'business': return StoreIcon;
+      case 'service': return StoreIcon;
+      case 'offer': return SpecialsIcon;
+      default: return null;
     }
   };
 
@@ -148,7 +163,14 @@ const NotificationsScreen: React.FC = () => {
                 activeOpacity={0.7}
               >
                 <View style={styles.notificationIcon}>
-                  <Text style={styles.iconText}>{getNotificationIcon(notification.type)}</Text>
+                  {(() => {
+                    const IconComponent = getNotificationIconComponent(notification.type);
+                    return IconComponent ? (
+                      <IconComponent size={24} color="#666" />
+                    ) : (
+                      <Text style={styles.iconText}>{getNotificationIcon(notification.type)}</Text>
+                    );
+                  })()}
                 </View>
                 
                 <View style={styles.notificationContent}>

@@ -7,6 +7,9 @@ import {
   StyleSheet,
   Dimensions,
 } from 'react-native';
+import MikvahIcon from './MikvahIcon';
+import EateryIcon from './EateryIcon';
+import StoreIcon from './StoreIcon';
 
 interface CategoryRailProps {
   activeCategory: string;
@@ -17,13 +20,14 @@ interface Category {
   id: string;
   name: string;
   icon: string;
+  iconComponent?: React.ComponentType<{ size?: number; color?: string }>;
 }
 
 const CATEGORIES: Category[] = [
-  { id: 'mikvah', name: 'Mikvah', icon: '🛁' },
-  { id: 'eatery', name: 'Eatery', icon: '🍽️' },
+  { id: 'mikvah', name: 'Mikvah', icon: '🛁', iconComponent: MikvahIcon },
+  { id: 'eatery', name: 'Eatery', icon: '🍽️', iconComponent: EateryIcon },
   { id: 'shul', name: 'Shul', icon: '🕍' },
-  { id: 'stores', name: 'Stores', icon: '🏪' },
+  { id: 'stores', name: 'Stores', icon: '🏪', iconComponent: StoreIcon },
   { id: 'shuk', name: 'Shuk', icon: '🥬' },
   { id: 'shtetl', name: 'Shtetl', icon: '🏘️' },
   { id: 'shidduch', name: 'Shidduch', icon: '💕' },
@@ -58,7 +62,13 @@ const CategoryRail: React.FC<CategoryRailProps> = ({
           accessibilityHint={`Filter content by ${item.name}`}
           accessibilityState={{ selected: isActive }}
         >
-          <Text style={styles.chipIcon}>{item.icon}</Text>
+          <View style={styles.iconContainer}>
+            {item.iconComponent ? (
+              <item.iconComponent size={24} color={isActive ? '#FFFFFF' : '#666666'} />
+            ) : (
+              <Text style={styles.chipIcon}>{item.icon}</Text>
+            )}
+          </View>
           <Text style={[
             styles.chipText,
             isActive && styles.chipTextActive,
@@ -126,7 +136,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     borderRadius: 16,
     backgroundColor: '#F2F2F7',
-    minHeight: 44, // Accessibility: minimum touch target
+    minHeight: 60, // Accessibility: minimum touch target with larger icons
+    justifyContent: 'center',
   },
   chipActive: {
     backgroundColor: '#000000',
@@ -139,12 +150,20 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  iconContainer: {
+    height: 24,
+    width: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
   chipIcon: {
-    fontSize: 20,
-    marginBottom: 2,
+    fontSize: 24,
+    lineHeight: 24,
+    textAlign: 'center',
   },
   chipText: {
-    fontSize: 11,
+    fontSize: 14,
     fontWeight: '500',
     color: '#8E8E93',
     textAlign: 'center',

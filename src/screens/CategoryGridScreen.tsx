@@ -7,10 +7,14 @@ import {
   ActivityIndicator,
   RefreshControl,
   Alert,
+  TouchableOpacity,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { useCategoryData, CategoryItem } from '../hooks/useCategoryData';
 import { useFilters } from '../hooks/useFilters';
+import { useLocation, calculateDistance } from '../hooks/useLocation';
 import CategoryCard from '../components/CategoryCard';
+import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../styles/designSystem';
 
 interface CategoryGridScreenProps {
   categoryKey: string;
@@ -21,7 +25,9 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
   categoryKey,
   query = '',
 }) => {
+  const navigation = useNavigation();
   const { filters } = useFilters();
+  const { location, requestLocationPermission, permissionGranted } = useLocation();
   
   const {
     data,
@@ -37,37 +43,119 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
     pageSize: 20,
   });
 
-  // Apply filters to the data
+  console.log('🔥 CATEGORY GRID SCREEN - categoryKey:', categoryKey, 'data.length:', data.length);
+
+  // Handle location permission request
+  const handleLocationPermissionRequest = useCallback(async () => {
+    try {
+      const granted = await requestLocationPermission();
+      
+      if (granted) {
+        Alert.alert(
+          'Location Enabled!',
+          'You can now see distances to nearby businesses.',
+          [{ text: 'Great!' }]
+        );
+      } else {
+        Alert.alert(
+          'Location Permission Denied',
+          'To see distances to businesses, please enable location access in your device settings.',
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error) {
+      console.error('Error requesting location permission:', error);
+      Alert.alert(
+        'Error',
+        'Failed to request location permission. Please check your device settings.',
+        [{ text: 'OK' }]
+      );
+    }
+  }, [requestLocationPermission]);
+
+  // Apply filters and sorting to the data
   const filteredData = useMemo(() => {
-    return data.filter(item => {
-      // Distance filter
-      if (item.distance && item.distance > filters.maxDistance) {
-        return false;
+    console.log('🔥 FILTERING DATA - original data.length:', data.length, 'location:', !!location, 'filters:', filters);
+    const filtered = data.filter(item => {
+      // Distance filter - calculate real distance if location available
+      if (location && item.coordinate && filters.maxDistance < 100) {
+        const distance = calculateDistance(
+          location.latitude,
+          location.longitude,
+          item.coordinate.latitude,
+          item.coordinate.longitude
+        );
+        
+        // For testing: if distance is extremely large (like iOS simulator SF to NYC),
+        // don't apply distance filter to avoid filtering out all items
+        if (distance > 5000) {
+          console.log('🔥 DISTANCE TOO LARGE FOR FILTERING:', distance, 'miles - skipping distance filter');
+        } else if (distance > filters.maxDistance) {
+          console.log('🔥 FILTERED OUT BY DISTANCE:', item.name, 'distance:', distance, 'maxDistance:', filters.maxDistance);
+          return false;
+        }
       }
 
       // Rating filter
       if (filters.minRating > 0 && (!item.rating || item.rating < filters.minRating)) {
+        console.log('🔥 FILTERED OUT BY RATING:', item.name, 'rating:', item.rating, 'minRating:', filters.minRating);
         return false;
       }
 
       // Price range filter
       if (filters.priceRange !== 'any' && item.price !== filters.priceRange) {
+        console.log('🔥 FILTERED OUT BY PRICE:', item.name, 'price:', item.price, 'priceRange:', filters.priceRange);
         return false;
       }
 
       // Open now filter
       if (filters.openNow && !item.isOpen) {
+        console.log('🔥 FILTERED OUT BY OPEN NOW:', item.name, 'isOpen:', item.isOpen);
         return false;
       }
 
       // Weekend filter
       if (filters.openWeekends && !item.openWeekends) {
+        console.log('🔥 FILTERED OUT BY WEEKEND:', item.name, 'openWeekends:', item.openWeekends);
         return false;
       }
 
       return true;
     });
-  }, [data, filters]);
+
+    // Auto-sort by distance when location is available
+    if (location) {
+      console.log('🔥 SORTING BY DISTANCE - location available');
+      filtered.sort((a, b) => {
+        // If both items have coordinates, sort by distance
+        if (a.coordinate && b.coordinate) {
+          const distanceA = calculateDistance(
+            location.latitude,
+            location.longitude,
+            a.coordinate.latitude,
+            a.coordinate.longitude
+          );
+          const distanceB = calculateDistance(
+            location.latitude,
+            location.longitude,
+            b.coordinate.latitude,
+            b.coordinate.longitude
+          );
+          return distanceA - distanceB; // Sort closest first
+        }
+        
+        // If only one has coordinates, prioritize it
+        if (a.coordinate && !b.coordinate) return -1;
+        if (!a.coordinate && b.coordinate) return 1;
+        
+        // If neither has coordinates, maintain original order
+        return 0;
+      });
+    }
+
+    console.log('🔥 FILTERED AND SORTED DATA - filtered.length:', filtered.length);
+    return filtered;
+  }, [data, filters, location]);
 
   // Memoized render item to prevent unnecessary re-renders
   const renderItem = useCallback(
@@ -98,16 +186,11 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
 
   // Handle card press
   const handleCardPress = useCallback((item: CategoryItem) => {
-    Alert.alert(
-      item.title,
-      `${item.description}\n\nCategory: ${item.category}${
-        item.rating ? `\nRating: ${item.rating}` : ''
-      }${item.distance ? `\nDistance: ${item.distance}` : ''}${
-        item.price ? `\nPrice: ${item.price}` : ''
-      }`,
-      [{ text: 'OK' }]
-    );
-  }, []);
+    navigation.navigate('ListingDetail', {
+      itemId: item.id,
+      categoryKey: categoryKey,
+    });
+  }, [navigation, categoryKey]);
 
   // Handle end reached for infinite scroll
   const handleEndReached = useCallback(() => {
@@ -180,6 +263,30 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
 
   return (
     <View style={styles.container}>
+      {/* Location Permission Banner */}
+      {!location && (
+        <TouchableOpacity 
+          style={styles.locationPermissionBanner}
+          onPress={handleLocationPermissionRequest}
+          activeOpacity={0.8}
+        >
+          <View style={styles.bannerContent}>
+            <Text style={styles.bannerIcon}>📍</Text>
+            <View style={styles.bannerTextContainer}>
+              <Text style={styles.bannerTitle}>Enable Location</Text>
+              <Text style={styles.bannerSubtitle}>See distances to nearby businesses</Text>
+            </View>
+            <Text style={styles.bannerButton}>Enable</Text>
+          </View>
+        </TouchableOpacity>
+      )}
+      
+      {/* Location Enabled Indicator */}
+      {location && (
+        <View style={styles.locationIndicator}>
+          <Text style={styles.locationIndicatorText}>📍 Location enabled - showing distances</Text>
+        </View>
+      )}
       <FlatList
         data={filteredData}
         renderItem={renderItem}
@@ -210,9 +317,64 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F2F2F7',
   },
+  locationPermissionBanner: {
+    backgroundColor: Colors.primary,
+    marginHorizontal: Spacing.md,
+    marginTop: Spacing.sm,
+    marginBottom: Spacing.sm,
+    borderRadius: BorderRadius.lg,
+    ...Shadows.sm,
+    zIndex: 10, // Ensure banner is above other content
+  },
+  bannerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.md,
+  },
+  bannerIcon: {
+    fontSize: 20,
+    marginRight: Spacing.sm,
+  },
+  bannerTextContainer: {
+    flex: 1,
+  },
+  bannerTitle: {
+    ...Typography.styles.bodyLarge,
+    color: Colors.white,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  bannerSubtitle: {
+    ...Typography.styles.caption,
+    color: Colors.white,
+    opacity: 0.9,
+  },
+  bannerButton: {
+    ...Typography.styles.body,
+    color: Colors.white,
+    fontWeight: '600',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
+    borderRadius: BorderRadius.md,
+  },
+  locationIndicator: {
+    backgroundColor: '#E3F2FD',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#BBDEFB',
+    alignItems: 'center',
+  },
+  locationIndicatorText: {
+    fontSize: 12,
+    color: '#1976D2',
+    fontWeight: '500',
+  },
   listContent: {
     paddingHorizontal: 0,
-    paddingTop: 0,
+    paddingTop: Spacing.sm, // Add top padding for better spacing
     paddingBottom: 20, // Add some bottom padding to push content up
   },
   row: {

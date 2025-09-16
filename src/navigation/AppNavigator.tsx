@@ -28,7 +28,7 @@ const AppNavigator: React.FC = () => {
         component={AddCategoryScreen}
         options={{
           headerShown: false,
-          presentation: 'modal',
+          presentation: 'card',
         }}
       />
       <Stack.Screen 

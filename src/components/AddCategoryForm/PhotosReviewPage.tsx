@@ -8,257 +8,350 @@ import {
   Image,
   Alert,
 } from 'react-native';
+import { ListingFormData } from '../../screens/AddCategoryScreen';
+import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../styles/designSystem';
 
 interface PhotosReviewPageProps {
-  formData: any;
-  onFormDataChange: (data: any) => void;
+  formData: ListingFormData;
+  onFormDataChange: (data: Partial<ListingFormData>) => void;
   category: string;
+  isReviewStep?: boolean;
 }
 
 const PhotosReviewPage: React.FC<PhotosReviewPageProps> = ({
   formData,
   onFormDataChange,
   category,
+  isReviewStep = false,
 }) => {
-  const [selectedPhotos, setSelectedPhotos] = useState<string[]>(formData.photos || []);
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
-  // Mock photos for demonstration
-  const mockPhotos = [
-    'https://picsum.photos/300/200?random=1',
-    'https://picsum.photos/300/200?random=2',
-    'https://picsum.photos/300/200?random=3',
-    'https://picsum.photos/300/200?random=4',
-    'https://picsum.photos/300/200?random=5',
-    'https://picsum.photos/300/200?random=6',
-  ];
-
-  const handlePhotoSelect = useCallback((photoUrl: string) => {
-    if (selectedPhotos.includes(photoUrl)) {
-      setSelectedPhotos(prev => prev.filter(url => url !== photoUrl));
-    } else if (selectedPhotos.length < 5) {
-      setSelectedPhotos(prev => [...prev, photoUrl]);
-    } else {
-      Alert.alert('Maximum Photos', 'You can select up to 5 photos for your listing.');
-    }
+  const handleInputChange = useCallback((field: keyof ListingFormData, value: any) => {
+    onFormDataChange({ [field]: value });
     
-    onFormDataChange({ photos: selectedPhotos });
-  }, [selectedPhotos, onFormDataChange]);
+    // Clear error when user makes changes
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: '' }));
+    }
+  }, [onFormDataChange, errors]);
 
-  const handleRemovePhoto = useCallback((photoUrl: string) => {
-    const newPhotos = selectedPhotos.filter(url => url !== photoUrl);
-    setSelectedPhotos(newPhotos);
-    onFormDataChange({ photos: newPhotos });
-  }, [selectedPhotos, onFormDataChange]);
+  const validateForm = useCallback(() => {
+    const newErrors: { [key: string]: string } = {};
 
-  const formatAddress = useCallback(() => {
-    const parts = [
-      formData.address,
-      formData.city,
-      formData.state,
-      formData.zipCode,
-    ].filter(Boolean);
-    return parts.join(', ');
-  }, [formData]);
+    // For images step, validate that we have 2-5 images
+    if (!isReviewStep) {
+      if (formData.business_images.length < 2) {
+        newErrors.business_images = 'Please add at least 2 business images';
+      } else if (formData.business_images.length > 5) {
+        newErrors.business_images = 'Maximum 5 images allowed';
+      }
+    }
 
-  const formatHours = useCallback((day: string) => {
-    const hours = formData.hours?.[day];
-    if (!hours || hours.closed) return 'Closed';
-    return `${hours.open} - ${hours.close}`;
-  }, [formData.hours]);
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  }, [formData, isReviewStep]);
 
-  const getKosherLevelLabel = useCallback((level: string) => {
-    const levels: { [key: string]: string } = {
-      'regular': 'Regular Kosher',
-      'glatt': 'Glatt Kosher',
-      'chalav-yisrael': 'Chalav Yisrael',
-      'pas-yisrael': 'Pas Yisrael',
-      'not-kosher': 'Not Kosher',
-    };
-    return levels[level] || 'Regular Kosher';
-  }, []);
+  const handleNext = useCallback(() => {
+    if (validateForm()) {
+      return true;
+    }
+    return false;
+  }, [validateForm]);
 
-  const getAmenitiesList = useCallback(() => {
-    const amenities = formData.amenities || {};
-    return Object.entries(amenities)
-      .filter(([_, value]) => value)
-      .map(([key, _]) => {
-        const labels: { [key: string]: string } = {
-          'hasParking': 'Parking',
-          'hasWifi': 'WiFi',
-          'hasAccessibility': 'Accessible',
-          'hasDelivery': 'Delivery',
-          'hasTakeout': 'Takeout',
-          'hasOutdoorSeating': 'Outdoor Seating',
-        };
-        return labels[key] || key;
-      });
-  }, [formData.amenities]);
+  // Expose validation function to parent
+  React.useEffect(() => {
+    (handleNext as any).validate = validateForm;
+  }, [validateForm, handleNext]);
+
+  const handleAddImage = useCallback(() => {
+    // In a real app, this would open the image picker
+    Alert.alert(
+      'Add Image',
+      'Image picker functionality would be implemented here',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Add Sample Image', 
+          onPress: () => {
+            const sampleImages = [
+              'https://picsum.photos/400/300?random=1',
+              'https://picsum.photos/400/300?random=2',
+              'https://picsum.photos/400/300?random=3',
+              'https://picsum.photos/400/300?random=4',
+              'https://picsum.photos/400/300?random=5',
+            ];
+            
+            const availableImages = sampleImages.filter(img => 
+              !formData.business_images.includes(img)
+            );
+            
+            if (availableImages.length > 0) {
+              const randomImage = availableImages[Math.floor(Math.random() * availableImages.length)];
+              handleInputChange('business_images', [...formData.business_images, randomImage]);
+            }
+          }
+        }
+      ]
+    );
+  }, [formData.business_images, handleInputChange]);
+
+  const handleRemoveImage = useCallback((index: number) => {
+    const newImages = formData.business_images.filter((_, i) => i !== index);
+    handleInputChange('business_images', newImages);
+  }, [formData.business_images, handleInputChange]);
+
+  const renderImagesStep = () => (
+    <View style={styles.content}>
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Business Images</Text>
+        <Text style={styles.sectionDescription}>
+          Add 2-5 photos of your business (restaurant photos, food photos, etc.)
+        </Text>
+        
+        {/* Image Grid */}
+        <View style={styles.imageGrid}>
+          {formData.business_images.map((image, index) => (
+            <View key={index} style={styles.imageContainer}>
+              <Image source={{ uri: image }} style={styles.image} />
+              <TouchableOpacity
+                style={styles.removeButton}
+                onPress={() => handleRemoveImage(index)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.removeButtonText}>×</Text>
+              </TouchableOpacity>
+            </View>
+          ))}
+          
+          {/* Add Image Button */}
+          {formData.business_images.length < 5 && (
+            <TouchableOpacity style={styles.addImageButton} onPress={handleAddImage} activeOpacity={0.7}>
+              <Text style={styles.addImageText}>+</Text>
+              <Text style={styles.addImageLabel}>Add Image</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+        
+        {errors.business_images && <Text style={styles.errorText}>{errors.business_images}</Text>}
+        
+        <Text style={styles.imageCount}>
+          {formData.business_images.length}/5 images
+        </Text>
+      </View>
+    </View>
+  );
+
+  const renderReviewStep = () => (
+    <View style={styles.content}>
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Review Your Submission</Text>
+        <Text style={styles.sectionDescription}>
+          Please review all the information below before submitting your eatery listing.
+        </Text>
+        
+        {/* Business Information */}
+        <View style={styles.reviewSection}>
+          <Text style={styles.reviewSectionTitle}>Business Information</Text>
+          <View style={styles.reviewItem}>
+            <Text style={styles.reviewLabel}>Business Name:</Text>
+            <Text style={styles.reviewValue}>{formData.name}</Text>
+          </View>
+          <View style={styles.reviewItem}>
+            <Text style={styles.reviewLabel}>Address:</Text>
+            <Text style={styles.reviewValue}>{formData.address}</Text>
+          </View>
+          <View style={styles.reviewItem}>
+            <Text style={styles.reviewLabel}>Phone:</Text>
+            <Text style={styles.reviewValue}>{formData.phone}</Text>
+          </View>
+          <View style={styles.reviewItem}>
+            <Text style={styles.reviewLabel}>Listing Type:</Text>
+            <Text style={styles.reviewValue}>{formData.listing_type}</Text>
+          </View>
+          {formData.business_email && (
+            <View style={styles.reviewItem}>
+              <Text style={styles.reviewLabel}>Business Email:</Text>
+              <Text style={styles.reviewValue}>{formData.business_email}</Text>
+            </View>
+          )}
+          {formData.website && (
+            <View style={styles.reviewItem}>
+              <Text style={styles.reviewLabel}>Website:</Text>
+              <Text style={styles.reviewValue}>{formData.website}</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Owner Information (if applicable) */}
+        {formData.is_owner_submission && (
+          <View style={styles.reviewSection}>
+            <Text style={styles.reviewSectionTitle}>Owner Information</Text>
+            <View style={styles.reviewItem}>
+              <Text style={styles.reviewLabel}>Owner Name:</Text>
+              <Text style={styles.reviewValue}>{formData.owner_name}</Text>
+            </View>
+            <View style={styles.reviewItem}>
+              <Text style={styles.reviewLabel}>Owner Email:</Text>
+              <Text style={styles.reviewValue}>{formData.owner_email}</Text>
+            </View>
+            <View style={styles.reviewItem}>
+              <Text style={styles.reviewLabel}>Owner Phone:</Text>
+              <Text style={styles.reviewValue}>{formData.owner_phone}</Text>
+            </View>
+          </View>
+        )}
+
+        {/* Kosher Information */}
+        <View style={styles.reviewSection}>
+          <Text style={styles.reviewSectionTitle}>Kosher Certification</Text>
+          <View style={styles.reviewItem}>
+            <Text style={styles.reviewLabel}>Kosher Category:</Text>
+            <Text style={styles.reviewValue}>{formData.kosher_category}</Text>
+          </View>
+          <View style={styles.reviewItem}>
+            <Text style={styles.reviewLabel}>Certifying Agency:</Text>
+            <Text style={styles.reviewValue}>
+              {formData.certifying_agency === 'Other' 
+                ? formData.custom_certifying_agency 
+                : formData.certifying_agency}
+            </Text>
+          </View>
+          {formData.is_cholov_yisroel && (
+            <View style={styles.reviewItem}>
+              <Text style={styles.reviewLabel}>Cholov Yisroel:</Text>
+              <Text style={styles.reviewValue}>Yes</Text>
+            </View>
+          )}
+          {formData.is_pas_yisroel && (
+            <View style={styles.reviewItem}>
+              <Text style={styles.reviewLabel}>Pas Yisroel:</Text>
+              <Text style={styles.reviewValue}>Yes</Text>
+            </View>
+          )}
+          {formData.cholov_stam && (
+            <View style={styles.reviewItem}>
+              <Text style={styles.reviewLabel}>Cholov Stam:</Text>
+              <Text style={styles.reviewValue}>Yes</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Business Details */}
+        <View style={styles.reviewSection}>
+          <Text style={styles.reviewSectionTitle}>Business Details</Text>
+          <View style={styles.reviewItem}>
+            <Text style={styles.reviewLabel}>Short Description:</Text>
+            <Text style={styles.reviewValue}>{formData.short_description}</Text>
+          </View>
+          {formData.description && (
+            <View style={styles.reviewItem}>
+              <Text style={styles.reviewLabel}>Detailed Description:</Text>
+              <Text style={styles.reviewValue}>{formData.description}</Text>
+            </View>
+          )}
+          <View style={styles.reviewItem}>
+            <Text style={styles.reviewLabel}>Hours of Operation:</Text>
+            <Text style={styles.reviewValue}>{formData.hours_of_operation}</Text>
+          </View>
+          {formData.seating_capacity > 0 && (
+            <View style={styles.reviewItem}>
+              <Text style={styles.reviewLabel}>Seating Capacity:</Text>
+              <Text style={styles.reviewValue}>{formData.seating_capacity}</Text>
+            </View>
+          )}
+          {formData.years_in_business > 0 && (
+            <View style={styles.reviewItem}>
+              <Text style={styles.reviewLabel}>Years in Business:</Text>
+              <Text style={styles.reviewValue}>{formData.years_in_business}</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Service Options */}
+        <View style={styles.reviewSection}>
+          <Text style={styles.reviewSectionTitle}>Service Options</Text>
+          <View style={styles.reviewItem}>
+            <Text style={styles.reviewLabel}>Delivery:</Text>
+            <Text style={styles.reviewValue}>{formData.delivery_available ? 'Available' : 'Not Available'}</Text>
+          </View>
+          <View style={styles.reviewItem}>
+            <Text style={styles.reviewLabel}>Takeout:</Text>
+            <Text style={styles.reviewValue}>{formData.takeout_available ? 'Available' : 'Not Available'}</Text>
+          </View>
+          <View style={styles.reviewItem}>
+            <Text style={styles.reviewLabel}>Catering:</Text>
+            <Text style={styles.reviewValue}>{formData.catering_available ? 'Available' : 'Not Available'}</Text>
+          </View>
+        </View>
+
+        {/* Social Media Links */}
+        {(formData.google_listing_url || formData.instagram_link || formData.facebook_link || formData.tiktok_link) && (
+          <View style={styles.reviewSection}>
+            <Text style={styles.reviewSectionTitle}>Social Media Links</Text>
+            {formData.google_listing_url && (
+              <View style={styles.reviewItem}>
+                <Text style={styles.reviewLabel}>Google Maps:</Text>
+                <Text style={styles.reviewValue}>{formData.google_listing_url}</Text>
+              </View>
+            )}
+            {formData.instagram_link && (
+              <View style={styles.reviewItem}>
+                <Text style={styles.reviewLabel}>Instagram:</Text>
+                <Text style={styles.reviewValue}>{formData.instagram_link}</Text>
+              </View>
+            )}
+            {formData.facebook_link && (
+              <View style={styles.reviewItem}>
+                <Text style={styles.reviewLabel}>Facebook:</Text>
+                <Text style={styles.reviewValue}>{formData.facebook_link}</Text>
+              </View>
+            )}
+            {formData.tiktok_link && (
+              <View style={styles.reviewItem}>
+                <Text style={styles.reviewLabel}>TikTok:</Text>
+                <Text style={styles.reviewValue}>{formData.tiktok_link}</Text>
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Images */}
+        {formData.business_images.length > 0 && (
+          <View style={styles.reviewSection}>
+            <Text style={styles.reviewSectionTitle}>Business Images ({formData.business_images.length})</Text>
+            <View style={styles.reviewImageGrid}>
+              {formData.business_images.map((image, index) => (
+                <Image key={index} source={{ uri: image }} style={styles.reviewImage} />
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* Contact Preferences */}
+        <View style={styles.reviewSection}>
+          <Text style={styles.reviewSectionTitle}>Contact Preferences</Text>
+          <View style={styles.reviewItem}>
+            <Text style={styles.reviewLabel}>Preferred Contact Method:</Text>
+            <Text style={styles.reviewValue}>{formData.preferred_contact_method}</Text>
+          </View>
+          <View style={styles.reviewItem}>
+            <Text style={styles.reviewLabel}>Preferred Contact Time:</Text>
+            <Text style={styles.reviewValue}>{formData.preferred_contact_time}</Text>
+          </View>
+          {formData.contact_notes && (
+            <View style={styles.reviewItem}>
+              <Text style={styles.reviewLabel}>Contact Notes:</Text>
+              <Text style={styles.reviewValue}>{formData.contact_notes}</Text>
+            </View>
+          )}
+        </View>
+      </View>
+    </View>
+  );
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Header Section */}
-      <View style={styles.headerSection}>
-        <Text style={styles.headerEmoji}>📸</Text>
-        <Text style={styles.headerTitle}>Photos & Review</Text>
-        <Text style={styles.headerSubtitle}>
-          Add photos and review your listing
-        </Text>
-      </View>
-
-      {/* Photo Selection */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Select Photos (Optional)</Text>
-        <Text style={styles.sectionSubtitle}>
-          Choose up to 5 photos to showcase your place
-        </Text>
-        
-        <View style={styles.photoGrid}>
-          {mockPhotos.map((photoUrl, index) => (
-            <TouchableOpacity
-              key={index}
-              style={[
-                styles.photoItem,
-                selectedPhotos.includes(photoUrl) && styles.photoItemSelected,
-              ]}
-              onPress={() => handlePhotoSelect(photoUrl)}
-            >
-              <Image source={{ uri: photoUrl }} style={styles.photoImage} />
-              {selectedPhotos.includes(photoUrl) && (
-                <View style={styles.photoOverlay}>
-                  <Text style={styles.photoCheckmark}>✓</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          ))}
-        </View>
-        
-        {selectedPhotos.length > 0 && (
-          <View style={styles.selectedPhotosContainer}>
-            <Text style={styles.selectedPhotosTitle}>Selected Photos:</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {selectedPhotos.map((photoUrl, index) => (
-                <View key={index} style={styles.selectedPhotoItem}>
-                  <Image source={{ uri: photoUrl }} style={styles.selectedPhotoImage} />
-                  <TouchableOpacity
-                    style={styles.removePhotoButton}
-                    onPress={() => handleRemovePhoto(photoUrl)}
-                  >
-                    <Text style={styles.removePhotoText}>×</Text>
-                  </TouchableOpacity>
-                </View>
-              ))}
-            </ScrollView>
-          </View>
-        )}
-      </View>
-
-      {/* Review Section */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Review Your Listing</Text>
-        <Text style={styles.sectionSubtitle}>
-          Please review all information before submitting
-        </Text>
-        
-        <View style={styles.reviewCard}>
-          {/* Basic Info */}
-          <View style={styles.reviewSection}>
-            <Text style={styles.reviewSectionTitle}>Basic Information</Text>
-            <Text style={styles.reviewItem}>
-              <Text style={styles.reviewLabel}>Name:</Text> {formData.name || 'Not provided'}
-            </Text>
-            <Text style={styles.reviewItem}>
-              <Text style={styles.reviewLabel}>Category:</Text> {formData.category || 'Not provided'}
-            </Text>
-            <Text style={styles.reviewItem}>
-              <Text style={styles.reviewLabel}>Description:</Text> {formData.description || 'Not provided'}
-            </Text>
-          </View>
-
-          {/* Location */}
-          <View style={styles.reviewSection}>
-            <Text style={styles.reviewSectionTitle}>Location & Contact</Text>
-            <Text style={styles.reviewItem}>
-              <Text style={styles.reviewLabel}>Address:</Text> {formatAddress() || 'Not provided'}
-            </Text>
-            <Text style={styles.reviewItem}>
-              <Text style={styles.reviewLabel}>Phone:</Text> {formData.phone || 'Not provided'}
-            </Text>
-            <Text style={styles.reviewItem}>
-              <Text style={styles.reviewLabel}>Email:</Text> {formData.email || 'Not provided'}
-            </Text>
-            <Text style={styles.reviewItem}>
-              <Text style={styles.reviewLabel}>Website:</Text> {formData.website || 'Not provided'}
-            </Text>
-          </View>
-
-          {/* Hours */}
-          <View style={styles.reviewSection}>
-            <Text style={styles.reviewSectionTitle}>Operating Hours</Text>
-            {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map((day) => (
-              <Text key={day} style={styles.reviewItem}>
-                <Text style={styles.reviewLabel}>{day.charAt(0).toUpperCase() + day.slice(1)}:</Text> {formatHours(day)}
-              </Text>
-            ))}
-          </View>
-
-          {/* Amenities */}
-          <View style={styles.reviewSection}>
-            <Text style={styles.reviewSectionTitle}>Amenities</Text>
-            <Text style={styles.reviewItem}>
-              {getAmenitiesList().length > 0 ? getAmenitiesList().join(', ') : 'None selected'}
-            </Text>
-          </View>
-
-          {/* Kosher & Pricing */}
-          <View style={styles.reviewSection}>
-            <Text style={styles.reviewSectionTitle}>Kosher & Pricing</Text>
-            <Text style={styles.reviewItem}>
-              <Text style={styles.reviewLabel}>Kosher Level:</Text> {getKosherLevelLabel(formData.kosherLevel)}
-            </Text>
-            <Text style={styles.reviewItem}>
-              <Text style={styles.reviewLabel}>Price Range:</Text> {formData.priceRange || 'Not provided'}
-            </Text>
-            {formData.specialFeatures?.length > 0 && (
-              <Text style={styles.reviewItem}>
-                <Text style={styles.reviewLabel}>Special Features:</Text> {formData.specialFeatures.join(', ')}
-              </Text>
-            )}
-          </View>
-
-          {/* Photos */}
-          <View style={styles.reviewSection}>
-            <Text style={styles.reviewSectionTitle}>Photos</Text>
-            <Text style={styles.reviewItem}>
-              {selectedPhotos.length} photo{selectedPhotos.length !== 1 ? 's' : ''} selected
-            </Text>
-          </View>
-        </View>
-      </View>
-
-      {/* Final Tips */}
-      <View style={styles.tipsSection}>
-        <Text style={styles.tipsTitle}>🎉 Almost Done!</Text>
-        <View style={styles.tipItem}>
-          <Text style={styles.tipBullet}>•</Text>
-          <Text style={styles.tipText}>
-            Your listing will be reviewed and published within 24 hours
-          </Text>
-        </View>
-        <View style={styles.tipItem}>
-          <Text style={styles.tipBullet}>•</Text>
-          <Text style={styles.tipText}>
-            You can edit your listing anytime from your profile
-          </Text>
-        </View>
-        <View style={styles.tipItem}>
-          <Text style={styles.tipBullet}>•</Text>
-          <Text style={styles.tipText}>
-            Thank you for contributing to the Jewish community!
-          </Text>
-        </View>
-      </View>
-
-      <View style={styles.bottomSpacer} />
+      {isReviewStep ? renderReviewStep() : renderImagesStep()}
     </ScrollView>
   );
 };
@@ -266,171 +359,155 @@ const PhotosReviewPage: React.FC<PhotosReviewPageProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 20,
+    backgroundColor: '#F5F5F7',
   },
-  headerSection: {
-    alignItems: 'center',
-    marginBottom: 32,
-    paddingHorizontal: 20,
-  },
-  headerEmoji: {
-    fontSize: 48,
-    marginBottom: 16,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#000000',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    color: '#8E8E93',
-    textAlign: 'center',
-    lineHeight: 22,
+  content: {
+    padding: Spacing.md,
+    paddingBottom: Spacing.xl,
   },
   section: {
-    marginBottom: 32,
+    marginBottom: 20,
+    backgroundColor: Colors.white,
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000000',
-    marginBottom: 8,
+    ...Typography.styles.h3,
+    marginBottom: Spacing.sm,
+    color: Colors.textPrimary,
   },
-  sectionSubtitle: {
-    fontSize: 14,
-    color: '#8E8E93',
-    marginBottom: 16,
+  sectionDescription: {
+    ...Typography.styles.body,
+    color: Colors.textSecondary,
+    marginBottom: Spacing.lg,
+    lineHeight: 20,
   },
-  photoGrid: {
+  imageGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 16,
+    gap: Spacing.sm,
   },
-  photoItem: {
-    width: '30%',
+  imageContainer: {
+    position: 'relative',
+    width: '48%',
     aspectRatio: 1,
-    borderRadius: 8,
-    overflow: 'hidden',
-    borderWidth: 2,
-    borderColor: '#E5E5EA',
   },
-  photoItemSelected: {
-    borderColor: '#74e1a0',
-  },
-  photoImage: {
+  image: {
     width: '100%',
     height: '100%',
+    borderRadius: 16,
   },
-  photoOverlay: {
+  removeButton: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(116, 225, 160, 0.8)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  photoCheckmark: {
-    fontSize: 24,
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-  },
-  selectedPhotosContainer: {
-    backgroundColor: '#F8F9FA',
-    borderRadius: 8,
-    padding: 12,
-  },
-  selectedPhotosTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#000000',
-    marginBottom: 8,
-  },
-  selectedPhotoItem: {
-    position: 'relative',
-    marginRight: 8,
-  },
-  selectedPhotoImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 8,
-  },
-  removePhotoButton: {
-    position: 'absolute',
-    top: -4,
-    right: -4,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    top: 8,
+    right: 8,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: '#FF3B30',
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  removePhotoText: {
-    fontSize: 12,
-    color: '#FFFFFF',
+  removeButtonText: {
+    color: Colors.white,
+    fontSize: 16,
     fontWeight: 'bold',
   },
-  reviewCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
+  addImageButton: {
+    width: '48%',
+    aspectRatio: 1,
+    borderWidth: 3,
+    borderColor: '#74e1a0',
+    borderStyle: 'dashed',
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F0FDF4',
+    minHeight: 120,
+    shadowColor: '#74e1a0',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  addImageText: {
+    fontSize: 32,
+    color: '#74e1a0',
+    marginBottom: Spacing.xs,
+  },
+  addImageLabel: {
+    ...Typography.styles.body,
+    color: '#74e1a0',
+    fontWeight: '600',
+  },
+  errorText: {
+    ...Typography.styles.caption,
+    color: Colors.error,
+    marginTop: Spacing.sm,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  imageCount: {
+    ...Typography.styles.caption,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    marginTop: Spacing.md,
   },
   reviewSection: {
-    marginBottom: 20,
+    backgroundColor: Colors.surface,
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+    marginBottom: Spacing.md,
+    ...Shadows.sm,
   },
   reviewSectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000000',
-    marginBottom: 8,
+    ...Typography.styles.h4,
+    marginBottom: Spacing.md,
+    color: Colors.textPrimary,
   },
   reviewItem: {
-    fontSize: 14,
-    color: '#666666',
-    marginBottom: 4,
-    lineHeight: 20,
+    flexDirection: 'row',
+    marginBottom: Spacing.sm,
   },
   reviewLabel: {
-    fontWeight: '500',
-    color: '#000000',
-  },
-  tipsSection: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginTop: 8,
-  },
-  tipsTitle: {
-    fontSize: 16,
+    ...Typography.styles.body,
     fontWeight: '600',
-    color: '#000000',
-    marginBottom: 12,
+    color: Colors.textPrimary,
+    width: '40%',
   },
-  tipItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 8,
-  },
-  tipBullet: {
-    fontSize: 16,
-    color: '#74e1a0',
-    marginRight: 8,
-    marginTop: 2,
-  },
-  tipText: {
+  reviewValue: {
+    ...Typography.styles.body,
+    color: Colors.textSecondary,
     flex: 1,
-    fontSize: 14,
-    color: '#666666',
-    lineHeight: 20,
   },
-  bottomSpacer: {
-    height: 40,
+  reviewImageGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.sm,
+  },
+  reviewImage: {
+    width: 80,
+    height: 80,
+    borderRadius: BorderRadius.sm,
   },
 });
 

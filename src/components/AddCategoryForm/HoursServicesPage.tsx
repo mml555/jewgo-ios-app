@@ -1,16 +1,23 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
+  TextInput,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
   Switch,
 } from 'react-native';
+import { ListingFormData } from '../../screens/AddCategoryScreen';
+import { Colors, Typography, Spacing, BorderRadius, Shadows, TouchTargets } from '../../styles/designSystem';
+import BusinessHoursSelector, { BusinessHoursData, DayHours } from '../BusinessHoursSelector';
+import { useResponsiveDimensions, getResponsiveLayout } from '../../utils/deviceAdaptation';
+import { KeyboardManager } from '../../utils/keyboardManager';
+import { hapticButtonPress } from '../../utils/hapticFeedback';
 
 interface HoursServicesPageProps {
-  formData: any;
-  onFormDataChange: (data: any) => void;
+  formData: ListingFormData;
+  onFormDataChange: (data: Partial<ListingFormData>) => void;
   category: string;
 }
 
@@ -19,238 +26,509 @@ const HoursServicesPage: React.FC<HoursServicesPageProps> = ({
   onFormDataChange,
   category,
 }) => {
-  const [showTimePicker, setShowTimePicker] = useState<string | null>(null);
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  
+  // Responsive design hooks
+  const dimensions = useResponsiveDimensions();
+  const responsiveLayout = getResponsiveLayout();
 
-  const days = [
-    { key: 'monday', label: 'Monday' },
-    { key: 'tuesday', label: 'Tuesday' },
-    { key: 'wednesday', label: 'Wednesday' },
-    { key: 'thursday', label: 'Thursday' },
-    { key: 'friday', label: 'Friday' },
-    { key: 'saturday', label: 'Saturday' },
-    { key: 'sunday', label: 'Sunday' },
-  ];
-
-  const timeSlots = [
-    '06:00', '06:30', '07:00', '07:30', '08:00', '08:30', '09:00', '09:30',
-    '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30',
-    '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30',
-    '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '21:30',
-    '22:00', '22:30', '23:00', '23:30', '00:00',
-  ];
-
-  const handleDayToggle = useCallback((dayKey: string) => {
-    const currentHours = formData.hours || {};
-    const dayHours = currentHours[dayKey] || { open: '09:00', close: '17:00', closed: false };
+  const handleInputChange = useCallback((field: keyof ListingFormData, value: string | boolean | number) => {
+    onFormDataChange({ [field]: value });
     
-    onFormDataChange({
-      hours: {
-        ...currentHours,
-        [dayKey]: {
-          ...dayHours,
-          closed: !dayHours.closed,
-        },
-      },
-    });
-  }, [formData.hours, onFormDataChange]);
+    // Clear error when user starts typing
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: '' }));
+    }
+  }, [onFormDataChange, errors]);
 
-  const handleTimeChange = useCallback((dayKey: string, timeType: 'open' | 'close', time: string) => {
-    const currentHours = formData.hours || {};
-    const dayHours = currentHours[dayKey] || { open: '09:00', close: '17:00', closed: false };
+  const handleInputFocus = useCallback(() => {
+    // Dismiss keyboard when switching between inputs for better UX
+    if (dimensions.isSmallScreen) {
+      KeyboardManager.dismiss();
+    }
+  }, [dimensions.isSmallScreen]);
+
+  // Convert legacy business_hours array to BusinessHoursData format
+  const convertToBusinessHoursData = useCallback((businessHours: Array<{
+    day: string;
+    openTime: string;
+    closeTime: string;
+    isClosed: boolean;
+  }>): BusinessHoursData => {
+    const hoursData: BusinessHoursData = {};
     
-    onFormDataChange({
-      hours: {
-        ...currentHours,
-        [dayKey]: {
-          ...dayHours,
-          [timeType]: time,
-        },
-      },
+    businessHours.forEach(dayHour => {
+      // Convert 12-hour format to 24-hour format for internal use
+      const convertTo24Hour = (time12h: string): string => {
+        if (!time12h) return '';
+        
+        const [time, period] = time12h.split(' ');
+        const [hours, minutes] = time.split(':');
+        let hour24 = parseInt(hours);
+        
+        if (period === 'PM' && hour24 !== 12) {
+          hour24 += 12;
+        } else if (period === 'AM' && hour24 === 12) {
+          hour24 = 0;
+        }
+        
+        return `${hour24.toString().padStart(2, '0')}:${minutes}`;
+      };
+      
+      hoursData[dayHour.day] = {
+        day: dayHour.day,
+        isOpen: !dayHour.isClosed,
+        openTime: convertTo24Hour(dayHour.openTime),
+        closeTime: convertTo24Hour(dayHour.closeTime),
+        isNextDay: false, // Default to false, can be enhanced later
+      };
     });
-  }, [formData.hours, onFormDataChange]);
-
-  const handleAmenityToggle = useCallback((amenityKey: string) => {
-    const currentAmenities = formData.amenities || {};
-    onFormDataChange({
-      amenities: {
-        ...currentAmenities,
-        [amenityKey]: !currentAmenities[amenityKey],
-      },
-    });
-  }, [formData.amenities, onFormDataChange]);
-
-  const formatTime = useCallback((time: string) => {
-    const [hours, minutes] = time.split(':');
-    const hour = parseInt(hours);
-    const ampm = hour >= 12 ? 'PM' : 'AM';
-    const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
-    return `${displayHour}:${minutes} ${ampm}`;
+    
+    return hoursData;
   }, []);
 
-  const renderTimePicker = (dayKey: string, timeType: 'open' | 'close') => {
-    if (showTimePicker !== `${dayKey}-${timeType}`) return null;
+  // Convert BusinessHoursData back to legacy format
+  const convertFromBusinessHoursData = useCallback((hoursData: BusinessHoursData): Array<{
+    day: string;
+    openTime: string;
+    closeTime: string;
+    isClosed: boolean;
+  }> => {
+    const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    
+    return dayNames.map(day => {
+      const dayHours = hoursData[day];
+      
+      // Convert 24-hour format to 12-hour format for legacy compatibility
+      const convertTo12Hour = (time24h: string): string => {
+        if (!time24h) return '';
+        
+        const [hours, minutes] = time24h.split(':');
+        let hour12 = parseInt(hours);
+        const period = hour12 >= 12 ? 'PM' : 'AM';
+        
+        if (hour12 === 0) {
+          hour12 = 12;
+        } else if (hour12 > 12) {
+          hour12 -= 12;
+        }
+        
+        return `${hour12}:${minutes} ${period}`;
+      };
+      
+      return {
+        day,
+        openTime: dayHours?.isOpen ? convertTo12Hour(dayHours.openTime) : '',
+        closeTime: dayHours?.isOpen ? convertTo12Hour(dayHours.closeTime) : '',
+        isClosed: !dayHours?.isOpen,
+      };
+    });
+  }, []);
 
-    const currentTime = formData.hours?.[dayKey]?.[timeType] || '09:00';
+  // Get current business hours in new format
+  const currentBusinessHours = useMemo(() => {
+    return convertToBusinessHoursData(formData.business_hours);
+  }, [formData.business_hours, convertToBusinessHoursData]);
 
-    return (
-      <View style={styles.timePickerContainer}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.timePicker}>
-          {timeSlots.map((time) => (
-            <TouchableOpacity
-              key={time}
-              style={[
-                styles.timeSlot,
-                currentTime === time && styles.timeSlotActive,
-              ]}
-              onPress={() => {
-                handleTimeChange(dayKey, timeType, time);
-                setShowTimePicker(null);
-              }}
-            >
-              <Text style={[
-                styles.timeSlotText,
-                currentTime === time && styles.timeSlotTextActive,
-              ]}>
-                {formatTime(time)}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
+  const handleHoursChange = useCallback((hoursData: BusinessHoursData) => {
+    const legacyHours = convertFromBusinessHoursData(hoursData);
+    onFormDataChange({ business_hours: legacyHours });
+    
+    // Clear error when user changes hours
+    if (errors.hours_of_operation) {
+      setErrors(prev => ({ ...prev, hours_of_operation: '' }));
+    }
+  }, [onFormDataChange, errors, convertFromBusinessHoursData]);
+
+  const validateForm = useCallback(() => {
+    const newErrors: { [key: string]: string } = {};
+
+    // Required fields validation
+    if (!formData.short_description.trim()) {
+      newErrors.short_description = 'Short description is required';
+    } else if (formData.short_description.trim().length > 80) {
+      newErrors.short_description = 'Short description must be 80 characters or less';
+    }
+
+    // Check if at least one day has hours set
+    const hasValidHours = formData.business_hours.some(day => 
+      !day.isClosed && day.openTime && day.closeTime
     );
-  };
+    
+    if (!hasValidHours) {
+      newErrors.hours_of_operation = 'Please set business hours for at least one day';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  }, [formData]);
+
+  const handleNext = useCallback(() => {
+    if (validateForm()) {
+      return true;
+    }
+    return false;
+  }, [validateForm]);
+
+  // Expose validation function to parent
+  React.useEffect(() => {
+    (handleNext as any).validate = validateForm;
+  }, [validateForm, handleNext]);
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Header Section */}
-      <View style={styles.headerSection}>
-        <Text style={styles.headerEmoji}>🕒</Text>
-        <Text style={styles.headerTitle}>Hours & Services</Text>
-        <Text style={styles.headerSubtitle}>
-          Set your operating hours and available amenities
-        </Text>
-      </View>
-
-      {/* Operating Hours */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Operating Hours</Text>
-        <Text style={styles.sectionSubtitle}>
-          Tap on times to change them, or toggle days closed
-        </Text>
-        
-        <View style={styles.hoursContainer}>
-          {days.map((day) => {
-            const dayHours = formData.hours?.[day.key] || { open: '09:00', close: '17:00', closed: false };
-            
-            return (
-              <View key={day.key} style={styles.dayRow}>
-                <View style={styles.dayInfo}>
-                  <Text style={styles.dayLabel}>{day.label}</Text>
-                  <Switch
-                    value={!dayHours.closed}
-                    onValueChange={() => handleDayToggle(day.key)}
-                    trackColor={{ false: '#E5E5EA', true: '#74e1a0' }}
-                    thumbColor="#FFFFFF"
-                    style={styles.daySwitch}
-                  />
-                </View>
-                
-                {!dayHours.closed && (
-                  <View style={styles.timeRow}>
-                    <TouchableOpacity
-                      style={styles.timeButton}
-                      onPress={() => setShowTimePicker(`${day.key}-open`)}
-                    >
-                      <Text style={styles.timeButtonText}>
-                        {formatTime(dayHours.open)}
-                      </Text>
-                    </TouchableOpacity>
-                    
-                    <Text style={styles.timeSeparator}>to</Text>
-                    
-                    <TouchableOpacity
-                      style={styles.timeButton}
-                      onPress={() => setShowTimePicker(`${day.key}-close`)}
-                    >
-                      <Text style={styles.timeButtonText}>
-                        {formatTime(dayHours.close)}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-                
-                {dayHours.closed && (
-                  <Text style={styles.closedText}>Closed</Text>
-                )}
-                
-                {renderTimePicker(day.key, 'open')}
-                {renderTimePicker(day.key, 'close')}
-              </View>
-            );
-          })}
-        </View>
-      </View>
-
-      {/* Amenities */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Amenities & Services</Text>
-        <Text style={styles.sectionSubtitle}>
-          Select all amenities you offer
-        </Text>
-        
-        <View style={styles.amenitiesGrid}>
-          {[
-            { key: 'hasParking', label: 'Parking Available', emoji: '🅿️' },
-            { key: 'hasWifi', label: 'Free WiFi', emoji: '📶' },
-            { key: 'hasAccessibility', label: 'Wheelchair Accessible', emoji: '♿' },
-            { key: 'hasDelivery', label: 'Delivery Available', emoji: '🚚' },
-            { key: 'hasTakeout', label: 'Takeout Available', emoji: '🥡' },
-            { key: 'hasOutdoorSeating', label: 'Outdoor Seating', emoji: '🌳' },
-          ].map((amenity) => (
-            <TouchableOpacity
-              key={amenity.key}
+    <ScrollView 
+      style={styles.container} 
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="interactive"
+    >
+      <View style={[
+        styles.content,
+        { 
+          paddingHorizontal: responsiveLayout.containerPadding,
+          paddingVertical: responsiveLayout.formSpacing,
+        }
+      ]}>
+        {/* Business Descriptions */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Business Descriptions</Text>
+          
+          {/* Short Description */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Short Description * (max 80 characters)</Text>
+            <TextInput
               style={[
-                styles.amenityButton,
-                formData.amenities?.[amenity.key] && styles.amenityButtonActive,
+                styles.input, 
+                styles.textArea, 
+                errors.short_description && styles.inputError,
+                { minHeight: responsiveLayout.inputHeight * 2 }
               ]}
-              onPress={() => handleAmenityToggle(amenity.key)}
-            >
-              <Text style={styles.amenityEmoji}>{amenity.emoji}</Text>
-              <Text style={[
-                styles.amenityLabel,
-                formData.amenities?.[amenity.key] && styles.amenityLabelActive,
-              ]}>
-                {amenity.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
+              value={formData.short_description}
+              onChangeText={(value) => handleInputChange('short_description', value)}
+              onFocus={handleInputFocus}
+              placeholder="Brief description of your business"
+              placeholderTextColor={Colors.gray400}
+              multiline
+              maxLength={80}
+              returnKeyType="done"
+              blurOnSubmit={true}
+            />
+            <Text style={styles.characterCount}>
+              {formData.short_description.length}/80 characters
+            </Text>
+            {errors.short_description && <Text style={styles.errorText}>{errors.short_description}</Text>}
+          </View>
+
+          {/* Detailed Description */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Detailed Description (max 2000 characters)</Text>
+            <TextInput
+              style={[
+                styles.input, 
+                styles.textArea,
+                { minHeight: responsiveLayout.inputHeight * 3 }
+              ]}
+              value={formData.description}
+              onChangeText={(value) => handleInputChange('description', value)}
+              onFocus={handleInputFocus}
+              placeholder="Detailed description of your business, menu, specialties, etc."
+              placeholderTextColor={Colors.gray400}
+              multiline
+              maxLength={2000}
+              returnKeyType="done"
+              blurOnSubmit={true}
+            />
+            <Text style={styles.characterCount}>
+              {formData.description.length}/2000 characters
+            </Text>
+          </View>
+        </View>
+
+        {/* Business Hours */}
+        <View style={[styles.section, styles.hoursSection]}>
+          <BusinessHoursSelector
+            hours={currentBusinessHours}
+            onHoursChange={handleHoursChange}
+            errors={errors.hours_of_operation ? { general: errors.hours_of_operation } : {}}
+            enableRealTimeValidation={true}
+          />
+        </View>
+
+        {/* Business Details */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Business Details</Text>
+          
+          {/* Seating Capacity */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Seating Capacity</Text>
+            <TextInput
+              style={styles.input}
+              value={formData.seating_capacity ? formData.seating_capacity.toString() : ''}
+              onChangeText={(value) => handleInputChange('seating_capacity', parseInt(value) || 0)}
+              placeholder="Number of seats"
+              placeholderTextColor={Colors.gray400}
+              keyboardType="numeric"
+            />
+          </View>
+
+          {/* Years in Business */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Years in Business</Text>
+            <TextInput
+              style={styles.input}
+              value={formData.years_in_business ? formData.years_in_business.toString() : ''}
+              onChangeText={(value) => handleInputChange('years_in_business', parseInt(value) || 0)}
+              placeholder="Number of years operating"
+              placeholderTextColor={Colors.gray400}
+              keyboardType="numeric"
+            />
+          </View>
+
+          {/* Business License */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Business License Number</Text>
+            <TextInput
+              style={styles.input}
+              value={formData.business_license}
+              onChangeText={(value) => handleInputChange('business_license', value)}
+              placeholder="Business license number"
+              placeholderTextColor={Colors.gray400}
+            />
+          </View>
+
+          {/* Tax ID */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Tax ID Number</Text>
+            <TextInput
+              style={styles.input}
+              value={formData.tax_id}
+              onChangeText={(value) => handleInputChange('tax_id', value)}
+              placeholder="Tax ID number"
+              placeholderTextColor={Colors.gray400}
+            />
+          </View>
+        </View>
+
+        {/* Service Options */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Service Options</Text>
+          
+          <TouchableOpacity
+            style={[
+              styles.checkboxContainer,
+              { minHeight: TouchTargets.minimum }
+            ]}
+            onPress={() => {
+              hapticButtonPress();
+              handleInputChange('delivery_available', !formData.delivery_available);
+            }}
+            activeOpacity={0.7}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: formData.delivery_available }}
+            accessibilityLabel="Delivery available"
+          >
+            <View style={[
+              styles.checkbox,
+              formData.delivery_available && styles.checkboxChecked
+            ]}>
+              {formData.delivery_available && (
+                <Text style={styles.checkmark}>✓</Text>
+              )}
+            </View>
+            <Text style={styles.checkboxLabel}>Delivery Available</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.checkboxContainer,
+              { minHeight: TouchTargets.minimum }
+            ]}
+            onPress={() => {
+              hapticButtonPress();
+              handleInputChange('takeout_available', !formData.takeout_available);
+            }}
+            activeOpacity={0.7}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: formData.takeout_available }}
+            accessibilityLabel="Takeout available"
+          >
+            <View style={[
+              styles.checkbox,
+              formData.takeout_available && styles.checkboxChecked
+            ]}>
+              {formData.takeout_available && (
+                <Text style={styles.checkmark}>✓</Text>
+              )}
+            </View>
+            <Text style={styles.checkboxLabel}>Takeout Available</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.checkboxContainer,
+              { minHeight: TouchTargets.minimum }
+            ]}
+            onPress={() => {
+              hapticButtonPress();
+              handleInputChange('catering_available', !formData.catering_available);
+            }}
+            activeOpacity={0.7}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: formData.catering_available }}
+            accessibilityLabel="Catering available"
+          >
+            <View style={[
+              styles.checkbox,
+              formData.catering_available && styles.checkboxChecked
+            ]}>
+              {formData.catering_available && (
+                <Text style={styles.checkmark}>✓</Text>
+              )}
+            </View>
+            <Text style={styles.checkboxLabel}>Catering Available</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Social Media Links */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Social Media Links</Text>
+          
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Google Maps/Google My Business URL</Text>
+            <TextInput
+              style={styles.input}
+              value={formData.google_listing_url}
+              onChangeText={(value) => handleInputChange('google_listing_url', value)}
+              placeholder="https://maps.google.com/..."
+              placeholderTextColor={Colors.gray400}
+              keyboardType="url"
+              autoCapitalize="none"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Instagram Profile URL</Text>
+            <TextInput
+              style={styles.input}
+              value={formData.instagram_link}
+              onChangeText={(value) => handleInputChange('instagram_link', value)}
+              placeholder="https://instagram.com/..."
+              placeholderTextColor={Colors.gray400}
+              keyboardType="url"
+              autoCapitalize="none"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Facebook Page URL</Text>
+            <TextInput
+              style={styles.input}
+              value={formData.facebook_link}
+              onChangeText={(value) => handleInputChange('facebook_link', value)}
+              placeholder="https://facebook.com/..."
+              placeholderTextColor={Colors.gray400}
+              keyboardType="url"
+              autoCapitalize="none"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>TikTok Profile URL</Text>
+            <TextInput
+              style={styles.input}
+              value={formData.tiktok_link}
+              onChangeText={(value) => handleInputChange('tiktok_link', value)}
+              placeholder="https://tiktok.com/@..."
+              placeholderTextColor={Colors.gray400}
+              keyboardType="url"
+              autoCapitalize="none"
+            />
+          </View>
+        </View>
+
+        {/* Contact Preferences */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Contact Preferences (Optional)</Text>
+          
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Preferred Contact Method</Text>
+            <View style={styles.optionContainer}>
+              {['Email', 'Phone', 'Text', 'Any'].map((method) => (
+                <TouchableOpacity
+                  key={method}
+                  style={[
+                    styles.optionButton,
+                    formData.preferred_contact_method === method && styles.optionButtonSelected,
+                    { minHeight: TouchTargets.minimum }
+                  ]}
+                  onPress={() => {
+                    hapticButtonPress();
+                    handleInputChange('preferred_contact_method', method);
+                  }}
+                  activeOpacity={0.7}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: formData.preferred_contact_method === method }}
+                  accessibilityLabel={`Preferred contact method: ${method}`}
+                >
+                  <Text
+                    style={[
+                      styles.optionText,
+                      formData.preferred_contact_method === method && styles.optionTextSelected,
+                    ]}
+                  >
+                    {method}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Preferred Contact Time</Text>
+            <View style={styles.optionContainer}>
+              {['Morning', 'Afternoon', 'Evening'].map((time) => (
+                <TouchableOpacity
+                  key={time}
+                  style={[
+                    styles.optionButton,
+                    formData.preferred_contact_time === time && styles.optionButtonSelected,
+                    { minHeight: TouchTargets.minimum }
+                  ]}
+                  onPress={() => {
+                    hapticButtonPress();
+                    handleInputChange('preferred_contact_time', time);
+                  }}
+                  activeOpacity={0.7}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: formData.preferred_contact_time === time }}
+                  accessibilityLabel={`Preferred contact time: ${time}`}
+                >
+                  <Text
+                    style={[
+                      styles.optionText,
+                      formData.preferred_contact_time === time && styles.optionTextSelected,
+                    ]}
+                  >
+                    {time}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Additional Contact Notes</Text>
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              value={formData.contact_notes}
+              onChangeText={(value) => handleInputChange('contact_notes', value)}
+              placeholder="Any additional contact information or preferences"
+              placeholderTextColor={Colors.gray400}
+              multiline
+            />
+          </View>
         </View>
       </View>
-
-      {/* Tips Section */}
-      <View style={styles.tipsSection}>
-        <Text style={styles.tipsTitle}>💡 Hours & Services Tips</Text>
-        <View style={styles.tipItem}>
-          <Text style={styles.tipBullet}>•</Text>
-          <Text style={styles.tipText}>
-            Be accurate with your hours - customers rely on this info
-          </Text>
-        </View>
-        <View style={styles.tipItem}>
-          <Text style={styles.tipBullet}>•</Text>
-          <Text style={styles.tipText}>
-            Consider Shabbat hours for Friday/Saturday
-          </Text>
-        </View>
-        <View style={styles.tipItem}>
-          <Text style={styles.tipBullet}>•</Text>
-          <Text style={styles.tipText}>
-            Highlight amenities that make you stand out
-          </Text>
-        </View>
-      </View>
-
-      <View style={styles.bottomSpacer} />
     </ScrollView>
   );
 };
@@ -258,197 +536,185 @@ const HoursServicesPage: React.FC<HoursServicesPageProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 20,
+    backgroundColor: '#F5F5F7',
   },
-  headerSection: {
-    alignItems: 'center',
-    marginBottom: 20,
-    paddingHorizontal: 20,
-  },
-  headerEmoji: {
-    fontSize: 40,
-    marginBottom: 12,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#000000',
-    textAlign: 'center',
-    marginBottom: 6,
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    color: '#8E8E93',
-    textAlign: 'center',
-    lineHeight: 20,
+  content: {
+    paddingBottom: Spacing.xl,
   },
   section: {
-    marginBottom: 24,
+    marginBottom: 20,
+    backgroundColor: Colors.white,
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  hoursSection: {
+    minHeight: 450, // Ensure enough space for the hours selector
+    paddingBottom: 20, // Extra padding for better spacing
   },
   sectionTitle: {
-    fontSize: 18,
+    ...Typography.styles.h3,
+    marginBottom: Spacing.md,
+    color: Colors.textPrimary,
+  },
+  inputGroup: {
+    marginBottom: Spacing.md,
+  },
+  label: {
+    ...Typography.styles.body,
     fontWeight: '600',
-    color: '#000000',
-    marginBottom: 8,
+    marginBottom: Spacing.xs,
+    color: Colors.textPrimary,
   },
-  sectionSubtitle: {
-    fontSize: 14,
-    color: '#8E8E93',
-    marginBottom: 12,
-  },
-  hoursContainer: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 12,
-  },
-  dayRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 8,
-    paddingHorizontal: 4,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F2F2F7',
-  },
-  dayInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  dayLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#000000',
-    minWidth: 80,
-  },
-  daySwitch: {
-    transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }],
-  },
-  timeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  timeButton: {
-    backgroundColor: '#F2F2F7',
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    minWidth: 60,
-    alignItems: 'center',
-  },
-  timeButtonText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#000000',
-  },
-  timeSeparator: {
-    fontSize: 12,
-    color: '#8E8E93',
-    marginHorizontal: 6,
-  },
-  closedText: {
-    fontSize: 12,
-    color: '#FF3B30',
-    textAlign: 'right',
-    fontWeight: '500',
-    flex: 1,
-  },
-  timePickerContainer: {
-    backgroundColor: '#F8F9FA',
-    borderRadius: 6,
-    marginTop: 4,
-    paddingVertical: 6,
-  },
-  timePicker: {
-    maxHeight: 80,
-  },
-  timeSlot: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    marginHorizontal: 2,
-    borderRadius: 4,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
+  input: {
+    ...Typography.styles.body,
+    borderWidth: 2,
     borderColor: '#E5E5EA',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: '#F8F9FA',
+    color: Colors.textPrimary,
+    minHeight: TouchTargets.minimum,
+    fontSize: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  timeSlotActive: {
-    backgroundColor: '#74e1a0',
-    borderColor: '#74e1a0',
+  textArea: {
+    minHeight: 100,
+    textAlignVertical: 'top',
+    paddingTop: 12,
   },
-  timeSlotText: {
-    fontSize: 12,
-    color: '#000000',
+  inputError: {
+    borderColor: Colors.error,
+  },
+  errorText: {
+    ...Typography.styles.caption,
+    color: Colors.error,
+    marginTop: Spacing.xs,
+    fontSize: 14,
     fontWeight: '500',
   },
-  timeSlotTextActive: {
-    color: '#FFFFFF',
+  characterCount: {
+    ...Typography.styles.caption,
+    color: Colors.textSecondary,
+    textAlign: 'right',
+    marginTop: Spacing.xs,
   },
-  amenitiesGrid: {
+  switchContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginBottom: 8,
+    minHeight: 48,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    marginHorizontal: 0,
+  },
+  switchLabel: {
+    ...Typography.styles.body,
+    flex: 1,
+    marginRight: 12,
+    color: Colors.textPrimary,
+    fontSize: 14,
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginBottom: 8,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    marginHorizontal: 0,
+  },
+  checkbox: {
+    width: 28, // Slightly larger for better touch target
+    height: 28,
+    borderWidth: 2,
+    borderColor: '#E5E5EA',
+    borderRadius: 6,
+    backgroundColor: Colors.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  checkboxChecked: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  checkmark: {
+    color: Colors.white,
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  checkboxLabel: {
+    ...Typography.styles.body,
+    flex: 1,
+    color: Colors.textPrimary,
+    fontSize: 14,
+  },
+  optionContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: Spacing.sm,
   },
-  amenityButton: {
-    flex: 1,
-    minWidth: '45%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    alignItems: 'center',
-    borderWidth: 1,
+  optionButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 2,
     borderColor: '#E5E5EA',
+    backgroundColor: '#F8F9FA',
+    minWidth: 80,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  amenityButtonActive: {
+  optionButtonSelected: {
     backgroundColor: '#74e1a0',
     borderColor: '#74e1a0',
+    shadowColor: '#74e1a0',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
-  amenityEmoji: {
-    fontSize: 16,
-    marginBottom: 4,
-  },
-  amenityLabel: {
-    fontSize: 10,
-    fontWeight: '500',
-    color: '#000000',
+  optionText: {
+    ...Typography.styles.body,
+    color: Colors.textPrimary,
     textAlign: 'center',
-  },
-  amenityLabelActive: {
-    color: '#FFFFFF',
-  },
-  tipsSection: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginTop: 8,
-  },
-  tipsTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000000',
-    marginBottom: 12,
-  },
-  tipItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 8,
-  },
-  tipBullet: {
-    fontSize: 16,
-    color: '#74e1a0',
-    marginRight: 8,
-    marginTop: 2,
-  },
-  tipText: {
-    flex: 1,
     fontSize: 14,
-    color: '#666666',
-    lineHeight: 20,
+    fontWeight: '500',
   },
-  bottomSpacer: {
-    height: 40,
+  optionTextSelected: {
+    color: Colors.white,
+    fontWeight: '600',
   },
 });
 

@@ -9,6 +9,7 @@ import {
   Switch,
   Alert,
 } from 'react-native';
+import { Spacing, Shadows } from '../styles/designSystem';
 
 export interface FilterOptions {
   // Distance filters
@@ -483,19 +484,20 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   kosherButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
+    paddingVertical: 4, // Even thinner pill
+    paddingHorizontal: Spacing.sm, // Less horizontal padding
+    borderRadius: 25, // Pill shape like listing page buttons
     backgroundColor: '#F2F2F7',
     borderWidth: 1,
     borderColor: '#E5E5EA',
+    ...Shadows.sm,
   },
   kosherButtonActive: {
     backgroundColor: '#74e1a0',
     borderColor: '#74e1a0',
   },
   kosherButtonText: {
-    fontSize: 14,
+    fontSize: 12, // Smaller text
     color: '#666666',
     fontWeight: '500',
   },
@@ -508,18 +510,19 @@ const styles = StyleSheet.create({
   },
   priceButton: {
     flex: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingVertical: 4, // Even thinner pill
+    paddingHorizontal: Spacing.xs, // Less horizontal padding
     marginHorizontal: 2,
-    borderRadius: 8,
+    borderRadius: 25, // Pill shape like listing page buttons
     backgroundColor: '#F2F2F7',
     alignItems: 'center',
+    ...Shadows.sm,
   },
   priceButtonActive: {
     backgroundColor: '#74e1a0',
   },
   priceButtonText: {
-    fontSize: 14,
+    fontSize: 12, // Smaller text
     color: '#666666',
     fontWeight: '500',
   },
@@ -533,19 +536,20 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   sortButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
+    paddingVertical: 4, // Even thinner pill
+    paddingHorizontal: Spacing.sm, // Less horizontal padding
+    borderRadius: 25, // Pill shape like listing page buttons
     backgroundColor: '#F2F2F7',
     borderWidth: 1,
     borderColor: '#E5E5EA',
+    ...Shadows.sm,
   },
   sortButtonActive: {
     backgroundColor: '#74e1a0',
     borderColor: '#74e1a0',
   },
   sortButtonText: {
-    fontSize: 14,
+    fontSize: 12, // Smaller text
     color: '#666666',
     fontWeight: '500',
   },
@@ -558,18 +562,19 @@ const styles = StyleSheet.create({
   },
   sortOrderButton: {
     flex: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingVertical: 4, // Even thinner pill
+    paddingHorizontal: Spacing.xs, // Less horizontal padding
     marginHorizontal: 4,
-    borderRadius: 8,
+    borderRadius: 25, // Pill shape like listing page buttons
     backgroundColor: '#F2F2F7',
     alignItems: 'center',
+    ...Shadows.sm,
   },
   sortOrderButtonActive: {
     backgroundColor: '#74e1a0',
   },
   sortOrderButtonText: {
-    fontSize: 14,
+    fontSize: 12, // Smaller text
     color: '#666666',
     fontWeight: '500',
   },
@@ -600,25 +605,29 @@ const styles = StyleSheet.create({
   },
   resetButton: {
     flex: 1,
-    paddingVertical: 14,
-    borderRadius: 12,
+    paddingVertical: 6, // Even thinner pill
+    paddingHorizontal: Spacing.xs, // Minimal horizontal padding
+    borderRadius: 25, // Pill shape like listing page buttons
     backgroundColor: '#F2F2F7',
     alignItems: 'center',
+    ...Shadows.sm,
   },
   resetButtonText: {
-    fontSize: 16,
+    fontSize: 14, // Smaller text
     color: '#666666',
     fontWeight: '600',
   },
   applyButton: {
     flex: 2,
-    paddingVertical: 14,
-    borderRadius: 12,
+    paddingVertical: 6, // Even thinner pill
+    paddingHorizontal: Spacing.xs, // Minimal horizontal padding
+    borderRadius: 25, // Pill shape like listing page buttons
     backgroundColor: '#74e1a0',
     alignItems: 'center',
+    ...Shadows.sm,
   },
   applyButtonText: {
-    fontSize: 16,
+    fontSize: 14, // Smaller text
     color: '#FFFFFF',
     fontWeight: '600',
   },

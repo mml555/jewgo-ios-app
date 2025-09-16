@@ -5,10 +5,12 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
   Image,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import MapIcon from '../components/MapIcon';
+import SpecialsIcon from '../components/SpecialsIcon';
 import { Colors, Typography, Spacing, BorderRadius, Shadows, TouchTargets } from '../styles/designSystem';
 
 const ProfileScreen: React.FC = () => {
@@ -72,7 +74,10 @@ const ProfileScreen: React.FC = () => {
           </View>
           <Text style={styles.name}>{user.name}</Text>
           <Text style={styles.email}>{user.email}</Text>
-          <Text style={styles.location}>📍 {user.location}</Text>
+          <View style={styles.locationContainer}>
+            <MapIcon size={24} color="#666" />
+            <Text style={styles.location}>{user.location}</Text>
+          </View>
           <Text style={styles.memberSince}>Member since {user.memberSince}</Text>
         </View>
 
@@ -99,7 +104,7 @@ const ProfileScreen: React.FC = () => {
             <Text style={styles.quickActionText}>Favorites</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.quickActionButton} onPress={handleReviews}>
-            <Text style={styles.quickActionIcon}>⭐</Text>
+            <SpecialsIcon size={24} color="#666" />
             <Text style={styles.quickActionText}>Reviews</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.quickActionButton} onPress={handleEditProfile}>
@@ -236,10 +241,15 @@ const styles = StyleSheet.create({
     color: '#666666',
     marginBottom: 4,
   },
+  locationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
   location: {
     fontSize: 14,
     color: '#666666',
-    marginBottom: 4,
+    marginLeft: 4,
   },
   memberSince: {
     fontSize: 14,
@@ -348,9 +358,9 @@ const styles = StyleSheet.create({
   },
   logoutButton: {
     backgroundColor: Colors.error,
-    borderRadius: BorderRadius.lg,
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.xl,
+    borderRadius: 25, // Pill shape like listing page buttons
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
     alignItems: 'center',
     marginHorizontal: Spacing.md,
     marginBottom: Spacing.xl,

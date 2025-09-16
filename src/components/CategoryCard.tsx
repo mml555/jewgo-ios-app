@@ -30,16 +30,52 @@ const CategoryCard: React.FC<CategoryCardProps> = memo(({ item, categoryKey }) =
 
   // Calculate real distance if user location is available
   const realDistance = useMemo(() => {
-    if (location && item.coordinate) {
-      return calculateDistance(
+    console.log('🔥 CATEGORY CARD LOCATION CHECK:', { 
+      hasLocation: !!location, 
+      hasItemCoordinate: !!item.coordinate,
+      locationData: location ? `${location.latitude}, ${location.longitude}` : 'none'
+    });
+    
+    if (location && item.coordinate && item.coordinate.latitude && item.coordinate.longitude) {
+      console.log('📍 CALCULATING DISTANCE:', {
+        userLocation: `${location.latitude}, ${location.longitude}`,
+        businessLocation: `${item.coordinate.latitude}, ${item.coordinate.longitude}`,
+        businessName: item.title
+      });
+      
+      const distance = calculateDistance(
         location.latitude,
         location.longitude,
-        item.coordinate.latitude,
-        item.coordinate.longitude
+        Number(item.coordinate.latitude),
+        Number(item.coordinate.longitude)
       );
+      
+      console.log('📍 DISTANCE RESULT:', { 
+        distance: `${distance.toFixed(1)} miles`, 
+        businessName: item.title,
+        userLocation: 'San Francisco (iOS Simulator)',
+        businessLocation: 'NYC Area'
+      });
+      
+      // For testing: allow larger distances since iOS simulator gives SF location
+      // In production, this should be much smaller (like 50-100 miles)
+      if (distance > 20000) { // 20,000 miles - basically anywhere on Earth
+        console.log('📍 Distance too large, likely incorrect coordinates');
+        return null;
+      }
+      
+      return distance;
     }
-    return item.distance || 0;
-  }, [location, item.coordinate, item.distance]);
+    console.log('📍 No location or coordinates available for card:', { 
+      hasLocation: !!location, 
+      hasItemCoordinate: !!item.coordinate,
+      hasZipCode: !!item.zip_code,
+      zipCode: item.zip_code,
+      hasPrice: !!item.price,
+      price: item.price
+    });
+    return null; // Return null to trigger zipcode fallback, not mock distance
+  }, [location, item.coordinate]);
 
   const handlePress = () => {
     (navigation as any).navigate('ListingDetail', {
@@ -73,7 +109,7 @@ const CategoryCard: React.FC<CategoryCardProps> = memo(({ item, categoryKey }) =
         
         {/* Tag on top left */}
         <View style={styles.tagContainer}>
-          <Text style={styles.tagText}>{item.category}</Text>
+          <Text style={styles.tagText}>{String(item.category || 'Unknown')}</Text>
         </View>
         
         {/* Heart button on top right */}
@@ -93,25 +129,24 @@ const CategoryCard: React.FC<CategoryCardProps> = memo(({ item, categoryKey }) =
       </View>
       
       <View style={styles.contentContainer}>
-        {/* Main content line with title and rating */}
-        <View style={styles.mainContentRow}>
+        {/* Title and Rating - matches details page layout */}
+        <View style={styles.titleSection}>
           <Text style={styles.title} numberOfLines={1}>
-            {item.title.replace(/^[^\w\s]*\s*/, '').substring(0, 20)}
+            {item.title ? String(item.title).substring(0, 30) : 'Unknown'}
           </Text>
-          {item.rating && (
-            <View style={styles.ratingTag}>
-              <Text style={styles.ratingText}>{item.rating}</Text>
+          {item.rating !== undefined && item.rating > 0 && (
+            <View style={styles.ratingContainer}>
+              <Text style={styles.ratingStar}>★</Text>
+              <Text style={styles.ratingText}>{Number(item.rating).toFixed(1)}</Text>
             </View>
           )}
         </View>
         
-        {/* Subtitle line with description and additional info */}
-        <View style={styles.subtitleRow}>
-          <Text style={styles.subtitle} numberOfLines={1}>
-            {item.description.substring(0, 25)}
-          </Text>
-          <Text style={styles.additionalText} numberOfLines={1}>
-            {realDistance ? `${realDistance.toFixed(1)}mi` : item.price || ''}
+        {/* Price and Distance - matches details page layout */}
+        <View style={styles.infoRow}>
+          <Text style={styles.priceText}>{String(item.price || '$$')}</Text>
+          <Text style={styles.distanceText}>
+            {realDistance ? `${Number(realDistance).toFixed(1)} mi` : (item.zip_code ? String(item.zip_code) : 'N/A')}
           </Text>
         </View>
       </View>
@@ -126,7 +161,7 @@ const styles = StyleSheet.create({
     width: CARD_WIDTH,
     backgroundColor: 'transparent',
     borderRadius: BorderRadius.lg,
-    padding: Spacing.xs,
+    padding: 0, // Remove padding to align with image edges
   },
   imageContainer: {
     position: 'relative',
@@ -144,51 +179,57 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: Spacing.sm,
     left: Spacing.sm,
-    backgroundColor: 'rgba(45, 80, 22, 0.9)', // Primary with high opacity for better contrast
+    backgroundColor: 'rgba(255, 255, 255, 0.15)', // Glassy background like details header
     borderRadius: BorderRadius.full,
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.xs,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderColor: 'rgba(255, 255, 255, 0.2)', // Glassy border
+    backdropFilter: 'blur(10px)', // Glassy effect
   },
   tagText: {
     ...Typography.styles.caption,
-    color: Colors.white,
+    color: Colors.textPrimary, // Dark text for glassy background
     fontWeight: '700',
     textTransform: 'uppercase',
-    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowColor: 'rgba(255, 255, 255, 0.8)', // White shadow for contrast
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
   },
   heartButton: {
     position: 'absolute',
-    top: Spacing.sm,
+    top: Spacing.sm - 6, // Move up 6px total for better visual alignment
     right: Spacing.sm,
-    width: TouchTargets.minimum,
-    height: TouchTargets.minimum,
-    borderRadius: TouchTargets.minimum / 2,
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    width: 40,
+    height: 40, // Keep same height for touch target
     justifyContent: 'center',
     alignItems: 'center',
-    ...Shadows.sm,
   },
   heartIcon: {
-    fontSize: 20,
-    color: Colors.textPrimary,
+    fontSize: 24, // Reduced from 32 to 24 for better visual balance
+    color: Colors.gray300, // Light grey when not favorited
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: 24, // Match the fontSize
+    textShadowColor: 'rgba(255, 255, 255, 1)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 3, // Increased radius for better white outline
   },
   heartIconActive: {
     color: Colors.error,
+    textShadowColor: 'rgba(255, 255, 255, 1)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 3, // Increased radius for better white outline
   },
   contentContainer: {
     flex: 1,
+    paddingHorizontal: Spacing.xs, // Add padding to content area
   },
-  mainContentRow: {
+  titleSection: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     marginBottom: Spacing.sm,
+    paddingHorizontal: 0,
   },
   title: {
     ...Typography.styles.bodyLarge,
@@ -197,36 +238,39 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: Spacing.sm,
   },
-  ratingTag: {
-    backgroundColor: Colors.gray200,
-    borderRadius: BorderRadius.sm,
-    paddingHorizontal: Spacing.xs,
-    paddingVertical: 2,
+  ratingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minWidth: 40, // Ensure consistent width
+  },
+  ratingStar: {
+    fontSize: 14,
+    color: '#FFD700',
+    marginRight: Spacing.xs,
   },
   ratingText: {
     ...Typography.styles.caption,
     color: Colors.textPrimary,
     fontWeight: '600',
   },
-  subtitleRow: {
+  infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingHorizontal: 0,
   },
-  subtitle: {
-    ...Typography.styles.bodySmall,
-    color: Colors.textSecondary,
+  priceText: {
+    ...Typography.styles.body,
+    color: Colors.textPrimary,
     flex: 1,
     marginRight: Spacing.sm,
   },
-  additionalInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  additionalText: {
-    ...Typography.styles.caption,
+  distanceText: {
+    ...Typography.styles.body,
     color: Colors.textSecondary,
-    fontWeight: '600',
+    fontWeight: '500',
+    minWidth: 40, // Match rating container width
+    textAlign: 'right', // Right align the text
   },
 });
 

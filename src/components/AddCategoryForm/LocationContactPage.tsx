@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
+import MapIcon from '../MapIcon';
 
 interface LocationContactPageProps {
   formData: any;
@@ -102,7 +103,9 @@ const LocationContactPage: React.FC<LocationContactPageProps> = ({
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       {/* Header Section */}
       <View style={styles.headerSection}>
-        <Text style={styles.headerEmoji}>📍</Text>
+        <View style={styles.headerEmojiContainer}>
+          <MapIcon size={24} color="#333" />
+        </View>
         <Text style={styles.headerTitle}>Location & Contact</Text>
         <Text style={styles.headerSubtitle}>
           Help customers find and reach you
@@ -262,6 +265,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 32,
     paddingHorizontal: 20,
+  },
+  headerEmojiContainer: {
+    marginBottom: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerEmoji: {
     fontSize: 48,

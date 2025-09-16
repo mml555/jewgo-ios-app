@@ -2,14 +2,18 @@ import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
+  TextInput,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Switch,
 } from 'react-native';
+import { ListingFormData } from '../../screens/AddCategoryScreen';
+import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../styles/designSystem';
 
 interface KosherPricingPageProps {
-  formData: any;
-  onFormDataChange: (data: any) => void;
+  formData: ListingFormData;
+  onFormDataChange: (data: Partial<ListingFormData>) => void;
   category: string;
 }
 
@@ -18,187 +22,212 @@ const KosherPricingPage: React.FC<KosherPricingPageProps> = ({
   onFormDataChange,
   category,
 }) => {
-  const kosherLevels = [
-    { key: 'regular', label: 'Regular Kosher', description: 'Standard kosher certification', emoji: '✅' },
-    { key: 'glatt', label: 'Glatt Kosher', description: 'Glatt kosher certification', emoji: '🥩' },
-    { key: 'chalav-yisrael', label: 'Chalav Yisrael', description: 'Chalav Yisrael dairy products', emoji: '🥛' },
-    { key: 'pas-yisrael', label: 'Pas Yisrael', description: 'Pas Yisrael bread products', emoji: '🍞' },
-    { key: 'not-kosher', label: 'Not Kosher', description: 'No kosher certification', emoji: '❌' },
-  ];
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
-  const priceRanges = [
-    { key: '$', label: '$', description: 'Budget-friendly', emoji: '💰' },
-    { key: '$$', label: '$$', description: 'Moderate pricing', emoji: '💵' },
-    { key: '$$$', label: '$$$', description: 'Upscale pricing', emoji: '💎' },
-    { key: '$$$$', label: '$$$$', description: 'Premium pricing', emoji: '👑' },
-  ];
-
-  const specialFeatures = [
-    { key: 'family-friendly', label: 'Family Friendly', emoji: '👨‍👩‍👧‍👦' },
-    { key: 'date-night', label: 'Date Night Spot', emoji: '💕' },
-    { key: 'business-meetings', label: 'Business Meetings', emoji: '💼' },
-    { key: 'group-events', label: 'Group Events', emoji: '🎉' },
-    { key: 'outdoor-dining', label: 'Outdoor Dining', emoji: '🌳' },
-    { key: 'live-music', label: 'Live Music', emoji: '🎵' },
-    { key: 'happy-hour', label: 'Happy Hour', emoji: '🍻' },
-    { key: 'late-night', label: 'Late Night', emoji: '🌙' },
-    { key: 'brunch', label: 'Brunch', emoji: '🥞' },
-    { key: 'desserts', label: 'Desserts', emoji: '🍰' },
-    { key: 'coffee', label: 'Coffee & Tea', emoji: '☕' },
-    { key: 'catering', label: 'Catering', emoji: '🍽️' },
-  ];
-
-  const handleKosherLevelSelect = useCallback((level: string) => {
-    onFormDataChange({ kosherLevel: level });
-  }, [onFormDataChange]);
-
-  const handlePriceRangeSelect = useCallback((range: string) => {
-    onFormDataChange({ priceRange: range });
-  }, [onFormDataChange]);
-
-  const handleSpecialFeatureToggle = useCallback((feature: string) => {
-    const currentFeatures = formData.specialFeatures || [];
-    const newFeatures = currentFeatures.includes(feature)
-      ? currentFeatures.filter((f: string) => f !== feature)
-      : [...currentFeatures, feature];
+  const handleInputChange = useCallback((field: keyof ListingFormData, value: string | boolean) => {
+    onFormDataChange({ [field]: value });
     
-    onFormDataChange({ specialFeatures: newFeatures });
-  }, [formData.specialFeatures, onFormDataChange]);
+    // Clear error when user starts typing
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: '' }));
+    }
+  }, [onFormDataChange, errors]);
+
+  const validateForm = useCallback(() => {
+    const newErrors: { [key: string]: string } = {};
+
+    // Required fields validation
+    if (!formData.kosher_category) {
+      newErrors.kosher_category = 'Please select a kosher category';
+    }
+
+    if (!formData.certifying_agency.trim()) {
+      newErrors.certifying_agency = 'Certifying agency is required';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  }, [formData]);
+
+  const handleNext = useCallback(() => {
+    if (validateForm()) {
+      return true;
+    }
+    return false;
+  }, [validateForm]);
+
+  // Expose validation function to parent
+  React.useEffect(() => {
+    (handleNext as any).validate = validateForm;
+  }, [validateForm, handleNext]);
+
+  const kosherCategories = [
+    { key: 'Meat', label: 'Meat' },
+    { key: 'Dairy', label: 'Dairy' },
+    { key: 'Pareve', label: 'Pareve' },
+  ];
+
+  const certifyingAgencies = [
+    'ORB (Orthodox Rabbinical Board)',
+    'Kosher Miami',
+    'OU (Orthodox Union)',
+    'OK (Organized Kashrut)',
+    'Star-K',
+    'CRC (Chicago Rabbinical Council)',
+    'Kof-K',
+    'Other',
+  ];
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Header Section */}
-      <View style={styles.headerSection}>
-        <Text style={styles.headerEmoji}>🥘</Text>
-        <Text style={styles.headerTitle}>Kosher & Pricing</Text>
-        <Text style={styles.headerSubtitle}>
-          Set your kosher level and pricing information
-        </Text>
-      </View>
-
-      {/* Kosher Level */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Kosher Level *</Text>
-        <Text style={styles.sectionSubtitle}>
-          Select the appropriate kosher certification level
-        </Text>
-        
-        <View style={styles.kosherGrid}>
-          {kosherLevels.map((level) => (
-            <TouchableOpacity
-              key={level.key}
-              style={[
-                styles.kosherButton,
-                formData.kosherLevel === level.key && styles.kosherButtonActive,
-              ]}
-              onPress={() => handleKosherLevelSelect(level.key)}
-            >
-              <Text style={styles.kosherEmoji}>{level.emoji}</Text>
-              <Text style={[
-                styles.kosherLabel,
-                formData.kosherLevel === level.key && styles.kosherLabelActive,
-              ]}>
-                {level.label}
-              </Text>
-              <Text style={[
-                styles.kosherDescription,
-                formData.kosherLevel === level.key && styles.kosherDescriptionActive,
-              ]}>
-                {level.description}
-              </Text>
-            </TouchableOpacity>
-          ))}
+      <View style={styles.content}>
+        {/* Kosher Category */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Kosher Category</Text>
+          <View style={styles.optionContainer}>
+            {kosherCategories.map((category) => (
+              <TouchableOpacity
+                key={category.key}
+                style={[
+                  styles.optionButton,
+                  formData.kosher_category === category.key && styles.optionButtonSelected,
+                ]}
+                onPress={() => handleInputChange('kosher_category', category.key)}
+                activeOpacity={0.7}
+              >
+                <Text
+                  style={[
+                    styles.optionText,
+                    formData.kosher_category === category.key && styles.optionTextSelected,
+                  ]}
+                >
+                  {category.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          {errors.kosher_category && <Text style={styles.errorText}>{errors.kosher_category}</Text>}
         </View>
-      </View>
 
-      {/* Price Range */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Price Range *</Text>
-        <Text style={styles.sectionSubtitle}>
-          Select the general price range for your services
-        </Text>
-        
-        <View style={styles.priceGrid}>
-          {priceRanges.map((range) => (
-            <TouchableOpacity
-              key={range.key}
-              style={[
-                styles.priceButton,
-                formData.priceRange === range.key && styles.priceButtonActive,
-              ]}
-              onPress={() => handlePriceRangeSelect(range.key)}
-            >
-              <Text style={styles.priceEmoji}>{range.emoji}</Text>
-              <Text style={[
-                styles.priceLabel,
-                formData.priceRange === range.key && styles.priceLabelActive,
-              ]}>
-                {range.label}
-              </Text>
-              <Text style={[
-                styles.priceDescription,
-                formData.priceRange === range.key && styles.priceDescriptionActive,
-              ]}>
-                {range.description}
-              </Text>
-            </TouchableOpacity>
-          ))}
+        {/* Certifying Agency */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Certifying Agency</Text>
+          <View style={styles.optionContainer}>
+            {certifyingAgencies.map((agency) => (
+              <TouchableOpacity
+                key={agency}
+                style={[
+                  styles.optionButton,
+                  formData.certifying_agency === agency && styles.optionButtonSelected,
+                ]}
+                onPress={() => handleInputChange('certifying_agency', agency)}
+                activeOpacity={0.7}
+              >
+                <Text
+                  style={[
+                    styles.optionText,
+                    formData.certifying_agency === agency && styles.optionTextSelected,
+                  ]}
+                >
+                  {agency}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          {errors.certifying_agency && <Text style={styles.errorText}>{errors.certifying_agency}</Text>}
         </View>
-      </View>
 
-      {/* Special Features */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Special Features</Text>
-        <Text style={styles.sectionSubtitle}>
-          Select features that make your place special (optional)
-        </Text>
-        
-        <View style={styles.featuresGrid}>
-          {specialFeatures.map((feature) => (
+        {/* Custom Certifying Agency */}
+        {formData.certifying_agency === 'Other' && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Custom Certifying Agency</Text>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Agency Name</Text>
+              <TextInput
+                style={styles.input}
+                value={formData.custom_certifying_agency}
+                onChangeText={(value) => handleInputChange('custom_certifying_agency', value)}
+                placeholder="Enter certifying agency name"
+                placeholderTextColor={Colors.gray400}
+              />
+            </View>
+          </View>
+        )}
+
+        {/* Conditional Kosher Details */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Additional Kosher Details</Text>
+          
+          {/* Cholov Yisroel (for dairy establishments) */}
+          {formData.kosher_category === 'Dairy' && (
             <TouchableOpacity
-              key={feature.key}
-              style={[
-                styles.featureButton,
-                formData.specialFeatures?.includes(feature.key) && styles.featureButtonActive,
-              ]}
-              onPress={() => handleSpecialFeatureToggle(feature.key)}
+              style={styles.checkboxContainer}
+              onPress={() => handleInputChange('is_cholov_yisroel', !formData.is_cholov_yisroel)}
+              activeOpacity={0.7}
             >
-              <Text style={styles.featureEmoji}>{feature.emoji}</Text>
-              <Text style={[
-                styles.featureLabel,
-                formData.specialFeatures?.includes(feature.key) && styles.featureLabelActive,
+              <View style={[
+                styles.checkbox,
+                formData.is_cholov_yisroel && styles.checkboxChecked
               ]}>
-                {feature.label}
-              </Text>
+                {formData.is_cholov_yisroel && (
+                  <Text style={styles.checkmark}>✓</Text>
+                )}
+              </View>
+              <Text style={styles.checkboxLabel}>Cholov Yisroel</Text>
             </TouchableOpacity>
-          ))}
-        </View>
-      </View>
+          )}
 
-      {/* Tips Section */}
-      <View style={styles.tipsSection}>
-        <Text style={styles.tipsTitle}>💡 Kosher & Pricing Tips</Text>
-        <View style={styles.tipItem}>
-          <Text style={styles.tipBullet}>•</Text>
-          <Text style={styles.tipText}>
-            Be accurate about your kosher certification level
+          {/* Pas Yisroel (for meat/pareve establishments) */}
+          {(formData.kosher_category === 'Meat' || formData.kosher_category === 'Pareve') && (
+            <TouchableOpacity
+              style={styles.checkboxContainer}
+              onPress={() => handleInputChange('is_pas_yisroel', !formData.is_pas_yisroel)}
+              activeOpacity={0.7}
+            >
+              <View style={[
+                styles.checkbox,
+                formData.is_pas_yisroel && styles.checkboxChecked
+              ]}>
+                {formData.is_pas_yisroel && (
+                  <Text style={styles.checkmark}>✓</Text>
+                )}
+              </View>
+              <Text style={styles.checkboxLabel}>Pas Yisroel</Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Cholov Stam */}
+          <TouchableOpacity
+            style={styles.checkboxContainer}
+            onPress={() => handleInputChange('cholov_stam', !formData.cholov_stam)}
+            activeOpacity={0.7}
+          >
+            <View style={[
+              styles.checkbox,
+              formData.cholov_stam && styles.checkboxChecked
+            ]}>
+              {formData.cholov_stam && (
+                <Text style={styles.checkmark}>✓</Text>
+              )}
+            </View>
+            <Text style={styles.checkboxLabel}>Cholov Stam</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Information Section */}
+        <View style={styles.infoSection}>
+          <Text style={styles.infoTitle}>Kosher Certification Information</Text>
+          <Text style={styles.infoText}>
+            • Cholov Yisroel: Dairy products supervised by a Jew from milking to processing
+          </Text>
+          <Text style={styles.infoText}>
+            • Pas Yisroel: Bread and baked goods supervised by a Jew during baking
+          </Text>
+          <Text style={styles.infoText}>
+            • Cholov Stam: Dairy products from non-Jewish supervised facilities
           </Text>
         </View>
-        <View style={styles.tipItem}>
-          <Text style={styles.tipBullet}>•</Text>
-          <Text style={styles.tipText}>
-            Choose a price range that reflects your typical prices
-          </Text>
-        </View>
-        <View style={styles.tipItem}>
-          <Text style={styles.tipBullet}>•</Text>
-          <Text style={styles.tipText}>
-            Highlight unique features that set you apart
-          </Text>
-        </View>
       </View>
-
-      <View style={styles.bottomSpacer} />
     </ScrollView>
   );
 };
@@ -206,185 +235,189 @@ const KosherPricingPage: React.FC<KosherPricingPageProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 20,
+    backgroundColor: '#F5F5F7',
   },
-  headerSection: {
-    alignItems: 'center',
-    marginBottom: 32,
-    paddingHorizontal: 20,
-  },
-  headerEmoji: {
-    fontSize: 48,
-    marginBottom: 16,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#000000',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    color: '#8E8E93',
-    textAlign: 'center',
-    lineHeight: 22,
+  content: {
+    padding: Spacing.md,
+    paddingBottom: Spacing.xl,
   },
   section: {
-    marginBottom: 32,
+    marginBottom: 20,
+    backgroundColor: Colors.white,
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000000',
-    marginBottom: 8,
+    ...Typography.styles.h3,
+    marginBottom: Spacing.md,
+    color: Colors.textPrimary,
   },
-  sectionSubtitle: {
+  inputGroup: {
+    marginBottom: Spacing.md,
+  },
+  label: {
+    ...Typography.styles.body,
+    fontWeight: '600',
+    marginBottom: Spacing.xs,
+    color: Colors.textPrimary,
+  },
+  input: {
+    ...Typography.styles.body,
+    borderWidth: 2,
+    borderColor: '#E5E5EA',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: '#F8F9FA',
+    color: Colors.textPrimary,
+    minHeight: 48,
+    fontSize: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  errorText: {
+    ...Typography.styles.caption,
+    color: Colors.error,
+    marginTop: Spacing.xs,
     fontSize: 14,
-    color: '#8E8E93',
-    marginBottom: 16,
-  },
-  kosherGrid: {
-    gap: 12,
-  },
-  kosherButton: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#E5E5EA',
-    alignItems: 'center',
-  },
-  kosherButtonActive: {
-    backgroundColor: '#74e1a0',
-    borderColor: '#74e1a0',
-  },
-  kosherEmoji: {
-    fontSize: 24,
-    marginBottom: 8,
-  },
-  kosherLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000000',
-    marginBottom: 4,
-    textAlign: 'center',
-  },
-  kosherLabelActive: {
-    color: '#FFFFFF',
-  },
-  kosherDescription: {
-    fontSize: 12,
-    color: '#8E8E93',
-    textAlign: 'center',
-  },
-  kosherDescriptionActive: {
-    color: '#FFFFFF',
-  },
-  priceGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  priceButton: {
-    flex: 1,
-    minWidth: '45%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#E5E5EA',
-    alignItems: 'center',
-  },
-  priceButtonActive: {
-    backgroundColor: '#74e1a0',
-    borderColor: '#74e1a0',
-  },
-  priceEmoji: {
-    fontSize: 20,
-    marginBottom: 8,
-  },
-  priceLabel: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#000000',
-    marginBottom: 4,
-  },
-  priceLabelActive: {
-    color: '#FFFFFF',
-  },
-  priceDescription: {
-    fontSize: 12,
-    color: '#8E8E93',
-    textAlign: 'center',
-  },
-  priceDescriptionActive: {
-    color: '#FFFFFF',
-  },
-  featuresGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  featureButton: {
-    flex: 1,
-    minWidth: '30%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderWidth: 1,
-    borderColor: '#E5E5EA',
-    alignItems: 'center',
-  },
-  featureButtonActive: {
-    backgroundColor: '#74e1a0',
-    borderColor: '#74e1a0',
-  },
-  featureEmoji: {
-    fontSize: 16,
-    marginBottom: 4,
-  },
-  featureLabel: {
-    fontSize: 10,
     fontWeight: '500',
-    color: '#000000',
-    textAlign: 'center',
   },
-  featureLabelActive: {
-    color: '#FFFFFF',
-  },
-  tipsSection: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginTop: 8,
-  },
-  tipsTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000000',
-    marginBottom: 12,
-  },
-  tipItem: {
+  switchContainer: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     marginBottom: 8,
+    minHeight: 48,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    marginHorizontal: 0,
   },
-  tipBullet: {
-    fontSize: 16,
-    color: '#74e1a0',
-    marginRight: 8,
-    marginTop: 2,
-  },
-  tipText: {
+  switchLabel: {
+    ...Typography.styles.body,
     flex: 1,
+    marginRight: 12,
+    color: Colors.textPrimary,
     fontSize: 14,
-    color: '#666666',
-    lineHeight: 20,
   },
-  bottomSpacer: {
-    height: 40,
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginBottom: 8,
+    minHeight: 48,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    marginHorizontal: 0,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderWidth: 2,
+    borderColor: '#E5E5EA',
+    borderRadius: 6,
+    backgroundColor: Colors.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  checkboxChecked: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  checkmark: {
+    color: Colors.white,
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  checkboxLabel: {
+    ...Typography.styles.body,
+    flex: 1,
+    color: Colors.textPrimary,
+    fontSize: 14,
+  },
+  optionContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.sm,
+  },
+  optionButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#E5E5EA',
+    backgroundColor: '#F8F9FA',
+    minWidth: 100,
+    minHeight: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  optionButtonSelected: {
+    backgroundColor: '#74e1a0',
+    borderColor: '#74e1a0',
+    shadowColor: '#74e1a0',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  optionText: {
+    ...Typography.styles.body,
+    color: Colors.textPrimary,
+    textAlign: 'center',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  optionTextSelected: {
+    color: Colors.white,
+    fontWeight: '600',
+  },
+  infoSection: {
+    backgroundColor: Colors.gray100,
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+    marginTop: Spacing.lg,
+    borderLeftWidth: 4,
+    borderLeftColor: Colors.primary,
+  },
+  infoTitle: {
+    ...Typography.styles.h4,
+    marginBottom: Spacing.sm,
+    color: Colors.textPrimary,
+  },
+  infoText: {
+    ...Typography.styles.body,
+    color: Colors.textSecondary,
+    marginBottom: Spacing.xs,
+    lineHeight: 20,
   },
 });
 

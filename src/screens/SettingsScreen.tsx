@@ -9,6 +9,7 @@ import {
   Switch,
   Alert,
 } from 'react-native';
+import { Spacing, Shadows } from '../styles/designSystem';
 
 const SettingsScreen: React.FC = () => {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
@@ -264,11 +265,13 @@ const styles = StyleSheet.create({
   },
   logoutButton: {
     backgroundColor: '#ff3b30',
-    borderRadius: 25,
-    padding: 15,
+    borderRadius: 25, // Pill shape like listing page buttons
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
     alignItems: 'center',
     marginHorizontal: 20,
     marginBottom: 30,
+    ...Shadows.md,
   },
   logoutText: {
     color: 'white',

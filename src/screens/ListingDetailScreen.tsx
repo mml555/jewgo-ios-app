@@ -9,45 +9,28 @@ import {
   Alert,
   ActivityIndicator,
   Dimensions,
-  SafeAreaView,
   FlatList,
   Modal,
+  TextInput,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useLocation, calculateDistance } from '../hooks/useLocation';
+import { apiService, DetailedListing, Review } from '../services/api';
+import { useReviews } from '../hooks/useReviews';
+import EateryIcon from '../components/EateryIcon';
+import FacebookIcon from '../components/FacebookIcon';
+import InstagramIcon from '../components/InstagramIcon';
+import TikTokIcon from '../components/TikTokIcon';
+import WhatsAppIcon from '../components/WhatsAppIcon';
+import ReviewsModal from '../components/ReviewsModal';
+import WriteReviewModal from '../components/WriteReviewModal';
+import { Colors, Typography, Spacing, BorderRadius, Shadows, TouchTargets } from '../styles/designSystem';
 
 // Types
 interface ListingDetailParams {
   itemId: string;
   categoryKey: string;
-}
-
-interface ListingItem {
-  id: string;
-  title: string;
-  description: string;
-  imageUrl: string;
-  category: string;
-  rating?: number;
-  distance?: string;
-  price?: string;
-  address?: string;
-  phone?: string;
-  hours?: {
-    [key: string]: {
-      open: string;
-      close: string;
-      closed: boolean;
-    };
-  };
-  images?: string[];
-  reviews?: Array<{
-    id: string;
-    author: string;
-    rating: number;
-    text: string;
-    date: string;
-  }>;
 }
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -56,691 +39,856 @@ const ListingDetailScreen: React.FC = () => {
   const route = useRoute();
   const navigation = useNavigation();
   const { itemId, categoryKey } = route.params as ListingDetailParams;
-  const { location } = useLocation();
+  const { location, getCurrentLocation } = useLocation();
+  const { reviews, loading: reviewsLoading, error: reviewsError, writeReview, loadReviews } = useReviews();
 
-  const [item, setItem] = useState<ListingItem | null>(null);
+  const [item, setItem] = useState<DetailedListing | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [isFavorited, setIsFavorited] = useState(false);
   const [showReviewsModal, setShowReviewsModal] = useState(false);
-  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'rating'>('newest');
+  const [showWriteReviewModal, setShowWriteReviewModal] = useState(false);
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'rating_high' | 'rating_low' | 'verified' | 'recent' | 'rating_5' | 'rating_4' | 'rating_3' | 'rating_2' | 'rating_1'>('newest');
   const [currentPage, setCurrentPage] = useState(1);
   const [showHoursDropdown, setShowHoursDropdown] = useState(false);
+  const [pressedButtons, setPressedButtons] = useState<Set<string>>(new Set());
+
+  // Helper functions for button press effects
+  const handlePressIn = (buttonId: string) => {
+    setPressedButtons(prev => new Set(prev).add(buttonId));
+  };
+
+  const handlePressOut = (buttonId: string) => {
+    setPressedButtons(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(buttonId);
+      return newSet;
+    });
+  };
+
+  // Handle special card navigation
+  const handleSpecialPress = (specialType: string) => {
+    // For now, we'll show an alert. In a real app, this would navigate to a special details page
+    Alert.alert(
+      `${specialType} Details`,
+      `This would navigate to the ${specialType.toLowerCase()} details page with more information, terms, and conditions.`,
+      [{ text: 'OK' }]
+    );
+  };
+
+  // Handle social media press
+  const handleSocialMediaPress = (platform: string, url: string) => {
+    // For now, we'll show an alert. In a real app, this would open the social media link
+    Alert.alert(
+      `Open ${platform.charAt(0).toUpperCase() + platform.slice(1)}`,
+      `This would open ${url} in the browser or social media app.`,
+      [{ text: 'OK' }]
+    );
+  };
 
   // Calculate real distance if user location is available
   const realDistance = useMemo(() => {
-    if (location && item?.coordinate) {
-      return calculateDistance(
+    if (location && item?.latitude && item?.longitude) {
+      const distance = calculateDistance(
         location.latitude,
         location.longitude,
-        item.coordinate.latitude,
-        item.coordinate.longitude
+        item.latitude,
+        item.longitude
       );
+      console.log('📍 Distance calculated:', `${distance.toFixed(1)} miles`);
+      console.log('📍 Location coords:', location.latitude, location.longitude);
+      console.log('📍 Item coords:', item.latitude, item.longitude);
+      
+      // For testing: allow larger distances since iOS simulator gives SF location
+      // In production, this should be much smaller (like 50-100 miles)
+      if (distance > 20000) { // 20,000 miles - basically anywhere on Earth
+        console.log('📍 Distance too large, likely incorrect coordinates');
+        return null;
+      }
+      
+      return distance;
     }
-    return item?.distance || 0;
-  }, [location, item?.coordinate, item?.distance]);
+    console.log('📍 No location or coordinates available:', { 
+      hasLocation: !!location, 
+      hasItemLat: !!item?.latitude, 
+      hasItemLng: !!item?.longitude 
+    });
+    return null;
+  }, [location, item]);
 
-  // Mock data generation - replace with actual API call
+  // Fetch item details
   const fetchItemDetails = useCallback(async () => {
     try {
       setLoading(true);
-      setError(null);
-
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // Generate mock detailed data
-      const mockItem: ListingItem = {
-        id: itemId,
-        title: `${(categoryKey || 'restaurants').charAt(0).toUpperCase() + (categoryKey || 'restaurants').slice(1)} Item ${itemId || 'default'}`,
-        description: `A wonderful ${categoryKey || 'restaurants'} location with excellent service and atmosphere. This place offers a unique experience that you won't forget.`,
-        imageUrl: `https://picsum.photos/seed/${categoryKey || 'restaurants'}-${itemId || 'default'}/800/600`,
-        category: categoryKey || 'restaurants',
-        rating: parseFloat((Math.random() * (5 - 3) + 3).toFixed(1)),
-        distance: Math.random() > 0.3 ? `${(Math.random() * 10).toFixed(1)} mi` : undefined, // Simulate no location permission
-        coordinate: {
-          latitude: 40.7128 + (Math.random() - 0.5) * 0.1, // NYC area with some variation
-          longitude: -74.0060 + (Math.random() - 0.5) * 0.1,
-        },
-        price: ['$', '$$', '$$$'][Math.floor(Math.random() * 3)],
-        address: '123 Main Street, City, State 12345',
-        phone: '(555) 123-4567',
-        hours: {
-          monday: { open: '9:00 AM', close: '9:00 PM', closed: false },
-          tuesday: { open: '9:00 AM', close: '9:00 PM', closed: false },
-          wednesday: { open: '9:00 AM', close: '9:00 PM', closed: false },
-          thursday: { open: '9:00 AM', close: '9:00 PM', closed: false },
-          friday: { open: '9:00 AM', close: '10:00 PM', closed: false },
-          saturday: { open: '10:00 AM', close: '10:00 PM', closed: false },
-          sunday: { open: '10:00 AM', close: '8:00 PM', closed: false },
-        },
-        images: [
-          `https://picsum.photos/seed/${categoryKey || 'restaurants'}-${itemId || 'default'}-1/800/600`,
-          `https://picsum.photos/seed/${categoryKey || 'restaurants'}-${itemId || 'default'}-2/800/600`,
-          `https://picsum.photos/seed/${categoryKey || 'restaurants'}-${itemId || 'default'}-3/800/600`,
-          `https://picsum.photos/seed/${categoryKey || 'restaurants'}-${itemId || 'default'}-4/800/600`,
-          `https://picsum.photos/seed/${categoryKey || 'restaurants'}-${itemId || 'default'}-5/800/600`,
-        ],
-        reviews: [
-          {
-            id: '1',
-            author: 'Sarah M.',
-            rating: 5,
-            text: 'Amazing experience! Great service and wonderful atmosphere. The staff was incredibly friendly and the food was outstanding.',
-            date: '2024-01-15',
-          },
-          {
-            id: '2',
-            author: 'John D.',
-            rating: 4,
-            text: 'Really enjoyed our visit. Would definitely recommend. The ambiance was perfect for our date night.',
-            date: '2024-01-10',
-          },
-          {
-            id: '3',
-            author: 'Emily R.',
-            rating: 5,
-            text: 'Absolutely fantastic! The quality exceeded my expectations. Will definitely be coming back soon.',
-            date: '2024-01-08',
-          },
-          {
-            id: '4',
-            author: 'Mike T.',
-            rating: 3,
-            text: 'Good overall experience, but service was a bit slow. Food quality was decent.',
-            date: '2024-01-05',
-          },
-          {
-            id: '5',
-            author: 'Lisa K.',
-            rating: 4,
-            text: 'Nice place with good vibes. The menu has great variety and prices are reasonable.',
-            date: '2024-01-03',
-          },
-          {
-            id: '6',
-            author: 'David L.',
-            rating: 5,
-            text: 'Exceptional service and amazing food! This place has become our go-to spot.',
-            date: '2024-01-01',
-          },
-          {
-            id: '7',
-            author: 'Anna P.',
-            rating: 4,
-            text: 'Great atmosphere and friendly staff. The portions are generous and everything tastes fresh.',
-            date: '2023-12-28',
-          },
-          {
-            id: '8',
-            author: 'Tom W.',
-            rating: 2,
-            text: 'Had some issues with the order, but the manager was very helpful in resolving them.',
-            date: '2023-12-25',
-          },
-        ],
-      };
-
-      setItem(mockItem);
+      const response = await apiService.getListing(itemId);
+      if (response.success && response.data) {
+        setItem(response.data.listing);
+        // Load reviews separately to avoid circular dependency
+        loadReviews(itemId);
+      } else {
+        setError('Failed to load listing details');
+      }
     } catch (err) {
-      console.error('Error fetching item details:', err);
-      setError('Failed to load item details');
+      setError('Failed to load listing details');
     } finally {
       setLoading(false);
     }
-  }, [itemId, categoryKey]);
+  }, [itemId]); // Remove loadReviews from dependencies
 
   useEffect(() => {
     fetchItemDetails();
-  }, [fetchItemDetails]);
+    // Request location for distance calculation
+    getCurrentLocation();
+  }, [fetchItemDetails, getCurrentLocation]);
 
-  const handleBackPress = () => {
-    (navigation as any).goBack();
+  // Debug: Track modal state changes
+  useEffect(() => {
+    // Modal state changed
+  }, [showWriteReviewModal]);
+
+
+  // Handle image swipe
+  const handleImageSwipe = (event: any) => {
+    const { contentOffset } = event.nativeEvent;
+    // ScrollView width is now screen width minus margins
+    const imageWidth = screenWidth - (Spacing.md * 2); // Image width
+    const index = Math.round(contentOffset.x / imageWidth);
+    console.log('🖼️ Image swipe - contentOffset.x:', contentOffset.x, 'imageWidth:', imageWidth, 'index:', index);
+    setActiveImageIndex(index);
   };
 
-  const handleCallPress = () => {
-    if (item?.phone) {
-      Alert.alert('Call', `Call ${item.phone}?`, [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Call', onPress: () => console.log('Calling:', item.phone) },
-      ]);
-    }
-  };
-
-  const handleDirectionsPress = () => {
-    Alert.alert('Directions', 'Opening directions in Maps app...');
-  };
-
-  const handleSharePress = () => {
-    Alert.alert('Share', 'Sharing item details...');
-  };
-
-  const handleFavoritePress = () => {
+  // Handle favorite toggle
+  const handleFavoriteToggle = () => {
     setIsFavorited(!isFavorited);
   };
 
-  const handleViewCountPress = () => {
-    Alert.alert('Views', '1.2k views');
-  };
-
+  // Handle rating press
   const handleRatingPress = () => {
     setShowReviewsModal(true);
   };
 
+  // Handle write review
   const handleWriteReview = () => {
-    Alert.alert('Write a Review', 'Review writing feature coming soon!');
+    setShowReviewsModal(false); // Close reviews modal if open
+    setShowWriteReviewModal(true);
   };
 
-  const handleViewAllReviews = () => {
-    Alert.alert('All Reviews', 'Review list feature coming soon!');
-  };
+  // Handle submit review
+  const handleSubmitReview = async (review: { rating: number; title: string; content: string }) => {
+    if (!item) return;
 
-  const handleHoursPress = () => {
-    setShowHoursDropdown(!showHoursDropdown);
-  };
+    const success = await writeReview(item.id, {
+      rating: review.rating,
+      title: review.title,
+      content: review.content,
+      userId: '33333333-3333-3333-3333-333333333333', // Use a sample user ID for now
+    });
 
-  const handleOrderNowPress = () => {
-    Alert.alert('Order Now', 'Ordering feature coming soon!');
-  };
-
-  const handleWebsitePress = () => {
-    Alert.alert('Website', 'Website feature coming soon!');
-  };
-
-  const handleEmailPress = () => {
-    Alert.alert('Email', 'Email feature coming soon!');
-  };
-
-  const getCurrentHoursStatus = () => {
-    if (!item?.hours) return { status: 'Unknown', color: '#666', nextInfo: '' };
-    
-    const now = new Date();
-    const currentDay = now.toLocaleDateString('en-US', { weekday: 'short' }).toLowerCase();
-    const currentTime = now.getHours() * 100 + now.getMinutes();
-    
-    const dayKey = currentDay === 'sun' ? 'sunday' :
-                   currentDay === 'mon' ? 'monday' :
-                   currentDay === 'tue' ? 'tuesday' :
-                   currentDay === 'wed' ? 'wednesday' :
-                   currentDay === 'thu' ? 'thursday' :
-                   currentDay === 'fri' ? 'friday' : 'saturday';
-    
-    const todayHours = item.hours[dayKey];
-    if (!todayHours || todayHours.closed) {
-      // Find next opening time
-      const nextOpen = getNextOpeningTime(dayKey);
-      return { status: 'Closed', color: '#FF3B30', nextInfo: nextOpen };
-    }
-    
-    // Parse opening and closing times
-    const openTime = parseInt(todayHours.open.replace(/[^\d]/g, '').slice(0, 4));
-    const closeTime = parseInt(todayHours.close.replace(/[^\d]/g, '').slice(0, 4));
-    
-    if (currentTime >= openTime && currentTime <= closeTime) {
-      return { status: 'Open', color: '#34C759', nextInfo: `Closes at ${todayHours.close}` };
+    if (success) {
+      setShowWriteReviewModal(false);
+      Alert.alert('Success', 'Your review has been submitted!');
+      await fetchItemDetails();
     } else {
-      // Find next opening time
-      const nextOpen = getNextOpeningTime(dayKey);
-      return { status: 'Closed', color: '#FF3B30', nextInfo: nextOpen };
+      Alert.alert('Error', 'Failed to submit review. Please try again.');
     }
   };
 
-  const getNextOpeningTime = (currentDayKey: string) => {
-    const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-    const currentIndex = days.indexOf(currentDayKey);
+  // Get paginated reviews
+  const getPaginatedReviews = () => {
+    if (!reviews) return [];
     
-    // Check next 7 days
-    for (let i = 1; i <= 7; i++) {
-      const nextIndex = (currentIndex + i) % 7;
-      const nextDayKey = days[nextIndex];
-      const nextDayHours = item?.hours?.[nextDayKey];
-      
-      if (nextDayHours && !nextDayHours.closed) {
-        const dayName = nextDayKey.charAt(0).toUpperCase() + nextDayKey.slice(1);
-        return `Opens ${dayName} at ${nextDayHours.open}`;
-      }
-    }
+    let sortedReviews = [...reviews];
     
-    return 'No upcoming hours';
-  };
-
-  const getSortedReviews = () => {
-    if (!item?.reviews) return [];
-    
-    const reviews = [...item.reviews];
+    // Apply filtering and sorting
     switch (sortBy) {
       case 'newest':
-        return reviews.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        sortedReviews.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        break;
       case 'oldest':
-        return reviews.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-      case 'rating':
-        return reviews.sort((a, b) => b.rating - a.rating);
-      default:
-        return reviews;
+        sortedReviews.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+        break;
+      case 'rating_high':
+        sortedReviews.sort((a, b) => b.rating - a.rating);
+        break;
+      case 'rating_low':
+        sortedReviews.sort((a, b) => a.rating - b.rating);
+        break;
+      case 'verified':
+        sortedReviews = sortedReviews.filter(review => review.is_verified);
+        break;
+      case 'recent':
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        sortedReviews = sortedReviews.filter(review => new Date(review.created_at) > thirtyDaysAgo);
+        break;
+      case 'rating_5':
+        sortedReviews = sortedReviews.filter(review => review.rating === 5);
+        break;
+      case 'rating_4':
+        sortedReviews = sortedReviews.filter(review => review.rating === 4);
+        break;
+      case 'rating_3':
+        sortedReviews = sortedReviews.filter(review => review.rating === 3);
+        break;
+      case 'rating_2':
+        sortedReviews = sortedReviews.filter(review => review.rating === 2);
+        break;
+      case 'rating_1':
+        sortedReviews = sortedReviews.filter(review => review.rating === 1);
+        break;
     }
+    
+    const startIndex = (currentPage - 1) * 5;
+    return sortedReviews.slice(startIndex, startIndex + 5);
   };
 
-  const getPaginatedReviews = () => {
-    const sortedReviews = getSortedReviews();
-    const reviewsPerPage = 3;
-    const startIndex = (currentPage - 1) * reviewsPerPage;
-    const endIndex = startIndex + reviewsPerPage;
-    return sortedReviews.slice(startIndex, endIndex);
-  };
-
+  // Get total pages
   const getTotalPages = () => {
-    if (!item?.reviews) return 0;
-    return Math.ceil(item.reviews.length / 3);
+    if (!reviews) return 1;
+    
+    let sortedReviews = [...reviews];
+    
+    // Apply same filtering logic as getPaginatedReviews
+    switch (sortBy) {
+      case 'verified':
+        sortedReviews = sortedReviews.filter(review => review.is_verified);
+        break;
+      case 'recent':
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        sortedReviews = sortedReviews.filter(review => new Date(review.created_at) > thirtyDaysAgo);
+        break;
+      case 'rating_5':
+        sortedReviews = sortedReviews.filter(review => review.rating === 5);
+        break;
+      case 'rating_4':
+        sortedReviews = sortedReviews.filter(review => review.rating === 4);
+        break;
+      case 'rating_3':
+        sortedReviews = sortedReviews.filter(review => review.rating === 3);
+        break;
+      case 'rating_2':
+        sortedReviews = sortedReviews.filter(review => review.rating === 2);
+        break;
+      case 'rating_1':
+        sortedReviews = sortedReviews.filter(review => review.rating === 1);
+        break;
+    }
+    
+    return Math.ceil(sortedReviews.length / 5);
   };
 
-  const handleSortChange = (newSort: 'newest' | 'oldest' | 'rating') => {
-    setSortBy(newSort);
-    setCurrentPage(1); // Reset to first page when sorting changes
+  // Handle sort change
+  const handleSortChange = (newSortBy: 'newest' | 'oldest' | 'rating_high' | 'rating_low' | 'verified' | 'recent' | 'rating_5' | 'rating_4' | 'rating_3' | 'rating_2' | 'rating_1') => {
+    setSortBy(newSortBy);
+    setCurrentPage(1);
   };
 
+  // Handle page change
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
   };
 
-  const renderStars = (rating: number) => {
-    const stars = [];
-    const fullStars = Math.floor(rating);
-    const hasHalfStar = rating % 1 !== 0;
-
-    for (let i = 0; i < fullStars; i++) {
-      stars.push(
-        <Text key={i} style={styles.starIcon}>★</Text>
-      );
-    }
-
-    if (hasHalfStar) {
-      stars.push(
-        <Text key="half" style={styles.starIcon}>☆</Text>
-      );
-    }
-
-    const emptyStars = 5 - Math.ceil(rating);
-    for (let i = 0; i < emptyStars; i++) {
-      stars.push(
-        <Text key={`empty-${i}`} style={styles.emptyStarIcon}>☆</Text>
-      );
-    }
-
-    return (
-      <View style={styles.starsContainer}>
-        {stars}
-      </View>
-    );
+  // Format time from 24-hour format to 12-hour format
+  const formatTime = (time24: string): string => {
+    const [hours, minutes] = time24.split(':').map(Number);
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const hours12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+    return `${hours12}:${minutes.toString().padStart(2, '0')} ${period}`;
   };
 
+  // Ensure image URLs are working
+  const getWorkingImageUrl = (url: string): string => {
+    if (url.includes('picsum.photos')) {
+      // For now, keep using picsum.photos but ensure proper dimensions
+      const randomMatch = url.match(/random=(\d+)/);
+      const randomId = randomMatch ? randomMatch[1] : '1';
+      
+      // Use picsum.photos with proper dimensions for the carousel
+      return `https://picsum.photos/400/300?random=${randomId}`;
+    }
+    return url;
+  };
 
-  const renderReviews = () => {
-    if (!item?.reviews || item.reviews.length === 0) return null;
+  // Transform business hours from API format (array with day_of_week numbers) to display format (object with day names)
+  const transformBusinessHours = (businessHours: any[]) => {
+    if (!businessHours || !Array.isArray(businessHours)) return {};
+    
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const transformed: any = {};
+    
+    businessHours.forEach(hours => {
+      const dayName = dayNames[hours.day_of_week];
+      if (dayName) {
+        transformed[dayName] = {
+          open_time: hours.open_time,
+          close_time: hours.close_time,
+          is_closed: hours.is_closed
+        };
+      }
+    });
+    
+    return transformed;
+  };
 
-    return (
-      <View style={styles.reviewsContainer}>
-        <Text style={styles.sectionTitle}>Reviews</Text>
-        {item.reviews.map((review) => (
-          <View key={review.id} style={styles.reviewItem}>
-            <View style={styles.reviewHeader}>
-              <Text style={styles.reviewAuthor}>{review.author}</Text>
-              <View style={styles.reviewRating}>
-                {renderStars(review.rating)}
-              </View>
-            </View>
-            <Text style={styles.reviewText}>{review.text}</Text>
-            <Text style={styles.reviewDate}>{review.date}</Text>
-          </View>
-        ))}
-      </View>
-    );
+  // Get business hours status
+  const getBusinessHoursStatus = () => {
+    if (!item?.business_hours) return { isOpen: false, nextChange: null };
+    
+    const transformedHours = transformBusinessHours(item.business_hours);
+    const now = new Date();
+    const currentDay = now.getDay();
+    const currentTime = now.getHours() * 60 + now.getMinutes();
+    
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const todayDayName = dayNames[currentDay];
+    const todayHours = transformedHours[todayDayName];
+    
+    if (!todayHours || todayHours.is_closed) {
+      return { isOpen: false, nextChange: null };
+    }
+    
+    const openTime = todayHours.open_time.split(':').map(Number);
+    const closeTime = todayHours.close_time.split(':').map(Number);
+    const openMinutes = openTime[0] * 60 + openTime[1];
+    const closeMinutes = closeTime[0] * 60 + closeTime[1];
+    
+    const isOpen = currentTime >= openMinutes && currentTime < closeMinutes;
+    
+    return {
+      isOpen,
+      nextChange: isOpen ? formatTime(todayHours.close_time) : formatTime(todayHours.open_time)
+    };
   };
 
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
-          <Text style={styles.loadingText}>Loading details...</Text>
+          <ActivityIndicator size="large" color={Colors.primary} />
+          <Text style={styles.loadingText}>Loading...</Text>
         </View>
       </SafeAreaView>
     );
   }
 
-  if (error) {
+  if (error || !item) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.errorContainer}>
-          <Text style={styles.errorTitle}>Error</Text>
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={fetchItemDetails}>
-            <Text style={styles.retryButtonText}>Try Again</Text>
+          <Text style={styles.errorText}>{error || 'Listing not found'}</Text>
+          <TouchableOpacity 
+            style={styles.retryButton} 
+            onPress={fetchItemDetails}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.retryButtonText}>Retry</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
   }
 
-  if (!item) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorTitle}>Item Not Found</Text>
-          <Text style={styles.errorText}>The requested item could not be found.</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
+  const businessStatus = getBusinessHoursStatus();
 
   return (
     <>
-    <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Rounded Floating Image Carousel with Header Overlay */}
-        <View style={styles.imageContainer}>
-          <FlatList
-            data={item.images || [item.imageUrl]}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            onMomentumScrollEnd={(event) => {
-              const index = Math.round(event.nativeEvent.contentOffset.x / event.nativeEvent.layoutMeasurement.width);
-              setActiveImageIndex(index);
-            }}
-            renderItem={({ item: imageUrl }) => (
-              <Image source={{ uri: imageUrl }} style={styles.mainImage} />
-            )}
-            keyExtractor={(imageUrl, index) => `${imageUrl}-${index}`}
-            style={styles.carousel}
-          />
+      <SafeAreaView style={styles.container}>
+        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        {/* Image Header Bar */}
+        <View style={styles.imageHeaderBar}>
+          <TouchableOpacity 
+            style={[
+              styles.headerBackButton,
+              pressedButtons.has('back') && styles.headerButtonPressed
+            ]}
+            onPress={() => navigation.goBack()}
+            onPressIn={() => handlePressIn('back')}
+            onPressOut={() => handlePressOut('back')}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.headerBackIcon}>←</Text>
+          </TouchableOpacity>
           
-          {/* Image indicators */}
-          {item.images && item.images.length > 1 && (
-            <View style={styles.imageIndicators}>
-              {item.images.map((_, index) => (
-                <View
-                  key={index}
-                  style={[
-                    styles.indicator,
-                    index === activeImageIndex && styles.activeIndicator,
-                  ]}
-                />
-              ))}
+          <Text style={styles.headerText}>DETAILS</Text>
+          <Text style={styles.headerSubText}>VIEW</Text>
+          <View style={styles.viewCountGroup}>
+            <Text style={styles.eyeIcon}>👁</Text>
+            <Text style={styles.viewCount}>1.2k</Text>
+          </View>
+          
+          <TouchableOpacity 
+            style={[
+              styles.shareButton,
+              pressedButtons.has('share') && styles.headerButtonPressed
+            ]}
+            onPressIn={() => handlePressIn('share')}
+            onPressOut={() => handlePressOut('share')}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.shareIcon}>↗</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[
+              styles.heartButton,
+              pressedButtons.has('heart') && styles.headerButtonPressed
+            ]}
+            onPress={handleFavoriteToggle}
+            onPressIn={() => handlePressIn('heart')}
+            onPressOut={() => handlePressOut('heart')}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.heartIcon, isFavorited && styles.heartIconActive]}>
+              {isFavorited ? '♥' : '♡'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Image Carousel */}
+        <View style={styles.imageContainer}>
+          {item.images && item.images.length > 0 ? (
+            <>
+              <ScrollView
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                onMomentumScrollEnd={handleImageSwipe}
+                style={[styles.imageScrollView, { width: screenWidth - (Spacing.md * 2) }]}
+                contentContainerStyle={styles.imageScrollViewContent}
+              >
+                {item.images.map((image, index) => {
+                  const workingUrl = getWorkingImageUrl(image);
+                  console.log('🖼️ Rendering image', index, ':', workingUrl);
+                  return (
+                    <Image
+                      key={index}
+                      source={{ uri: workingUrl }}
+                      style={styles.image}
+                      resizeMode="cover"
+                      accessible={true}
+                      accessibilityLabel={`Image ${index + 1} of ${item.images?.length || 0}`}
+                      onLoad={() => console.log('🖼️ Image loaded:', index, workingUrl)}
+                      onError={(error) => console.log('🖼️ Image error:', index, workingUrl, error)}
+                    />
+                  );
+                })}
+              </ScrollView>
+              
+              {/* Image Indicators */}
+              {item.images.length > 1 && (
+                <>
+                  {/* Page Counter Pill */}
+                  <View style={styles.pageCounterPill}>
+                    <Text style={styles.pageCounterText}>
+                      {activeImageIndex + 1} of {item.images.length}
+                    </Text>
+                  </View>
+                  
+                  {/* Image Dots */}
+                  <View style={styles.imageIndicators}>
+                    {item.images.map((_, index) => (
+                      <View
+                        key={index}
+                        style={[
+                          styles.indicator,
+                          index === activeImageIndex && styles.indicatorActive
+                        ]}
+                      />
+                    ))}
+                  </View>
+                </>
+              )}
+            </>
+          ) : (
+            <View style={styles.placeholderImage}>
+              <Text style={styles.placeholderText}>No images available</Text>
             </View>
           )}
-          
-          {/* White Rounded Header Bar Overlay */}
-          <View style={styles.headerOverlay}>
-            <TouchableOpacity style={styles.backButton} onPress={handleBackPress}>
-              <Text style={styles.backIcon}>←</Text>
-            </TouchableOpacity>
-            
-            <View style={styles.headerCenter}>
-              <View style={styles.tagsContainer}>
-                <View style={styles.tag}>
-                  <Text style={styles.tagText}>Meat</Text>
-                </View>
-                <View style={styles.tag}>
-                  <Text style={styles.tagText}>ORB</Text>
-                </View>
-              </View>
-            </View>
-            
-            <View style={styles.headerActions}>
-              <TouchableOpacity style={styles.headerActionButton} onPress={handleViewCountPress}>
-                <Text style={styles.viewCountIcon}>👁</Text>
-                <Text style={styles.viewCountText}>1.2k</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.headerActionButton} onPress={handleSharePress}>
-                <Text style={styles.actionIcon}>↗</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.headerActionButton} onPress={handleFavoritePress}>
-                <Text style={[styles.actionIcon, isFavorited && styles.favoritedHeart]}>
-                  {isFavorited ? '♥' : '♡'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
         </View>
 
         {/* Content */}
         <View style={styles.content}>
-          {/* Title and Rating Row */}
-          <View style={styles.titleRatingRow}>
-            <Text style={styles.listingName}>{item.title}</Text>
-            <TouchableOpacity style={styles.ratingButton} onPress={handleRatingPress}>
-              <View style={styles.ratingButtonContent}>
-                <Text style={styles.singleStar}>★</Text>
-                <Text style={styles.ratingButtonText}>{item.rating}</Text>
-              </View>
-            </TouchableOpacity>
-          </View>
-
-          {/* Distance and Price Row */}
-          <View style={styles.distancePriceRow}>
-            <View style={styles.priceContainer}>
-              <Text style={styles.priceText}>
-                {item.price || '$$'}
-              </Text>
-            </View>
-            <View style={styles.distanceContainer}>
-              <Text style={styles.distanceIcon}>📍</Text>
-              <Text style={styles.distanceText}>
-                {realDistance ? `${realDistance.toFixed(1)}mi` : '10001'}
-              </Text>
-            </View>
-          </View>
-
-          {/* Hours Dropdown Button */}
-          <View style={styles.hoursButtonContainer}>
-            <TouchableOpacity style={styles.hoursButton} onPress={handleHoursPress}>
-              <View style={styles.hoursButtonContent}>
-                <Text style={styles.hoursIcon}>🕒</Text>
-                <Text style={styles.hoursButtonText}>Hours:</Text>
-                <Text style={[styles.hoursStatusText, { color: getCurrentHoursStatus().color }]}>
-                  {getCurrentHoursStatus().status}
+          {/* Title and Rating */}
+          <View style={styles.titleSection}>
+            <Text style={styles.title}>{item.title}</Text>
+            <TouchableOpacity 
+              style={styles.ratingButton} 
+              onPress={handleRatingPress}
+              activeOpacity={0.7}
+            >
+              <View style={styles.ratingContainer}>
+                <Text style={styles.ratingStar}>★</Text>
+                <Text style={styles.ratingText}>
+                  {(() => {
+                    const rating = item.rating as any;
+                    if (typeof rating === 'number') {
+                      return rating.toFixed(1);
+                    } else if (rating) {
+                      return parseFloat(String(rating)).toFixed(1);
+                    }
+                    return '0.0';
+                  })()}
                 </Text>
-                <Text style={styles.hoursNextInfo}>{getCurrentHoursStatus().nextInfo}</Text>
-                <Text style={styles.hoursDropdownIcon}>{showHoursDropdown ? '▲' : '▼'}</Text>
               </View>
             </TouchableOpacity>
-            
-            {/* Hours Dropdown Content */}
-            {showHoursDropdown && (
-              <View style={styles.hoursDropdown}>
-                {item?.hours && Object.entries(item.hours).map(([day, hours], index, array) => (
-                  <View key={day} style={[
-                    styles.hoursRow,
-                    index === array.length - 1 && { borderBottomWidth: 0 }
-                  ]}>
-                    <Text style={styles.dayLabel}>
-                      {day.charAt(0).toUpperCase() + day.slice(1)}
-                    </Text>
-                    <Text style={styles.hoursText}>
-                      {hours.closed ? 'Closed' : `${hours.open} - ${hours.close}`}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            )}
           </View>
 
-          {/* Address */}
-          {item.address && (
-            <View style={styles.addressSection}>
-              <View style={styles.addressTextContainer}>
-                <Text style={styles.addressText}>{item.address}</Text>
-              </View>
+          {/* Price and Distance */}
+          <View style={styles.infoRow}>
+            <Text style={styles.priceText}>{(item as any).price_range || '$$'}</Text>
+            <Text style={styles.distanceText}>
+              {realDistance ? `${realDistance.toFixed(1)} mi` : (item.zip_code ? `${item.zip_code}` : 'Location N/A')}
+            </Text>
+          </View>
+
+          {/* Hours */}
+          <TouchableOpacity 
+            style={styles.hoursButton}
+            onPress={() => setShowHoursDropdown(!showHoursDropdown)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.hoursText}>
+              🕒 Hours: 
+              <Text style={[styles.statusText, businessStatus.isOpen ? styles.statusOpen : styles.statusClosed]}>
+                {businessStatus.isOpen ? ' Open' : ' Closed'}
+              </Text>
+              {businessStatus.nextChange && (
+                <Text style={styles.nextChangeText}>
+                  {businessStatus.isOpen ? ' closes at ' : ' opens at '}{businessStatus.nextChange}
+                </Text>
+              )}
+              <Text style={styles.dropdownIcon}> ▼</Text>
+            </Text>
+          </TouchableOpacity>
+
+          {/* Hours Dropdown */}
+          {showHoursDropdown && item.business_hours && (
+            <View style={styles.hoursDropdown}>
+              {Object.entries(transformBusinessHours(item.business_hours)).map(([day, hours]) => (
+                <View key={day} style={styles.hoursRow}>
+                  <Text style={styles.dayLabel}>{day.charAt(0).toUpperCase() + day.slice(1)}</Text>
+                  <Text style={styles.hoursText}>
+                    {(hours as any).is_closed ? 'Closed' : `${formatTime((hours as any).open_time)} - ${formatTime((hours as any).close_time)}`}
+                  </Text>
+                </View>
+              ))}
             </View>
           )}
 
-          {/* Order Now Button */}
-          <View style={styles.orderButtonContainer}>
-            <TouchableOpacity style={styles.orderButton} onPress={handleOrderNowPress}>
-              <Text style={styles.orderButtonText}>Order Now</Text>
-            </TouchableOpacity>
+          {/* Address */}
+          <View style={styles.addressContainer}>
+            <Text style={styles.addressText}>
+              {item.address}
+              {item.city && `, ${item.city}`}
+              {item.state && `, ${item.state}`}
+              {item.zip_code && ` ${item.zip_code}`}
+            </Text>
           </View>
 
           {/* Contact Buttons */}
           <View style={styles.contactButtonsContainer}>
-            <TouchableOpacity style={styles.contactButton} onPress={handleCallPress}>
+            <TouchableOpacity 
+              style={[
+                styles.contactButton,
+                pressedButtons.has('call') && styles.contactButtonPressed
+              ]}
+              onPressIn={() => handlePressIn('call')}
+              onPressOut={() => handlePressOut('call')}
+              activeOpacity={0.7}
+            >
               <Text style={styles.contactButtonText}>Call</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.contactButton} onPress={handleWebsitePress}>
+            <TouchableOpacity 
+              style={[
+                styles.contactButton,
+                pressedButtons.has('website') && styles.contactButtonPressed
+              ]}
+              onPressIn={() => handlePressIn('website')}
+              onPressOut={() => handlePressOut('website')}
+              activeOpacity={0.7}
+            >
               <Text style={styles.contactButtonText}>Website</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.contactButton} onPress={handleEmailPress}>
+            <TouchableOpacity 
+              style={[
+                styles.contactButton,
+                pressedButtons.has('email') && styles.contactButtonPressed
+              ]}
+              onPressIn={() => handlePressIn('email')}
+              onPressOut={() => handlePressOut('email')}
+              activeOpacity={0.7}
+            >
               <Text style={styles.contactButtonText}>Email</Text>
             </TouchableOpacity>
           </View>
 
+          {/* Order Button */}
+          <TouchableOpacity 
+            style={[
+              styles.orderButton,
+              pressedButtons.has('order-now') && styles.orderButtonPressed
+            ]}
+            onPressIn={() => handlePressIn('order-now')}
+            onPressOut={() => handlePressOut('order-now')}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.orderButtonText}>Order Now</Text>
+          </TouchableOpacity>
+
+          {/* Feature Tags */}
+          <View style={styles.featureTagsContainer}>
+            <View style={[styles.featureTag, styles.featureTagPrimary]}>
+              <Text style={styles.featureTagText}>Popular</Text>
+            </View>
+            <View style={[styles.featureTag, styles.featureTagSecondary]}>
+              <Text style={styles.featureTagText}>Trending</Text>
+            </View>
+            <View style={[styles.featureTag, styles.featureTagAccent]}>
+              <Text style={styles.featureTagText}>New</Text>
+            </View>
+          </View>
+
           {/* Tags */}
-          <View style={styles.contentTagsContainer}>
-            <View style={styles.contentTag}>
-              <Text style={styles.contentTagText}>Dairy</Text>
-            </View>
-            <View style={styles.contentTag}>
-              <Text style={styles.contentTagText}>ORB</Text>
-            </View>
-            <View style={styles.contentTag}>
-              <Text style={styles.contentTagText}>Cholov Yisroel</Text>
-            </View>
+          <View style={styles.tagsContainer}>
+            {(item as any).tags?.map((tag: any, index: number) => (
+              <View key={index} style={styles.tag}>
+                <Text style={styles.tagText}>{tag}</Text>
+              </View>
+            ))}
           </View>
 
           {/* Description */}
-          <View style={styles.descriptionSection}>
-            <Text style={styles.description} numberOfLines={3}>{item.description}</Text>
-          </View>
+          <Text style={styles.description}>{item.description}</Text>
 
-          {/* Divider Line */}
-          <View style={styles.dividerLine} />
+          {/* Divider */}
+          <View style={styles.divider} />
 
-
-        </View>
-        </ScrollView>
-      </SafeAreaView>
-
-      <Modal
-        visible={showReviewsModal}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setShowReviewsModal(false)}
-      >
-        <SafeAreaView style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Reviews & Ratings</Text>
+          {/* Special Cards */}
+          <View style={styles.specialCardsContainer}>
             <TouchableOpacity 
-              style={styles.closeButton}
-              onPress={() => setShowReviewsModal(false)}
+              style={[
+                styles.specialCard,
+                pressedButtons.has('happy-hour') && styles.specialCardPressed
+              ]}
+              onPress={() => handleSpecialPress('Happy Hour')}
+              onPressIn={() => handlePressIn('happy-hour')}
+              onPressOut={() => handlePressOut('happy-hour')}
+              activeOpacity={0.8}
             >
-              <Text style={styles.closeButtonText}>✕</Text>
+              <View style={styles.specialCardImage}>
+                <Text style={styles.specialCardImageText}>🍺</Text>
+              </View>
+              <View style={styles.specialCardContent}>
+                <Text style={styles.specialCardTitle}>Happy Hour</Text>
+                <Text style={styles.specialCardDescription}>50% off drinks</Text>
+                <Text style={styles.specialCardDescription}>4-6 PM</Text>
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[
+                styles.specialCard,
+                pressedButtons.has('student-deal') && styles.specialCardPressed
+              ]}
+              onPress={() => handleSpecialPress('Student Deal')}
+              onPressIn={() => handlePressIn('student-deal')}
+              onPressOut={() => handlePressOut('student-deal')}
+              activeOpacity={0.8}
+            >
+              <View style={styles.specialCardImage}>
+                <Text style={styles.specialCardImageText}>🎓</Text>
+              </View>
+              <View style={styles.specialCardContent}>
+                <Text style={styles.specialCardTitle}>Student Deal</Text>
+                <Text style={styles.specialCardDescription}>15% off with ID</Text>
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[
+                styles.specialCard,
+                pressedButtons.has('weekend-deal') && styles.specialCardPressed
+              ]}
+              onPress={() => handleSpecialPress('Weekend Deal')}
+              onPressIn={() => handlePressIn('weekend-deal')}
+              onPressOut={() => handlePressOut('weekend-deal')}
+              activeOpacity={0.8}
+            >
+              <View style={styles.specialCardImage}>
+                <EateryIcon size={24} color="#FFFFFF" />
+              </View>
+              <View style={styles.specialCardContent}>
+                <Text style={styles.specialCardTitle}>Weekend Deal</Text>
+                <Text style={styles.specialCardDescription}>Free appetizer</Text>
+                <Text style={styles.specialCardDescription}>with entree</Text>
+              </View>
             </TouchableOpacity>
           </View>
 
-          {/* Rating Summary */}
-          <View style={styles.ratingSummary}>
-            <View style={styles.ratingSummaryLeft}>
-              <Text style={styles.averageRating}>{item?.rating || 0}</Text>
-              <View style={styles.ratingStars}>
-                {renderStars(item?.rating || 0)}
+          {/* Social Media Icons */}
+          {(item.facebook_url || item.instagram_url || item.whatsapp_url || item.tiktok_url) && (
+            <View style={styles.socialMediaContainer}>
+              <Text style={styles.socialMediaTitle}>Follow Us</Text>
+              <View style={styles.socialMediaIcons}>
+                {item.facebook_url && (
+                  <TouchableOpacity 
+                    style={styles.socialMediaButton}
+                    onPress={() => handleSocialMediaPress('facebook', item.facebook_url!)}
+                    activeOpacity={0.7}
+                  >
+                    <FacebookIcon size={24} color="#1877F2" />
+                  </TouchableOpacity>
+                )}
+                {item.instagram_url && (
+                  <TouchableOpacity 
+                    style={styles.socialMediaButton}
+                    onPress={() => handleSocialMediaPress('instagram', item.instagram_url!)}
+                    activeOpacity={0.7}
+                  >
+                    <InstagramIcon size={24} color="#E4405F" />
+                  </TouchableOpacity>
+                )}
+                {item.whatsapp_url && (
+                  <TouchableOpacity 
+                    style={styles.socialMediaButton}
+                    onPress={() => handleSocialMediaPress('whatsapp', item.whatsapp_url!)}
+                    activeOpacity={0.7}
+                  >
+                    <WhatsAppIcon size={24} color="#25D366" />
+                  </TouchableOpacity>
+                )}
+                {item.tiktok_url && (
+                  <TouchableOpacity 
+                    style={styles.socialMediaButton}
+                    onPress={() => handleSocialMediaPress('tiktok', item.tiktok_url!)}
+                    activeOpacity={0.7}
+                  >
+                    <TikTokIcon size={24} color="#000000" />
+                  </TouchableOpacity>
+                )}
               </View>
-              <Text style={styles.reviewCount}>{item?.reviews?.length || 0} reviews</Text>
-            </View>
-            <TouchableOpacity style={styles.writeReviewButton} onPress={handleWriteReview}>
-              <Text style={styles.writeReviewButtonText}>Write a Review</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Sort Options */}
-          <View style={styles.sortContainer}>
-            <Text style={styles.sortLabel}>Sort by:</Text>
-            <View style={styles.sortButtons}>
-              {[
-                { key: 'newest', label: 'Newest' },
-                { key: 'oldest', label: 'Oldest' },
-                { key: 'rating', label: 'Rating' }
-              ].map((option) => (
-                <TouchableOpacity
-                  key={option.key}
-                  style={[
-                    styles.sortButton,
-                    sortBy === option.key && styles.sortButtonActive
-                  ]}
-                  onPress={() => handleSortChange(option.key as any)}
-                >
-                  <Text style={[
-                    styles.sortButtonText,
-                    sortBy === option.key && styles.sortButtonTextActive
-                  ]}>
-                    {option.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          {/* Reviews List */}
-          <FlatList
-            data={getPaginatedReviews()}
-            keyExtractor={(review) => review.id}
-            renderItem={({ item: review }) => (
-              <View style={styles.reviewItem}>
-                <View style={styles.reviewHeader}>
-                  <Text style={styles.reviewAuthor}>{review.author}</Text>
-                  <View style={styles.reviewRating}>
-                    {renderStars(review.rating)}
-                    <Text style={styles.reviewDate}>{review.date}</Text>
-                  </View>
-                </View>
-                <Text style={styles.reviewText}>{review.text}</Text>
-              </View>
-            )}
-            style={styles.reviewsList}
-            showsVerticalScrollIndicator={false}
-          />
-
-          {/* Pagination */}
-          {getTotalPages() > 1 && (
-            <View style={styles.pagination}>
-              <TouchableOpacity
-                style={[styles.paginationButton, currentPage === 1 && styles.paginationButtonDisabled]}
-                onPress={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage === 1}
-              >
-                <Text style={[styles.paginationButtonText, currentPage === 1 && styles.paginationButtonTextDisabled]}>
-                  Previous
-                </Text>
-              </TouchableOpacity>
-              
-              <Text style={styles.paginationInfo}>
-                Page {currentPage} of {getTotalPages()}
-              </Text>
-              
-              <TouchableOpacity
-                style={[styles.paginationButton, currentPage === getTotalPages() && styles.paginationButtonDisabled]}
-                onPress={() => handlePageChange(currentPage + 1)}
-                disabled={currentPage === getTotalPages()}
-              >
-                <Text style={[styles.paginationButtonText, currentPage === getTotalPages() && styles.paginationButtonTextDisabled]}>
-                  Next
-                </Text>
-              </TouchableOpacity>
             </View>
           )}
-        </SafeAreaView>
-      </Modal>
+
+          {/* Long Description */}
+          {item.long_description && (
+            <View style={styles.longDescriptionContainer}>
+              <Text style={styles.longDescriptionTitle}>About Us</Text>
+              <Text style={styles.longDescriptionText}>{item.long_description}</Text>
+            </View>
+          )}
+
+          {/* Reviews Section */}
+          <View style={styles.reviewsSectionContainer}>
+            <View style={styles.reviewsSectionHeader}>
+              <Text style={styles.reviewsSectionTitle}>Customer Reviews</Text>
+              <TouchableOpacity 
+                style={styles.writeReviewButton}
+                onPress={handleWriteReview}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.writeReviewButtonText}>Write Review</Text>
+              </TouchableOpacity>
+            </View>
+            
+            {reviews && reviews.length > 0 ? (
+              <View style={styles.reviewsSectionContainer}>
+                {reviews.slice(0, 5).map((review, index) => (
+                  <View key={review.id || index} style={styles.reviewItem}>
+                    <View style={styles.reviewHeader}>
+                      <View style={styles.reviewUserInfo}>
+                        <View style={styles.reviewUserAvatar}>
+                          <Text style={styles.reviewUserInitial}>
+                            {(review as any).user_name ? (review as any).user_name.charAt(0).toUpperCase() : 'U'}
+                          </Text>
+                        </View>
+                        <View style={styles.reviewUserDetails}>
+                          <Text style={styles.reviewUserName}>
+                            {(review as any).user_name || 'Anonymous User'}
+                          </Text>
+                          <View style={styles.reviewRating}>
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <Text 
+                                key={star} 
+                                style={[
+                                  styles.reviewStar,
+                                  star <= (Number(review.rating) || 0) && styles.reviewStarFilled
+                                ]}
+                              >
+                                ★
+                              </Text>
+                            ))}
+                          </View>
+                        </View>
+                      </View>
+                    </View>
+                    
+                    {review.title && (
+                      <Text style={styles.reviewTitle}>{review.title}</Text>
+                    )}
+                    
+                    {review.content && (
+                      <Text style={styles.reviewContent} numberOfLines={3}>
+                        {review.content}
+                      </Text>
+                    )}
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <View style={styles.noReviewsContainer}>
+                <Text style={styles.noReviewsText}>No reviews yet</Text>
+                <Text style={styles.noReviewsSubtext}>Be the first to share your experience!</Text>
+              </View>
+            )}
+            
+            {/* View More Button */}
+            {reviews && reviews.length > 0 && (
+              <View style={styles.viewMoreContainer}>
+                <TouchableOpacity 
+                  style={styles.viewMoreButton}
+                  onPress={() => setShowReviewsModal(true)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.viewMoreButtonText}>View More</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        </View>
+      </ScrollView>
+
+      {/* Reviews Modal */}
+      <ReviewsModal
+        visible={showReviewsModal}
+        onClose={() => setShowReviewsModal(false)}
+        reviews={reviews}
+        itemRating={Number(item?.rating) || 0}
+        onWriteReview={handleWriteReview}
+        onSortChange={handleSortChange}
+        onPageChange={handlePageChange}
+        sortBy={sortBy}
+        currentPage={currentPage}
+        getPaginatedReviews={getPaginatedReviews}
+        getTotalPages={getTotalPages}
+      />
+      </SafeAreaView>
+
+      {/* Write Review Modal */}
+      <WriteReviewModal
+        visible={showWriteReviewModal}
+        onClose={() => setShowWriteReviewModal(false)}
+        onSubmit={handleSubmitReview}
+        loading={reviewsLoading}
+      />
     </>
-    );
-  };
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  scrollView: {
-    flex: 1,
+    backgroundColor: Colors.background,
   },
   loadingContainer: {
     flex: 1,
@@ -748,111 +896,397 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#666',
+    ...Typography.styles.body,
+    marginTop: Spacing.md,
+    color: Colors.textSecondary,
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
-  },
-  errorTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#FF3B30',
-    marginBottom: 8,
+    padding: Spacing.md,
   },
   errorText: {
-    fontSize: 16,
-    color: '#666',
+    ...Typography.styles.body,
+    color: Colors.error,
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: Spacing.md,
   },
   retryButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
+    ...Typography.styles.button,
+    backgroundColor: Colors.primary,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.lg,
   },
   retryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
+    ...Typography.styles.button,
+    color: Colors.white,
   },
-  headerOverlay: {
-    position: 'absolute',
-    top: 16,
-    left: 16,
-    right: 16,
-    flexDirection: 'row',
+  scrollView: {
+    flex: 1,
+  },
+  imageContainer: {
+    height: 280,
+    position: 'relative',
+    justifyContent: 'center',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: 30,
-    paddingHorizontal: 20,
-    paddingVertical: 8,
+    marginHorizontal: Spacing.md, // Center the image ScrollView
+  },
+  imageScrollView: {
+    flex: 1,
+  },
+  imageScrollViewContent: {
+    justifyContent: 'center',
+  },
+  image: {
+    width: screenWidth - (Spacing.md * 2), // Full width of the ScrollView
+    height: 280,
+    borderRadius: 25,
+    marginHorizontal: 0, // No margins since ScrollView handles positioning
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 6,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 10,
   },
-  backButton: {
-    padding: 6,
-    marginRight: 8,
-  },
-  headerCenter: {
-    flex: 1,
+  placeholderImage: {
+    width: screenWidth - (Spacing.md * 2),
+    height: 280,
+    backgroundColor: Colors.gray200,
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 12,
+    borderRadius: 25,
+    marginHorizontal: Spacing.md,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 6,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  placeholderText: {
+    ...Typography.styles.body,
+    color: Colors.textSecondary,
+  },
+  imageIndicators: {
+    position: 'absolute',
+    bottom: Spacing.md,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
+  indicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    marginHorizontal: 4,
+  },
+  indicatorActive: {
+    backgroundColor: Colors.white,
+  },
+  pageCounterPill: {
+    position: 'absolute',
+    bottom: Spacing.md,
+    right: Spacing.md,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 15,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 4,
+    minWidth: 50,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  pageCounterText: {
+    color: Colors.white,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  content: {
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.md,
+    paddingHorizontal: Spacing.md,
+  },
+  titleSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+  },
+  title: {
+    ...Typography.styles.h3,
+    flex: 1,
+    marginRight: Spacing.md,
+  },
+  ratingButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  ratingText: {
+    ...Typography.styles.body,
+    color: Colors.textSecondary,
+  },
+  ratingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minWidth: 40, // Ensure consistent width
+  },
+  ratingStar: {
+    fontSize: 16,
+    color: '#FFD700',
+    marginRight: Spacing.xs,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.md,
+  },
+  priceText: {
+    ...Typography.styles.body,
+    color: Colors.textPrimary,
+  },
+  distanceText: {
+    ...Typography.styles.body,
+    color: Colors.textSecondary,
+    minWidth: 40, // Match rating container width
+    textAlign: 'right', // Right align the text
+  },
+  hoursButton: {
+    backgroundColor: Colors.gray300,
+    borderRadius: BorderRadius['2xl'],
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    marginBottom: Spacing.md,
+    ...Shadows.sm,
+  },
+  hoursText: {
+    ...Typography.styles.body,
+    textAlign: 'center',
+    color: Colors.textPrimary,
+  },
+  statusText: {
+    fontWeight: '600',
+  },
+  statusOpen: {
+    color: Colors.success,
+  },
+  statusClosed: {
+    color: Colors.error,
+  },
+  nextChangeText: {
+    color: Colors.textSecondary,
+  },
+  dropdownIcon: {
+    color: Colors.textSecondary,
+  },
+  hoursDropdown: {
+    backgroundColor: Colors.gray300,
+    borderRadius: BorderRadius.lg,
+    marginBottom: Spacing.md,
+    ...Shadows.sm,
+  },
+  hoursRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.borderLight,
+  },
+  dayLabel: {
+    ...Typography.styles.body,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+    width: 80,
+  },
+  addressContainer: {
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+  },
+  addressText: {
+    ...Typography.styles.body,
+    color: Colors.primary,
+    textDecorationLine: 'underline',
+  },
+  orderButton: {
+    backgroundColor: Colors.primary,
+    borderRadius: 25, // Pill shape like header buttons
+    paddingVertical: Spacing.sm, // Reduced vertical padding
+    paddingHorizontal: Spacing.lg,
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+    ...Shadows.md,
+  },
+  orderButtonPressed: {
+    backgroundColor: Colors.primaryDark,
+    transform: [{ scale: 0.98 }],
+    ...Shadows.lg,
+  },
+  orderButtonText: {
+    ...Typography.styles.button,
+    color: Colors.white,
+  },
+  contactButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.md,
+  },
+  contactButton: {
+    backgroundColor: Colors.black,
+    borderRadius: BorderRadius['2xl'],
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    flex: 1,
+    marginHorizontal: Spacing.xs,
+    alignItems: 'center',
+    ...Shadows.sm,
+  },
+  contactButtonPressed: {
+    backgroundColor: Colors.gray800,
+    transform: [{ scale: 0.98 }],
+    ...Shadows.md,
+  },
+  contactButtonText: {
+    ...Typography.styles.body,
+    color: Colors.white,
+    fontWeight: '600',
+  },
+  featureTagsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginBottom: Spacing.md,
+    gap: Spacing.sm,
+  },
+  featureTag: {
+    borderRadius: BorderRadius['2xl'], // Match contact button shape
+    paddingVertical: Spacing.sm, // Match contact button padding
+    paddingHorizontal: Spacing.md, // Match contact button padding
+    ...Shadows.sm,
+  },
+  featureTagPrimary: {
+    backgroundColor: '#3B82F6', // Blue
+  },
+  featureTagSecondary: {
+    backgroundColor: '#EF4444', // Red
+  },
+  featureTagAccent: {
+    backgroundColor: '#F97316', // Orange
+  },
+  featureTagText: {
+    ...Typography.styles.caption,
+    color: Colors.white,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   tagsContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    marginBottom: Spacing.md,
   },
   tag: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: 10,
-    marginHorizontal: 3,
+    backgroundColor: Colors.gray200,
+    borderRadius: BorderRadius.full,
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
+    marginHorizontal: Spacing.xs,
+    marginVertical: Spacing.xs,
   },
   tagText: {
-    color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  headerActionButton: {
-    padding: 6,
-    marginLeft: 6,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  viewCountIcon: {
-    fontSize: 16,
-    marginRight: 4,
-  },
-  viewCountText: {
-    fontSize: 12,
-    color: '#666',
+    ...Typography.styles.bodySmall,
+    color: Colors.textPrimary,
     fontWeight: '500',
   },
-  imageContainer: {
-    position: 'relative',
-    marginHorizontal: 16,
-    marginTop: 16,
-    marginBottom: 8,
-    borderRadius: 16,
-    backgroundColor: 'transparent',
+  description: {
+    ...Typography.styles.body,
+    color: Colors.textPrimary,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  specialCardsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.md,
+    gap: Spacing.sm,
+  },
+  specialCard: {
+    flex: 1,
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.gray200,
+    flexDirection: 'column',
+    alignItems: 'center',
+    ...Shadows.sm,
+  },
+  specialCardPressed: {
+    backgroundColor: Colors.gray100,
+    borderColor: Colors.primary,
+    transform: [{ scale: 0.98 }],
+    ...Shadows.md,
+  },
+  specialCardImage: {
+    width: 70,
+    height: 70,
+    backgroundColor: Colors.primary,
+    borderRadius: BorderRadius.sm,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing.sm,
+  },
+  specialCardImageText: {
+    fontSize: 28,
+  },
+  specialCardContent: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  specialCardTitle: {
+    ...Typography.styles.caption,
+    color: Colors.primary,
+    fontWeight: '600',
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  specialCardDescription: {
+    ...Typography.styles.caption,
+    color: Colors.textSecondary,
+    fontSize: 10,
+    lineHeight: 12,
+    marginBottom: 1,
+    textAlign: 'center',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: Colors.border,
+    marginVertical: Spacing.md,
+  },
+  // Image Header Bar Styles
+  imageHeaderBar: {
+    position: 'absolute',
+    top: 20, // Position at the top
+    alignSelf: 'center', // Center the header horizontally
+    height: 40, // Reduced height to make it thinner
+    backgroundColor: 'rgba(255, 255, 255, 0.15)', // Glassy background
+    borderRadius: 20, // Adjusted border radius for thinner height
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center', // Center content within the header
+    paddingHorizontal: Spacing.md, // Padding for content
+    gap: Spacing.md, // Even spacing between elements
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    zIndex: 20,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -862,573 +1296,252 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 5,
   },
-  carousel: {
-    width: '100%',
-    height: 300,
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  mainImage: {
-    width: Dimensions.get('window').width - 32, // Full width minus margins
-    height: 300,
-    resizeMode: 'cover',
-  },
-  imageIndicators: {
-    position: 'absolute',
-    bottom: 16,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
+  headerBackButton: {
     justifyContent: 'center',
     alignItems: 'center',
   },
-  indicator: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.5)',
-    marginHorizontal: 4,
+  headerButtonPressed: {
+    transform: [{ scale: 0.95 }],
+    opacity: 0.8,
   },
-  activeIndicator: {
-    backgroundColor: '#FFFFFF',
-    width: 12,
-    height: 8,
-    borderRadius: 4,
-  },
-  content: {
-    padding: 16,
-  },
-  titleRatingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  listingName: {
-    fontSize: 24,
+  headerBackIcon: {
+    fontSize: 20,
+    color: Colors.textPrimary, // Black icon
     fontWeight: 'bold',
-    color: '#000',
-    flex: 1,
-    marginRight: 16,
   },
-  ratingButton: {
-    backgroundColor: '#F8F9FA',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: '#E5E5EA',
-  },
-  ratingButtonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  singleStar: {
-    fontSize: 16,
-    color: '#FFD700',
-    marginRight: 4,
-  },
-  ratingButtonText: {
-    fontSize: 14,
+  headerText: {
+    ...Typography.styles.caption,
+    color: Colors.textPrimary, // Black text
     fontWeight: '600',
-    color: '#000',
+    letterSpacing: 1,
   },
-  distancePriceRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  distanceContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  distanceIcon: {
-    fontSize: 14,
-    marginRight: 4,
-  },
-  distanceText: {
-    fontSize: 14,
-    color: '#666',
-    fontWeight: '500',
-  },
-  priceContainer: {
-    backgroundColor: '#F2F2F7',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  priceText: {
-    fontSize: 14,
-    color: '#000',
-    fontWeight: '600',
-  },
-  hoursButtonContainer: {
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  hoursButton: {
-    backgroundColor: '#F2F2F7',
-    borderRadius: 25,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    minWidth: 350,
-    maxWidth: '90%',
-  },
-  hoursButtonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-  },
-  hoursIcon: {
-    fontSize: 16,
-    marginRight: 4,
-  },
-  hoursButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#000',
-    marginRight: 4,
-  },
-  hoursNextInfo: {
-    fontSize: 12,
-    color: '#666',
+  headerSubText: {
+    ...Typography.styles.caption,
+    color: Colors.textPrimary, // Black text
     fontWeight: '400',
-    marginRight: 4,
+    letterSpacing: 1,
+    opacity: 0.8,
   },
-  hoursStatusText: {
-    fontSize: 12,
-    fontWeight: '600',
-    marginRight: 4,
-  },
-  hoursDropdownIcon: {
-    fontSize: 12,
-    color: '#666',
-  },
-  hoursDropdown: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 15,
-    marginTop: 12,
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 5,
-    minWidth: 380,
-    maxWidth: '95%',
-  },
-  addressSection: {
-    marginBottom: 24,
-    alignItems: 'center',
-    width: '100%',
-  },
-  addressTextContainer: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#000',
-    paddingBottom: 2,
-    alignSelf: 'center',
-  },
-  addressText: {
-    fontSize: 16,
-    lineHeight: 22,
-    color: '#00AA00',
-    textAlign: 'center',
-    fontWeight: 'bold',
-  },
-  descriptionSection: {
-    marginBottom: 20,
-  },
-  description: {
-    fontSize: 16,
-    lineHeight: 24,
-    color: '#333',
-    textAlign: 'center',
-    numberOfLines: 3,
-  },
-  dividerLine: {
-    height: 1,
-    backgroundColor: '#E5E5EA',
-    marginHorizontal: 40,
-    marginVertical: 20,
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    marginBottom: 24,
-  },
-  actionButton: {
-    flex: 1,
+  viewCountGroup: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#F2F2F7',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    marginHorizontal: 4,
+    gap: 4, // Small gap between eye and number
   },
-  actionButtonIcon: {
-    fontSize: 18,
-    marginRight: 8,
-  },
-  actionButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#007AFF',
-  },
-  backIcon: {
-    fontSize: 24,
-    color: '#000',
-    fontWeight: 'bold',
-  },
-  actionIcon: {
-    fontSize: 20,
-    color: '#000',
-  },
-  favoritedHeart: {
-    color: '#FF3B30',
-  },
-  addressIcon: {
-    fontSize: 16,
-    marginRight: 8,
-  },
-  starIcon: {
-    fontSize: 16,
-    color: '#FFD700',
-    marginRight: 2,
-  },
-  emptyStarIcon: {
-    fontSize: 16,
-    color: '#DDD',
-    marginRight: 2,
-  },
-  starsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  // Modal Styles
-  modalContainer: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#000',
-  },
-  closeButton: {
-    padding: 8,
-  },
-  closeButtonText: {
-    fontSize: 18,
-    color: '#666',
-  },
-  ratingSummary: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    backgroundColor: '#F8F9FA',
-  },
-  ratingSummaryLeft: {
-    alignItems: 'center',
-  },
-  averageRating: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#000',
-  },
-  reviewCount: {
+  eyeIcon: {
     fontSize: 14,
-    color: '#666',
-    marginTop: 4,
+    color: Colors.primary, // Blue color for eye icon
+  },
+  viewCount: {
+    ...Typography.styles.caption,
+    color: Colors.textPrimary, // Black color for numbers
+    fontWeight: '600',
+    fontSize: 12,
+  },
+  shareButton: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  shareIcon: {
+    fontSize: 18,
+    color: Colors.textPrimary, // Black icon
+    fontWeight: 'bold',
+  },
+  heartButton: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  heartIcon: {
+    fontSize: 20,
+    color: Colors.textPrimary, // Black icon
+  },
+  heartIconActive: {
+    color: Colors.error,
+  },
+  // Social Media Styles
+  socialMediaContainer: {
+    marginTop: Spacing.lg,
+    marginHorizontal: Spacing.md,
+  },
+  socialMediaTitle: {
+    ...Typography.styles.h4,
+    marginBottom: Spacing.sm,
+    textAlign: 'center',
+  },
+  socialMediaIcons: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  socialMediaButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: Colors.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...Shadows.sm,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  // Long Description Styles
+  longDescriptionContainer: {
+    marginTop: Spacing.lg,
+    marginHorizontal: Spacing.md,
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.md,
+    ...Shadows.sm,
+  },
+  longDescriptionTitle: {
+    ...Typography.styles.h4,
+    marginBottom: Spacing.sm,
+  },
+  longDescriptionText: {
+    ...Typography.styles.body,
+    lineHeight: 24,
+    color: Colors.textSecondary,
+  },
+  // Reviews Section Styles
+  reviewsSectionContainer: {
+    marginTop: Spacing.lg,
+    marginHorizontal: Spacing.sm,
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.md,
+    ...Shadows.sm,
+  },
+  reviewsSectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+  },
+  reviewsSectionTitle: {
+    ...Typography.styles.h4,
+    fontFamily: 'Nunito-Bold',
+    marginBottom: Spacing.xs,
   },
   writeReviewButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
+    backgroundColor: 'transparent',
+    borderRadius: BorderRadius['2xl'],
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.success,
+    ...Shadows.sm,
   },
   writeReviewButtonText: {
-    color: '#FFFFFF',
+    ...Typography.styles.button,
+    color: Colors.success,
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Nunito-SemiBold',
   },
-  sortContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
+  viewMoreContainer: {
+    marginTop: Spacing.sm,
+    alignItems: 'center',
   },
-  sortLabel: {
+  viewMoreButton: {
+    backgroundColor: Colors.primary,
+    borderRadius: BorderRadius['2xl'],
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    ...Shadows.sm,
+  },
+  viewMoreButtonText: {
+    ...Typography.styles.button,
+    color: Colors.white,
     fontSize: 14,
-    fontWeight: '600',
-    color: '#000',
-    marginBottom: 8,
-  },
-  sortButtons: {
-    flexDirection: 'row',
-  },
-  sortButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-    marginRight: 8,
-    backgroundColor: '#F8F9FA',
-    borderWidth: 1,
-    borderColor: '#E5E5EA',
-  },
-  sortButtonActive: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
-  },
-  sortButtonText: {
-    fontSize: 12,
-    color: '#666',
-  },
-  sortButtonTextActive: {
-    color: '#FFFFFF',
-  },
-  reviewsList: {
-    flex: 1,
-    paddingHorizontal: 16,
-  },
-  reviewItem: {
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    fontFamily: 'Nunito-SemiBold',
   },
   reviewHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 8,
+    marginBottom: Spacing.xs,
   },
-  reviewAuthor: {
-    fontSize: 16,
+  reviewUserInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  reviewUserAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: Spacing.sm,
+  },
+  reviewUserInitial: {
+    ...Typography.styles.bodyLarge,
+    color: Colors.white,
     fontWeight: '600',
-    color: '#000',
+    fontFamily: 'Nunito-SemiBold',
+  },
+  reviewUserDetails: {
+    flex: 1,
+  },
+  reviewUserName: {
+    ...Typography.styles.bodyLarge,
+    fontWeight: '600',
+    marginBottom: 2,
+    fontFamily: 'Nunito-SemiBold',
   },
   reviewRating: {
-    alignItems: 'flex-end',
-  },
-  reviewStars: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
+  },
+  reviewStar: {
+    fontSize: 14,
+    color: Colors.gray300,
+    marginRight: 1,
+  },
+  reviewStarFilled: {
+    color: Colors.warning,
   },
   reviewDate: {
-    fontSize: 12,
-    color: '#666',
+    ...Typography.styles.caption,
+    color: Colors.textTertiary,
+    fontFamily: 'Nunito-Regular',
   },
-  reviewText: {
-    fontSize: 14,
-    color: '#333',
+  reviewTitle: {
+    ...Typography.styles.bodyLarge,
+    fontWeight: '600',
+    marginBottom: Spacing.xs,
+    fontFamily: 'Nunito-SemiBold',
+  },
+  reviewContent: {
+    ...Typography.styles.body,
+    color: Colors.textSecondary,
     lineHeight: 20,
+    fontFamily: 'Nunito-Regular',
   },
-  pagination: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  noReviewsContainer: {
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E5EA',
+    paddingVertical: Spacing.md,
   },
-  paginationButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 6,
-    backgroundColor: '#007AFF',
+  noReviewsText: {
+    ...Typography.styles.h4,
+    color: Colors.textSecondary,
+    marginBottom: Spacing.xs,
+    fontFamily: 'Nunito-Bold',
   },
-  paginationButtonDisabled: {
-    backgroundColor: '#E5E5EA',
-  },
-  paginationButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  paginationButtonTextDisabled: {
-    color: '#999',
-  },
-  paginationInfo: {
-    fontSize: 14,
-    color: '#666',
-  },
-  addressSection: {
-    marginBottom: 20,
-    alignItems: 'center',
-  },
-  addressHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  addressTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000',
-    marginLeft: 8,
-  },
-  addressText: {
-    fontSize: 16,
-    color: '#00AA00',
-    lineHeight: 22,
+  noReviewsSubtext: {
+    ...Typography.styles.body,
+    color: Colors.textTertiary,
     textAlign: 'center',
-    fontWeight: 'bold',
-  },
-  orderButtonContainer: {
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  orderButton: {
-    backgroundColor: '#00AA00',
-    borderRadius: 25,
-    paddingVertical: 12,
-    paddingHorizontal: 28,
-    minWidth: 200,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  orderButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  contactButtonsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    marginBottom: 20,
-  },
-  contactButton: {
-    backgroundColor: '#000000',
-    borderRadius: 25,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    flex: 1,
-    marginHorizontal: 4,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  contactButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  contentTagsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    flexWrap: 'wrap',
-    paddingHorizontal: 16,
-    marginBottom: 20,
-  },
-  contentTag: {
-    backgroundColor: '#F2F2F7',
-    borderRadius: 20,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    marginHorizontal: 4,
-    marginVertical: 4,
-  },
-  contentTagText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#333',
-  },
-  hoursContainer: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000',
-    marginBottom: 12,
-  },
-  hoursRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F2F2F7',
-  },
-  dayLabel: {
-    fontSize: 15,
-    color: '#333',
-    fontWeight: '600',
-    width: 90,
-    marginRight: 16,
-  },
-  hoursText: {
-    fontSize: 14,
-    color: '#666',
-    fontWeight: '500',
-    flex: 1,
-    textAlign: 'center',
-  },
-  reviewsContainer: {
-    marginBottom: 24,
+    fontFamily: 'Nunito-Regular',
   },
   reviewItem: {
-    backgroundColor: '#F8F9FA',
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 12,
-  },
-  reviewHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  reviewAuthor: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000',
-  },
-  reviewRating: {
-    flexDirection: 'row',
-  },
-  reviewStars: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  reviewText: {
-    fontSize: 14,
-    color: '#333',
-    lineHeight: 20,
-    marginBottom: 8,
-  },
-  reviewDate: {
-    fontSize: 12,
-    color: '#666',
+    backgroundColor: Colors.white,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.md,
+    marginHorizontal: Spacing.md,
+    marginBottom: Spacing.xs,
+    borderRadius: BorderRadius.lg,
+    ...Shadows.sm,
+    flex: 1,
   },
 });
 

@@ -1,6 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import EateryIcon from '../components/EateryIcon';
+import StoreIcon from '../components/StoreIcon';
 import { Colors, Typography, Spacing, BorderRadius, Shadows, TouchTargets } from '../styles/designSystem';
 
 const FavoritesScreen: React.FC = () => {
@@ -8,7 +10,8 @@ const FavoritesScreen: React.FC = () => {
   const favoriteItems = [
     {
       id: '1',
-      title: '🍽️ Kosher Deli & Market',
+      title: 'Kosher Deli & Market',
+      icon: EateryIcon,
       description: 'Authentic kosher cuisine with traditional recipes',
       category: 'Restaurant',
       rating: 4.8,
@@ -35,7 +38,8 @@ const FavoritesScreen: React.FC = () => {
     },
     {
       id: '4',
-      title: '🛒 Kosher Grocery',
+      title: 'Kosher Grocery',
+      icon: StoreIcon,
       description: 'Complete kosher grocery with fresh produce',
       category: 'Shopping',
       rating: 4.6,

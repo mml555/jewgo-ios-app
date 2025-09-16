@@ -19,16 +19,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
     setSearchQuery(query);
     // Pass search query to parent component (RootTabs)
     onSearchChange?.(query);
-    console.log('Search query:', query);
   }, [onSearchChange]);
 
   const handleCategoryChange = useCallback((category: string) => {
     setActiveCategory(category);
-    console.log('Active category:', category);
   }, []);
 
   const handleActionPress = useCallback((action: string) => {
-    console.log('Action pressed:', action);
     // Here you would typically handle different actions
     // For now, we'll just log the action
   }, []);
@@ -56,7 +53,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
       />
       <ActionBar 
         onActionPress={handleActionPress} 
-        currentCategory={getCategoryDisplayName(activeCategory)}
+        currentCategory={activeCategory}
       />
       <CategoryGridScreen 
         categoryKey={activeCategory}

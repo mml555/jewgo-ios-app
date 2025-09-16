@@ -9,6 +9,8 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { useFilters } from '../hooks/useFilters';
 import FiltersModal from './FiltersModal';
+import FilterIcon from './FilterIcon';
+import MapIcon from './MapIcon';
 import { Colors, Typography, Spacing, BorderRadius, Shadows, TouchTargets } from '../styles/designSystem';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -19,7 +21,7 @@ interface ActionBarProps {
   currentCategory?: string;
 }
 
-const ActionBar: React.FC<ActionBarProps> = ({ onActionPress, currentCategory = 'Place' }) => {
+const ActionBar: React.FC<ActionBarProps> = ({ onActionPress, currentCategory = 'mikvah' }) => {
   const navigation = useNavigation();
   const {
     filters,
@@ -30,17 +32,32 @@ const ActionBar: React.FC<ActionBarProps> = ({ onActionPress, currentCategory = 
     getActiveFiltersCount,
   } = useFilters();
 
+  // Convert category key to display name
+  const getCategoryDisplayName = (categoryKey: string) => {
+    const categoryMap: { [key: string]: string } = {
+      'mikvah': 'Mikvah',
+      'eatery': 'Eatery',
+      'shul': 'Shul',
+      'stores': 'Store',
+      'shuk': 'Shuk',
+      'shtetl': 'Shtetl',
+      'shidduch': 'Shidduch',
+      'social': 'Social',
+    };
+    return categoryMap[categoryKey] || 'Place';
+  };
+
   const handleActionPress = useCallback((action: string) => {
     if (action === 'filters') {
       openFiltersModal();
     } else if (action === 'addCategory') {
       (navigation as any).navigate('AddCategory', { category: currentCategory });
     } else if (action === 'liveMap') {
-      (navigation as any).navigate('LiveMap', { category: currentCategory.toLowerCase() });
+      // Pass the category key directly (it's already in the correct format)
+      (navigation as any).navigate('LiveMap', { category: currentCategory });
     } else {
       onActionPress?.(action);
     }
-    console.log('Action pressed:', action);
   }, [onActionPress, openFiltersModal, navigation, currentCategory]);
 
   return (
@@ -54,7 +71,7 @@ const ActionBar: React.FC<ActionBarProps> = ({ onActionPress, currentCategory = 
           accessibilityLabel="Open live map"
           accessibilityHint="Tap to view live map"
         >
-          <Text style={styles.actionIcon}>🗺️</Text>
+          <MapIcon size={14} color="#333" />
           <Text style={styles.actionText}>Live Map</Text>
         </TouchableOpacity>
 
@@ -63,11 +80,11 @@ const ActionBar: React.FC<ActionBarProps> = ({ onActionPress, currentCategory = 
           onPress={() => handleActionPress('addCategory')}
           accessible={true}
           accessibilityRole="button"
-          accessibilityLabel={`Add new ${currentCategory}`}
-          accessibilityHint={`Tap to add a new ${currentCategory.toLowerCase()}`}
+          accessibilityLabel={`Add new ${getCategoryDisplayName(currentCategory)}`}
+          accessibilityHint={`Tap to add a new ${getCategoryDisplayName(currentCategory).toLowerCase()}`}
         >
           <Text style={styles.actionIcon}>➕</Text>
-          <Text style={styles.actionText}>Add {currentCategory}</Text>
+          <Text style={styles.actionText}>Add {getCategoryDisplayName(currentCategory)}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -81,7 +98,9 @@ const ActionBar: React.FC<ActionBarProps> = ({ onActionPress, currentCategory = 
           accessibilityLabel="Open filters"
           accessibilityHint="Tap to open filter options"
         >
-          <Text style={styles.actionIcon}>🔍</Text>
+          <View style={styles.filterIconWrapper}>
+            <FilterIcon size={14} color="#333" />
+          </View>
           <Text style={styles.actionText}>
             Filters{getActiveFiltersCount() > 0 ? ` (${getActiveFiltersCount()})` : ''}
           </Text>
@@ -118,18 +137,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: Colors.gray200,
-    borderRadius: BorderRadius.lg,
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.sm,
+    borderRadius: 25, // Pill shape like listing page buttons
+    paddingVertical: 6, // Even thinner pill
+    paddingHorizontal: Spacing.xs, // Minimal horizontal padding
     marginHorizontal: Spacing.xs,
     minHeight: TouchTargets.minimum,
+    ...Shadows.sm,
   },
   actionIcon: {
-    fontSize: 16,
+    fontSize: 14, // Smaller icon
+    marginRight: Spacing.xs,
+  },
+  filterIconWrapper: {
     marginRight: Spacing.xs,
   },
   actionText: {
-    ...Typography.styles.bodySmall,
+    fontSize: 12, // Smaller text
     fontWeight: '600',
     color: Colors.textPrimary,
     flexShrink: 1,

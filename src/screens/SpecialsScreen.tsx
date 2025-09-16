@@ -2,13 +2,17 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Typography, Spacing, BorderRadius, Shadows, TouchTargets } from '../styles/designSystem';
+import EateryIcon from '../components/EateryIcon';
+import StoreIcon from '../components/StoreIcon';
+import SpecialsIcon from '../components/SpecialsIcon';
 
 const SpecialsScreen: React.FC = () => {
   // Mock special offers
   const specialOffers = [
     {
       id: '1',
-      title: '🍽️ 20% Off Kosher Deli',
+      title: '20% Off Kosher Deli',
+      icon: EateryIcon,
       description: 'Get 20% off your next meal at Kosher Deli & Market. Valid until end of month.',
       business: 'Kosher Deli & Market',
       category: 'Restaurant',
@@ -19,7 +23,8 @@ const SpecialsScreen: React.FC = () => {
     },
     {
       id: '2',
-      title: '🛒 Free Delivery Weekend',
+      title: 'Free Delivery Weekend',
+      icon: StoreIcon,
       description: 'Free delivery on all orders over $50 this weekend only!',
       business: 'Kosher Grocery',
       category: 'Shopping',
@@ -164,7 +169,7 @@ const SpecialsScreen: React.FC = () => {
         {/* Empty State (hidden when offers exist) */}
         {specialOffers.length === 0 && (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>⭐</Text>
+            <SpecialsIcon size={48} color="#CCCCCC" />
             <Text style={styles.emptyTitle}>No Specials Available</Text>
             <Text style={styles.emptyDescription}>
               Check back soon for exclusive deals and offers from your favorite Jewish community businesses.
@@ -330,12 +335,13 @@ const styles = StyleSheet.create({
   },
   claimButton: {
     backgroundColor: Colors.primary,
-    borderRadius: BorderRadius.md,
+    borderRadius: 25, // Pill shape like listing page buttons
     paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.md,
+    paddingHorizontal: Spacing.lg,
     minHeight: TouchTargets.minimum,
     justifyContent: 'center',
     alignItems: 'center',
+    ...Shadows.md,
   },
   claimButtonText: {
     ...Typography.styles.button,

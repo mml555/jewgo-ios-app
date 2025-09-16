@@ -8,11 +8,19 @@ import {
   Alert,
   ScrollView,
   TextInput,
+  Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { WebView } from 'react-native-webview';
 import { useFilters } from '../hooks/useFilters';
+import FiltersModal from '../components/FiltersModal';
+import FilterIcon from '../components/FilterIcon';
+import MikvahIcon from '../components/MikvahIcon';
+import EateryIcon from '../components/EateryIcon';
+import StoreIcon from '../components/StoreIcon';
+import SpecialsIcon from '../components/SpecialsIcon';
+import { Spacing, Shadows } from '../styles/designSystem';
 import { useLocation, calculateDistance } from '../hooks/useLocation';
 import { useCategoryData } from '../hooks/useCategoryData';
 
@@ -60,22 +68,28 @@ interface MapListing {
   category: string;
   rating?: number;
   distance?: number;
-  coordinate: {
-    latitude: number;
-    longitude: number;
-  };
+  latitude: number;
+  longitude: number;
+  imageUrl?: string;
 }
 
 const LiveMapScreen: React.FC = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const insets = useSafeAreaInsets();
-  const { filters } = useFilters();
+  const {
+    filters,
+    showFiltersModal,
+    applyFilters,
+    openFiltersModal,
+    closeFiltersModal,
+    getActiveFiltersCount,
+  } = useFilters();
   const webViewRef = useRef<WebView>(null);
   const { location, getCurrentLocation, permissionGranted, loading: locationLoading } = useLocation();
   
-  // Get current category from route params, default to 'all'
-  const currentCategory = (route.params as any)?.category || 'all';
+  // Get current category from route params, default to 'mikvah'
+  const currentCategory = (route.params as any)?.category || 'mikvah';
   const [selectedCategory, setSelectedCategory] = useState<string>(currentCategory);
   const [selectedListing, setSelectedListing] = useState<MapListing | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -87,84 +101,61 @@ const LiveMapScreen: React.FC = () => {
     latitudeDelta: 0.1,
     longitudeDelta: 0.1,
   });
+  const [isUserInteracting, setIsUserInteracting] = useState(false);
 
-  // Categories configuration
+  // Categories configuration - matching the keys from ActionBar
   const categories = [
     { key: 'all', label: 'All', emoji: '📍', color: '#74e1a0' },
-    { key: 'restaurants', label: 'Restaurants', emoji: '🍽️', color: '#FF6B6B' },
-    { key: 'shuls', label: 'Shuls', emoji: '🕍', color: '#4ECDC4' },
-    { key: 'mikvahs', label: 'Mikvahs', emoji: '🛁', color: '#45B7D1' },
+    { key: 'eatery', label: 'Eatery', emoji: '🍽️', color: '#FF6B6B', iconComponent: EateryIcon },
+    { key: 'shul', label: 'Shul', emoji: '🕍', color: '#4ECDC4' },
+    { key: 'mikvah', label: 'Mikvah', emoji: '🛁', color: '#45B7D1', iconComponent: MikvahIcon },
     { key: 'schools', label: 'Schools', emoji: '🎓', color: '#96CEB4' },
-    { key: 'stores', label: 'Stores', emoji: '🛒', color: '#FFEAA7' },
+    { key: 'stores', label: 'Stores', emoji: '🛒', color: '#FFEAA7', iconComponent: StoreIcon },
     { key: 'services', label: 'Services', emoji: '🔧', color: '#DDA0DD' },
-    { key: 'events', label: 'Events', emoji: '🎉', color: '#98D8C8' },
+    { key: 'events', label: 'Events', emoji: '🎉', color: '#98D8C8', iconComponent: SpecialsIcon },
     { key: 'housing', label: 'Housing', emoji: '🏠', color: '#F7DC6F' },
+    { key: 'shuk', label: 'Shuk', emoji: '🛒', color: '#FFEAA7', iconComponent: StoreIcon },
+    { key: 'shtetl', label: 'Shtetl', emoji: '🏘️', color: '#98D8C8' },
+    { key: 'shidduch', label: 'Shidduch', emoji: '💕', color: '#FFB6C1' },
+    { key: 'social', label: 'Social', emoji: '👥', color: '#DDA0DD' },
   ];
 
-  // Get data for the current category
-  const { data: allListings } = useCategoryData(selectedCategory === 'all' ? 'restaurants' : selectedCategory, '', 100);
+  // Get data for the current category only
+  const { data: allListings } = useCategoryData({ 
+    categoryKey: selectedCategory, 
+    query: '', 
+    pageSize: 100 
+  });
 
-  // Convert listings to map format with coordinates
+  // Debug logging
+  console.log('🗺️ LiveMapScreen - selectedCategory:', selectedCategory);
+  console.log('🗺️ LiveMapScreen - allListings.length:', allListings?.length || 0);
+  console.log('🗺️ LiveMapScreen - category found:', categories.find(c => c.key === selectedCategory));
+  
+
+  // Convert listings to map format with coordinates - only show current category
   const mapListings: MapListing[] = useMemo(() => {
-    // Create more diverse sample data for the map
-    const sampleLocations = [
-      // Restaurants
-      { title: '🍽️ Kosher Deli & Market', description: 'Authentic kosher cuisine with traditional recipes', category: 'restaurants', rating: 4.5, distance: 0.8 },
-      { title: '🍽️ Kosher Pizza Palace', description: 'Best kosher pizza in the neighborhood', category: 'restaurants', rating: 4.2, distance: 1.2 },
-      { title: '🍽️ Shabbat Takeout', description: 'Fresh Shabbat meals for pickup', category: 'restaurants', rating: 4.7, distance: 0.5 },
-      { title: '🍽️ Kosher Restaurant', description: 'Fine dining with kosher certification', category: 'restaurants', rating: 4.8, distance: 1.8 },
-      { title: '🍽️ Kosher Bakery', description: 'Fresh-baked challah and pastries daily', category: 'restaurants', rating: 4.3, distance: 0.9 },
-      
-      // Synagogues
-      { title: '🕍 Chabad House', description: 'Warm and welcoming community center for all ages', category: 'shuls', rating: 4.6, distance: 0.3 },
-      { title: '🕍 Young Israel', description: 'Traditional Orthodox synagogue with daily services', category: 'shuls', rating: 4.4, distance: 1.1 },
-      { title: '🕍 Sephardic Center', description: 'Modern Sephardic community with rich heritage', category: 'shuls', rating: 4.5, distance: 1.5 },
-      { title: '🕍 Synagogue Beth Israel', description: 'Historic synagogue with beautiful architecture', category: 'shuls', rating: 4.7, distance: 2.1 },
-      
-      // Mikvahs
-      { title: '🛁 Mikvah Chaya', description: 'Beautiful mikvah facility with private appointments', category: 'mikvahs', rating: 4.8, distance: 0.7 },
-      { title: '🛁 Community Mikvah', description: 'Modern mikvah with excellent facilities', category: 'mikvahs', rating: 4.6, distance: 1.4 },
-      
-      // Stores
-      { title: '🏪 Kosher Grocery', description: 'Complete kosher grocery with fresh produce', category: 'stores', rating: 4.4, distance: 0.6 },
-      { title: '🏪 Kosher Butcher', description: 'Premium kosher meats and poultry', category: 'stores', rating: 4.5, distance: 1.0 },
-      { title: '🏪 Jewish Bookstore', description: 'Comprehensive selection of Jewish books and gifts', category: 'stores', rating: 4.3, distance: 1.3 },
-      
-      // Community Centers
-      { title: '👥 Jewish Community Center', description: 'Full-service Jewish community center', category: 'services', rating: 4.6, distance: 1.7 },
-      { title: '👥 Jewish Senior Center', description: 'Activities and programs for Jewish seniors', category: 'services', rating: 4.4, distance: 2.0 },
-      { title: '👥 Kollel Torah', description: 'Torah study center for serious learning', category: 'services', rating: 4.8, distance: 0.4 },
-      
-      // Education
-      { title: '📚 Jewish Day School', description: 'Excellent Jewish education for children', category: 'schools', rating: 4.7, distance: 1.6 },
-      { title: '📚 Jewish Library', description: 'Extensive collection of Jewish literature', category: 'schools', rating: 4.5, distance: 0.9 },
-      
-      // Culture
-      { title: '🎭 Jewish Museum', description: 'Educational exhibits on Jewish history', category: 'events', rating: 4.6, distance: 2.3 },
-      
-      // Services
-      { title: '🎉 Kosher Catering', description: 'Catering for all Jewish celebrations', category: 'services', rating: 4.5, distance: 1.8 },
-    ];
-
-    // Combine sample data with existing listings
-    const combinedListings = [...sampleLocations, ...allListings];
-    
-    return combinedListings.map((item, index) => ({
-      id: item.id || `sample-${index}`,
+    console.log('🗺️ Converting listings to map format - allListings:', allListings);
+    // Only use real data from the API for the specific category
+    const converted = allListings.map((item, index) => ({
+      id: item.id || `fallback-${index}`,
       title: item.title,
       description: item.description,
       category: item.category,
       rating: item.rating,
       distance: item.distance,
-      coordinate: item.coordinate || {
-        latitude: 40.7128 + (Math.random() - 0.5) * 0.15, // NYC area with more spread
-        longitude: -74.0060 + (Math.random() - 0.5) * 0.15,
-      },
+      latitude: item.latitude || (40.7128 + (Math.random() - 0.5) * 0.15), // NYC area with more spread
+      longitude: item.longitude || (-74.0060 + (Math.random() - 0.5) * 0.15),
+      imageUrl: item.images && item.images.length > 0 ? item.images[0] : item.imageUrl, // Use first image from enhanced data
     }));
+    console.log('🗺️ Converted mapListings:', converted);
+    return converted;
   }, [allListings]);
 
-  // Filter listings based on search query and global filters
+  // Filter and sort listings based on search query and global filters
   const filteredListings = useMemo(() => {
+    console.log('🗺️ FILTERING MAP DATA - original data.length:', mapListings.length, 'location:', !!location, 'filters:', filters);
+    
     const filtered = mapListings.filter((listing) => {
       // Search filter
       if (searchQuery.trim()) {
@@ -178,22 +169,85 @@ const LiveMapScreen: React.FC = () => {
         }
       }
 
-      // Global filters
-      if (filters.maxDistance && listing.distance && listing.distance > filters.maxDistance) {
+      // Distance filter - calculate real distance if location available
+      if (location && listing.latitude && listing.longitude && filters.maxDistance < 100) {
+        const distance = calculateDistance(
+          location.latitude,
+          location.longitude,
+          listing.latitude,
+          listing.longitude
+        );
+        
+        // For testing: if distance is extremely large (like iOS simulator SF to NYC),
+        // don't apply distance filter to avoid filtering out all items
+        if (distance > 2000) {
+          console.log('🗺️ DISTANCE TOO LARGE FOR FILTERING:', distance, 'miles - skipping distance filter');
+        } else if (distance > filters.maxDistance) {
+          console.log('🗺️ FILTERED OUT BY DISTANCE:', listing.title, 'distance:', distance, 'maxDistance:', filters.maxDistance);
+          return false;
+        }
+      }
+
+      // Rating filter
+      if (filters.minRating > 0 && (!listing.rating || listing.rating < filters.minRating)) {
+        console.log('🗺️ FILTERED OUT BY RATING:', listing.title, 'rating:', listing.rating, 'minRating:', filters.minRating);
         return false;
       }
-      if (filters.minRating && listing.rating && listing.rating < filters.minRating) {
+
+      // Price range filter
+      if (filters.priceRange !== 'any' && listing.price !== filters.priceRange) {
+        console.log('🗺️ FILTERED OUT BY PRICE:', listing.title, 'price:', listing.price, 'priceRange:', filters.priceRange);
         return false;
       }
+
+      // Open now filter
       if (filters.openNow && !listing.isOpen) {
+        console.log('🗺️ FILTERED OUT BY OPEN NOW:', listing.title, 'isOpen:', listing.isOpen);
         return false;
       }
+
+      // Weekend filter
+      if (filters.openWeekends && !listing.openWeekends) {
+        console.log('🗺️ FILTERED OUT BY WEEKEND:', listing.title, 'openWeekends:', listing.openWeekends);
+        return false;
+      }
+
       return true;
     });
+
+    // Auto-sort by distance when location is available
+    if (location) {
+      console.log('🗺️ SORTING MAP DATA BY DISTANCE - location available');
+      filtered.sort((a, b) => {
+        // If both listings have coordinates, sort by distance
+        if (a.latitude && a.longitude && b.latitude && b.longitude) {
+          const distanceA = calculateDistance(
+            location.latitude,
+            location.longitude,
+            a.latitude,
+            a.longitude
+          );
+          const distanceB = calculateDistance(
+            location.latitude,
+            location.longitude,
+            b.latitude,
+            b.longitude
+          );
+          return distanceA - distanceB; // Sort closest first
+        }
+        
+        // If only one has coordinates, prioritize it
+        if ((a.latitude && a.longitude) && (!b.latitude || !b.longitude)) return -1;
+        if ((!a.latitude || !a.longitude) && (b.latitude && b.longitude)) return 1;
+        
+        // If neither has coordinates, maintain original order
+        return 0;
+      });
+    }
     
-    console.log('Filtered listings:', filtered.length, 'out of', mapListings.length);
+    console.log('🗺️ FILTERED AND SORTED MAP DATA - filtered.length:', filtered.length);
     return filtered;
-  }, [mapListings, filters, searchQuery]);
+  }, [mapListings, filters, searchQuery, location]);
 
   const handleBackPress = useCallback(() => {
     navigation.goBack();
@@ -208,7 +262,10 @@ const LiveMapScreen: React.FC = () => {
   }, []);
 
   const handleViewDetails = useCallback((listing: MapListing) => {
-    navigation.navigate('ListingDetail' as never, { listing } as never);
+    navigation.navigate('ListingDetail' as never, { 
+      itemId: listing.id, 
+      categoryKey: listing.category 
+    } as never);
     setSelectedListing(null);
   }, [navigation]);
 
@@ -278,11 +335,42 @@ const LiveMapScreen: React.FC = () => {
             zIndex: 1000
           });
           
-          console.log('Test marker added to map');
 
           // Handle map region changes (heavily debounced to prevent re-renders)
           let regionChangeTimeout;
+          let isUserInteracting = false;
+          
+          // Track user interaction
+          map.addListener('dragstart', () => {
+            isUserInteracting = true;
+            window.ReactNativeWebView.postMessage(JSON.stringify({
+              type: 'user_interaction_start'
+            }));
+          });
+          
+          map.addListener('dragend', () => {
+            isUserInteracting = false;
+            window.ReactNativeWebView.postMessage(JSON.stringify({
+              type: 'user_interaction_end'
+            }));
+          });
+          
+          map.addListener('zoom_changed', () => {
+            isUserInteracting = true;
+            window.ReactNativeWebView.postMessage(JSON.stringify({
+              type: 'user_interaction_start'
+            }));
+            setTimeout(() => {
+              isUserInteracting = false;
+              window.ReactNativeWebView.postMessage(JSON.stringify({
+                type: 'user_interaction_end'
+              }));
+            }, 500);
+          });
+          
           map.addListener('bounds_changed', () => {
+            if (isUserInteracting) return; // Don't send updates during user interaction
+            
             clearTimeout(regionChangeTimeout);
             regionChangeTimeout = setTimeout(() => {
               const center = map.getCenter();
@@ -295,12 +383,21 @@ const LiveMapScreen: React.FC = () => {
                   longitudeDelta: 0.0421
                 }
               }));
-            }, 1000); // Increased debounce time
+            }, 3000); // Much longer debounce time
           });
         }
 
         function updateMarkers(listings) {
-          console.log('updateMarkers called with:', listings.length, 'listings');
+          console.log('🗺️ WebView received markers:', listings.length, 'markers');
+          
+          // Check if listings have actually changed to prevent unnecessary updates
+          const listingsChanged = JSON.stringify(listings) !== JSON.stringify(currentListings);
+          if (!listingsChanged && markers.length > 0) {
+            console.log('🗺️ Markers unchanged, skipping update');
+            return;
+          }
+          
+          console.log('🗺️ Updating markers due to data change');
           
           // Clear existing markers
           markers.forEach(marker => marker.setMap(null));
@@ -309,25 +406,42 @@ const LiveMapScreen: React.FC = () => {
 
           // Add new markers
           listings.forEach((listing, index) => {
-            console.log('Adding marker:', listing.title, 'at', listing.position);
+            console.log('🗺️ WebView creating marker:', listing.title, 'at', listing.position);
             
+            // Create custom marker with more rounded pill shape
             const marker = new google.maps.Marker({
               position: listing.position,
               map: map,
               title: listing.title,
               icon: {
-                path: google.maps.SymbolPath.CIRCLE,
-                scale: 8,
-                fillColor: listing.color,
-                fillOpacity: 1,
-                strokeColor: '#FFFFFF',
-                strokeWeight: 2
+                url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(\`
+                  <svg width="70" height="35" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                      <linearGradient id="grad\${index}" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:\${listing.color};stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:\${listing.color}dd;stop-opacity:1" />
+                      </linearGradient>
+                      <filter id="shadow\${index}" x="-50%" y="-50%" width="200%" height="200%">
+                        <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="rgba(0,0,0,0.3)"/>
+                      </filter>
+                    </defs>
+                    <rect x="5" y="5" width="60" height="25" rx="15" ry="15" fill="url(#grad\${index})" stroke="#FFFFFF" stroke-width="2" filter="url(#shadow\${index})"/>
+                    <text x="35" y="22" text-anchor="middle" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="11" font-weight="600" text-shadow="0 1px 2px rgba(0,0,0,0.5)">⭐ \${listing.rating || 'N/A'}</text>
+                  </svg>
+                \`),
+                scaledSize: new google.maps.Size(70, 35),
+                anchor: new google.maps.Point(35, 17.5)
               }
             });
 
             const infoWindow = new google.maps.InfoWindow({
               content: \`
-                <div style="padding: 10px; max-width: 200px;">
+                <div style="padding: 10px; max-width: 250px;">
+                  \${listing.imageUrl ? \`
+                    <div style="margin-bottom: 8px;">
+                      <img src="\${listing.imageUrl}" style="width: 100%; height: 120px; object-fit: cover; border-radius: 8px;" alt="\${listing.title}" />
+                    </div>
+                  \` : ''}
                   <div style="display: flex; align-items: center; margin-bottom: 8px;">
                     <span style="font-size: 20px; margin-right: 8px;">\${listing.emoji}</span>
                     <strong>\${listing.title}</strong>
@@ -335,7 +449,7 @@ const LiveMapScreen: React.FC = () => {
                   <p style="margin: 0 0 8px 0; color: #666; font-size: 12px;">\${listing.description}</p>
                   <div style="display: flex; justify-content: space-between; font-size: 12px;">
                     <span>\${listing.rating ? '⭐ ' + listing.rating : 'No rating'}</span>
-                    <span>\${listing.distance ? listing.distance.toFixed(1) + 'mi' : ''}</span>
+                    <span>\${listing.distance && typeof listing.distance === 'number' ? listing.distance.toFixed(1) + 'mi' : ''}</span>
                   </div>
                 </div>
               \`
@@ -355,29 +469,27 @@ const LiveMapScreen: React.FC = () => {
 
         // Listen for messages from React Native
         window.addEventListener('message', function(event) {
-          console.log('Received message from React Native:', event.data);
           try {
             const data = JSON.parse(event.data);
+            console.log('🗺️ WebView received message:', data.type);
             if (data.type === 'update_markers') {
-              console.log('Updating markers with data:', data.listings);
               updateMarkers(data.listings);
             }
           } catch (error) {
-            console.log('Error parsing message:', error);
+            console.log('🗺️ WebView message parse error:', error);
           }
         });
 
         // Also listen for React Native WebView messages
         document.addEventListener('message', function(event) {
-          console.log('Received document message:', event.data);
           try {
             const data = JSON.parse(event.data);
+            console.log('🗺️ WebView received document message:', data.type);
             if (data.type === 'update_markers') {
-              console.log('Updating markers with document data:', data.listings);
               updateMarkers(data.listings);
             }
           } catch (error) {
-            console.log('Error parsing document message:', error);
+            console.log('🗺️ WebView document message parse error:', error);
           }
         });
       </script>
@@ -396,26 +508,33 @@ const LiveMapScreen: React.FC = () => {
         handleMarkerPress(data.listing);
       } else if (data.type === 'region_changed') {
         // Don't update state on every region change to prevent re-renders
-        // Only update if the change is significant
-        const newRegion = data.region;
-        const currentRegion = mapRegion;
-        const latDiff = Math.abs(newRegion.latitude - currentRegion.latitude);
-        const lngDiff = Math.abs(newRegion.longitude - currentRegion.longitude);
-        
-        if (latDiff > 0.01 || lngDiff > 0.01) {
-          setMapRegion(newRegion);
+        // Only update if the change is significant and user is not interacting
+        if (!isUserInteracting) {
+          const newRegion = data.region;
+          const currentRegion = mapRegion;
+          const latDiff = Math.abs(newRegion.latitude - currentRegion.latitude);
+          const lngDiff = Math.abs(newRegion.longitude - currentRegion.longitude);
+          
+          if (latDiff > 0.01 || lngDiff > 0.01) {
+            setMapRegion(newRegion);
+          }
         }
       } else if (data.type === 'map_loaded') {
         setMapLoaded(true);
+      } else if (data.type === 'user_interaction_start') {
+        setIsUserInteracting(true);
+      } else if (data.type === 'user_interaction_end') {
+        setIsUserInteracting(false);
       }
     } catch (error) {
-      console.log('Error parsing WebView message:', error);
     }
   }, [handleMarkerPress, mapRegion]);
 
   // Memoize marker data to prevent unnecessary updates
   const markerData = useMemo(() => {
-    return filteredListings.map((listing) => {
+    console.log('🗺️ Creating marker data from filteredListings:', filteredListings.length);
+    
+    const markers = filteredListings.map((listing) => {
       const category = categories.find(c => c.key === listing.category);
       
       // Calculate real distance if user location is available
@@ -424,13 +543,21 @@ const LiveMapScreen: React.FC = () => {
         realDistance = calculateDistance(
           location.latitude,
           location.longitude,
-          listing.coordinate.latitude,
-          listing.coordinate.longitude
+          listing.latitude,
+          listing.longitude
         );
+      } else {
+        // Handle both string and number distance values
+        if (typeof listing.distance === 'string') {
+          // Extract number from string like "1.2 mi" or "1.2"
+          const match = listing.distance.match(/(\d+\.?\d*)/);
+          realDistance = match ? parseFloat(match[1]) : 0;
+        }
       }
       
-      return {
-        position: { lat: listing.coordinate.latitude, lng: listing.coordinate.longitude },
+      const marker = {
+        id: listing.id,
+        position: { lat: listing.latitude, lng: listing.longitude },
         title: listing.title,
         description: listing.description,
         category: listing.category,
@@ -439,7 +566,13 @@ const LiveMapScreen: React.FC = () => {
         rating: listing.rating || 0,
         distance: realDistance
       };
+      
+      console.log('🗺️ Created marker:', marker.title, 'at', `lat: ${marker.position.lat}, lng: ${marker.position.lng}`);
+      return marker;
     });
+    
+    console.log('🗺️ Total markers created:', markers.length);
+    return markers;
   }, [filteredListings, categories, location]);
 
   // Get user's current location on mount
@@ -461,13 +594,13 @@ const LiveMapScreen: React.FC = () => {
     initializeLocation();
   }, [permissionGranted, getCurrentLocation]);
 
-  // Send marker updates to WebView when markerData changes
+  // Send marker updates to WebView when markerData changes (with debouncing)
   useEffect(() => {
-    console.log('Marker update effect:', { 
-      hasWebView: !!webViewRef.current, 
-      mapLoaded, 
+    console.log('🗺️ Marker data updated:', {
       markerDataLength: markerData.length,
-      filteredListingsLength: filteredListings.length 
+      filteredListingsLength: filteredListings.length,
+      mapLoaded,
+      hasWebView: !!webViewRef.current
     });
     
     if (webViewRef.current && markerData.length > 0) {
@@ -476,22 +609,16 @@ const LiveMapScreen: React.FC = () => {
         listings: markerData
       });
 
-      console.log('Sending markers to WebView:', markerData.length, 'markers');
-      console.log('Marker data sample:', markerData[0]);
+      console.log('🗺️ Sending markers to WebView:', markerData.length, 'markers');
       
-      // Send immediately and also with a delay
-      console.log('Posting message to WebView:', message);
-      webViewRef.current.postMessage(message);
+      // Debounce marker updates to prevent flickering
+      const timeoutId = setTimeout(() => {
+        if (webViewRef.current) {
+          webViewRef.current.postMessage(message);
+        }
+      }, 300); // 300ms debounce
       
-      setTimeout(() => {
-        console.log('Posting delayed message to WebView (500ms)');
-        webViewRef.current?.postMessage(message);
-      }, 500);
-      
-      setTimeout(() => {
-        console.log('Posting delayed message to WebView (2000ms)');
-        webViewRef.current?.postMessage(message);
-      }, 2000);
+      return () => clearTimeout(timeoutId);
     }
   }, [markerData, mapLoaded, filteredListings.length]);
 
@@ -536,6 +663,28 @@ const LiveMapScreen: React.FC = () => {
               <Text style={styles.clearButtonText}>✕</Text>
             </TouchableOpacity>
           )}
+          
+          {/* Filter Button */}
+          <TouchableOpacity
+            style={[
+              styles.filterButton,
+              getActiveFiltersCount() > 0 && styles.filterButtonActive
+            ]}
+            onPress={openFiltersModal}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Open filters"
+            accessibilityHint="Tap to open filter options"
+          >
+            <View style={styles.filterIconContainer}>
+              <FilterIcon size={16} color="#666" />
+            </View>
+            {getActiveFiltersCount() > 0 && (
+              <View style={styles.filterBadge}>
+                <Text style={styles.filterBadgeText}>{getActiveFiltersCount()}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -546,6 +695,19 @@ const LiveMapScreen: React.FC = () => {
           onMessage={handleWebViewMessage}
           webViewRef={webViewRef}
         />
+        
+        {/* Map Legend */}
+        <View style={styles.mapLegend}>
+          <Text style={styles.legendTitle}>Legend</Text>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendColor, { backgroundColor: categories.find(c => c.key === selectedCategory)?.color || '#74e1a0' }]} />
+            <Text style={styles.legendText}>{categories.find(c => c.key === selectedCategory)?.label || 'Places'}</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <Text style={styles.legendIcon}>⭐</Text>
+            <Text style={styles.legendText}>Rating</Text>
+          </View>
+        </View>
       </View>
 
       {/* Selected Listing Popup - Wider Card Version */}
@@ -555,11 +717,19 @@ const LiveMapScreen: React.FC = () => {
           <View style={styles.popupCard}>
             {/* Card Image */}
             <View style={styles.popupImageContainer}>
-              <View style={styles.popupImagePlaceholder}>
-                <Text style={styles.popupImageEmoji}>
-                  {categories.find(c => c.key === selectedListing.category)?.emoji}
-                </Text>
-              </View>
+              {selectedListing.imageUrl ? (
+                <Image 
+                  source={{ uri: selectedListing.imageUrl }} 
+                  style={styles.popupImage}
+                  resizeMode="cover"
+                />
+              ) : (
+                <View style={styles.popupImagePlaceholder}>
+                  <Text style={styles.popupImageEmoji}>
+                    {categories.find(c => c.key === selectedListing.category)?.emoji}
+                  </Text>
+                </View>
+              )}
               <View style={styles.popupTag}>
                 <Text style={styles.popupTagText}>
                   {categories.find(c => c.key === selectedListing.category)?.label}
@@ -590,7 +760,7 @@ const LiveMapScreen: React.FC = () => {
                   {selectedListing.description}
                 </Text>
                 <Text style={styles.popupDistance}>
-                  {selectedListing.distance ? `${selectedListing.distance.toFixed(1)}mi` : ''}
+                  {selectedListing.distance && typeof selectedListing.distance === 'number' ? `${selectedListing.distance.toFixed(1)}mi` : ''}
                 </Text>
               </View>
 
@@ -612,6 +782,15 @@ const LiveMapScreen: React.FC = () => {
           Tap markers to see details. Use filters to narrow results.
         </Text>
       </View>
+
+      {/* Filters Modal */}
+      <FiltersModal
+        visible={showFiltersModal}
+        onClose={closeFiltersModal}
+        onApplyFilters={applyFilters}
+        currentFilters={filters}
+        category={categories.find(c => c.key === selectedCategory)?.label}
+      />
     </View>
   );
 };
@@ -741,6 +920,10 @@ const styles = StyleSheet.create({
     height: 200,
     backgroundColor: '#F5F5F5',
   },
+  popupImage: {
+    width: '100%',
+    height: '100%',
+  },
   popupImagePlaceholder: {
     flex: 1,
     justifyContent: 'center',
@@ -837,10 +1020,11 @@ const styles = StyleSheet.create({
   },
   popupActionButton: {
     backgroundColor: '#74e1a0',
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
+    borderRadius: 25, // Pill shape like listing page buttons
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
     alignItems: 'center',
+    ...Shadows.md,
   },
   popupActionButtonText: {
     fontSize: 16,
@@ -874,6 +1058,93 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#8E8E93',
     textAlign: 'center',
+  },
+  filterButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F2F2F7',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+    position: 'relative',
+  },
+  filterButtonActive: {
+    backgroundColor: '#74e1a0',
+    borderColor: '#74e1a0',
+  },
+  filterIconContainer: {
+    width: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  filterIcon: {
+    fontSize: 16,
+    color: '#666',
+  },
+  filterBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#FF3B30',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
+  filterBadgeText: {
+    fontSize: 10,
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  mapLegend: {
+    position: 'absolute',
+    top: 16,
+    left: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 12,
+    padding: 12,
+    minWidth: 120,
+    backdropFilter: 'blur(10px)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  legendTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#000000',
+    marginBottom: 8,
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  legendColor: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginRight: 8,
+  },
+  legendIcon: {
+    fontSize: 12,
+    marginRight: 8,
+  },
+  legendText: {
+    fontSize: 12,
+    color: '#666666',
+    fontWeight: '500',
   },
 });
 

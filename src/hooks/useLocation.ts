@@ -2,6 +2,26 @@ import { useState, useEffect, useCallback } from 'react';
 import Geolocation from '@react-native-community/geolocation';
 import { PermissionsAndroid, Platform, Alert } from 'react-native';
 
+// Global location state to share across all components
+let globalLocationState: LocationState = {
+  location: null,
+  loading: false,
+  error: null,
+  permissionGranted: false,
+  permissionRequested: false,
+};
+
+// Listeners for state changes
+const listeners = new Set<(state: LocationState) => void>();
+
+const notifyListeners = () => {
+  console.log('🔥 NOTIFYING LISTENERS:', { 
+    listeners: listeners.size,
+    hasLocation: !!globalLocationState.location 
+  });
+  listeners.forEach(listener => listener(globalLocationState));
+};
+
 export interface LocationData {
   latitude: number;
   longitude: number;
@@ -38,18 +58,79 @@ export const calculateDistance = (
 };
 
 export const useLocation = () => {
-  const [state, setState] = useState<LocationState>({
-    location: null,
-    loading: false,
-    error: null,
-    permissionGranted: false,
-    permissionRequested: false,
-  });
+  const [state, setState] = useState<LocationState>(globalLocationState);
+
+  // Subscribe to global state changes
+  useEffect(() => {
+    const listener = (newState: LocationState) => {
+      setState(newState);
+    };
+    
+    listeners.add(listener);
+    
+    return () => {
+      listeners.delete(listener);
+    };
+  }, []);
+
+  // Update global state and notify listeners
+  const updateGlobalState = useCallback((updater: (prev: LocationState) => LocationState) => {
+    const newState = updater(globalLocationState);
+    console.log('🔥 UPDATING GLOBAL STATE:', { 
+      oldLocation: globalLocationState.location ? 'has location' : 'no location',
+      newLocation: newState.location ? 'has location' : 'no location',
+      listeners: listeners.size 
+    });
+    globalLocationState = newState;
+    notifyListeners();
+  }, []);
 
   const requestLocationPermission = useCallback(async (): Promise<boolean> => {
     if (Platform.OS === 'ios') {
-      // iOS permissions are handled in Info.plist
-      return true;
+      // For iOS, we need to actually get the location to trigger the permission dialog
+      try {
+        updateGlobalState(prev => ({ ...prev, loading: true, error: null }));
+        
+        return new Promise((resolve) => {
+          Geolocation.getCurrentPosition(
+            (position) => {
+              const locationData: LocationData = {
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude,
+                accuracy: position.coords.accuracy,
+                timestamp: position.timestamp,
+              };
+
+              updateGlobalState(prev => ({
+                ...prev,
+                location: locationData,
+                loading: false,
+                error: null,
+                permissionGranted: true,
+                permissionRequested: true,
+              }));
+              
+              resolve(true);
+            },
+            (error) => {
+              console.error('🔥 iOS location permission error:', error);
+              updateGlobalState(prev => ({
+                ...prev,
+                loading: false,
+                error: error.message,
+                permissionGranted: false,
+                permissionRequested: true,
+              }));
+              resolve(false);
+            },
+            { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
+          );
+        });
+      } catch (err) {
+        console.error('Error requesting iOS location permission:', err);
+        updateGlobalState(prev => ({ ...prev, error: 'Failed to request location permission' }));
+        return false;
+      }
     }
 
     try {
@@ -65,14 +146,14 @@ export const useLocation = () => {
       );
       
       const isGranted = granted === PermissionsAndroid.RESULTS.GRANTED;
-      setState(prev => ({ ...prev, permissionGranted: isGranted, permissionRequested: true }));
+      updateGlobalState(prev => ({ ...prev, permissionGranted: isGranted, permissionRequested: true }));
       return isGranted;
     } catch (err) {
       console.error('Error requesting location permission:', err);
-      setState(prev => ({ ...prev, error: 'Failed to request location permission' }));
+      updateGlobalState(prev => ({ ...prev, error: 'Failed to request location permission' }));
       return false;
     }
-  }, []);
+  }, [updateGlobalState]);
 
   const getCurrentLocation = useCallback(async (): Promise<LocationData | null> => {
     if (!state.permissionGranted && !state.permissionRequested) {
@@ -82,7 +163,7 @@ export const useLocation = () => {
       }
     }
 
-    setState(prev => ({ ...prev, loading: true, error: null }));
+    updateGlobalState(prev => ({ ...prev, loading: true, error: null }));
 
     return new Promise((resolve) => {
       Geolocation.getCurrentPosition(
@@ -94,7 +175,7 @@ export const useLocation = () => {
             timestamp: position.timestamp,
           };
 
-          setState(prev => ({
+          updateGlobalState(prev => ({
             ...prev,
             location: locationData,
             loading: false,
@@ -119,7 +200,7 @@ export const useLocation = () => {
               break;
           }
 
-          setState(prev => ({
+          updateGlobalState(prev => ({
             ...prev,
             loading: false,
             error: errorMessage,
@@ -135,7 +216,7 @@ export const useLocation = () => {
         }
       );
     });
-  }, [state.permissionGranted, state.permissionRequested, requestLocationPermission]);
+  }, [state.permissionGranted, state.permissionRequested, requestLocationPermission, updateGlobalState]);
 
   const watchLocation = useCallback(() => {
     if (!state.permissionGranted) {
