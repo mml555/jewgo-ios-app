@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Dimensions,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -13,23 +12,25 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Spacing, Shadows, TouchTargets } from '../styles/designSystem';
+import { useAuth } from '../contexts/AuthContext';
+import { TouchTargets } from '../styles/designSystem';
 import { useResponsiveDimensions, useKeyboardAwareLayout, getResponsiveLayout } from '../utils/deviceAdaptation';
 import { KeyboardManager } from '../utils/keyboardManager';
 import { hapticNavigation, hapticSuccess } from '../utils/hapticFeedback';
 import { useFormAutoSave } from '../hooks/useFormAutoSave';
 import { useFormValidation } from '../hooks/useFormValidation';
 import SaveStatusIndicator from '../components/SaveStatusIndicator';
-import ValidationSummary from '../components/ValidationSummary';
+// import ValidationSummary from '../components/ValidationSummary';
 import FormProgressIndicator from '../components/FormProgressIndicator';
 import ConfirmationDialog from '../components/ConfirmationDialog';
 import SuccessCelebration from '../components/SuccessCelebration';
 import FormAnalyticsService from '../services/FormAnalytics';
 import CrashReportingService from '../services/CrashReporting';
+import { ApiV5Service } from '../services/api-v5';
 
 // Form Pages
 import BasicInfoPage from '../components/AddCategoryForm/BasicInfoPage';
-import LocationContactPage from '../components/AddCategoryForm/LocationContactPage';
+// import LocationContactPage from '../components/AddCategoryForm/LocationContactPage';
 import HoursServicesPage from '../components/AddCategoryForm/HoursServicesPage';
 import KosherPricingPage from '../components/AddCategoryForm/KosherPricingPage';
 import PhotosReviewPage from '../components/AddCategoryForm/PhotosReviewPage';
@@ -231,17 +232,21 @@ const defaultFormData: ListingFormData = {
   photos: [],
 };
 
-const { width: screenWidth } = Dimensions.get('window');
+// const { width: screenWidth } = Dimensions.get('window');
 
 const AddCategoryScreen: React.FC = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const insets = useSafeAreaInsets();
+  const { isAuthenticated, checkPermission, user } = useAuth();
   
   // Responsive design hooks
   const dimensions = useResponsiveDimensions();
   const keyboardLayout = useKeyboardAwareLayout();
   const responsiveLayout = getResponsiveLayout();
+  
+  // Initialize API service
+  const apiV5Service = new ApiV5Service();
   
   const [currentPage, setCurrentPage] = useState(1);
   const [formData, setFormData] = useState<ListingFormData>(defaultFormData);
@@ -268,26 +273,50 @@ const AddCategoryScreen: React.FC = () => {
     saveNow,
     loadSavedData,
     clearSavedData,
-    getSaveHistory,
-    restoreFromHistory,
+    // getSaveHistory,
+    // restoreFromHistory,
   } = useFormAutoSave(formData, currentPage, currentPage === totalPages && isSubmitting, { enabled: false });
+
+  // Check authentication and permissions
+  useEffect(() => {
+    if (!isAuthenticated) {
+      Alert.alert(
+        'Authentication Required',
+        'Please log in to add a new listing.',
+        [
+          { text: 'Cancel', onPress: () => navigation.goBack() },
+          { text: 'Login', onPress: () => navigation.navigate('Auth' as never) }
+        ]
+      );
+      return;
+    }
+
+    if (!checkPermission('entities:create')) {
+      Alert.alert(
+        'Access Denied',
+        'You do not have permission to create listings.',
+        [{ text: 'OK', onPress: () => navigation.goBack() }]
+      );
+      return;
+    }
+  }, [isAuthenticated, checkPermission, navigation]);
 
   // Track auto-save events for analytics
   useEffect(() => {
     if (analyticsSessionId && saveCount > 0) {
       analyticsService.trackAutoSave(currentPage);
     }
-  }, [saveCount, analyticsSessionId, currentPage]);
+  }, [saveCount, analyticsSessionId, currentPage, analyticsService]);
 
   // Form validation with debounced real-time validation
   const {
     fieldErrors,
     stepResults,
-    hasErrors,
+    // hasErrors,
     isFormValid,
     validateStep,
     validateForm,
-    validationSummary,
+    // validationSummary,
     getFieldError,
     isStepValid,
   } = useFormValidation(formData, {
@@ -310,7 +339,7 @@ const AddCategoryScreen: React.FC = () => {
         }
       });
     }
-  }, [fieldErrors, analyticsSessionId, currentPage]);
+  }, [fieldErrors, analyticsSessionId, currentPage, analyticsService]);
 
   // Handle step navigation
   const handleStepNavigation = useCallback(async (stepNumber: number) => {
@@ -426,7 +455,7 @@ const AddCategoryScreen: React.FC = () => {
     };
 
     initializeForm();
-  }, [hasSavedData, loadSavedData, clearSavedData, lastSaved]);
+  }, [hasSavedData, loadSavedData, clearSavedData, lastSaved, analyticsService, crashService]);
 
   // Track step changes for analytics
   useEffect(() => {
@@ -443,7 +472,7 @@ const AddCategoryScreen: React.FC = () => {
         lastAction: `navigated_to_step_${currentPage}`,
       });
     }
-  }, [currentPage, analyticsSessionId, isInitialized, formData]);
+  }, [currentPage, analyticsSessionId, isInitialized, formData, analyticsService, crashService]);
 
   const handleGoBack = useCallback(async () => {
     // Dismiss keyboard first
@@ -471,7 +500,7 @@ const AddCategoryScreen: React.FC = () => {
       await saveNow(); // Save current progress
       setCurrentPage(prev => prev - 1);
     }
-  }, [currentPage, navigation, hasSavedData, formData, saveNow, analyticsSessionId]);
+  }, [currentPage, navigation, hasSavedData, formData, saveNow, analyticsSessionId, analyticsService]);
 
   // Handle exit confirmation
   const handleExitConfirm = useCallback(async () => {
@@ -484,7 +513,7 @@ const AddCategoryScreen: React.FC = () => {
     }
     
     navigation.goBack();
-  }, [saveNow, navigation, analyticsSessionId, currentPage]);
+  }, [saveNow, navigation, analyticsSessionId, currentPage, analyticsService]);
 
   const handleExitDiscard = useCallback(async () => {
     setShowExitConfirmation(false);
@@ -495,11 +524,11 @@ const AddCategoryScreen: React.FC = () => {
     }
     
     navigation.goBack();
-  }, [navigation, analyticsSessionId, currentPage]);
+  }, [navigation, analyticsSessionId, currentPage, analyticsService]);
 
-  const handleExitCancel = useCallback(() => {
-    setShowExitConfirmation(false);
-  }, []);
+  // const handleExitCancel = useCallback(() => {
+  //   setShowExitConfirmation(false);
+  // }, []);
 
   const handleFormDataChange = useCallback((newData: Partial<ListingFormData>) => {
     setFormData(prev => ({ ...prev, ...newData }));
@@ -507,8 +536,8 @@ const AddCategoryScreen: React.FC = () => {
 
   // Helper function to generate detailed error message
   const generateValidationErrorMessage = useCallback((stepValidation: any, stepNumber: number) => {
-    const fieldErrors = stepValidation.errors || {};
-    const errorFields = Object.keys(fieldErrors);
+    const stepFieldErrors = stepValidation.errors || {};
+    const errorFields = Object.keys(stepFieldErrors);
     
     if (errorFields.length === 0) {
       return 'Please complete all required fields before continuing.';
@@ -618,34 +647,68 @@ const AddCategoryScreen: React.FC = () => {
     
     setIsSubmitting(true);
     
+      // Transform form data to API format
+      const services = [];
+      if (formData.delivery_available) services.push('delivery');
+      if (formData.takeout_available) services.push('takeout');
+      if (formData.catering_available) services.push('catering');
+      
+      // Map kosher category to valid enum values
+      const kosherLevelMap: Record<string, string> = {
+        'Meat': 'glatt',
+        'Dairy': 'chalav_yisrael',
+        'Pareve': 'glatt'
+      };
+
+      const apiData = {
+        entityType: 'restaurant',
+        name: formData.name,
+        description: formData.short_description,
+        longDescription: formData.description,
+        ownerId: user?.id || null, // Use authenticated user's ID
+        address: formData.address,
+        city: formData.city || '',
+        state: formData.state || '',
+        zipCode: formData.zip_code || '',
+        phone: formData.phone,
+        email: formData.business_email,
+        website: formData.website,
+        facebookUrl: formData.facebook_link,
+        instagramUrl: formData.instagram_link,
+        whatsappUrl: formData.whatsapp_url,
+        tiktokUrl: formData.tiktok_link,
+        latitude: formData.latitude || 0,
+        longitude: formData.longitude || 0,
+        kosherLevel: kosherLevelMap[formData.kosher_category] || 'glatt',
+        kosherCertification: formData.certifying_agency === 'Other' ? formData.custom_certifying_agency : formData.certifying_agency,
+        kosherCertificateNumber: '',
+        kosherExpiresAt: null,
+        denomination: null,
+        storeType: null,
+        services: services
+      };
+    
     try {
       // Save final form data
       await saveNow();
-      
-      // Auto-populate system fields
-      const submissionData = {
-        ...formData,
-        user_email: 'user@example.com', // In real app, get from auth context
-        status: 'pending',
-        submission_status: 'pending_approval',
-        submission_date: new Date().toISOString(),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        // Map new fields to legacy fields for backward compatibility
-        category: 'eatery',
-        zipCode: formData.zip_code,
-        email: formData.business_email,
-        photos: formData.business_images,
-      };
 
-      console.log('Submitting eatery listing:', submissionData);
+      console.log('Submitting eatery listing to API:', apiData);
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Call the actual API using the entities endpoint
+      const response = await apiV5Service.request<{ entity: any }>('/entities', {
+        method: 'POST',
+        body: JSON.stringify(apiData),
+      });
+      
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to create restaurant listing');
+      }
+      
+      console.log('Successfully created restaurant:', response.data);
       
       // Track successful form submission
       if (analyticsSessionId) {
-        await analyticsService.trackFormSubmission(undefined, submissionData);
+        await analyticsService.trackFormSubmission(undefined, apiData);
       }
       
       // Clear saved data after successful submission
@@ -665,7 +728,7 @@ const AddCategoryScreen: React.FC = () => {
       // Report submission error
       await crashService.reportError(error as Error, 'network_error', 'high', {
         context: 'form_submission',
-        formData: submissionData,
+        formData: apiData,
         step: currentPage,
       });
       
@@ -677,7 +740,7 @@ const AddCategoryScreen: React.FC = () => {
     } finally {
       setIsSubmitting(false);
     }
-  }, [formData, navigation, saveNow, clearSavedData, validateForm, analyticsSessionId, currentPage]);
+  }, [formData, saveNow, clearSavedData, validateForm, analyticsSessionId, currentPage, analyticsService, apiV5Service, crashService]);
 
   const renderProgressBar = () => (
     <FormProgressIndicator

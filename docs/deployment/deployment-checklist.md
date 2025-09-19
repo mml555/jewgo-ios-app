@@ -1,33 +1,34 @@
-# Deployment Checklist: Add Eatery Form Improvements
+# Deployment Checklist: Jewgo V5 Enhanced API System
 
-This comprehensive checklist ensures all aspects of the enhanced Add Eatery form are ready for production deployment.
+This comprehensive checklist ensures all aspects of the Jewgo V5 enhanced API system with category-specific tables, enhanced data features, and complete frontend integration are ready for production deployment.
 
 ## Pre-Deployment Checklist
 
 ### ✅ Code Quality & Testing
 
 #### Unit Tests
-- [ ] All new components have unit tests with >90% coverage
-- [ ] BusinessHoursSelector component tests pass
-- [ ] TimePickerInput component tests pass
-- [ ] DayHoursRow component tests pass
-- [ ] FormAnalyticsService tests pass
-- [ ] CrashReportingService tests pass
-- [ ] FormValidation service tests pass
-- [ ] FormPersistence service tests pass
+- [ ] All API controllers have unit tests with >90% coverage
+- [ ] RestaurantController tests pass
+- [ ] SynagogueController tests pass
+- [ ] MikvahController tests pass
+- [ ] StoreController tests pass
+- [ ] ReviewController tests pass
+- [ ] Database connection tests pass
+- [ ] Data transformation tests pass
 
 #### Integration Tests
-- [ ] Form navigation flow tests pass
-- [ ] Auto-save and recovery tests pass
-- [ ] Validation error handling tests pass
-- [ ] Photo upload integration tests pass
-- [ ] Analytics tracking integration tests pass
+- [ ] API endpoint integration tests pass
+- [ ] Database query performance tests pass
+- [ ] Frontend-backend data transformation tests pass
+- [ ] Business hours, images, and reviews integration tests pass
+- [ ] Error handling and fallback tests pass
 
 #### End-to-End Tests
-- [ ] Complete form submission flow works
-- [ ] Error recovery scenarios tested
-- [ ] Cross-step navigation tested
-- [ ] Form abandonment tracking tested
+- [ ] Complete listing display flow works
+- [ ] Category-specific data retrieval tested
+- [ ] Enhanced data display in frontend tested
+- [ ] LiveMap integration with enhanced data tested
+- [ ] Listing detail pages with business hours and images tested
 
 #### Regression Tests
 - [ ] All existing functionality still works

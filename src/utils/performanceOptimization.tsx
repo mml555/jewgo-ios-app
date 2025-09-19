@@ -411,7 +411,7 @@ export const usePerformanceOptimization = (componentName: string) => {
   );
 
   const optimizedMemo = useCallback(
-    <T>(factory: () => T, deps: any[] = []): T => {
+    <T extends unknown>(factory: () => T, deps: any[] = []): T => {
       return useMemo(factory, deps);
     },
     []
@@ -475,7 +475,7 @@ export class VirtualScrollManager {
 }
 
 // Performance monitoring decorator
-export const withPerformanceMonitoring = <P extends object>(
+export const withPerformanceMonitoring = <P extends object = {}>(
   Component: React.ComponentType<P>,
   componentName?: string
 ) => {

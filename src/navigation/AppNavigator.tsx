@@ -2,6 +2,7 @@ import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
 import RootTabs from './RootTabs';
 import ListingDetailScreen from '../screens/ListingDetailScreen';
+import SpecialDetailScreen from '../screens/SpecialDetailScreen';
 import AddCategoryScreen from '../screens/AddCategoryScreen';
 import LiveMapScreen from '../screens/LiveMapScreen';
 
@@ -18,6 +19,14 @@ const AppNavigator: React.FC = () => {
       <Stack.Screen 
         name="ListingDetail" 
         component={ListingDetailScreen}
+        options={{
+          headerShown: false,
+          presentation: 'card',
+        }}
+      />
+      <Stack.Screen 
+        name="SpecialDetail" 
+        component={SpecialDetailScreen}
         options={{
           headerShown: false,
           presentation: 'card',

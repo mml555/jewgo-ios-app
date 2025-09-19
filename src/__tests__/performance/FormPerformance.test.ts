@@ -75,17 +75,17 @@ describe('Form Performance Tests', () => {
     });
 
     it('should clean up memory after form completion', async () => {
-      const initialMemory = performanceRunner['getCurrentMemoryUsage']();
+      const initialMemory = performanceRunner.getCurrentMemoryUsage();
       
       // Simulate form completion cycle
-      await performanceRunner['simulateFormInteraction']();
+      await performanceRunner.simulateFormInteraction();
       
       // Allow garbage collection
       if (global.gc) {
         global.gc();
       }
       
-      const finalMemory = performanceRunner['getCurrentMemoryUsage']();
+      const finalMemory = performanceRunner.getCurrentMemoryUsage();
       
       // Memory should return close to baseline
       expect(finalMemory).toBeLessThan(initialMemory * 1.1);
@@ -177,14 +177,14 @@ describe('Form Performance Tests', () => {
     });
 
     it('should handle form switching without performance degradation', async () => {
-      const baselineMetrics = await performanceRunner['measureFormPerformance']();
+      const baselineMetrics = await performanceRunner.measureFormPerformance();
       
       // Simulate switching between multiple forms
       for (let i = 0; i < 5; i++) {
-        await performanceRunner['simulateFormInteraction']();
+        await performanceRunner.simulateFormInteraction();
       }
       
-      const afterSwitchingMetrics = await performanceRunner['measureFormPerformance']();
+      const afterSwitchingMetrics = await performanceRunner.measureFormPerformance();
       
       // Performance should not degrade significantly
       expect(afterSwitchingMetrics.renderTime).toBeLessThan(baselineMetrics.renderTime * 1.5);

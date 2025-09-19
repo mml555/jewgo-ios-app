@@ -14,6 +14,7 @@ import {
   TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { BlurView } from '@react-native-community/blur';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useLocation, calculateDistance } from '../hooks/useLocation';
 import { apiService, DetailedListing, Review } from '../services/api';
@@ -25,6 +26,8 @@ import TikTokIcon from '../components/TikTokIcon';
 import WhatsAppIcon from '../components/WhatsAppIcon';
 import ReviewsModal from '../components/ReviewsModal';
 import WriteReviewModal from '../components/WriteReviewModal';
+import ImageCarousel from '../components/ImageCarousel';
+import DetailHeaderBar from '../components/DetailHeaderBar';
 import { Colors, Typography, Spacing, BorderRadius, Shadows, TouchTargets } from '../styles/designSystem';
 
 // Types
@@ -121,15 +124,21 @@ const ListingDetailScreen: React.FC = () => {
   const fetchItemDetails = useCallback(async () => {
     try {
       setLoading(true);
+      console.log('🔍 DEBUG: Fetching item details for ID:', itemId, 'Category:', categoryKey);
       const response = await apiService.getListing(itemId);
+      console.log('🔍 DEBUG: getListing response:', response);
+      
       if (response.success && response.data) {
+        console.log('🔍 DEBUG: Setting item data:', response.data.listing);
         setItem(response.data.listing);
         // Load reviews separately to avoid circular dependency
         loadReviews(itemId);
       } else {
-        setError('Failed to load listing details');
+        console.error('🔍 DEBUG: Failed to load listing:', response.error);
+        setError(response.error || 'Failed to load listing details');
       }
     } catch (err) {
+      console.error('🔍 DEBUG: Exception in fetchItemDetails:', err);
       setError('Failed to load listing details');
     } finally {
       setLoading(false);
@@ -172,6 +181,36 @@ const ListingDetailScreen: React.FC = () => {
   const handleWriteReview = () => {
     setShowReviewsModal(false); // Close reviews modal if open
     setShowWriteReviewModal(true);
+  };
+
+  const handleReportListing = () => {
+    Alert.alert(
+      'Report Listing',
+      'What would you like to report about this listing?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Incorrect Information', onPress: () => submitReport('incorrect_info') },
+        { text: 'Inappropriate Content', onPress: () => submitReport('inappropriate') },
+        { text: 'Closed Business', onPress: () => submitReport('closed') },
+        { text: 'Other', onPress: () => submitReport('other') }
+      ]
+    );
+  };
+
+  const submitReport = (reason: string) => {
+    // TODO: Implement report submission to backend
+    Alert.alert('Report Submitted', 'Thank you for your feedback. We will review this listing.');
+  };
+
+  // Format count numbers (e.g., 1200 -> 1.2k, 24 -> 24)
+  const formatCount = (count: number): string => {
+    if (count >= 1000000) {
+      return `${(count / 1000000).toFixed(1)}M`;
+    } else if (count >= 1000) {
+      return `${(count / 1000).toFixed(1)}k`;
+    } else {
+      return count.toString();
+    }
   };
 
   // Handle submit review
@@ -395,118 +434,35 @@ const ListingDetailScreen: React.FC = () => {
   return (
     <>
       <SafeAreaView style={styles.container}>
-        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Image Header Bar */}
-        <View style={styles.imageHeaderBar}>
-          <TouchableOpacity 
-            style={[
-              styles.headerBackButton,
-              pressedButtons.has('back') && styles.headerButtonPressed
-            ]}
-            onPress={() => navigation.goBack()}
-            onPressIn={() => handlePressIn('back')}
-            onPressOut={() => handlePressOut('back')}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.headerBackIcon}>←</Text>
-          </TouchableOpacity>
-          
-          <Text style={styles.headerText}>DETAILS</Text>
-          <Text style={styles.headerSubText}>VIEW</Text>
-          <View style={styles.viewCountGroup}>
-            <Text style={styles.eyeIcon}>👁</Text>
-            <Text style={styles.viewCount}>1.2k</Text>
-          </View>
-          
-          <TouchableOpacity 
-            style={[
-              styles.shareButton,
-              pressedButtons.has('share') && styles.headerButtonPressed
-            ]}
-            onPressIn={() => handlePressIn('share')}
-            onPressOut={() => handlePressOut('share')}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.shareIcon}>↗</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={[
-              styles.heartButton,
-              pressedButtons.has('heart') && styles.headerButtonPressed
-            ]}
-            onPress={handleFavoriteToggle}
-            onPressIn={() => handlePressIn('heart')}
-            onPressOut={() => handlePressOut('heart')}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.heartIcon, isFavorited && styles.heartIconActive]}>
-              {isFavorited ? '♥' : '♡'}
-            </Text>
-          </TouchableOpacity>
-        </View>
+        {/* Header Bar - Reusable Component */}
+        <DetailHeaderBar
+          pressedButtons={pressedButtons}
+          handlePressIn={handlePressIn}
+          handlePressOut={handlePressOut}
+          formatCount={formatCount}
+          onReportPress={handleReportListing}
+          onSharePress={() => Alert.alert('Share', 'Share functionality would be implemented here')}
+          onFavoritePress={handleFavoriteToggle}
+          centerContent={{
+            type: 'view_count',
+            count: item?.view_count || 0
+          }}
+          rightContent={{
+            type: 'share_favorite',
+            shareCount: item?.share_count || 0,
+            likeCount: item?.like_count || 0,
+            isFavorited: isFavorited
+          }}
+        />
 
-        {/* Image Carousel */}
-        <View style={styles.imageContainer}>
-          {item.images && item.images.length > 0 ? (
-            <>
-              <ScrollView
-                horizontal
-                pagingEnabled
-                showsHorizontalScrollIndicator={false}
-                onMomentumScrollEnd={handleImageSwipe}
-                style={[styles.imageScrollView, { width: screenWidth - (Spacing.md * 2) }]}
-                contentContainerStyle={styles.imageScrollViewContent}
-              >
-                {item.images.map((image, index) => {
-                  const workingUrl = getWorkingImageUrl(image);
-                  console.log('🖼️ Rendering image', index, ':', workingUrl);
-                  return (
-                    <Image
-                      key={index}
-                      source={{ uri: workingUrl }}
-                      style={styles.image}
-                      resizeMode="cover"
-                      accessible={true}
-                      accessibilityLabel={`Image ${index + 1} of ${item.images?.length || 0}`}
-                      onLoad={() => console.log('🖼️ Image loaded:', index, workingUrl)}
-                      onError={(error) => console.log('🖼️ Image error:', index, workingUrl, error)}
-                    />
-                  );
-                })}
-              </ScrollView>
-              
-              {/* Image Indicators */}
-              {item.images.length > 1 && (
-                <>
-                  {/* Page Counter Pill */}
-                  <View style={styles.pageCounterPill}>
-                    <Text style={styles.pageCounterText}>
-                      {activeImageIndex + 1} of {item.images.length}
-                    </Text>
-                  </View>
-                  
-                  {/* Image Dots */}
-                  <View style={styles.imageIndicators}>
-                    {item.images.map((_, index) => (
-                      <View
-                        key={index}
-                        style={[
-                          styles.indicator,
-                          index === activeImageIndex && styles.indicatorActive
-                        ]}
-                      />
-                    ))}
-                  </View>
-                </>
-              )}
-            </>
-          ) : (
-            <View style={styles.placeholderImage}>
-              <Text style={styles.placeholderText}>No images available</Text>
-            </View>
-          )}
-        </View>
+        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        {/* Image Carousel - Reusable Component */}
+        <ImageCarousel
+          images={item.images}
+          fallbackImageUrl={`https://picsum.photos/400/300?random=${item.id}`}
+          height={280}
+          borderRadius={25}
+        />
 
         {/* Content */}
         <View style={styles.content}>
@@ -650,14 +606,6 @@ const ListingDetailScreen: React.FC = () => {
             </View>
           </View>
 
-          {/* Tags */}
-          <View style={styles.tagsContainer}>
-            {(item as any).tags?.map((tag: any, index: number) => (
-              <View key={index} style={styles.tag}>
-                <Text style={styles.tagText}>{tag}</Text>
-              </View>
-            ))}
-          </View>
 
           {/* Description */}
           <Text style={styles.description}>{item.description}</Text>
@@ -1187,25 +1135,6 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  tagsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    marginBottom: Spacing.md,
-  },
-  tag: {
-    backgroundColor: Colors.gray200,
-    borderRadius: BorderRadius.full,
-    paddingVertical: Spacing.xs,
-    paddingHorizontal: Spacing.sm,
-    marginHorizontal: Spacing.xs,
-    marginVertical: Spacing.xs,
-  },
-  tagText: {
-    ...Typography.styles.bodySmall,
-    color: Colors.textPrimary,
-    fontWeight: '500',
-  },
   description: {
     ...Typography.styles.body,
     color: Colors.textPrimary,
@@ -1271,34 +1200,49 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.border,
     marginVertical: Spacing.md,
   },
-  // Image Header Bar Styles
-  imageHeaderBar: {
+  // Header Bar Styles (pill shape with glass effect, above image)
+  headerBarContainer: {
+    position: 'relative',
+  },
+  headerBarBackground: {
     position: 'absolute',
-    top: 20, // Position at the top
-    alignSelf: 'center', // Center the header horizontally
-    height: 40, // Reduced height to make it thinner
-    backgroundColor: 'rgba(255, 255, 255, 0.15)', // Glassy background
-    borderRadius: 20, // Adjusted border radius for thinner height
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.15)', // Subtle dark backdrop
+    marginHorizontal: Spacing.md,
+    marginTop: Spacing.sm,
+    marginBottom: Spacing.sm,
+    height: 44,
+    borderRadius: 22, // Match header bar pill shape
+  },
+  headerBarBlur: {
+    marginHorizontal: Spacing.md, // Match image container margin
+    marginTop: Spacing.sm,
+    marginBottom: Spacing.sm,
+    height: 44,
+    borderRadius: 22, // Pill shape (height/2)
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center', // Center content within the header
-    paddingHorizontal: Spacing.md, // Padding for content
-    gap: Spacing.md, // Even spacing between elements
+    justifyContent: 'space-evenly', // Even spacing between all elements
+    paddingHorizontal: Spacing.sm,
+    overflow: 'hidden', // Ensure blur effect stays within border radius
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    zIndex: 20,
-    shadowColor: '#000',
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    shadowColor: Colors.black,
     shadowOffset: {
       width: 0,
       height: 4,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
   },
   headerBackButton: {
     justifyContent: 'center',
     alignItems: 'center',
+    minWidth: 40, // Consistent with other buttons
   },
   headerButtonPressed: {
     transform: [{ scale: 0.95 }],
@@ -1306,26 +1250,35 @@ const styles = StyleSheet.create({
   },
   headerBackIcon: {
     fontSize: 20,
-    color: Colors.textPrimary, // Black icon
+    color: Colors.textPrimary,
     fontWeight: 'bold',
   },
-  headerText: {
-    ...Typography.styles.caption,
-    color: Colors.textPrimary, // Black text
-    fontWeight: '600',
-    letterSpacing: 1,
+  reportFlagButton: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    minWidth: 40, // Consistent with other buttons
   },
-  headerSubText: {
-    ...Typography.styles.caption,
-    color: Colors.textPrimary, // Black text
-    fontWeight: '400',
-    letterSpacing: 1,
-    opacity: 0.8,
+  reportFlagIcon: {
+    fontSize: 18,
+    color: Colors.error,
+  },
+  headerButtonGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    minWidth: 40, // Ensure consistent button widths
+  },
+  headerButtonCount: {
+    fontSize: 10,
+    color: Colors.textSecondary,
+    fontWeight: '500',
   },
   viewCountGroup: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4, // Small gap between eye and number
+    gap: 4,
+    minWidth: 40, // Consistent with other button groups
   },
   eyeIcon: {
     fontSize: 14,
@@ -1340,19 +1293,21 @@ const styles = StyleSheet.create({
   shareButton: {
     justifyContent: 'center',
     alignItems: 'center',
+    minWidth: 40, // Consistent with other buttons
   },
   shareIcon: {
-    fontSize: 18,
-    color: Colors.textPrimary, // Black icon
+    fontSize: 16,
+    color: Colors.textPrimary,
     fontWeight: 'bold',
   },
   heartButton: {
     justifyContent: 'center',
     alignItems: 'center',
+    minWidth: 40, // Consistent with other buttons
   },
   heartIcon: {
-    fontSize: 20,
-    color: Colors.textPrimary, // Black icon
+    fontSize: 16,
+    color: Colors.textPrimary,
   },
   heartIconActive: {
     color: Colors.error,

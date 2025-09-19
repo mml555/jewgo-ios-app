@@ -377,20 +377,22 @@ const DayHoursRow: React.FC<DayHoursRowProps> = memo(({
 const styles = StyleSheet.create({
   container: {
     backgroundColor: Colors.white,
-    borderRadius: BorderRadius.lg,
-    padding: Spacing.md,
-    marginBottom: Spacing.sm,
+    borderRadius: BorderRadius.sm,
+    padding: Spacing.sm,
+    marginBottom: Spacing.xs,
     borderWidth: 1,
     borderColor: Colors.border,
     shadowColor: Colors.black,
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 1,
     },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
-    minHeight: 80, // Ensure consistent height for better performance
+    shadowOpacity: 0.03,
+    shadowRadius: 1,
+    elevation: 1,
+    minHeight: 60, // Mobile-optimized height
+    width: '100%',
+    maxWidth: '100%',
   },
   containerError: {
     borderColor: Colors.error,

@@ -7,9 +7,11 @@ import {
   ScrollView,
   TouchableOpacity,
   Switch,
+  Alert,
 } from 'react-native';
 import { ListingFormData } from '../../screens/AddCategoryScreen';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../styles/designSystem';
+import { hapticButtonPress } from '../../utils/hapticFeedback';
 import CustomAddressAutocomplete from '../CustomAddressAutocomplete';
 
 interface BasicInfoPageProps {
@@ -33,6 +35,79 @@ const BasicInfoPage: React.FC<BasicInfoPageProps> = ({
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
   }, [onFormDataChange, errors]);
+
+  // Real-time validation
+  const validateField = useCallback((field: keyof ListingFormData, value: any) => {
+    switch (field) {
+      case 'name':
+        if (!value || value.trim().length === 0) {
+          return 'Business name is required';
+        }
+        return '';
+      case 'address':
+        if (!value || value.trim().length === 0) {
+          return 'Business address is required';
+        }
+        return '';
+      case 'phone':
+        if (!value || value.trim().length === 0) {
+          return 'Phone number is required';
+        }
+        return '';
+      case 'business_email':
+        if (!value || value.trim().length === 0) {
+          return 'Business email is required';
+        }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())) {
+          return 'Please enter a valid email address';
+        }
+        return '';
+      case 'listing_type':
+        if (!value) {
+          return 'Please select a listing type';
+        }
+        return '';
+      default:
+        return '';
+    }
+  }, []);
+
+  // Validation functions
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return {
+      isValid: emailRegex.test(email) || email.length === 0,
+      message: emailRegex.test(email) || email.length === 0 ? undefined : 'Please enter a valid email address'
+    };
+  };
+
+  const validateWebsite = (website: string) => {
+    if (!website.trim()) return { isValid: true };
+    const urlRegex = /^https?:\/\/.+/;
+    return {
+      isValid: urlRegex.test(website),
+      message: urlRegex.test(website) ? undefined : 'Please enter a valid website URL (include http:// or https://)'
+    };
+  };
+
+  const formatPhoneNumber = (phone: string) => {
+    const cleaned = phone.replace(/\D/g, '');
+    if (cleaned.length >= 6) {
+      return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6, 10)}`;
+    } else if (cleaned.length >= 3) {
+      return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3)}`;
+    }
+    return cleaned;
+  };
+
+  const handleLocationPress = () => {
+    hapticButtonPress();
+    Alert.alert(
+      'Get Current Location',
+      'This would use your device\'s GPS to automatically fill in your address.',
+      [{ text: 'OK' }]
+    );
+  };
 
   const handleAddressVerified = useCallback((addressDetails: any) => {
     console.log('✅ Address verified:', addressDetails);
@@ -98,10 +173,15 @@ const BasicInfoPage: React.FC<BasicInfoPageProps> = ({
   }, [validateForm, handleNext]);
 
   const listingTypes = [
-    { key: 'Eatery', label: 'Eatery' },
-    { key: 'Catering', label: 'Catering' },
-    { key: 'Food Truck', label: 'Food Truck' },
+    { value: 'Eatery', label: 'Restaurant/Eatery', icon: '🍽️' },
+    { value: 'Catering', label: 'Catering Service', icon: '👥' },
+    { value: 'Food Truck', label: 'Food Truck', icon: '🚚' },
   ];
+
+  const handleListingTypeSelect = (type: string) => {
+    hapticButtonPress();
+    handleInputChange('listing_type', type);
+  };
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -110,19 +190,26 @@ const BasicInfoPage: React.FC<BasicInfoPageProps> = ({
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Business Ownership</Text>
           <TouchableOpacity
-            style={styles.checkboxContainer}
-            onPress={() => handleInputChange('is_owner_submission', !formData.is_owner_submission)}
+            style={[
+              styles.ownerToggle,
+              formData.is_owner_submission && styles.ownerToggleActive
+            ]}
+            onPress={() => {
+              hapticButtonPress();
+              handleInputChange('is_owner_submission', !formData.is_owner_submission);
+            }}
             activeOpacity={0.7}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: formData.is_owner_submission }}
+            accessibilityLabel="I am the business owner"
           >
-            <View style={[
-              styles.checkbox,
-              formData.is_owner_submission && styles.checkboxChecked
+            <Text style={styles.ownerToggleIcon}>
+              {formData.is_owner_submission ? '☑️' : '☐'}
+            </Text>
+            <Text style={[
+              styles.ownerToggleText,
+              formData.is_owner_submission && styles.ownerToggleTextActive
             ]}>
-              {formData.is_owner_submission && (
-                <Text style={styles.checkmark}>✓</Text>
-              )}
-            </View>
-            <Text style={styles.checkboxLabel}>
               I am the owner or manager of this business
             </Text>
           </TouchableOpacity>
@@ -135,93 +222,144 @@ const BasicInfoPage: React.FC<BasicInfoPageProps> = ({
           {/* Business Name */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Business Name *</Text>
-            <TextInput
-              style={[styles.input, errors.name && styles.inputError]}
-              value={formData.name}
-              onChangeText={(value) => handleInputChange('name', value)}
-              placeholder="Enter business name"
-              placeholderTextColor={Colors.gray400}
-            />
+            <View style={[styles.inputWrapper, errors.name && styles.inputError]}>
+              <Text style={styles.inputIcon}>🏢</Text>
+              <TextInput
+                style={styles.input}
+                value={formData.name}
+                onChangeText={(value) => {
+                  handleInputChange('name', value);
+                  const error = validateField('name', value);
+                  if (error) {
+                    setErrors(prev => ({ ...prev, name: error }));
+                  }
+                }}
+                onBlur={() => {
+                  const error = validateField('name', formData.name);
+                  if (error) {
+                    setErrors(prev => ({ ...prev, name: error }));
+                  }
+                }}
+                placeholder="Enter business name"
+                placeholderTextColor={Colors.gray400}
+              />
+              {formData.name && !errors.name && (
+                <Text style={styles.successIcon}>✓</Text>
+              )}
+            </View>
             {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
           </View>
 
           {/* Business Address */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Business Address *</Text>
-            <CustomAddressAutocomplete
-              value={formData.address}
-              onChangeText={(value) => handleInputChange('address', value)}
-              onAddressVerified={handleAddressVerified}
-              placeholder="Enter full address (street, city, state, zip)"
-              error={!!errors.address}
-            />
+            <View style={styles.addressWrapper}>
+              <Text style={styles.inputIcon}>📍</Text>
+              <CustomAddressAutocomplete
+                value={formData.address}
+                onChangeText={(value) => handleInputChange('address', value)}
+                onAddressVerified={handleAddressVerified}
+                placeholder="Enter full address (street, city, state, zip)"
+                error={!!errors.address}
+              />
+              <TouchableOpacity 
+                onPress={handleLocationPress}
+                style={styles.locationButton}
+                activeOpacity={0.7}
+                accessibilityLabel="Get current location"
+              >
+                <Text style={styles.locationIcon}>🎯</Text>
+              </TouchableOpacity>
+            </View>
             {errors.address && <Text style={styles.errorText}>{errors.address}</Text>}
           </View>
 
-          {/* Phone Number */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Business Phone Number *</Text>
-            <TextInput
-              style={[styles.input, errors.phone && styles.inputError]}
-              value={formData.phone}
-              onChangeText={(value) => handleInputChange('phone', value)}
-              placeholder="(555) 123-4567"
-              placeholderTextColor={Colors.gray400}
-              keyboardType="phone-pad"
-            />
-            {errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
-          </View>
-
-          {/* Business Email */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Business Email *</Text>
-            <TextInput
-              style={[styles.input, errors.business_email && styles.inputError]}
-              value={formData.business_email}
-              onChangeText={(value) => handleInputChange('business_email', value)}
-              placeholder="business@example.com"
-              placeholderTextColor={Colors.gray400}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-            {errors.business_email && <Text style={styles.errorText}>{errors.business_email}</Text>}
+          {/* Phone and Email Row */}
+          <View style={styles.rowContainer}>
+            <View style={styles.inputHalf}>
+              <Text style={styles.label}>Phone Number *</Text>
+              <View style={styles.inputWrapper}>
+                <Text style={styles.inputIcon}>📞</Text>
+                <TextInput
+                  style={[styles.input, errors.phone && styles.inputError]}
+                  value={formData.phone}
+                  onChangeText={(value) => handleInputChange('phone', formatPhoneNumber(value))}
+                  placeholder="(555) 123-4567"
+                  placeholderTextColor={Colors.gray400}
+                  keyboardType="phone-pad"
+                />
+                {formData.phone && !errors.phone && (
+                  <Text style={styles.successIcon}>✓</Text>
+                )}
+              </View>
+              {errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
+            </View>
+            <View style={styles.inputHalf}>
+              <Text style={styles.label}>Business Email *</Text>
+              <View style={styles.inputWrapper}>
+                <Text style={styles.inputIcon}>✉️</Text>
+                <TextInput
+                  style={[styles.input, errors.business_email && styles.inputError]}
+                  value={formData.business_email}
+                  onChangeText={(value) => handleInputChange('business_email', value)}
+                  placeholder="business@example.com"
+                  placeholderTextColor={Colors.gray400}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+                {formData.business_email && !errors.business_email && (
+                  <Text style={styles.successIcon}>✓</Text>
+                )}
+              </View>
+              {errors.business_email && <Text style={styles.errorText}>{errors.business_email}</Text>}
+            </View>
           </View>
 
           {/* Website */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Website</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.website}
-              onChangeText={(value) => handleInputChange('website', value)}
-              placeholder="https://www.example.com"
-              placeholderTextColor={Colors.gray400}
-              keyboardType="url"
-              autoCapitalize="none"
-            />
+            <View style={styles.inputWrapper}>
+              <Text style={styles.inputIcon}>🌐</Text>
+              <TextInput
+                style={styles.input}
+                value={formData.website}
+                onChangeText={(value) => handleInputChange('website', value)}
+                placeholder="https://www.example.com"
+                placeholderTextColor={Colors.gray400}
+                keyboardType="url"
+                autoCapitalize="none"
+              />
+              {formData.website && (
+                <Text style={styles.successIcon}>✓</Text>
+              )}
+            </View>
+            <Text style={styles.suggestionText}>
+              💡 A website helps customers find more information about your business
+            </Text>
           </View>
 
           {/* Listing Type */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Type of Listing *</Text>
-            <View style={styles.optionContainer}>
+            <View style={styles.listingTypeContainer}>
               {listingTypes.map((type) => (
                 <TouchableOpacity
-                  key={type.key}
+                  key={type.value}
                   style={[
-                    styles.optionButton,
-                    formData.listing_type === type.key && styles.optionButtonSelected,
+                    styles.listingTypeOption,
+                    formData.listing_type === type.value && styles.listingTypeOptionSelected,
                   ]}
-                  onPress={() => handleInputChange('listing_type', type.key)}
+                  onPress={() => handleListingTypeSelect(type.value)}
                   activeOpacity={0.7}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: formData.listing_type === type.value }}
+                  accessibilityLabel={`Select ${type.label} as business type`}
                 >
-                  <Text
-                    style={[
-                      styles.optionText,
-                      formData.listing_type === type.key && styles.optionTextSelected,
-                    ]}
-                    numberOfLines={1}
-                  >
+                  <Text style={styles.listingTypeIcon}>{type.icon}</Text>
+                  <Text style={[
+                    styles.listingTypeLabel,
+                    formData.listing_type === type.value && styles.listingTypeLabelSelected,
+                  ]}>
                     {type.label}
                   </Text>
                 </TouchableOpacity>
@@ -285,35 +423,40 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F5F5F7',
+    width: '100%',
+    maxWidth: '100%',
   },
   content: {
     flex: 1,
-    paddingHorizontal: 0,
-    paddingBottom: Spacing.xl,
+    paddingHorizontal: Spacing.sm,
+    paddingBottom: Spacing.md,
+    width: '100%',
+    maxWidth: '100%',
   },
   section: {
-    marginBottom: 20,
-    marginHorizontal: 20,
+    marginBottom: Spacing.sm,
     backgroundColor: Colors.white,
-    borderRadius: 16,
-    padding: 20,
+    borderRadius: BorderRadius.sm,
+    padding: Spacing.sm,
+    width: '100%',
+    maxWidth: '100%',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: 1,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   sectionTitle: {
     ...Typography.styles.h3,
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.sm,
     color: Colors.textPrimary,
+    fontSize: 18,
   },
   inputGroup: {
-    marginBottom: Spacing.md,
-    marginHorizontal: 20,
+    marginBottom: Spacing.sm,
   },
   label: {
     ...Typography.styles.body,
@@ -323,27 +466,15 @@ const styles = StyleSheet.create({
   },
   input: {
     ...Typography.styles.body,
-    borderWidth: 2,
-    borderColor: '#E5E5EA',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    backgroundColor: '#F8F9FA',
+    flex: 1,
     color: Colors.textPrimary,
-    minHeight: 48,
     fontSize: 16,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
+    paddingVertical: 8,
+    maxWidth: '100%',
   },
   inputError: {
-    borderColor: '#FF3B30',
-    backgroundColor: '#FFF5F5',
+    borderColor: Colors.error,
+    backgroundColor: Colors.error + '10',
   },
   errorText: {
     ...Typography.styles.caption,
@@ -431,42 +562,145 @@ const styles = StyleSheet.create({
     color: Colors.white,
     fontWeight: '600',
   },
-  checkboxContainer: {
+  ownerToggle: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    marginBottom: 8,
-    minHeight: 48,
-    backgroundColor: '#F8F9FA',
-    borderRadius: 12,
-    marginHorizontal: 0,
-  },
-  checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 4,
+    backgroundColor: Colors.gray100,
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.lg,
     borderWidth: 2,
-    borderColor: Colors.gray400,
-    backgroundColor: Colors.white,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
+    borderColor: Colors.border,
   },
-  checkboxChecked: {
-    backgroundColor: Colors.success,
-    borderColor: Colors.success,
+  ownerToggleActive: {
+    backgroundColor: Colors.primary + '10',
+    borderColor: Colors.primary,
   },
-  checkmark: {
-    color: Colors.white,
-    fontSize: 16,
-    fontWeight: 'bold',
+  ownerToggleIcon: {
+    fontSize: 24,
+    marginRight: Spacing.md,
   },
-  checkboxLabel: {
+  ownerToggleText: {
     ...Typography.styles.body,
-    flex: 1,
     color: Colors.textPrimary,
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  ownerToggleTextActive: {
+    color: Colors.primary,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: BorderRadius.sm,
+    backgroundColor: Colors.white,
+    minHeight: 40,
+    width: '100%',
+    maxWidth: '100%',
+    shadowColor: Colors.black,
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.03,
+    shadowRadius: 1,
+    elevation: 1,
+  },
+  inputIcon: {
+    fontSize: 16,
+    marginLeft: Spacing.xs,
+    marginRight: Spacing.xs,
+  },
+  successIcon: {
+    fontSize: 16,
+    color: Colors.success,
+    marginRight: Spacing.xs,
+  },
+  addressWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: BorderRadius.sm,
+    backgroundColor: Colors.white,
+    minHeight: 40,
+    width: '100%',
+    maxWidth: '100%',
+    shadowColor: Colors.black,
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.03,
+    shadowRadius: 1,
+    elevation: 1,
+  },
+  locationButton: {
+    padding: Spacing.xs,
+    marginRight: Spacing.xs,
+  },
+  locationIcon: {
+    fontSize: 18,
+    color: Colors.primary,
+  },
+  rowContainer: {
+    flexDirection: 'column',
+    marginBottom: Spacing.sm,
+  },
+  inputHalf: {
+    marginBottom: Spacing.xs,
+  },
+  suggestionText: {
+    ...Typography.styles.caption,
+    color: Colors.primary,
+    marginTop: Spacing.xs,
     fontSize: 14,
+    fontStyle: 'italic',
+  },
+  listingTypeContainer: {
+    gap: Spacing.xs,
+  },
+  listingTypeOption: {
+    backgroundColor: Colors.white,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: BorderRadius.md,
+    padding: Spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 48,
+    width: '100%',
+    maxWidth: '100%',
+    shadowColor: Colors.black,
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  listingTypeOptionSelected: {
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primary + '05',
+    shadowColor: Colors.primary,
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  listingTypeIcon: {
+    fontSize: 20,
+    marginRight: Spacing.sm,
+  },
+  listingTypeLabel: {
+    ...Typography.styles.body,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+    fontSize: 16,
+  },
+  listingTypeLabelSelected: {
+    color: Colors.primary,
   },
 });
 

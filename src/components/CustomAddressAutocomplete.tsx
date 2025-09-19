@@ -361,27 +361,31 @@ const CustomAddressAutocomplete: React.FC<CustomAddressAutocompleteProps> = ({
 const styles = StyleSheet.create({
   container: {
     position: 'relative',
+    width: '100%',
+    maxWidth: '100%',
   },
   input: {
-    minHeight: 56, // Increased height to accommodate full address
-    maxHeight: 70, // Increased max height
-    paddingHorizontal: 16, // Increased horizontal padding for better spacing
-    paddingVertical: 14, // Increased vertical padding
-    fontSize: 14, // Smaller text to fit more content
+    minHeight: 40, // Mobile-optimized height
+    maxHeight: 50, // Mobile-optimized max height
+    paddingHorizontal: 8, // Mobile-optimized padding
+    paddingVertical: 8, // Mobile-optimized padding
+    fontSize: 16, // Standard mobile font size
     color: Colors.textPrimary,
     backgroundColor: Colors.white,
     borderWidth: 1,
-    borderRadius: BorderRadius.md,
-    paddingRight: 40, // More space for verification indicator
+    borderRadius: BorderRadius.sm,
+    paddingRight: 32, // Space for verification indicator
+    width: '100%',
+    maxWidth: '100%',
     ...Typography.styles.body,
   },
   verificationIndicator: {
     position: 'absolute',
-    right: 8, // Adjusted for increased padding
-    top: 8, // Adjusted for increased padding
+    right: 4, // Mobile-optimized positioning
+    top: 4, // Mobile-optimized positioning
     backgroundColor: Colors.white,
-    paddingHorizontal: 4,
-    paddingVertical: 2,
+    paddingHorizontal: 2,
+    paddingVertical: 1,
     borderRadius: BorderRadius.sm,
     borderWidth: 1,
     borderColor: Colors.primary,
@@ -395,7 +399,7 @@ const styles = StyleSheet.create({
   verifiedIndicator: {
     position: 'absolute',
     right: 2,
-    top: 4,
+    top: 2,
     backgroundColor: Colors.success || '#4CAF50',
     paddingHorizontal: 2,
     paddingVertical: 1,
@@ -408,8 +412,8 @@ const styles = StyleSheet.create({
   },
   loadingContainer: {
     position: 'absolute',
-    right: 16,
-    top: 16, // Adjusted for increased padding
+    right: 8,
+    top: 8, // Mobile-optimized positioning
   },
   modalOverlay: {
     flex: 1,

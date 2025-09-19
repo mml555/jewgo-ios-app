@@ -6,6 +6,12 @@ const compression = require('compression');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
+// Import database connection
+const { Pool } = require('pg');
+
+// Import auth system
+const AuthSystem = require('./auth');
+
 // Import routes
 const entitiesRoutes = require('./routes/entities');
 const restaurantsRoutes = require('./routes/restaurants');
@@ -13,9 +19,27 @@ const synagoguesRoutes = require('./routes/synagogues');
 const mikvahsRoutes = require('./routes/mikvahs');
 const storesRoutes = require('./routes/stores');
 const reviewsRoutes = require('./routes/reviews');
+const interactionsRoutes = require('./routes/interactions');
+const specialsRoutes = require('./routes/specials');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// Initialize database connection
+const dbPool = new Pool({
+  host: process.env.DB_HOST || 'localhost',
+  port: process.env.DB_PORT || 5432,
+  database: process.env.DB_NAME || 'jewgo_dev',
+  user: process.env.DB_USER || 'jewgo_user',
+  password: process.env.DB_PASSWORD || 'jewgo_dev_password',
+  ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
+  max: 20,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 2000,
+});
+
+// Initialize auth system
+const authSystem = new AuthSystem(dbPool);
 
 // Security middleware
 app.use(helmet());
@@ -50,25 +74,52 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Health check endpoint
-app.get('/health', (req, res) => {
-  res.json({
-    success: true,
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    version: '1.0.0'
-  });
+app.get('/health', async (req, res) => {
+  try {
+    const authHealth = await authSystem.healthCheck();
+    
+    res.json({
+      success: true,
+      status: authHealth.status,
+      timestamp: new Date().toISOString(),
+      version: '2.0.0',
+      services: authHealth.services,
+      error: authHealth.error
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      status: 'unhealthy',
+      error: error.message
+    });
+  }
 });
 
-// API routes
-app.use('/api/v5/entities', entitiesRoutes);
-app.use('/api/v5/restaurants', restaurantsRoutes);
-app.use('/api/v5/synagogues', synagoguesRoutes);
-app.use('/api/v5/mikvahs', mikvahsRoutes);
-app.use('/api/v5/stores', storesRoutes);
-app.use('/api/v5/reviews', reviewsRoutes);
+// Import auth routes
+const createAuthRoutes = require('./routes/auth');
+const createRBACRoutes = require('./routes/rbac');
+const createGuestRoutes = require('./routes/guest');
 
-// Search endpoint
-app.get('/api/v5/search', async (req, res) => {
+// Auth routes
+app.use('/api/v5/auth', createAuthRoutes(authSystem.getAuthController(), authSystem.getAuthMiddleware()));
+app.use('/api/v5/rbac', createRBACRoutes(authSystem.getRBACService(), authSystem.getAuthMiddleware()));
+app.use('/api/v5/guest', createGuestRoutes(authSystem.getGuestController(), authSystem.getAuthMiddleware()));
+
+// API routes (with authentication middleware)
+app.use('/api/v5/entities', authSystem.getAuthMiddleware().requireAuthOrGuest(), entitiesRoutes);
+app.use('/api/v5/restaurants', authSystem.getAuthMiddleware().requireAuthOrGuest(), restaurantsRoutes);
+app.use('/api/v5/synagogues', authSystem.getAuthMiddleware().requireAuthOrGuest(), synagoguesRoutes);
+app.use('/api/v5/mikvahs', authSystem.getAuthMiddleware().requireAuthOrGuest(), mikvahsRoutes);
+app.use('/api/v5/stores', authSystem.getAuthMiddleware().requireAuthOrGuest(), storesRoutes);
+app.use('/api/v5/reviews', authSystem.getAuthMiddleware().requireAuthOrGuest(), reviewsRoutes);
+app.use('/api/v5/interactions', authSystem.getAuthMiddleware().requireAuthOrGuest(), interactionsRoutes);
+app.use('/api/v5/specials', authSystem.getAuthMiddleware().requireAuthOrGuest(), specialsRoutes);
+
+// Search endpoint (requires authentication)
+app.get('/api/v5/search', 
+  authSystem.getAuthMiddleware().requireAuthOrGuest(),
+  authSystem.getAuthMiddleware().requireGuestPermission('search:public', 'search'),
+  async (req, res) => {
   try {
     const { q, ...params } = req.query;
     
@@ -127,11 +178,27 @@ app.use((error, req, res, next) => {
   });
 });
 
+// Graceful shutdown
+process.on('SIGINT', async () => {
+  console.log('\n🛑 Received SIGINT. Graceful shutdown...');
+  await authSystem.cleanup();
+  process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+  console.log('\n🛑 Received SIGTERM. Graceful shutdown...');
+  await authSystem.cleanup();
+  process.exit(0);
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log(`🚀 Jewgo API server running on port ${PORT}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🔐 Auth system: ${authSystem.healthCheck().status}`);
   console.log(`🔗 Health check: http://localhost:${PORT}/health`);
+  console.log(`🔑 Auth endpoints: http://localhost:${PORT}/api/v5/auth`);
+  console.log(`👥 RBAC endpoints: http://localhost:${PORT}/api/v5/rbac`);
   console.log(`📖 API docs: http://localhost:${PORT}/api/v5`);
 });
 

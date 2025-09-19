@@ -442,7 +442,7 @@ describe('FormPersistence', () => {
 
       // Mock current version as newer
       const service = new FormPersistenceService();
-      service['currentVersion'] = '1.1.0';
+      service.currentVersion = '1.1.0';
 
       const result = await service.loadFormData();
 
@@ -507,13 +507,13 @@ describe('FormPersistence', () => {
       const unsubscribe1 = service.onSaveStatusChange(callback1);
       const unsubscribe2 = service.onSaveStatusChange(callback2);
 
-      service['updateSaveStatus'](SaveStatus.SAVING);
+      service.updateSaveStatus(SaveStatus.SAVING);
 
       expect(callback1).toHaveBeenCalledWith(SaveStatus.SAVING);
       expect(callback2).toHaveBeenCalledWith(SaveStatus.SAVING);
 
       unsubscribe1();
-      service['updateSaveStatus'](SaveStatus.SAVED);
+      service.updateSaveStatus(SaveStatus.SAVED);
 
       expect(callback1).toHaveBeenCalledTimes(1); // Should not be called again
       expect(callback2).toHaveBeenCalledWith(SaveStatus.SAVED);

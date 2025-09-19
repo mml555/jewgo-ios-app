@@ -614,8 +614,10 @@ const BusinessHoursSelector: React.FC<BusinessHoursSelectorProps> = memo(({
 
 const styles = StyleSheet.create({
   container: {
-    minHeight: 400, // Set a minimum height instead of flex: 1
-    maxHeight: 600, // Set a maximum height to prevent overflow
+    minHeight: 300, // Mobile-optimized minimum height
+    maxHeight: 450, // Mobile-optimized maximum height
+    width: '100%',
+    maxWidth: '100%',
   },
   header: {
     marginBottom: Spacing.lg,
@@ -638,14 +640,15 @@ const styles = StyleSheet.create({
   },
   bulkButton: {
     paddingVertical: Spacing.xs,
-    paddingHorizontal: Spacing.sm,
-    borderRadius: BorderRadius.md,
+    paddingHorizontal: Spacing.xs,
+    borderRadius: BorderRadius.sm,
     backgroundColor: Colors.primary,
-    minHeight: 36, // Smaller touch target for better fit
+    minHeight: 32, // Mobile-optimized touch target
     justifyContent: 'center',
     alignItems: 'center',
     flex: 1, // Make buttons flexible to fit container
-    minWidth: 80, // Ensure minimum width
+    minWidth: 70, // Mobile-optimized minimum width
+    maxWidth: '100%',
   },
   bulkButtonDisabled: {
     opacity: 0.5,

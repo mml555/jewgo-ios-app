@@ -146,7 +146,7 @@ export const useFormValidation = (
       
       // Clear existing errors for this step
       Object.keys(updated).forEach(fieldName => {
-        const fieldRule = validationEngine['rules'].find(rule => rule.field === fieldName);
+        const fieldRule = validationEngine.rules.find(rule => rule.field === fieldName);
         if (fieldRule?.step === stepNumber) {
           delete updated[fieldName];
         }
@@ -164,7 +164,7 @@ export const useFormValidation = (
       
       // Clear existing warnings for this step
       Object.keys(updated).forEach(fieldName => {
-        const fieldRule = validationEngine['rules'].find(rule => rule.field === fieldName);
+        const fieldRule = validationEngine.rules.find(rule => rule.field === fieldName);
         if (fieldRule?.step === stepNumber) {
           delete updated[fieldName];
         }
@@ -218,7 +218,7 @@ export const useFormValidation = (
       const updated = { ...prev };
       
       // Find all fields for this step and clear their errors
-      validationEngine['rules']
+      validationEngine.rules
         .filter(rule => rule.step === stepNumber)
         .forEach(rule => {
           delete updated[rule.field];

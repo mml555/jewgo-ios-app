@@ -177,7 +177,7 @@ class ApiV5Service {
     };
 
     if (this.accessToken) {
-      headers['Authorization'] = `Bearer ${this.accessToken}`;
+      headers.Authorization = `Bearer ${this.accessToken}`;
     }
 
     return headers;

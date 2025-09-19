@@ -283,21 +283,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: Colors.white,
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: Colors.border,
-    borderRadius: BorderRadius.lg,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    minHeight: TouchTargets.minimum, // Ensure 44pt minimum touch target
-    minWidth: 120, // Minimum width for comfortable touch
+    borderRadius: BorderRadius.sm,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    minHeight: 40, // Mobile-optimized touch target
+    minWidth: 100, // Mobile-optimized minimum width
+    maxWidth: '100%',
     shadowColor: Colors.black,
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 1,
     },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOpacity: 0.03,
+    shadowRadius: 1,
+    elevation: 1,
   },
   inputDisabled: {
     backgroundColor: Colors.gray200,

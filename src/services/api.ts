@@ -2,6 +2,8 @@
 // This is a compatibility layer that works with both local mock data and V5 API
 import { configService } from '../config/ConfigService';
 import { apiV5Service, EntityType, Entity, SearchParams } from './api-v5';
+import authService from './AuthService';
+import guestService from './GuestService';
 
 export interface ApiResponse<T> {
   success: boolean;
@@ -52,6 +54,10 @@ export interface Listing {
   images?: string[];
   recent_reviews?: Review[];
   kosher_certifications?: KosherCertification[];
+  // Engagement metrics
+  view_count?: number;
+  like_count?: number;
+  share_count?: number;
 }
 
 export interface Review {
@@ -89,6 +95,28 @@ export interface DetailedListing extends Listing {
   images?: string[];
 }
 
+export interface SpecialOffer {
+  id: string;
+  title: string;
+  description: string;
+  business_id: string;
+  business_name: string;
+  category: string;
+  discount_type: 'percentage' | 'fixed_amount' | 'free_item' | 'buy_one_get_one';
+  discount_value: string;
+  discount_display: string;
+  valid_from: string;
+  valid_until: string;
+  is_active: boolean;
+  is_expiring: boolean;
+  terms_conditions?: string;
+  image_url?: string;
+  rating?: number;
+  price_range?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface WriteReviewRequest {
   rating: number;
   title?: string;
@@ -112,9 +140,24 @@ class ApiService {
     try {
       const url = `${this.baseUrl}${endpoint}`;
       console.log('🌐 API Request:', url);
+      
+      // Get authentication headers
+      let authHeaders: Record<string, string> = {};
+      
+      if (authService.isAuthenticated()) {
+        // User is authenticated - use user token
+        authHeaders = await authService.getAuthHeaders();
+      } else if (guestService.isGuestAuthenticated()) {
+        // Guest is authenticated - use guest token
+        authHeaders = await guestService.getAuthHeadersAsync();
+      }
+      
+      console.log('🔐 Auth headers:', authHeaders);
+      
       const response = await fetch(url, {
         headers: {
           'Content-Type': 'application/json',
+          ...authHeaders,
           ...options.headers,
         },
         ...options,
@@ -280,21 +323,22 @@ class ApiService {
 
   // Get listings by category
   async getListingsByCategory(categoryKey: string, limit: number = 100, offset: number = 0): Promise<ApiResponse<{ listings: Listing[] }>> {
-    if (this.isV5Api) {
-      // Map category keys to entity types
-      const categoryToEntityType: Record<string, string> = {
-        'mikvah': 'mikvah',
-        'eatery': 'restaurant',
-        'shul': 'synagogue',
-        'stores': 'store',
-        'shuk': 'store',
-        'restaurant': 'restaurant',
-        'synagogue': 'synagogue',
-        'store': 'store'
-      };
+    // Map category keys to entity types (available for both V5 and fallback)
+    const categoryToEntityType: Record<string, string> = {
+      'mikvah': 'mikvah',
+      'eatery': 'restaurant',
+      'shul': 'synagogue',
+      'stores': 'store',
+      'shuk': 'store',
+      'restaurant': 'restaurant',
+      'synagogue': 'synagogue',
+      'store': 'store'
+    };
 
-      const entityType = categoryToEntityType[categoryKey] || categoryKey;
-      
+    const entityType = categoryToEntityType[categoryKey] || categoryKey;
+    console.log('🔍 Entity type mapping:', { categoryKey, entityType });
+
+    if (this.isV5Api) {
       try {
         const response = await apiV5Service.getEntities(entityType as EntityType, { 
           limit, 
@@ -302,7 +346,9 @@ class ApiService {
         });
         
         if (response.success && response.data) {
+          console.log('🔍 Raw backend data sample:', response.data.entities[0]);
           const transformedListings = response.data.entities.map(entity => this.transformEntityToLegacyListing(entity));
+          console.log('🔍 Transformed data sample:', transformedListings[0]);
           return {
             success: true,
             data: { listings: transformedListings }
@@ -312,20 +358,53 @@ class ApiService {
         console.log('V5 API not available, falling back to local data');
       }
     }
-    return this.request(`/entities?entityType=${categoryKey}&limit=${limit}&offset=${offset}`);
+    
+    // Use mapped entity type for fallback request
+    console.log('🔍 Making fallback request with entityType:', entityType);
+    const fallbackResponse = await this.request(`/entities?entityType=${entityType}&limit=${limit}&offset=${offset}`);
+    console.log('🔍 Fallback response:', fallbackResponse);
+    
+    if (fallbackResponse.success && fallbackResponse.data?.entities) {
+      console.log('🔍 Raw entity sample from fallback:', fallbackResponse.data.entities[0]);
+      
+      // Transform the fallback data to match the expected format
+      const transformedListings = fallbackResponse.data.entities.map(entity => this.transformEntityToLegacyListing(entity));
+      console.log('🔍 Transformed fallback sample:', transformedListings[0]);
+      
+      return {
+        success: true,
+        data: { listings: transformedListings }
+      };
+    }
+    
+    return fallbackResponse;
   }
 
   // Get single listing with details
   async getListing(id: string): Promise<ApiResponse<{ listing: DetailedListing }>> {
+    console.log('🔍 DEBUG: getListing called with id:', id);
+    
     if (this.isV5Api) {
       // Try to get from entities endpoint first (legacy)
       try {
+        console.log('🔍 Trying legacy entities endpoint:', `/entities/${id}`);
         const response = await this.request(`/entities/${id}`);
-        if (response.success) {
-          return response;
+        console.log('🔍 Legacy entities response:', response);
+        if (response.success && response.data) {
+          // Transform the entity data to match expected format
+          const entity = response.data.entity || response.data;
+          console.log('🔍 Raw entity for transformation:', entity);
+          
+          const transformedListing = this.transformEntityToLegacyListing(entity);
+          console.log('🔍 Transformed listing:', transformedListing);
+          
+          return {
+            success: true,
+            data: { listing: transformedListing }
+          };
         }
       } catch (error) {
-        console.log('Legacy entities endpoint failed, trying category-specific endpoints');
+        console.log('Legacy entities endpoint failed, trying category-specific endpoints', error);
       }
 
       // If entities endpoint fails, try category-specific endpoints
@@ -447,7 +526,11 @@ class ApiService {
       business_hours: business_hours,
       images: images,
       recent_reviews: entity.recent_reviews || [],
-      kosher_certifications: kosher_certifications
+      kosher_certifications: kosher_certifications,
+      // Engagement metrics
+      view_count: entity.view_count || 0,
+      like_count: entity.like_count || 0,
+      share_count: entity.share_count || 0
     };
   }
 
@@ -476,6 +559,197 @@ class ApiService {
       'shul': '🕍'
     };
     return emojis[entityType] || '📍';
+  }
+
+  // Get special offers
+  async getSpecials(limit: number = 20, offset: number = 0): Promise<ApiResponse<{ specials: SpecialOffer[] }>> {
+    if (this.isV5Api) {
+      return this.request(`/specials?limit=${limit}&offset=${offset}`);
+    }
+    
+    // Fallback to mock data for now
+    const mockSpecials: SpecialOffer[] = [
+      {
+        id: '1',
+        title: '20% Off Kosher Deli',
+        description: 'Get 20% off your next meal at Kosher Deli & Market. Valid until end of month.',
+        business_id: 'business-1',
+        business_name: 'Kosher Deli & Market',
+        category: 'Restaurant',
+        discount_type: 'percentage',
+        discount_value: '20',
+        discount_display: '20% OFF',
+        valid_from: '2024-12-01T00:00:00Z',
+        valid_until: '2024-12-31T23:59:59Z',
+        is_active: true,
+        is_expiring: false,
+        image_url: 'https://picsum.photos/300/200?random=5',
+        rating: 4.5,
+        price_range: '$$',
+        created_at: '2024-12-01T00:00:00Z',
+        updated_at: '2024-12-01T00:00:00Z',
+      },
+      {
+        id: '2',
+        title: 'Free Delivery Weekend',
+        description: 'Free delivery on all orders over $50 this weekend only!',
+        business_id: 'business-2',
+        business_name: 'Kosher Grocery',
+        category: 'Shopping',
+        discount_type: 'free_item',
+        discount_value: 'delivery',
+        discount_display: 'FREE DELIVERY',
+        valid_from: '2024-12-21T00:00:00Z',
+        valid_until: '2024-12-22T23:59:59Z',
+        is_active: true,
+        is_expiring: true,
+        image_url: 'https://picsum.photos/300/200?random=6',
+        rating: 4.2,
+        price_range: '$',
+        created_at: '2024-12-15T00:00:00Z',
+        updated_at: '2024-12-15T00:00:00Z',
+      },
+      {
+        id: '3',
+        title: 'School Registration Special',
+        description: 'Early bird discount for Jewish Day School registration. Save $200!',
+        business_id: 'business-3',
+        business_name: 'Jewish Day School',
+        category: 'Education',
+        discount_type: 'fixed_amount',
+        discount_value: '200',
+        discount_display: '$200 OFF',
+        valid_from: '2024-12-01T00:00:00Z',
+        valid_until: '2025-01-15T23:59:59Z',
+        is_active: true,
+        is_expiring: false,
+        image_url: 'https://picsum.photos/300/200?random=7',
+        rating: 4.8,
+        created_at: '2024-12-01T00:00:00Z',
+        updated_at: '2024-12-01T00:00:00Z',
+      },
+      {
+        id: '4',
+        title: 'Community Event Pass',
+        description: 'Get access to all community events this month for just $25.',
+        business_id: 'business-4',
+        business_name: 'Chabad House',
+        category: 'Community',
+        discount_type: 'percentage',
+        discount_value: '50',
+        discount_display: '50% OFF',
+        valid_from: '2024-12-01T00:00:00Z',
+        valid_until: '2024-12-25T23:59:59Z',
+        is_active: true,
+        is_expiring: true,
+        image_url: 'https://picsum.photos/300/200?random=8',
+        rating: 4.7,
+        created_at: '2024-12-01T00:00:00Z',
+        updated_at: '2024-12-01T00:00:00Z',
+      },
+      {
+        id: '5',
+        title: 'Shabbat Catering Deal',
+        description: 'Complete Shabbat meals for families. Order by Thursday!',
+        business_id: 'business-5',
+        business_name: 'Kosher Kitchen',
+        category: 'Restaurant',
+        discount_type: 'percentage',
+        discount_value: '15',
+        discount_display: '15% OFF',
+        valid_from: '2024-12-01T00:00:00Z',
+        valid_until: '2024-12-31T23:59:59Z',
+        is_active: true,
+        is_expiring: false,
+        image_url: 'https://picsum.photos/300/200?random=9',
+        rating: 4.6,
+        price_range: '$$$',
+        created_at: '2024-12-01T00:00:00Z',
+        updated_at: '2024-12-01T00:00:00Z',
+      },
+      {
+        id: '6',
+        title: 'Hebrew Book Sale',
+        description: 'Annual sale on religious texts and Hebrew books.',
+        business_id: 'business-6',
+        business_name: 'Torah Books',
+        category: 'Shopping',
+        discount_type: 'percentage',
+        discount_value: '30',
+        discount_display: '30% OFF',
+        valid_from: '2024-12-01T00:00:00Z',
+        valid_until: '2025-01-31T23:59:59Z',
+        is_active: true,
+        is_expiring: false,
+        image_url: 'https://picsum.photos/300/200?random=10',
+        rating: 4.3,
+        price_range: '$$',
+        created_at: '2024-12-01T00:00:00Z',
+        updated_at: '2024-12-01T00:00:00Z',
+      },
+    ];
+
+    // Filter active specials and add expiring logic
+    const activeSpecials = mockSpecials
+      .filter(special => special.is_active)
+      .map(special => {
+        const validUntilDate = new Date(special.valid_until);
+        const now = new Date();
+        const threeDaysFromNow = new Date(now.getTime() + (3 * 24 * 60 * 60 * 1000));
+        
+        return {
+          ...special,
+          is_expiring: validUntilDate <= threeDaysFromNow
+        };
+      })
+      .slice(offset, offset + limit);
+
+    return {
+      success: true,
+      data: { specials: activeSpecials }
+    };
+  }
+
+  // Get a specific special offer
+  async getSpecial(id: string): Promise<ApiResponse<{ special: SpecialOffer }>> {
+    if (this.isV5Api) {
+      return this.request(`/specials/${id}`);
+    }
+    
+    // Get from mock data for now
+    const specialsResponse = await this.getSpecials(100, 0);
+    if (specialsResponse.success && specialsResponse.data) {
+      const special = specialsResponse.data.specials.find(s => s.id === id);
+      if (special) {
+        // Add some delay to simulate network request
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        return {
+          success: true,
+          data: { special }
+        };
+      }
+    }
+    
+    return {
+      success: false,
+      error: 'Special offer not found'
+    };
+  }
+
+  // Claim a special offer
+  async claimSpecial(id: string): Promise<ApiResponse<{ message: string }>> {
+    if (this.isV5Api) {
+      return this.request(`/specials/${id}/claim`, {
+        method: 'POST'
+      });
+    }
+    
+    // Mock success for now
+    return {
+      success: true,
+      data: { message: 'Special offer claimed successfully!' }
+    };
   }
 }
 

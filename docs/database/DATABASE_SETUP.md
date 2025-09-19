@@ -4,29 +4,31 @@ This guide covers the complete setup of the PostgreSQL database for the Jewgo ap
 
 ## Overview
 
-The Jewgo database is designed to support a comprehensive directory of Jewish businesses and institutions, including restaurants, synagogues, mikvahs, and stores. The database uses PostgreSQL with a unified entity model that supports different business types while maintaining their specific attributes.
+The Jewgo database is designed to support a comprehensive directory of Jewish businesses and institutions, including restaurants, synagogues, mikvahs, and stores. The database uses PostgreSQL with **category-specific tables** that provide optimized performance and maintainability while supporting enhanced data features.
 
 ## Architecture
 
 ### Database Schema
 
-The database uses a unified `entities` table approach where all business types (restaurants, synagogues, mikvahs, stores) are stored in a single table with type-specific fields. This design provides:
+The database uses **category-specific tables** where each business type (restaurants, synagogues, mikvahs, stores) has its own dedicated table. This design provides:
 
-- **Unified Search**: Cross-type searches across all business categories
-- **Consistent API**: Single endpoint structure for all entity types
-- **Flexible Attributes**: Type-specific fields while maintaining common attributes
-- **Performance**: Optimized queries with proper indexing
+- **Optimized Performance**: Category-specific queries without type filtering
+- **Enhanced Data**: Rich business hours, images, and reviews for each listing
+- **Dedicated Controllers**: Specialized API endpoints for each category
+- **Scalable Design**: Easy to add new categories and features
 
 ### Core Tables
 
-1. **entities** - Main table storing all business listings
-2. **users** - User accounts and business owners
-3. **categories** - Business category definitions
-4. **business_hours** - Operating hours for each entity
-5. **reviews** - User reviews and ratings
-6. **images** - Photos and media for entities
-7. **favorites** - User's favorite listings
-8. **search_history** - Search analytics and user behavior
+1. **restaurants** - Restaurant listings with kosher details
+2. **synagogues** - Synagogue listings with denomination info
+3. **mikvahs** - Mikvah listings with privacy and services
+4. **stores** - Store listings with product types
+5. **users** - User accounts and business owners
+6. **business_hours** - Operating hours for each entity (all categories)
+7. **reviews** - User reviews and ratings (all categories)
+8. **images** - Photos and media for entities (all categories)
+9. **favorites** - User's favorite listings
+10. **search_history** - Search analytics and user behavior
 
 ## Setup Instructions
 
@@ -142,20 +144,23 @@ http://localhost:3001/api/v5
 
 ### Available Endpoints
 
-#### Entities (All Types)
-- `GET /entities` - Get all entities with filtering
-- `GET /entities/:id` - Get specific entity details
-- `GET /entities/search` - Search entities
-- `GET /entities/nearby` - Get nearby entities by location
+#### Category-Specific Endpoints (Enhanced Data)
+- `GET /restaurants` - Get restaurants with business hours, images, and reviews
+- `GET /restaurants/:id` - Get specific restaurant with full details
+- `GET /synagogues` - Get synagogues with business hours, images, and reviews
+- `GET /synagogues/:id` - Get specific synagogue with full details
+- `GET /mikvahs` - Get mikvahs with business hours, images, and reviews
+- `GET /mikvahs/:id` - Get specific mikvah with full details
+- `GET /stores` - Get stores with business hours, images, and reviews
+- `GET /stores/:id` - Get specific store with full details
 
-#### Type-Specific Endpoints
-- `GET /restaurants` - Get restaurants only
-- `GET /synagogues` - Get synagogues only
-- `GET /mikvahs` - Get mikvahs only
-- `GET /stores` - Get stores only
+#### Reviews Endpoints
+- `GET /reviews/entity/:entityId` - Get reviews for a specific entity
+- `POST /reviews/entity/:entityId` - Create a new review for an entity
+- `GET /reviews` - Get all reviews with filtering
 
-#### Search
-- `GET /search` - Global search across all entity types
+#### Health Check
+- `GET /health` - API health status
 
 ### Query Parameters
 
@@ -200,19 +205,38 @@ curl "http://localhost:3001/api/v5/stores?isVerified=true&minRating=4.0"
 
 ## Sample Data
 
-The database includes 19+ sample entities across all categories:
+The database includes **80+ enhanced entities** across all categories:
 
-- **5 Restaurants**: Kosher Delight, Jerusalem Grill, Chabad House Cafe, Mazel Tov Bakery, Sephardic Kitchen
-- **5 Synagogues**: Congregation Beth Israel, Temple Emanuel, Chabad Lubavitch, Reform Temple Sinai, Sephardic Center
-- **4 Mikvahs**: Community Mikvah Center, Chabad Mikvah, Temple Mikvah, Sephardic Mikvah
-- **5 Stores**: Kosher World Market, Glatt Kosher Butcher, Challah Corner Bakery, Gourmet Kosher Deli, Sephardic Specialty Market
+- **20+ Restaurants**: Woodmere Wraps, Brooklyn Kosher Delight, Jerusalem Grill, Chabad House Cafe, Mazel Tov Bakery, Sephardic Kitchen, and more
+- **20+ Synagogues**: Woodmere Synagogue, Congregation Beth Israel, Temple Emanuel, Chabad Lubavitch, Reform Temple Sinai, Sephardic Center, and more
+- **20+ Mikvahs**: Seaford Mikvah, Community Mikvah Center, Chabad Mikvah, Temple Mikvah, Sephardic Mikvah, and more
+- **20+ Stores**: Woodmere Wine Shop, Kosher World Market, Glatt Kosher Butcher, Challah Corner Bakery, Gourmet Kosher Deli, and more
 
-Each entity includes:
-- Complete contact information
-- Business hours for all days of the week
-- Sample reviews and ratings
-- Location coordinates for mapping
-- Kosher certifications and details
+### Enhanced Data Features
+
+Each entity now includes **complete enhanced data**:
+
+#### Business Hours
+- **7 days of the week** with realistic Jewish business hours
+- **Shabbat-aware scheduling** (early Friday close, Saturday evening open)
+- **Holiday considerations** and special hours
+
+#### Images
+- **4 high-quality stock images** per listing from Unsplash
+- **Primary image** for main display
+- **Additional images** for galleries and detail views
+- **Professional photography** showing interior/exterior views
+
+#### Reviews
+- **10 authentic reviews** per listing with varied ratings (1-5 stars)
+- **Realistic review content** with specific details
+- **User attribution** with first and last names
+- **Verification status** for review authenticity
+
+#### Location Data
+- **Accurate coordinates** for GPS mapping
+- **Real addresses** in Jewish communities
+- **Distance calculations** for nearby search
 
 ## Environment Configuration
 

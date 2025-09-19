@@ -2,7 +2,8 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { StatusBar, Text, TextInput } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import AppNavigator from './navigation/AppNavigator';
+import { AuthProvider } from './contexts/AuthContext';
+import RootNavigator from './navigation/RootNavigator';
 import { configService } from './config/ConfigService';
 
 // Set default font family for all Text and TextInput components
@@ -34,10 +35,12 @@ export default function App(): React.JSX.Element {
 
   return (
     <SafeAreaProvider>
-      <NavigationContainer>
-        <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-        <AppNavigator />
-      </NavigationContainer>
+      <AuthProvider>
+        <NavigationContainer>
+          <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+          <RootNavigator />
+        </NavigationContainer>
+      </AuthProvider>
     </SafeAreaProvider>
   );
 }

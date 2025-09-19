@@ -4,6 +4,7 @@ export interface EnvironmentConfig {
   nodeEnv: 'development' | 'staging' | 'production';
   apiBaseUrl: string;
   googlePlacesApiKey: string;
+  recaptchaSiteKey: string;
   enableAnalytics: boolean;
   enablePerformanceMonitoring: boolean;
   debugMode: boolean;
@@ -33,6 +34,7 @@ export class ConfigService {
       nodeEnv: (Config.NODE_ENV as 'development' | 'staging' | 'production') || 'development',
       apiBaseUrl: apiBaseUrl,
       googlePlacesApiKey: Config.GOOGLE_PLACES_API_KEY || '',
+      recaptchaSiteKey: Config.RECAPTCHA_SITE_KEY || '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI', // Test key
       enableAnalytics: Config.ENABLE_ANALYTICS === 'true',
       enablePerformanceMonitoring: Config.ENABLE_PERFORMANCE_MONITORING === 'true',
       debugMode: Config.DEBUG_MODE === 'true',
@@ -82,6 +84,10 @@ export class ConfigService {
     return this.config.googlePlacesApiKey;
   }
 
+  public get recaptchaSiteKey(): string {
+    return this.config.recaptchaSiteKey;
+  }
+
   public get enableAnalytics(): boolean {
     return this.config.enableAnalytics;
   }
@@ -108,6 +114,10 @@ export class ConfigService {
 
   public isStaging(): boolean {
     return this.config.nodeEnv === 'staging';
+  }
+
+  public getApiUrl(): string {
+    return this.config.apiBaseUrl;
   }
 }
 
