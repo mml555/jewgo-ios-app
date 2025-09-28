@@ -207,7 +207,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   ratingButtonActive: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
   },
   ratingButtonTextModal: {
     fontSize: 24,
@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   submitButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
     borderRadius: BorderRadius.lg,
     paddingVertical: Spacing.sm,
     alignItems: 'center',

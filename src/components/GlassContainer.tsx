@@ -101,6 +101,7 @@ const styles = StyleSheet.create({
   },
   blur: {
     borderWidth: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)', // Solid background for shadow efficiency
     shadowColor: Colors.black,
     shadowOffset: {
       width: 0,

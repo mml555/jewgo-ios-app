@@ -123,7 +123,7 @@ const WelcomeScreen: React.FC = () => {
           </View>
           
           <View style={styles.benefitItem}>
-            <HeartIcon size={24} color={Colors.primary} filled={true} />
+            <HeartIcon size={24} color={Colors.primary.main} filled={true} />
             <Text style={styles.benefitText}>Save your favorite places</Text>
           </View>
           
@@ -175,7 +175,7 @@ const styles = StyleSheet.create({
   appName: {
     fontSize: 36,
     fontWeight: 'bold',
-    color: Colors.primary,
+    color: Colors.primary.main,
     marginBottom: Spacing.sm,
   },
   tagline: {
@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.md,
   },
   primaryButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
@@ -234,14 +234,14 @@ const styles = StyleSheet.create({
   secondaryButton: {
     backgroundColor: 'transparent',
     borderWidth: 2,
-    borderColor: Colors.primary,
+    borderColor: Colors.primary.main,
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
     marginBottom: Spacing.md,
   },
   secondaryButtonText: {
-    color: Colors.primary,
+    color: Colors.primary.main,
     fontSize: 18,
     fontWeight: '600',
   },

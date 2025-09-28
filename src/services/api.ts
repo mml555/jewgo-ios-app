@@ -339,7 +339,7 @@ class ApiService {
     };
 
     const entityType = categoryToEntityType[categoryKey] || categoryKey;
-    console.log('🔍 Entity type mapping:', { categoryKey, entityType });
+    console.log('🔍 Entity type mapping:', `categoryKey: ${categoryKey}, entityType: ${entityType}`);
 
     if (this.isV5Api) {
       try {
@@ -392,14 +392,14 @@ class ApiService {
       try {
         console.log('🔍 Trying legacy entities endpoint:', `/entities/${id}`);
         const response = await this.request(`/entities/${id}`);
-        console.log('🔍 Legacy entities response:', response);
+        console.log('🔍 Legacy entities response:', JSON.stringify(response, null, 2));
         if (response.success && response.data) {
           // Transform the entity data to match expected format
           const entity = response.data.entity || response.data;
-          console.log('🔍 Raw entity for transformation:', entity);
+          console.log('🔍 Raw entity for transformation:', JSON.stringify(entity, null, 2));
           
           const transformedListing = this.transformEntityToLegacyListing(entity);
-          console.log('🔍 Transformed listing:', transformedListing);
+          console.log('🔍 Transformed listing:', JSON.stringify(transformedListing, null, 2));
           
           return {
             success: true,

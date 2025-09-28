@@ -237,7 +237,7 @@ const SpecialDetailScreen: React.FC = () => {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Colors.primary} />
+          <ActivityIndicator size="large" color={Colors.primary.main} />
           <Text style={styles.loadingText}>Loading special details...</Text>
         </View>
       </SafeAreaView>
@@ -314,7 +314,7 @@ const SpecialDetailScreen: React.FC = () => {
               onPress={() => handleBusinessPress(special.business_id)}
               activeOpacity={0.7}
             >
-              <MapPinIcon size={16} color={Colors.primary} />
+              <MapPinIcon size={16} color={Colors.primary.main} />
               <Text style={styles.businessName}>{special.business_name}</Text>
             </TouchableOpacity>
           </View>
@@ -448,7 +448,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   retryButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
     borderRadius: BorderRadius.md,
@@ -535,7 +535,7 @@ const styles = StyleSheet.create({
   },
   businessName: {
     ...Typography.styles.body,
-    color: Colors.primary, // Make it primary color to indicate it's clickable
+    color: Colors.primary.main, // Make it primary color to indicate it's clickable
     fontWeight: '600',
     textAlign: 'right',
   },

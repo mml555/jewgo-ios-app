@@ -629,8 +629,8 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
   },
   ownerToggleActive: {
-    backgroundColor: Colors.primary + '10',
-    borderColor: Colors.primary,
+    backgroundColor: Colors.primary.main + '10',
+    borderColor: Colors.primary.main,
   },
   ownerToggleIcon: {
     fontSize: 24,
@@ -643,7 +643,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   ownerToggleTextActive: {
-    color: Colors.primary,
+    color: Colors.primary.main,
   },
   inputWrapper: {
     flexDirection: 'row',
@@ -699,7 +699,7 @@ const styles = StyleSheet.create({
   },
   locationIcon: {
     fontSize: 18,
-    color: Colors.primary,
+    color: Colors.primary.main,
   },
   rowContainer: {
     flexDirection: 'column',
@@ -710,7 +710,7 @@ const styles = StyleSheet.create({
   },
   suggestionText: {
     ...Typography.styles.caption,
-    color: Colors.primary,
+    color: Colors.primary.main,
     marginTop: Spacing.xs,
     fontSize: 14,
     fontStyle: 'italic',
@@ -739,9 +739,9 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   listingTypeOptionSelected: {
-    borderColor: Colors.primary,
-    backgroundColor: Colors.primary + '05',
-    shadowColor: Colors.primary,
+    borderColor: Colors.primary.main,
+    backgroundColor: Colors.primary.main + '05',
+    shadowColor: Colors.primary.main,
     shadowOpacity: 0.15,
     shadowRadius: 8,
     elevation: 4,
@@ -757,7 +757,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   listingTypeLabelSelected: {
-    color: Colors.primary,
+    color: Colors.primary.main,
   },
   enhancedInputContainer: {
     marginBottom: Spacing.sm,

@@ -596,12 +596,7 @@ const LiveMapScreen: React.FC = () => {
 
   // Send marker updates to WebView when markerData changes (with debouncing)
   useEffect(() => {
-    console.log('🗺️ Marker data updated:', {
-      markerDataLength: markerData.length,
-      filteredListingsLength: filteredListings.length,
-      mapLoaded,
-      hasWebView: !!webViewRef.current
-    });
+    console.log('🗺️ Marker data updated:', `markerDataLength: ${markerData.length}, filteredListingsLength: ${filteredListings.length}, mapLoaded: ${mapLoaded}, hasWebView: ${!!webViewRef.current}`);
     
     if (webViewRef.current && markerData.length > 0) {
       const message = JSON.stringify({

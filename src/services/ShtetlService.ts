@@ -59,9 +59,17 @@ class ShtetlService {
     }
 
     const queryString = queryParams.toString();
-    const endpoint = `/api/v5/shtetl-stores${queryString ? `?${queryString}` : ''}`;
     
-    return this.request<ShtetlStoreResponse>(endpoint);
+    try {
+      // Try the specific shtetl-stores endpoint first
+      const endpoint = `/api/v5/shtetl-stores${queryString ? `?${queryString}` : ''}`;
+      return await this.request<ShtetlStoreResponse>(endpoint);
+    } catch (error) {
+      // Fallback to entities endpoint if shtetl-stores doesn't exist
+      console.log('ShtetlService: Falling back to entities endpoint');
+      const fallbackEndpoint = `/api/v5/entities?entityType=shtetl${queryString ? `&${queryString}` : ''}`;
+      return await this.request<ShtetlStoreResponse>(fallbackEndpoint);
+    }
   }
 
   async getStore(storeId: string): Promise<{ success: boolean; data: { store: ShtetlStore }; error?: string }> {

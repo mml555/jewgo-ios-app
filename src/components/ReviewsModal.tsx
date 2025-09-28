@@ -424,7 +424,7 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.borderLight,
   },
   ratingDropdownItemActive: {
-    backgroundColor: Colors.primary + '10',
+    backgroundColor: Colors.primary.main + '10',
   },
   ratingDropdownText: {
     ...Typography.styles.body,
@@ -432,7 +432,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Nunito-Regular',
   },
   ratingDropdownTextActive: {
-    color: Colors.primary,
+    color: Colors.primary.main,
     fontFamily: 'Nunito-SemiBold',
   },
   ratingBreakdown: {
@@ -482,7 +482,7 @@ const styles = StyleSheet.create({
   },
   ratingBreakdownBarFill: {
     height: '100%',
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
     borderRadius: 4,
   },
   ratingBreakdownCount: {
@@ -494,7 +494,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Nunito-SemiBold',
   },
   ratingBreakdownRowSelected: {
-    backgroundColor: Colors.primary + '10',
+    backgroundColor: Colors.primary.main + '10',
     borderRadius: BorderRadius.sm,
     paddingHorizontal: Spacing.xs,
     paddingVertical: Spacing.xs,

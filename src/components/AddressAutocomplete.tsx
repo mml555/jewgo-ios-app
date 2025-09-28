@@ -78,7 +78,7 @@ const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
         styles={{
           textInput: {
             ...styles.input,
-            borderColor: error ? Colors.error : (isFocused ? Colors.primary : Colors.gray300),
+            borderColor: error ? Colors.error : (isFocused ? Colors.primary.main : Colors.gray300),
           },
           listView: {
             position: 'absolute',

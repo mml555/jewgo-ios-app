@@ -112,7 +112,7 @@ const LocationBasedSpecials: React.FC<LocationBasedSpecialsProps> = ({
   const getPriorityColor = (priority: number) => {
     if (priority >= 8) return Colors.error;
     if (priority >= 6) return Colors.warning;
-    if (priority >= 4) return Colors.primary;
+    if (priority >= 4) return Colors.primary.main;
     return Colors.textSecondary;
   };
 
@@ -300,7 +300,7 @@ const LocationBasedSpecials: React.FC<LocationBasedSpecialsProps> = ({
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={Colors.primary} />
+        <ActivityIndicator size="large" color={Colors.primary.main} />
         <Text style={styles.loadingText}>Finding nearby restaurants with specials...</Text>
       </View>
     );
@@ -376,7 +376,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
   },
   retryButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
     borderRadius: BorderRadius.md,
@@ -433,8 +433,8 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
   },
   radiusOptionActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
+    borderColor: Colors.primary.main,
   },
   radiusOptionText: {
     ...Typography.styles.body,
@@ -457,7 +457,7 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.sm,
   },
   sortOptionActive: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
   },
   sortOptionText: {
     ...Typography.styles.body,
@@ -527,7 +527,7 @@ const styles = StyleSheet.create({
   },
   distanceText: {
     ...Typography.styles.bodySmall,
-    color: Colors.primary,
+    color: Colors.primary.main,
     fontWeight: 'bold',
   },
   specialsCountBadge: {
@@ -581,7 +581,7 @@ const styles = StyleSheet.create({
   },
   topSpecialDiscount: {
     ...Typography.styles.h4,
-    color: Colors.primary,
+    color: Colors.primary.main,
     fontWeight: 'bold',
     marginBottom: Spacing.sm,
   },
@@ -603,7 +603,7 @@ const styles = StyleSheet.create({
   },
   viewRestaurantButton: {
     flex: 1,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
     paddingVertical: Spacing.sm,
     borderRadius: BorderRadius.md,
     alignItems: 'center',
@@ -617,14 +617,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.surface,
     borderWidth: 1,
-    borderColor: Colors.primary,
+    borderColor: Colors.primary.main,
     paddingVertical: Spacing.sm,
     borderRadius: BorderRadius.md,
     alignItems: 'center',
   },
   viewSpecialText: {
     ...Typography.styles.button,
-    color: Colors.primary,
+    color: Colors.primary.main,
     fontWeight: 'bold',
   },
   emptyContainer: {

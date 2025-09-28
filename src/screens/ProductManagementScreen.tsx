@@ -326,7 +326,7 @@ const ProductManagementScreen: React.FC = () => {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={Colors.primary} />
+        <ActivityIndicator size="large" color={Colors.primary.main} />
         <Text style={styles.loadingText}>Loading products...</Text>
       </View>
     );
@@ -353,8 +353,8 @@ const ProductManagementScreen: React.FC = () => {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            colors={[Colors.primary]}
-            tintColor={Colors.primary}
+            colors={[Colors.primary.main]}
+            tintColor={Colors.primary.main}
           />
         }
       >
@@ -411,7 +411,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
   },
   retryButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
     borderRadius: BorderRadius.md,
@@ -442,7 +442,7 @@ const styles = StyleSheet.create({
     color: Colors.gray600,
   },
   createButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
     borderRadius: BorderRadius.md,
@@ -465,7 +465,7 @@ const styles = StyleSheet.create({
   },
   statNumber: {
     ...Typography.h2,
-    color: Colors.primary,
+    color: Colors.primary.main,
     fontWeight: '700',
   },
   statLabel: {
@@ -494,7 +494,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   editButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
   },
   activateButton: {
     backgroundColor: Colors.success,
@@ -534,7 +534,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
   },
   emptyButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
     borderRadius: BorderRadius.md,

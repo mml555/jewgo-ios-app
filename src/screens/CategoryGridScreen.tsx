@@ -430,7 +430,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   locationPermissionBanner: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
     marginHorizontal: Spacing.md,
     marginTop: Spacing.sm,
     marginBottom: Spacing.sm,

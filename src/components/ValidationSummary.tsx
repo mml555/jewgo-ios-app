@@ -44,7 +44,7 @@ const ValidationSummary: React.FC<ValidationSummaryProps> = ({
     if (totalErrors > 0) return Colors.error;
     if (totalWarnings > 0) return Colors.warning;
     if (readyToSubmit) return Colors.success;
-    return Colors.primary;
+    return Colors.primary.main;
   };
 
   const getStatusIcon = () => {
@@ -308,7 +308,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   nextActionButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
     borderRadius: BorderRadius.md,
     paddingVertical: Spacing.sm,
     paddingHorizontal: Spacing.md,

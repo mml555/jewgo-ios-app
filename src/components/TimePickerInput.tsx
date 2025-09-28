@@ -231,7 +231,7 @@ const TimePickerInput: React.FC<TimePickerInputProps> = memo(({
           {loading ? (
             <ActivityIndicator 
               size="small" 
-              color={Colors.primary}
+              color={Colors.primary.main}
               accessibilityLabel="Loading"
             />
           ) : (
@@ -261,7 +261,7 @@ const TimePickerInput: React.FC<TimePickerInputProps> = memo(({
           onTouchCancel={handlePickerDismiss}
           style={styles.picker}
           textColor={Colors.textPrimary}
-          accentColor={Colors.primary}
+          accentColor={Colors.primary.main}
           themeVariant="light"
         />
       )}

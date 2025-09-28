@@ -262,7 +262,7 @@ const CustomAddressAutocomplete: React.FC<CustomAddressAutocompleteProps> = ({
         ref={inputRef}
         style={[
           styles.input,
-          { borderColor: error ? Colors.error : (isFocused ? Colors.primary : Colors.gray300) }
+          { borderColor: error ? Colors.error : (isFocused ? Colors.primary.main : Colors.gray300) }
         ]}
         value={value}
         onChangeText={handleTextChange}
@@ -281,7 +281,7 @@ const CustomAddressAutocomplete: React.FC<CustomAddressAutocompleteProps> = ({
       />
       {isVerifying && (
         <View style={styles.verificationIndicator}>
-          <ActivityIndicator size="small" color={Colors.primary} />
+          <ActivityIndicator size="small" color={Colors.primary.main} />
         </View>
       )}
       {verifiedAddress && !isVerifying && (
@@ -292,7 +292,7 @@ const CustomAddressAutocomplete: React.FC<CustomAddressAutocompleteProps> = ({
       
       {isLoading && (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="small" color={Colors.primary} />
+          <ActivityIndicator size="small" color={Colors.primary.main} />
         </View>
       )}
       
@@ -388,11 +388,11 @@ const styles = StyleSheet.create({
     paddingVertical: 1,
     borderRadius: BorderRadius.sm,
     borderWidth: 1,
-    borderColor: Colors.primary,
+    borderColor: Colors.primary.main,
   },
   verificationText: {
     fontSize: 8,
-    color: Colors.primary,
+    color: Colors.primary.main,
     marginLeft: 1,
     fontWeight: '500',
   },

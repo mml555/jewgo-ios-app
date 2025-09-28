@@ -225,7 +225,7 @@ const DayHoursRow: React.FC<DayHoursRowProps> = memo(({
               false: Colors.gray300,
               true: Colors.accent,
             }}
-            thumbColor={isOpen ? Colors.primary : Colors.gray500}
+            thumbColor={isOpen ? Colors.primary.main : Colors.gray500}
             ios_backgroundColor={Colors.gray300}
             accessibilityLabel={`${day} is currently ${isOpen ? 'open' : 'closed'}`}
             accessibilityHint={generateAccessibilityHint(
@@ -424,7 +424,7 @@ const styles = StyleSheet.create({
   toggleLabel: {
     ...Typography.styles.body,
     fontWeight: '600',
-    color: Colors.primary,
+    color: Colors.primary.main,
   },
   toggleLabelClosed: {
     color: Colors.textSecondary,
@@ -470,8 +470,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   nextDayButtonActive: {
-    borderColor: Colors.primary,
-    backgroundColor: Colors.primary + '10',
+    borderColor: Colors.primary.main,
+    backgroundColor: Colors.primary.main + '10',
   },
   nextDayText: {
     ...Typography.styles.body,
@@ -481,7 +481,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   nextDayTextActive: {
-    color: Colors.primary,
+    color: Colors.primary.main,
   },
   nextDaySubtext: {
     ...Typography.styles.caption,
@@ -490,7 +490,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
   },
   nextDaySubtextActive: {
-    color: Colors.primary,
+    color: Colors.primary.main,
   },
   copyButton: {
     paddingVertical: Spacing.sm,

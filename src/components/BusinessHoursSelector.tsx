@@ -642,7 +642,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.xs,
     paddingHorizontal: Spacing.xs,
     borderRadius: BorderRadius.sm,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
     minHeight: 32, // Mobile-optimized touch target
     justifyContent: 'center',
     alignItems: 'center',
@@ -695,7 +695,7 @@ const styles = StyleSheet.create({
   summaryValue: {
     ...Typography.styles.body,
     fontWeight: '600',
-    color: Colors.primary,
+    color: Colors.primary.main,
   },
   summaryValueError: {
     color: Colors.error,

@@ -446,7 +446,7 @@ const ServicesAndSocialLinks: React.FC<ServicesAndSocialLinksProps> = ({
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={Colors.primary} />
+        <ActivityIndicator size="large" color={Colors.primary.main} />
         <Text style={styles.loadingText}>Loading services and social links...</Text>
       </View>
     );
@@ -509,7 +509,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
   },
   retryButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
     borderRadius: BorderRadius.md,
@@ -536,7 +536,7 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
   },
   addButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
     borderRadius: BorderRadius.md,
@@ -577,7 +577,7 @@ const styles = StyleSheet.create({
   },
   serviceCategory: {
     ...Typography.styles.bodySmall,
-    color: Colors.primary,
+    color: Colors.primary.main,
     fontWeight: '500',
   },
   socialLinksList: {
@@ -650,7 +650,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
   },
   addFirstButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
     borderRadius: BorderRadius.md,
@@ -727,8 +727,8 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
   },
   platformOptionActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
+    borderColor: Colors.primary.main,
   },
   platformOptionText: {
     ...Typography.styles.body,
@@ -747,7 +747,7 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
   },
   saveButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
     paddingVertical: Spacing.md,
     borderRadius: BorderRadius.md,
     alignItems: 'center',

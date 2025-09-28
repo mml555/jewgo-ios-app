@@ -77,7 +77,7 @@ const ShtetlStoreGrid: React.FC<ShtetlStoreGridProps> = ({
     
     return (
       <View style={styles.footerContainer}>
-        <ActivityIndicator size="small" color={Colors.primary} />
+        <ActivityIndicator size="small" color={Colors.primary.main} />
         <Text style={styles.loadingText}>Loading stores...</Text>
       </View>
     );
@@ -113,8 +113,8 @@ const ShtetlStoreGrid: React.FC<ShtetlStoreGridProps> = ({
       <RefreshControl
         refreshing={refreshing}
         onRefresh={onRefresh}
-        colors={[Colors.primary]}
-        tintColor={Colors.primary}
+        colors={[Colors.primary.main]}
+        tintColor={Colors.primary.main}
       />
     ) : undefined
   ), [refreshing, onRefresh]);
@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
   },
   createStoreButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
     borderRadius: BorderRadius.md,
@@ -238,7 +238,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
   },
   retryButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
     borderRadius: BorderRadius.md,

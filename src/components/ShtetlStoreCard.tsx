@@ -155,7 +155,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: Spacing.sm,
     right: Spacing.sm,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
     borderRadius: BorderRadius.full,
     width: 24,
     height: 24,

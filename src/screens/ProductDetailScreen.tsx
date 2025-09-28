@@ -112,7 +112,7 @@ const ProductDetailScreen: React.FC = () => {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={Colors.primary} />
+        <ActivityIndicator size="large" color={Colors.primary.main} />
         <Text style={styles.loadingText}>Loading product...</Text>
       </View>
     );
@@ -304,7 +304,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
   },
   retryButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
     borderRadius: BorderRadius.md,
@@ -337,7 +337,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: Spacing.md,
     left: Spacing.md,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
     borderRadius: BorderRadius.full,
     width: 32,
     height: 32,
@@ -359,7 +359,7 @@ const styles = StyleSheet.create({
   },
   price: {
     ...Typography.h2,
-    color: Colors.primary,
+    color: Colors.primary.main,
     fontWeight: '700',
     marginBottom: Spacing.lg,
   },
@@ -463,7 +463,7 @@ const styles = StyleSheet.create({
   },
   addToCartButton: {
     flex: 2,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
     paddingVertical: Spacing.md,
     borderRadius: BorderRadius.md,
     alignItems: 'center',

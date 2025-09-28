@@ -112,11 +112,7 @@ const ListingDetailScreen: React.FC = () => {
       
       return distance;
     }
-    console.log('📍 No location or coordinates available:', { 
-      hasLocation: !!location, 
-      hasItemLat: !!item?.latitude, 
-      hasItemLng: !!item?.longitude 
-    });
+    console.log('📍 No location or coordinates available:', `hasLocation: ${!!location}, hasItemLat: ${!!item?.latitude}, hasItemLng: ${!!item?.longitude}`);
     return null;
   }, [location, item]);
 
@@ -420,7 +416,7 @@ const ListingDetailScreen: React.FC = () => {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Colors.primary} />
+          <ActivityIndicator size="large" color={Colors.primary.main} />
           <Text style={styles.loadingText}>Loading...</Text>
         </View>
       </SafeAreaView>
@@ -872,7 +868,7 @@ const styles = StyleSheet.create({
   },
   retryButton: {
     ...Typography.styles.button,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.md,
     borderRadius: BorderRadius.lg,
@@ -1071,7 +1067,7 @@ const styles = StyleSheet.create({
   },
   addressText: {
     ...Typography.styles.body,
-    color: Colors.primary,
+    color: Colors.primary.main,
     textDecorationLine: 'underline',
   },
   orderButton: {
@@ -1170,14 +1166,14 @@ const styles = StyleSheet.create({
   },
   specialCardPressed: {
     backgroundColor: Colors.gray100,
-    borderColor: Colors.primary,
+    borderColor: Colors.primary.main,
     transform: [{ scale: 0.98 }],
     ...Shadows.md,
   },
   specialCardImage: {
     width: 70,
     height: 70,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
     borderRadius: BorderRadius.sm,
     justifyContent: 'center',
     alignItems: 'center',
@@ -1192,7 +1188,7 @@ const styles = StyleSheet.create({
   },
   specialCardTitle: {
     ...Typography.styles.caption,
-    color: Colors.primary,
+    color: Colors.primary.main,
     fontWeight: '600',
     marginBottom: 4,
     textAlign: 'center',
@@ -1292,7 +1288,7 @@ const styles = StyleSheet.create({
   },
   eyeIcon: {
     fontSize: 14,
-    color: Colors.primary, // Blue color for eye icon
+    color: Colors.primary.main, // Blue color for eye icon
   },
   viewCount: {
     ...Typography.styles.caption,

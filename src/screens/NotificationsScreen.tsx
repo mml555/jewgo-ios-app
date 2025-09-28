@@ -221,7 +221,7 @@ const NotificationsScreen: React.FC = () => {
               <Switch
                 value={value}
                 onValueChange={() => handleSettingToggle(key)}
-                trackColor={{ false: Colors.gray300, true: Colors.primary }}
+                trackColor={{ false: Colors.gray300, true: Colors.primary.main }}
                 thumbColor={value ? Colors.white : Colors.gray400}
                 ios_backgroundColor={Colors.gray300}
               />
@@ -275,7 +275,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: Spacing.md,
     right: Spacing.md,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
     borderRadius: BorderRadius.full,
     paddingVertical: Spacing.xs,
     paddingHorizontal: Spacing.sm,
@@ -306,7 +306,7 @@ const styles = StyleSheet.create({
   },
   actionButtonText: {
     ...Typography.styles.button,
-    color: Colors.primary,
+    color: Colors.primary.main,
   },
   actionButtonDisabled: {
     color: Colors.textTertiary,
@@ -324,7 +324,7 @@ const styles = StyleSheet.create({
   },
   unreadNotification: {
     borderLeftWidth: 4,
-    borderLeftColor: Colors.primary,
+    borderLeftColor: Colors.primary.main,
   },
   notificationIcon: {
     width: 48,
@@ -359,7 +359,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
   },
   notificationDescription: {
     ...Typography.styles.body,

@@ -74,7 +74,7 @@ const FavoritesScreen: React.FC = () => {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Colors.primary} />
+          <ActivityIndicator size="large" color={Colors.primary.main} />
           <Text style={styles.loadingText}>Loading your favorites...</Text>
         </View>
       </SafeAreaView>
@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
   },
   statNumber: {
     ...Typography.styles.h3,
-    color: Colors.primary,
+    color: Colors.primary.main,
     marginBottom: Spacing.xs,
   },
   statLabel: {
@@ -301,7 +301,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   categoryTag: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
     borderRadius: BorderRadius.full,
     paddingVertical: Spacing.xs,
     paddingHorizontal: Spacing.sm,
@@ -376,7 +376,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
   },
   retryButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
     borderRadius: BorderRadius.md,
     paddingVertical: Spacing.sm,
     paddingHorizontal: Spacing.lg,

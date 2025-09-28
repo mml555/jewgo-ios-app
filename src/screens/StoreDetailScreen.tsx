@@ -336,7 +336,7 @@ const StoreDetailScreen: React.FC = () => {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={Colors.primary} />
+        <ActivityIndicator size="large" color={Colors.primary.main} />
         <Text style={styles.loadingText}>Loading store...</Text>
       </View>
     );
@@ -363,8 +363,8 @@ const StoreDetailScreen: React.FC = () => {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            colors={[Colors.primary]}
-            tintColor={Colors.primary}
+            colors={[Colors.primary.main]}
+            tintColor={Colors.primary.main}
           />
         }
       >
@@ -419,7 +419,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
   },
   retryButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
     borderRadius: BorderRadius.md,
@@ -455,7 +455,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: Spacing.md,
     right: Spacing.md,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
     borderRadius: BorderRadius.md,
@@ -509,7 +509,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   contactButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
     borderRadius: BorderRadius.md,
@@ -544,14 +544,14 @@ const styles = StyleSheet.create({
     borderBottomColor: 'transparent',
   },
   activeTab: {
-    borderBottomColor: Colors.primary,
+    borderBottomColor: Colors.primary.main,
   },
   tabText: {
     ...Typography.body1,
     color: Colors.gray600,
   },
   activeTabText: {
-    color: Colors.primary,
+    color: Colors.primary.main,
     fontWeight: '600',
   },
   productsGrid: {

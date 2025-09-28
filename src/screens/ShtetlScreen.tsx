@@ -132,7 +132,7 @@ const ShtetlScreen: React.FC = () => {
   if (loading && stores.length === 0) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={Colors.primary} />
+        <ActivityIndicator size="large" color={Colors.primary.main} />
         <Text style={styles.loadingText}>Loading stores...</Text>
       </View>
     );
@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
   },
   retryButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
     borderRadius: BorderRadius.md,
@@ -244,7 +244,7 @@ const styles = StyleSheet.create({
     color: Colors.gray600,
   },
   createButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
     borderRadius: BorderRadius.md,
@@ -267,7 +267,7 @@ const styles = StyleSheet.create({
   },
   statNumber: {
     ...Typography.h2,
-    color: Colors.primary,
+    color: Colors.primary.main,
     fontWeight: '700',
   },
   statLabel: {

@@ -384,7 +384,7 @@ const SpecialsScreen: React.FC = () => {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Colors.primary} />
+          <ActivityIndicator size="large" color={Colors.primary.main} />
           <Text style={styles.loadingText}>Loading special offers...</Text>
         </View>
       </SafeAreaView>
@@ -544,7 +544,7 @@ const styles = StyleSheet.create({
   },
   statNumber: {
     ...Typography.styles.h3,
-    color: Colors.primary,
+    color: Colors.primary.main,
     marginBottom: Spacing.xs,
   },
   statLabel: {
@@ -603,7 +603,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
   },
   retryButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
     borderRadius: BorderRadius.md,
     paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.lg,
@@ -637,8 +637,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   categoryButtonActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
+    borderColor: Colors.primary.main,
   },
   categoryButtonText: {
     ...Typography.styles.body,

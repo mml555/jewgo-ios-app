@@ -654,8 +654,8 @@ const styles = StyleSheet.create({
     marginRight: Spacing.sm,
   },
   checkboxChecked: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
+    borderColor: Colors.primary.main,
   },
   checkmark: {
     color: Colors.white,
@@ -696,9 +696,9 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   optionButtonSelected: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-    shadowColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
+    borderColor: Colors.primary.main,
+    shadowColor: Colors.primary.main,
     shadowOffset: {
       width: 0,
       height: 2,

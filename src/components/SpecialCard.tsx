@@ -275,7 +275,7 @@ const styles = StyleSheet.create({
   },
   ctaText: {
     ...Typography.styles.body,
-    color: Colors.primary,
+    color: Colors.primary.main,
     fontWeight: '600',
     fontSize: 12,
   },

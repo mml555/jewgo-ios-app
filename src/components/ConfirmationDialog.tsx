@@ -36,7 +36,7 @@ const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
   onCancel,
   destructive = false,
 }) => {
-  const defaultConfirmColor = destructive ? Colors.error : Colors.primary;
+  const defaultConfirmColor = destructive ? Colors.error : Colors.primary.main;
   const buttonColor = confirmButtonColor || defaultConfirmColor;
 
   return (
@@ -163,8 +163,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   confirmButton: {
-    backgroundColor: Colors.primary,
-    shadowColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
+    shadowColor: Colors.primary.main,
     shadowOffset: {
       width: 0,
       height: 4,

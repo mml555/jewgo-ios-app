@@ -246,8 +246,8 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   checkboxChecked: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
+    borderColor: Colors.primary.main,
   },
   checkmark: {
     color: Colors.white,
@@ -314,7 +314,7 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
     marginTop: Spacing.lg,
     borderLeftWidth: 4,
-    borderLeftColor: Colors.primary,
+    borderLeftColor: Colors.primary.main,
   },
   infoTitle: {
     ...Typography.styles.h4,
@@ -369,9 +369,9 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   categoryOptionSelected: {
-    borderColor: Colors.primary,
-    backgroundColor: Colors.primary + '05',
-    shadowColor: Colors.primary,
+    borderColor: Colors.primary.main,
+    backgroundColor: Colors.primary.main + '05',
+    shadowColor: Colors.primary.main,
     shadowOpacity: 0.15,
     shadowRadius: 8,
     elevation: 4,
@@ -388,7 +388,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   categoryOptionLabelSelected: {
-    color: Colors.primary,
+    color: Colors.primary.main,
   },
   categoryDescription: {
     ...Typography.styles.caption,
@@ -397,7 +397,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   categoryDescriptionSelected: {
-    color: Colors.primary,
+    color: Colors.primary.main,
   },
   agencySelector: {
     backgroundColor: Colors.white,
@@ -421,8 +421,8 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   agencySelectorSelected: {
-    borderColor: Colors.primary,
-    backgroundColor: Colors.primary + '05',
+    borderColor: Colors.primary.main,
+    backgroundColor: Colors.primary.main + '05',
   },
   agencySelectorText: {
     ...Typography.styles.body,
@@ -431,7 +431,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   agencySelectorTextSelected: {
-    color: Colors.primary,
+    color: Colors.primary.main,
     fontWeight: '600',
   },
   agencySelectorTextPlaceholder: {
@@ -478,7 +478,7 @@ const styles = StyleSheet.create({
   },
   modalDoneButton: {
     ...Typography.styles.body,
-    color: Colors.primary,
+    color: Colors.primary.main,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -494,7 +494,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.gray50,
   },
   agencyOptionSelected: {
-    backgroundColor: Colors.primary + '10',
+    backgroundColor: Colors.primary.main + '10',
   },
   agencySymbol: {
     fontSize: 24,
@@ -510,12 +510,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   agencyNameSelected: {
-    color: Colors.primary,
+    color: Colors.primary.main,
     fontWeight: '600',
   },
   agencyCheckmark: {
     ...Typography.styles.body,
-    color: Colors.primary,
+    color: Colors.primary.main,
     fontSize: 18,
     fontWeight: 'bold',
   },
@@ -560,7 +560,7 @@ const styles = StyleSheet.create({
     padding: 2,
   },
   kosherDetailToggleSwitchActive: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
   },
   kosherDetailToggleThumb: {
     width: 26,

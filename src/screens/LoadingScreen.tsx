@@ -4,8 +4,8 @@ import {
   Text,
   ActivityIndicator,
   StyleSheet,
-  SafeAreaView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const LoadingScreen: React.FC = () => {
   return (

@@ -349,7 +349,7 @@ const SpecialsDashboard: React.FC<SpecialsDashboardProps> = ({
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={Colors.primary} />
+        <ActivityIndicator size="large" color={Colors.primary.main} />
         <Text style={styles.loadingText}>Loading specials dashboard...</Text>
       </View>
     );
@@ -433,7 +433,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
   },
   retryButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
     borderRadius: BorderRadius.md,
@@ -458,7 +458,7 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
   },
   activeTab: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
   },
   tabText: {
     ...Typography.styles.body,
@@ -491,7 +491,7 @@ const styles = StyleSheet.create({
   },
   topSpecialCard: {
     borderWidth: 2,
-    borderColor: Colors.primary,
+    borderColor: Colors.primary.main,
     backgroundColor: Colors.primaryLight,
   },
   specialHeader: {
@@ -501,7 +501,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   priorityBadge: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.xs,
     borderRadius: BorderRadius.sm,
@@ -534,7 +534,7 @@ const styles = StyleSheet.create({
   },
   discountLabel: {
     ...Typography.styles.h4,
-    color: Colors.primary,
+    color: Colors.primary.main,
     fontWeight: 'bold',
     marginBottom: Spacing.md,
   },
@@ -559,7 +559,7 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
   },
   claimButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
     paddingVertical: Spacing.md,
     borderRadius: BorderRadius.md,
     alignItems: 'center',
@@ -621,7 +621,7 @@ const styles = StyleSheet.create({
   },
   topSpecialDiscount: {
     ...Typography.styles.bodySmall,
-    color: Colors.primary,
+    color: Colors.primary.main,
     fontWeight: 'bold',
   },
   metricsCard: {
@@ -649,7 +649,7 @@ const styles = StyleSheet.create({
   },
   metricValue: {
     ...Typography.styles.h2,
-    color: Colors.primary,
+    color: Colors.primary.main,
     fontWeight: 'bold',
   },
   metricLabel: {
@@ -677,7 +677,7 @@ const styles = StyleSheet.create({
   },
   analyticsRank: {
     ...Typography.styles.h4,
-    color: Colors.primary,
+    color: Colors.primary.main,
     fontWeight: 'bold',
     marginRight: Spacing.sm,
   },

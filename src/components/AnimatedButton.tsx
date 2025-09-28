@@ -237,7 +237,7 @@ const AnimatedButton: React.FC<AnimatedButtonProps> = memo(({
           >
             <ActivityIndicator
               size="small"
-              color={variant === 'outline' ? Colors.primary : Colors.white}
+              color={variant === 'outline' ? Colors.primary.main : Colors.white}
               accessibilityLabel="Loading"
             />
           </Animated.View>
@@ -305,7 +305,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
   },
   buttonPrimary: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
   },
   buttonSecondary: {
     backgroundColor: Colors.gray200,
@@ -319,7 +319,7 @@ const styles = StyleSheet.create({
   buttonOutline: {
     backgroundColor: 'transparent',
     borderWidth: 2,
-    borderColor: Colors.primary,
+    borderColor: Colors.primary.main,
   },
   buttonDisabled: {
     backgroundColor: Colors.gray300,
@@ -363,7 +363,7 @@ const styles = StyleSheet.create({
     color: Colors.white,
   },
   textOutline: {
-    color: Colors.primary,
+    color: Colors.primary.main,
   },
   textDisabled: {
     color: Colors.textTertiary,

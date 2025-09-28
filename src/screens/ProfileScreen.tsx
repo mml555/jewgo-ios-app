@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,14 +8,15 @@ import {
   Image,
   Alert,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigation } from '@react-navigation/native';
-import MapIcon from '../components/MapIcon';
 import SpecialsIcon from '../components/SpecialsIcon';
 import HeartIcon from '../components/HeartIcon';
 import { Colors, Typography, Spacing, BorderRadius, Shadows, TouchTargets } from '../styles/designSystem';
+import shtetlService from '../services/ShtetlService';
 
 const ProfileScreen: React.FC = () => {
   const { 
@@ -37,6 +38,12 @@ const ProfileScreen: React.FC = () => {
     reviews: 0,
     entities: 0,
   });
+  const [storeIds, setStoreIds] = useState<string[]>([]);
+  const [storeIdsLoading, setStoreIdsLoading] = useState(false);
+  const [storeIdsError, setStoreIdsError] = useState<string | null>(null);
+  const [showStoreSelector, setShowStoreSelector] = useState(false);
+  const [showStoreActions, setShowStoreActions] = useState(false);
+  const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
 
   // Get user initials for avatar
   const getUserInitials = () => {
@@ -148,6 +155,83 @@ const ProfileScreen: React.FC = () => {
 
   const handleSettings = () => {
     Alert.alert('Settings', 'App settings coming soon!');
+  };
+
+  const loadStoreIds = useCallback(async () => {
+    try {
+      setStoreIdsLoading(true);
+      setStoreIdsError(null);
+
+      const response = await shtetlService.getStores({
+        limit: 50,
+        sortBy: 'created_at',
+        sortOrder: 'DESC',
+      });
+
+      if (response.success && response.data?.stores) {
+        const ids = response.data.stores
+          .map(store => store.id)
+          .filter((id): id is string => Boolean(id));
+
+        if (ids.length === 0) {
+          setStoreIds([]);
+          setStoreIdsError('No stores available yet.');
+        } else {
+          setStoreIds(ids);
+        }
+      } else {
+        setStoreIds([]);
+        setStoreIdsError(response.error || 'Unable to load stores.');
+      }
+    } catch (error) {
+      console.error('Error loading store IDs:', error);
+      setStoreIdsError('Unable to load stores. Showing sample data.');
+      setStoreIds(['demo-store', 'sample-store-1', 'sample-store-2']);
+    } finally {
+      setStoreIdsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadStoreIds();
+  }, [loadStoreIds]);
+
+  const handleDashboard = () => {
+    if (storeIdsLoading) {
+      Alert.alert('Loading Stores', 'Store dashboards are still loading. Please try again in a moment.');
+      return;
+    }
+
+    if (storeIds.length === 0) {
+      Alert.alert('No Stores', storeIdsError || 'No stores are available yet.');
+      return;
+    }
+
+    setShowStoreSelector(true);
+  };
+
+  const handleStoreSelect = (storeId: string) => {
+    setSelectedStoreId(storeId);
+    setShowStoreSelector(false);
+    setShowStoreActions(true);
+  };
+
+  const handleNavigateToProducts = () => {
+    if (!selectedStoreId) return;
+    setShowStoreActions(false);
+    navigation.navigate('ProductManagement' as never, { storeId: selectedStoreId } as never);
+  };
+
+  const handleNavigateToStoreEdit = () => {
+    if (!selectedStoreId) return;
+    setShowStoreActions(false);
+    navigation.navigate('EditStore' as never, { storeId: selectedStoreId } as never);
+  };
+
+  const handleNavigateToSpecials = () => {
+    if (!selectedStoreId) return;
+    setShowStoreActions(false);
+    navigation.navigate('StoreSpecials' as never, { storeId: selectedStoreId } as never);
   };
 
   const handleNotifications = () => {
@@ -269,7 +353,7 @@ const ProfileScreen: React.FC = () => {
         <View style={styles.statsContainer}>
           <TouchableOpacity style={styles.statItem} onPress={handleFavorites}>
             {statsLoading ? (
-              <ActivityIndicator size="small" color={Colors.primary} />
+              <ActivityIndicator size="small" color={Colors.primary.main} />
             ) : (
               <Text style={styles.statNumber}>{userStats.favorites}</Text>
             )}
@@ -277,7 +361,7 @@ const ProfileScreen: React.FC = () => {
           </TouchableOpacity>
           <TouchableOpacity style={styles.statItem} onPress={handleReviews}>
             {statsLoading ? (
-              <ActivityIndicator size="small" color={Colors.primary} />
+              <ActivityIndicator size="small" color={Colors.primary.main} />
             ) : (
               <Text style={styles.statNumber}>{userStats.reviews}</Text>
             )}
@@ -285,7 +369,7 @@ const ProfileScreen: React.FC = () => {
           </TouchableOpacity>
           <TouchableOpacity style={styles.statItem} onPress={() => Alert.alert('Entities', `You have ${userStats.entities} business listings.`)}>
             {statsLoading ? (
-              <ActivityIndicator size="small" color={Colors.primary} />
+              <ActivityIndicator size="small" color={Colors.primary.main} />
             ) : (
               <Text style={styles.statNumber}>{userStats.entities}</Text>
             )}
@@ -307,6 +391,10 @@ const ProfileScreen: React.FC = () => {
             <Text style={styles.quickActionIcon}>✏️</Text>
             <Text style={styles.quickActionText}>Edit Profile</Text>
           </TouchableOpacity>
+          <TouchableOpacity style={styles.quickActionButton} onPress={handleDashboard}>
+            <Text style={styles.quickActionIcon}>📊</Text>
+            <Text style={styles.quickActionText}>Dashboard</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Menu Container */}
@@ -318,6 +406,12 @@ const ProfileScreen: React.FC = () => {
             <Text style={styles.menuText}>
               {isGuestAuthenticated ? 'Create Account' : 'Edit Profile'}
             </Text>
+            <Text style={styles.menuArrow}>›</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.menuItem} onPress={handleDashboard}>
+            <Text style={styles.menuIcon}>📊</Text>
+            <Text style={styles.menuText}>Product Dashboard</Text>
             <Text style={styles.menuArrow}>›</Text>
           </TouchableOpacity>
 
@@ -340,6 +434,47 @@ const ProfileScreen: React.FC = () => {
             <Text style={styles.menuText}>Privacy & Security</Text>
             <Text style={styles.menuArrow}>›</Text>
           </TouchableOpacity>
+        </View>
+
+        <View style={styles.menuContainer}>
+          <View style={styles.storeHeader}>
+            <Text style={styles.sectionTitle}>Store Dashboards</Text>
+            <TouchableOpacity style={styles.storeRefreshButton} onPress={loadStoreIds}>
+              <Text style={styles.storeRefreshText}>Refresh</Text>
+            </TouchableOpacity>
+          </View>
+
+          {storeIdsError && storeIds.length > 0 && (
+            <Text style={styles.storeInfoText}>{storeIdsError}</Text>
+          )}
+
+          {storeIdsLoading ? (
+            <View style={styles.storeLoadingRow}>
+              <ActivityIndicator size="small" color={Colors.primary.main} />
+              <Text style={styles.storeLoadingText}>Loading stores...</Text>
+            </View>
+          ) : storeIds.length > 0 ? (
+            storeIds.map(storeId => (
+              <TouchableOpacity
+                key={storeId}
+                style={styles.storeItem}
+                onPress={() => handleStoreSelect(storeId)}
+              >
+                <Text style={styles.menuIcon}>🏪</Text>
+                <View style={styles.storeItemContent}>
+                  <Text style={styles.menuText}>Store ID</Text>
+                  <Text style={styles.storeIdValue}>{storeId}</Text>
+                </View>
+                <Text style={styles.menuArrow}>›</Text>
+              </TouchableOpacity>
+            ))
+          ) : (
+            <View style={styles.storeEmptyState}>
+              <Text style={styles.storeEmptyText}>
+                {storeIdsError || 'No stores found. Create a store to view dashboards.'}
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* Guest-specific information */}
@@ -395,6 +530,87 @@ const ProfileScreen: React.FC = () => {
           <Text style={styles.logoutText}>Sign Out</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      <Modal
+        visible={showStoreSelector}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowStoreSelector(false)}
+      >
+        <View style={styles.storeModalOverlay}>
+          <View style={styles.storeModalContent}>
+            <Text style={styles.storeModalTitle}>Select a store</Text>
+
+            <ScrollView style={styles.storeModalList}>
+              {storeIds.map(storeId => (
+                <TouchableOpacity
+                  key={storeId}
+                  style={styles.storeModalItem}
+                  onPress={() => handleStoreSelect(storeId)}
+                >
+                  <Text style={styles.storeModalItemText}>{storeId}</Text>
+                  <Text style={styles.storeModalItemArrow}>›</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <TouchableOpacity
+              style={styles.storeModalCloseButton}
+              onPress={() => setShowStoreSelector(false)}
+            >
+              <Text style={styles.storeModalCloseText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={showStoreActions}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowStoreActions(false)}
+      >
+        <View style={styles.storeModalOverlay}>
+          <View style={styles.storeActionsContent}>
+            <Text style={styles.storeModalTitle}>Manage Store</Text>
+            <Text style={styles.storeModalSubtitle}>{selectedStoreId}</Text>
+
+            <TouchableOpacity style={styles.storeActionButton} onPress={handleNavigateToProducts}>
+              <Text style={styles.storeActionEmoji}>🛒</Text>
+              <View style={styles.storeActionTextContainer}>
+                <Text style={styles.storeActionTitle}>Product Dashboard</Text>
+                <Text style={styles.storeActionSubtitle}>Review products, edit inventory, and manage visibility</Text>
+              </View>
+              <Text style={styles.storeActionArrow}>›</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.storeActionButton} onPress={handleNavigateToStoreEdit}>
+              <Text style={styles.storeActionEmoji}>🏪</Text>
+              <View style={styles.storeActionTextContainer}>
+                <Text style={styles.storeActionTitle}>Edit Store Profile</Text>
+                <Text style={styles.storeActionSubtitle}>Update contact details, services, and branding</Text>
+              </View>
+              <Text style={styles.storeActionArrow}>›</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.storeActionButton} onPress={handleNavigateToSpecials}>
+              <Text style={styles.storeActionEmoji}>🔥</Text>
+              <View style={styles.storeActionTextContainer}>
+                <Text style={styles.storeActionTitle}>Manage Specials</Text>
+                <Text style={styles.storeActionSubtitle}>Edit promotions, adjust priority, and control availability</Text>
+              </View>
+              <Text style={styles.storeActionArrow}>›</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.storeModalCloseButton}
+              onPress={() => setShowStoreActions(false)}
+            >
+              <Text style={styles.storeModalCloseText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -431,7 +647,7 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
     justifyContent: 'center',
     alignItems: 'center',
     ...Shadows.lg,
@@ -511,7 +727,7 @@ const styles = StyleSheet.create({
   },
   statNumber: {
     ...Typography.styles.h1,
-    color: Colors.primary,
+    color: Colors.primary.main,
     marginBottom: 4,
   },
   statLabel: {
@@ -642,7 +858,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   upgradeButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 20,
@@ -671,7 +887,164 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666666',
   },
+  storeHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+  },
+  storeRefreshButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    backgroundColor: Colors.gray100,
+  },
+  storeRefreshText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.primary.main,
+  },
+  storeLoadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  storeLoadingText: {
+    marginLeft: 12,
+    fontSize: 14,
+    color: Colors.gray600,
+  },
+  storeInfoText: {
+    fontSize: 12,
+    color: Colors.warning,
+    paddingHorizontal: 20,
+    paddingBottom: 8,
+  },
+  storeItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#F2F2F7',
+  },
+  storeItemContent: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  storeIdValue: {
+    fontSize: 13,
+    color: Colors.gray600,
+    marginTop: 4,
+  },
+  storeEmptyState: {
+    paddingHorizontal: 20,
+    paddingVertical: 24,
+  },
+  storeEmptyText: {
+    fontSize: 14,
+    color: Colors.gray600,
+  },
+  storeModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    justifyContent: 'flex-end',
+  },
+  storeModalContent: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingTop: 24,
+    paddingBottom: 16,
+    maxHeight: '70%',
+  },
+  storeActionsContent: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingTop: 24,
+    paddingBottom: 24,
+  },
+  storeModalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000000',
+    paddingHorizontal: 24,
+    marginBottom: 16,
+  },
+  storeModalSubtitle: {
+    fontSize: 14,
+    color: Colors.gray600,
+    paddingHorizontal: 24,
+    marginBottom: 16,
+  },
+  storeModalList: {
+    paddingHorizontal: 8,
+  },
+  storeModalItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 12,
+    marginHorizontal: 8,
+    marginBottom: 8,
+    backgroundColor: Colors.gray50,
+  },
+  storeModalItemText: {
+    fontSize: 16,
+    color: Colors.gray900,
+  },
+  storeModalItemArrow: {
+    fontSize: 20,
+    color: Colors.gray400,
+  },
+  storeModalCloseButton: {
+    marginTop: 8,
+    marginHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 16,
+    backgroundColor: Colors.primary.main,
+    alignItems: 'center',
+  },
+  storeModalCloseText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  storeActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#F2F2F7',
+  },
+  storeActionEmoji: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  storeActionTextContainer: {
+    flex: 1,
+  },
+  storeActionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000000',
+  },
+  storeActionSubtitle: {
+    fontSize: 13,
+    color: Colors.gray600,
+    marginTop: 4,
+  },
+  storeActionArrow: {
+    fontSize: 20,
+    color: '#CCCCCC',
+    fontWeight: 'bold',
+  },
 });
 
 export default ProfileScreen;
-

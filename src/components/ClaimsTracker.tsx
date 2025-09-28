@@ -112,7 +112,7 @@ const ClaimsTracker: React.FC<ClaimsTrackerProps> = ({
   // Get status color
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'claimed': return Colors.primary;
+      case 'claimed': return Colors.primary.main;
       case 'redeemed': return Colors.success;
       case 'expired': return Colors.error;
       case 'cancelled': return Colors.textSecondary;
@@ -263,7 +263,7 @@ const ClaimsTracker: React.FC<ClaimsTrackerProps> = ({
           <Text style={styles.statLabel}>Total</Text>
         </View>
         <View style={styles.statItem}>
-          <Text style={[styles.statValue, { color: Colors.primary }]}>
+          <Text style={[styles.statValue, { color: Colors.primary.main }]}>
             {claims.filter(c => c.claim.status === 'claimed').length}
           </Text>
           <Text style={styles.statLabel}>Active</Text>
@@ -287,7 +287,7 @@ const ClaimsTracker: React.FC<ClaimsTrackerProps> = ({
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={Colors.primary} />
+        <ActivityIndicator size="large" color={Colors.primary.main} />
         <Text style={styles.loadingText}>Loading your claims...</Text>
       </View>
     );
@@ -350,7 +350,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
   },
   retryButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
     borderRadius: BorderRadius.md,
@@ -448,7 +448,7 @@ const styles = StyleSheet.create({
   },
   discountLabel: {
     ...Typography.styles.h4,
-    color: Colors.primary,
+    color: Colors.primary.main,
     fontWeight: 'bold',
     marginBottom: Spacing.md,
   },
@@ -515,7 +515,7 @@ const styles = StyleSheet.create({
   },
   codeText: {
     ...Typography.styles.body,
-    color: Colors.primary,
+    color: Colors.primary.main,
     fontWeight: 'bold',
   },
   emptyContainer: {

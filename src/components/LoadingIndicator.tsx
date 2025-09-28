@@ -144,7 +144,7 @@ const LoadingIndicator: React.FC<LoadingIndicatorProps> = memo(({
     >
       <ActivityIndicator
         size={size === 'small' ? 'small' : 'large'}
-        color={Colors.primary}
+        color={Colors.primary.main}
         accessibilityLabel="Loading spinner"
       />
     </Animated.View>
@@ -311,7 +311,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   pulseContainer: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
     borderRadius: 50,
     marginBottom: Spacing.md,
   },
@@ -333,7 +333,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   dot: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
     borderRadius: 50,
     marginHorizontal: Spacing.xs,
   },
@@ -364,7 +364,7 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: '100%',
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
     borderRadius: 4,
   },
   progressText: {

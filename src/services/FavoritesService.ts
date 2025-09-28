@@ -55,12 +55,13 @@ class FavoritesService {
 
   /**
    * Check if user is authenticated (has access to server favorites)
+   * Use AuthService instead of making API calls to avoid excessive requests
    */
   private async isAuthenticated(): Promise<boolean> {
     try {
-      // Check if we have a valid auth token
-      const response = await (apiService as any).request('/auth/me', { method: 'GET' });
-      return response.success;
+      // Import AuthService dynamically to avoid circular dependencies
+      const { default: authService } = await import('./AuthService');
+      return authService.isAuthenticated();
     } catch (error) {
       return false;
     }

@@ -166,7 +166,7 @@ const SpecialsAnalytics: React.FC<SpecialsAnalyticsProps> = ({
             <Text style={styles.metricLabel}>Expired</Text>
           </View>
           <View style={styles.metricCard}>
-            <Text style={[styles.metricValue, { color: Colors.primary }]}>
+            <Text style={[styles.metricValue, { color: Colors.primary.main }]}>
               {performanceMetrics.totalClaims}
             </Text>
             <Text style={styles.metricLabel}>Total Claims</Text>
@@ -360,7 +360,7 @@ const SpecialsAnalytics: React.FC<SpecialsAnalyticsProps> = ({
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={Colors.primary} />
+        <ActivityIndicator size="large" color={Colors.primary.main} />
         <Text style={styles.loadingText}>Loading analytics data...</Text>
       </View>
     );
@@ -423,7 +423,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
   },
   retryButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
     borderRadius: BorderRadius.md,
@@ -480,7 +480,7 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.sm,
   },
   timeframeOptionActive: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
   },
   timeframeOptionText: {
     ...Typography.styles.body,
@@ -544,7 +544,7 @@ const styles = StyleSheet.create({
   },
   avgMetricValue: {
     ...Typography.styles.h2,
-    color: Colors.primary,
+    color: Colors.primary.main,
     fontWeight: 'bold',
     marginBottom: Spacing.xs,
   },
@@ -560,7 +560,7 @@ const styles = StyleSheet.create({
   },
   topPerformerTitle: {
     ...Typography.styles.body,
-    color: Colors.primary,
+    color: Colors.primary.main,
     fontWeight: 'bold',
     marginBottom: Spacing.xs,
   },
@@ -578,7 +578,7 @@ const styles = StyleSheet.create({
   },
   topPerformerClaims: {
     ...Typography.styles.bodySmall,
-    color: Colors.primary,
+    color: Colors.primary.main,
     fontWeight: 'bold',
   },
   funnelCard: {
@@ -617,7 +617,7 @@ const styles = StyleSheet.create({
   },
   funnelArrowText: {
     ...Typography.styles.h3,
-    color: Colors.primary,
+    color: Colors.primary.main,
     marginBottom: Spacing.xs,
   },
   funnelRate: {
@@ -637,7 +637,7 @@ const styles = StyleSheet.create({
   },
   overallConversionValue: {
     ...Typography.styles.h1,
-    color: Colors.primary,
+    color: Colors.primary.main,
     fontWeight: 'bold',
   },
   analyticsCard: {
@@ -663,7 +663,7 @@ const styles = StyleSheet.create({
   },
   rankNumber: {
     ...Typography.styles.h3,
-    color: Colors.primary,
+    color: Colors.primary.main,
     fontWeight: 'bold',
   },
   analyticsContent: {
@@ -708,7 +708,7 @@ const styles = StyleSheet.create({
   },
   utilizationBarFill: {
     height: '100%',
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
     borderRadius: BorderRadius.sm,
   },
   utilizationText: {

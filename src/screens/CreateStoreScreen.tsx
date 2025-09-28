@@ -516,7 +516,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   typeOptionSelected: {
-    borderColor: Colors.primary,
+    borderColor: Colors.primary.main,
     backgroundColor: Colors.primaryLight,
   },
   typeEmoji: {
@@ -529,7 +529,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   typeLabelSelected: {
-    color: Colors.primary,
+    color: Colors.primary.main,
     fontWeight: '600',
   },
   kosherGrid: {
@@ -547,7 +547,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   kosherOptionSelected: {
-    borderColor: Colors.primary,
+    borderColor: Colors.primary.main,
     backgroundColor: Colors.primaryLight,
   },
   kosherLabel: {
@@ -555,7 +555,7 @@ const styles = StyleSheet.create({
     color: Colors.gray700,
   },
   kosherLabelSelected: {
-    color: Colors.primary,
+    color: Colors.primary.main,
     fontWeight: '600',
   },
   serviceOptions: {
@@ -573,7 +573,7 @@ const styles = StyleSheet.create({
     marginHorizontal: Spacing.xs,
   },
   serviceOptionSelected: {
-    borderColor: Colors.primary,
+    borderColor: Colors.primary.main,
     backgroundColor: Colors.primaryLight,
   },
   serviceEmoji: {
@@ -586,7 +586,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   serviceLabelSelected: {
-    color: Colors.primary,
+    color: Colors.primary.main,
     fontWeight: '600',
   },
   footer: {
@@ -596,7 +596,7 @@ const styles = StyleSheet.create({
     borderTopColor: Colors.gray200,
   },
   submitButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
     borderRadius: BorderRadius.md,
     paddingVertical: Spacing.md,
     alignItems: 'center',

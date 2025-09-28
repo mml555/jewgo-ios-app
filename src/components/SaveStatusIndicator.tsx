@@ -109,8 +109,8 @@ const SaveStatusIndicator: React.FC<SaveStatusIndicatorProps> = memo(({
         return {
           icon: '💾',
           text: 'Saving...',
-          color: Colors.primary,
-          backgroundColor: Colors.primary + '10',
+          color: Colors.primary.main,
+          backgroundColor: Colors.primary.main + '10',
         };
       case SaveStatus.SAVED:
         return {
@@ -280,7 +280,7 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: '100%',
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
     borderRadius: 2,
   },
   progressText: {

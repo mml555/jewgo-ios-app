@@ -13,6 +13,8 @@ import StoreDetailScreen from '../screens/StoreDetailScreen';
 import CreateStoreScreen from '../screens/CreateStoreScreen';
 import ProductManagementScreen from '../screens/ProductManagementScreen';
 import ProductDetailScreen from '../screens/ProductDetailScreen';
+import EditStoreScreen from '../screens/EditStoreScreen';
+import StoreSpecialsScreen from '../screens/StoreSpecialsScreen';
 
 const Stack = createStackNavigator();
 
@@ -108,6 +110,22 @@ const AppNavigator: React.FC = () => {
       <Stack.Screen 
         name="ProductDetail" 
         component={ProductDetailScreen}
+        options={{
+          headerShown: false,
+          presentation: 'card',
+        }}
+      />
+      <Stack.Screen
+        name="EditStore"
+        component={EditStoreScreen}
+        options={{
+          headerShown: false,
+          presentation: 'modal',
+        }}
+      />
+      <Stack.Screen
+        name="StoreSpecials"
+        component={StoreSpecialsScreen}
         options={{
           headerShown: false,
           presentation: 'card',

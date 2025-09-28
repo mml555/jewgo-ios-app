@@ -42,18 +42,10 @@ const CategoryCard: React.FC<CategoryCardProps> = memo(({ item, categoryKey }) =
 
   // Calculate real distance if user location is available
   const realDistance = useMemo(() => {
-    console.log('🔥 CATEGORY CARD LOCATION CHECK:', { 
-      hasLocation: !!location, 
-      hasItemCoordinate: !!item.coordinate,
-      locationData: location ? `${location.latitude}, ${location.longitude}` : 'none'
-    });
+    console.log('🔥 CATEGORY CARD LOCATION CHECK:', `hasLocation: ${!!location}, hasItemCoordinate: ${!!item.coordinate}, locationData: ${location ? `${location.latitude}, ${location.longitude}` : 'none'}`);
     
     if (location && item.coordinate && item.coordinate.latitude && item.coordinate.longitude) {
-      console.log('📍 CALCULATING DISTANCE:', {
-        userLocation: `${location.latitude}, ${location.longitude}`,
-        businessLocation: `${item.coordinate.latitude}, ${item.coordinate.longitude}`,
-        businessName: item.title
-      });
+      console.log('📍 CALCULATING DISTANCE:', `userLocation: ${location.latitude}, ${location.longitude}, businessLocation: ${item.coordinate.latitude}, ${item.coordinate.longitude}, businessName: ${item.title}`);
       
       const distance = calculateDistance(
         location.latitude,
@@ -62,12 +54,7 @@ const CategoryCard: React.FC<CategoryCardProps> = memo(({ item, categoryKey }) =
         Number(item.coordinate.longitude)
       );
       
-      console.log('📍 DISTANCE RESULT:', { 
-        distance: `${distance.toFixed(1)} miles`, 
-        businessName: item.title,
-        userLocation: 'San Francisco (iOS Simulator)',
-        businessLocation: 'NYC Area'
-      });
+      console.log('📍 DISTANCE RESULT:', `distance: ${distance.toFixed(1)} miles, businessName: ${item.title}, userLocation: San Francisco (iOS Simulator), businessLocation: NYC Area`);
       
       // For testing: allow larger distances since iOS simulator gives SF location
       // In production, this should be much smaller (like 50-100 miles)
@@ -78,14 +65,7 @@ const CategoryCard: React.FC<CategoryCardProps> = memo(({ item, categoryKey }) =
       
       return distance;
     }
-    console.log('📍 No location or coordinates available for card:', { 
-      hasLocation: !!location, 
-      hasItemCoordinate: !!item.coordinate,
-      hasZipCode: !!item.zip_code,
-      zipCode: item.zip_code,
-      hasPrice: !!item.price,
-      price: item.price
-    });
+    console.log('📍 No location or coordinates available for card:', `hasLocation: ${!!location}, hasItemCoordinate: ${!!item.coordinate}, hasZipCode: ${!!item.zip_code}, zipCode: ${item.zip_code}, hasPrice: ${!!item.price}, price: ${item.price}`);
     return null; // Return null to trigger zipcode fallback, not mock distance
   }, [location, item.coordinate]);
 

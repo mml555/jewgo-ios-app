@@ -441,7 +441,7 @@ const styles = StyleSheet.create({
   },
   overallProgressFill: {
     height: '100%',
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
     borderRadius: 2,
   },
   overallProgressText: {
@@ -463,7 +463,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.gray50,
   },
   stepContainerCurrent: {
-    backgroundColor: Colors.primary + '05',
+    backgroundColor: Colors.primary.main + '05',
   },
   stepContainerError: {
     backgroundColor: Colors.error + '05',

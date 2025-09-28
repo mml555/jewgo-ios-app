@@ -225,7 +225,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   activeTab: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
   },
   tabIcon: {
     fontSize: 16,

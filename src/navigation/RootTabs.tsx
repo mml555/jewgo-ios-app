@@ -46,7 +46,7 @@ const TabIcon: React.FC<{
       accessibilityHint={`Navigate to ${label} tab`}
     >
       {iconComponent ? (
-        React.createElement(iconComponent, { size: 24, color: focused ? Colors.primary : Colors.textSecondary })
+        React.createElement(iconComponent, { size: 24, color: focused ? Colors.primary.main : Colors.textSecondary })
       ) : (
         <Text style={[styles.tabIcon, focused && styles.tabIconFocused]}>
           {icon}
@@ -107,7 +107,7 @@ function RootTabs() {
           paddingBottom: Math.max(insets.bottom, 8),
           height: 60 + Math.max(insets.bottom, 8),
         },
-        tabBarActiveTintColor: Colors.primary,
+        tabBarActiveTintColor: Colors.primary.main,
         tabBarInactiveTintColor: Colors.textTertiary,
         headerShown: false,
         tabBarHideOnKeyboard: true,
@@ -188,7 +188,7 @@ const styles = StyleSheet.create({
   },
   tabLabelFocused: {
     fontWeight: '600',
-    color: Colors.primary,
+    color: Colors.primary.main,
   },
 });
 
