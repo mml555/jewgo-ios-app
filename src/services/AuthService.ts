@@ -33,6 +33,16 @@ export interface RegisterData {
   deviceInfo?: DeviceInfo;
 }
 
+export interface GoogleOAuthData {
+  idToken: string;
+  deviceInfo?: DeviceInfo;
+}
+
+export interface MagicLinkData {
+  email: string;
+  purpose?: 'login' | 'register';
+}
+
 export interface DeviceInfo {
   platform: string;
   model?: string;
@@ -152,6 +162,62 @@ class AuthService {
       await this.clearStoredTokens();
       this.accessToken = null;
       this.refreshToken = null;
+    }
+  }
+
+  async googleOAuth(data: GoogleOAuthData): Promise<AuthResponse> {
+    try {
+      const response = await this.makeRequest<AuthResponse>('/auth/google', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+
+      if (response.success && response.data) {
+        await this.setTokens(response.data.tokens);
+        return response.data;
+      }
+
+      throw new Error(response.error || 'Google OAuth failed');
+    } catch (error) {
+      console.error('Google OAuth error:', error);
+      throw error;
+    }
+  }
+
+  async sendMagicLink(data: MagicLinkData): Promise<{ success: boolean; message: string; expiresAt: string }> {
+    try {
+      const response = await this.makeRequest<{ success: boolean; message: string; expiresAt: string }>('/auth/magic-link/send', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+
+      if (response.success && response.data) {
+        return response.data;
+      }
+
+      throw new Error(response.error || 'Failed to send magic link');
+    } catch (error) {
+      console.error('Magic link sending error:', error);
+      throw error;
+    }
+  }
+
+  async verifyMagicLink(token: string): Promise<AuthResponse> {
+    try {
+      const response = await this.makeRequest<AuthResponse>('/auth/magic-link/verify', {
+        method: 'POST',
+        body: JSON.stringify({ token }),
+      });
+
+      if (response.success && response.data) {
+        await this.setTokens(response.data.tokens);
+        return response.data;
+      }
+
+      throw new Error(response.error || 'Magic link verification failed');
+    } catch (error) {
+      console.error('Magic link verification error:', error);
+      throw error;
     }
   }
 

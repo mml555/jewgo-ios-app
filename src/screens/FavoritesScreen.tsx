@@ -1,64 +1,110 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
+import React, { useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator, Alert, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import EateryIcon from '../components/EateryIcon';
-import StoreIcon from '../components/StoreIcon';
+import { useNavigation } from '@react-navigation/native';
+import type { StackNavigationProp } from '@react-navigation/stack';
 import { Colors, Typography, Spacing, BorderRadius, Shadows, TouchTargets } from '../styles/designSystem';
+import type { RootStackParamList } from '../types/navigation';
+import { useFavorites } from '../hooks/useFavorites';
+import { Favorite } from '../services/FavoritesService';
+import HeartIcon from '../components/HeartIcon';
+
+type NavigationProp = StackNavigationProp<RootStackParamList, 'Favorites'>;
 
 const FavoritesScreen: React.FC = () => {
-  // Mock favorite items
-  const favoriteItems = [
-    {
-      id: '1',
-      title: 'Kosher Deli & Market',
-      icon: EateryIcon,
-      description: 'Authentic kosher cuisine with traditional recipes',
-      category: 'Restaurant',
-      rating: 4.8,
-      distance: '0.5 mi',
-      imageUrl: 'https://picsum.photos/300/200?random=1',
-    },
-    {
-      id: '2',
-      title: '🕍 Chabad House',
-      description: 'Warm and welcoming community center for all ages',
-      category: 'Community',
-      rating: 4.9,
-      distance: '1.2 mi',
-      imageUrl: 'https://picsum.photos/300/200?random=2',
-    },
-    {
-      id: '3',
-      title: '📚 Jewish Day School',
-      description: 'Excellent Jewish education for children',
-      category: 'Education',
-      rating: 4.7,
-      distance: '2.1 mi',
-      imageUrl: 'https://picsum.photos/300/200?random=3',
-    },
-    {
-      id: '4',
-      title: 'Kosher Grocery',
-      icon: StoreIcon,
-      description: 'Complete kosher grocery with fresh produce',
-      category: 'Shopping',
-      rating: 4.6,
-      distance: '0.8 mi',
-      imageUrl: 'https://picsum.photos/300/200?random=4',
-    },
-  ];
+  const navigation = useNavigation<NavigationProp>();
+  const {
+    favorites,
+    loading,
+    error,
+    favoritesCount,
+    removeFromFavorites,
+    refreshFavorites,
+  } = useFavorites();
 
-  const handleItemPress = (item: any) => {
-    console.log('Favorite item pressed:', item.title);
-  };
+  const handleItemPress = useCallback((item: Favorite) => {
+    // Navigate to the appropriate detail screen based on entity type
+    if (item.entity_type === 'restaurant') {
+      navigation.navigate('RestaurantDetail', { id: item.entity_id });
+    } else if (item.entity_type === 'synagogue') {
+      navigation.navigate('SynagogueDetail', { id: item.entity_id });
+    } else if (item.entity_type === 'store') {
+      navigation.navigate('StoreDetail', { id: item.entity_id });
+    } else if (item.entity_type === 'mikvah') {
+      navigation.navigate('MikvahDetail', { id: item.entity_id });
+    } else {
+      // Default to entity detail
+      navigation.navigate('EntityDetail', { id: item.entity_id });
+    }
+  }, [navigation]);
 
-  const handleRemoveFavorite = (itemId: string) => {
-    console.log('Remove favorite:', itemId);
-  };
+  const handleRemoveFavorite = useCallback(async (item: Favorite) => {
+    Alert.alert(
+      'Remove from Favorites',
+      `Are you sure you want to remove "${item.entity_name}" from your favorites?`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            const success = await removeFromFavorites(item.entity_id);
+            if (!success) {
+              Alert.alert('Error', 'Failed to remove from favorites. Please try again.');
+            }
+          },
+        },
+      ]
+    );
+  }, [removeFromFavorites]);
+
+  const onRefresh = useCallback(async () => {
+    await refreshFavorites();
+  }, [refreshFavorites]);
+
+  // Calculate average rating
+  const averageRating = favorites.length > 0 
+    ? favorites.reduce((sum, fav) => sum + (fav.rating || 0), 0) / favorites.length 
+    : 0;
+
+  if (loading && favorites.length === 0) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+          <Text style={styles.loadingText}>Loading your favorites...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorIcon}>⚠️</Text>
+          <Text style={styles.errorTitle}>Error Loading Favorites</Text>
+          <Text style={styles.errorDescription}>{error}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={onRefresh}>
+            <Text style={styles.retryButtonText}>Try Again</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.scrollView} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={loading} onRefresh={onRefresh} />
+        }
+      >
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>Favorites</Text>
@@ -68,15 +114,15 @@ const FavoritesScreen: React.FC = () => {
         {/* Stats */}
         <View style={styles.statsContainer}>
           <View style={styles.statItem}>
-            <Text style={styles.statNumber}>{favoriteItems.length}</Text>
+            <Text style={styles.statNumber}>{favoritesCount}</Text>
             <Text style={styles.statLabel}>Saved Places</Text>
           </View>
           <View style={styles.statItem}>
-            <Text style={styles.statNumber}>12</Text>
-            <Text style={styles.statLabel}>This Month</Text>
+            <Text style={styles.statNumber}>{favorites.length}</Text>
+            <Text style={styles.statLabel}>Currently Shown</Text>
           </View>
           <View style={styles.statItem}>
-            <Text style={styles.statNumber}>4.7</Text>
+            <Text style={styles.statNumber}>{averageRating.toFixed(1)}</Text>
             <Text style={styles.statLabel}>Avg Rating</Text>
           </View>
         </View>
@@ -85,31 +131,36 @@ const FavoritesScreen: React.FC = () => {
         <View style={styles.favoritesContainer}>
           <Text style={styles.sectionTitle}>Your Favorites</Text>
           
-          {favoriteItems.map((item) => (
+          {favorites.map((item) => (
             <TouchableOpacity
               key={item.id}
               style={styles.favoriteItem}
               onPress={() => handleItemPress(item)}
               activeOpacity={0.7}
             >
-              <Image source={{ uri: item.imageUrl }} style={styles.itemImage} />
+              <Image 
+                source={{ 
+                  uri: item.image_url || `https://picsum.photos/300/200?random=${item.entity_id}` 
+                }} 
+                style={styles.itemImage}
+              />
               
               <View style={styles.itemContent}>
                 <View style={styles.itemHeader}>
                   <Text style={styles.itemTitle} numberOfLines={1}>
-                    {item.title}
+                    {item.entity_name}
                   </Text>
                   <TouchableOpacity
                     style={styles.removeButton}
-                    onPress={() => handleRemoveFavorite(item.id)}
+                    onPress={() => handleRemoveFavorite(item)}
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                   >
-                    <Text style={styles.removeIcon}>♡</Text>
+                    <HeartIcon size={20} color={Colors.error} filled={false} />
                   </TouchableOpacity>
                 </View>
                 
                 <Text style={styles.itemDescription} numberOfLines={2}>
-                  {item.description}
+                  {item.description || `${item.city}, ${item.state}`}
                 </Text>
                 
                 <View style={styles.itemFooter}>
@@ -118,8 +169,12 @@ const FavoritesScreen: React.FC = () => {
                   </View>
                   
                   <View style={styles.itemInfo}>
-                    <Text style={styles.rating}>⭐ {item.rating}</Text>
-                    <Text style={styles.distance}>📍 {item.distance}</Text>
+                    {item.rating && (
+                      <Text style={styles.rating}>⭐ {item.rating.toFixed(1)}</Text>
+                    )}
+                    {item.review_count && (
+                      <Text style={styles.reviewCount}>({item.review_count})</Text>
+                    )}
                   </View>
                 </View>
               </View>
@@ -127,10 +182,10 @@ const FavoritesScreen: React.FC = () => {
           ))}
         </View>
 
-        {/* Empty State (hidden when items exist) */}
-        {favoriteItems.length === 0 && (
+        {/* Empty State */}
+        {favorites.length === 0 && (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>❤️</Text>
+            <HeartIcon size={64} color={Colors.textSecondary} filled={true} />
             <Text style={styles.emptyTitle}>No Favorites Yet</Text>
             <Text style={styles.emptyDescription}>
               Start exploring and save your favorite places by tapping the heart icon on any listing.
@@ -277,10 +332,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.xl,
     paddingVertical: Spacing['4xl'],
   },
-  emptyIcon: {
-    fontSize: 64,
-    marginBottom: Spacing.lg,
-  },
   emptyTitle: {
     ...Typography.styles.h2,
     marginBottom: Spacing.sm,
@@ -291,6 +342,54 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.xl,
+  },
+  loadingText: {
+    ...Typography.styles.body,
+    color: Colors.textSecondary,
+    marginTop: Spacing.md,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.xl,
+  },
+  errorIcon: {
+    fontSize: 48,
+    marginBottom: Spacing.md,
+  },
+  errorTitle: {
+    ...Typography.styles.h3,
+    marginBottom: Spacing.sm,
+    textAlign: 'center',
+  },
+  errorDescription: {
+    ...Typography.styles.body,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: Spacing.lg,
+  },
+  retryButton: {
+    backgroundColor: Colors.primary,
+    borderRadius: BorderRadius.md,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
+  },
+  retryButtonText: {
+    ...Typography.styles.body,
+    color: Colors.white,
+    fontWeight: '600',
+  },
+  reviewCount: {
+    ...Typography.styles.bodySmall,
+    color: Colors.textSecondary,
+    marginLeft: Spacing.xs,
   },
 });
 

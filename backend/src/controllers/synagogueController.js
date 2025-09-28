@@ -468,6 +468,178 @@ class SynagogueController {
       });
     }
   }
+
+  // Create new synagogue
+  static async createSynagogue(req, res) {
+    try {
+      const {
+        name,
+        description,
+        address,
+        city,
+        state,
+        zip_code,
+        latitude,
+        longitude,
+        phone,
+        email,
+        website,
+        denomination,
+        rabbi_name,
+        congregation_size,
+        has_parking,
+        has_accessibility,
+        has_wifi,
+        has_kosher_kitchen,
+        has_mikvah,
+        has_library,
+        has_youth_programs,
+        has_adult_education,
+        has_social_events,
+        daily_minyan,
+        shabbat_services,
+        holiday_services,
+        lifecycle_services,
+        operating_hours,
+        facebook_url,
+        instagram_url,
+        twitter_url,
+        website_url
+      } = req.body;
+
+      // Validate required fields
+      if (!name || !address || !city || !state || !zip_code || !denomination) {
+        return res.status(400).json({
+          success: false,
+          error: 'Missing required fields: name, address, city, state, zip_code, denomination'
+        });
+      }
+
+      const query = `
+        INSERT INTO synagogues (
+          name, description, address, city, state, zip_code, latitude, longitude,
+          phone, email, website, denomination, rabbi_name, congregation_size,
+          has_parking, has_accessibility, has_wifi, has_kosher_kitchen, has_mikvah,
+          has_library, has_youth_programs, has_adult_education, has_social_events,
+          daily_minyan, shabbat_services, holiday_services, lifecycle_services,
+          operating_hours, facebook_url, instagram_url, twitter_url, website_url
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33
+        ) RETURNING *
+      `;
+
+      const values = [
+        name, description, address, city, state, zip_code, latitude, longitude,
+        phone, email, website, denomination, rabbi_name, congregation_size,
+        has_parking, has_accessibility, has_wifi, has_kosher_kitchen, has_mikvah,
+        has_library, has_youth_programs, has_adult_education, has_social_events,
+        daily_minyan, shabbat_services, holiday_services, lifecycle_services,
+        JSON.stringify(operating_hours || {}), facebook_url, instagram_url, twitter_url, website_url
+      ];
+
+      const result = await pool.query(query, values);
+      
+      res.status(201).json({
+        success: true,
+        data: {
+          synagogue: result.rows[0]
+        }
+      });
+    } catch (error) {
+      console.error('Error creating synagogue:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to create synagogue',
+        message: error.message
+      });
+    }
+  }
+
+  // Update synagogue
+  static async updateSynagogue(req, res) {
+    try {
+      const { id } = req.params;
+      const updateFields = req.body;
+      
+      // Build dynamic update query
+      const setClause = Object.keys(updateFields)
+        .map((key, index) => `${key} = $${index + 2}`)
+        .join(', ');
+      
+      if (!setClause) {
+        return res.status(400).json({
+          success: false,
+          error: 'No fields to update'
+        });
+      }
+
+      const query = `
+        UPDATE synagogues 
+        SET ${setClause}, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $1 AND is_active = true
+        RETURNING *
+      `;
+
+      const values = [id, ...Object.values(updateFields)];
+      const result = await pool.query(query, values);
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          error: 'Synagogue not found'
+        });
+      }
+
+      res.json({
+        success: true,
+        data: {
+          synagogue: result.rows[0]
+        }
+      });
+    } catch (error) {
+      console.error('Error updating synagogue:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to update synagogue',
+        message: error.message
+      });
+    }
+  }
+
+  // Delete synagogue (soft delete)
+  static async deleteSynagogue(req, res) {
+    try {
+      const { id } = req.params;
+      
+      const query = `
+        UPDATE synagogues 
+        SET is_active = false, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $1
+        RETURNING *
+      `;
+
+      const result = await pool.query(query, [id]);
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          error: 'Synagogue not found'
+        });
+      }
+
+      res.json({
+        success: true,
+        message: 'Synagogue deleted successfully'
+      });
+    } catch (error) {
+      console.error('Error deleting synagogue:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to delete synagogue',
+        message: error.message
+      });
+    }
+  }
 }
 
 module.exports = SynagogueController;

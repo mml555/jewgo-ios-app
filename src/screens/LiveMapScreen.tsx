@@ -18,6 +18,7 @@ import FiltersModal from '../components/FiltersModal';
 import FilterIcon from '../components/FilterIcon';
 import MikvahIcon from '../components/MikvahIcon';
 import EateryIcon from '../components/EateryIcon';
+import HeartIcon from '../components/HeartIcon';
 import StoreIcon from '../components/StoreIcon';
 import SpecialsIcon from '../components/SpecialsIcon';
 import { Spacing, Shadows } from '../styles/designSystem';
@@ -112,12 +113,11 @@ const LiveMapScreen: React.FC = () => {
     { key: 'schools', label: 'Schools', emoji: '🎓', color: '#96CEB4' },
     { key: 'stores', label: 'Stores', emoji: '🛒', color: '#FFEAA7', iconComponent: StoreIcon },
     { key: 'services', label: 'Services', emoji: '🔧', color: '#DDA0DD' },
-    { key: 'events', label: 'Events', emoji: '🎉', color: '#98D8C8', iconComponent: SpecialsIcon },
     { key: 'housing', label: 'Housing', emoji: '🏠', color: '#F7DC6F' },
     { key: 'shuk', label: 'Shuk', emoji: '🛒', color: '#FFEAA7', iconComponent: StoreIcon },
     { key: 'shtetl', label: 'Shtetl', emoji: '🏘️', color: '#98D8C8' },
-    { key: 'shidduch', label: 'Shidduch', emoji: '💕', color: '#FFB6C1' },
-    { key: 'social', label: 'Social', emoji: '👥', color: '#DDA0DD' },
+    { key: 'events', label: 'Events', emoji: '🎉', color: '#FFB6C1', iconComponent: HeartIcon },
+    { key: 'jobs', label: 'Jobs', emoji: '💼', color: '#DDA0DD' },
   ];
 
   // Get data for the current category only
@@ -736,7 +736,7 @@ const LiveMapScreen: React.FC = () => {
                 </Text>
               </View>
               <TouchableOpacity style={styles.popupHeartButton}>
-                <Text style={styles.popupHeartIcon}>♡</Text>
+                <HeartIcon size={20} color="#666" filled={false} />
               </TouchableOpacity>
             </View>
 

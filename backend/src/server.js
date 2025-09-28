@@ -21,6 +21,9 @@ const storesRoutes = require('./routes/stores');
 const reviewsRoutes = require('./routes/reviews');
 const interactionsRoutes = require('./routes/interactions');
 const specialsRoutes = require('./routes/specials');
+const favoritesRoutes = require('./routes/favorites');
+const shtetlStoresRoutes = require('./routes/shtetlStores');
+const shtetlProductsRoutes = require('./routes/shtetlProducts');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -52,13 +55,17 @@ app.use(cors({
   credentials: true
 }));
 
-// Rate limiting
+// Rate limiting - more lenient for development
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  max: 1000, // limit each IP to 1000 requests per windowMs (increased for development)
   message: {
     success: false,
     error: 'Too many requests from this IP, please try again later.'
+  },
+  skip: (req) => {
+    // Skip rate limiting for health checks and development
+    return req.path === '/health' || process.env.NODE_ENV === 'development';
   }
 });
 app.use(limiter);
@@ -114,6 +121,9 @@ app.use('/api/v5/stores', authSystem.getAuthMiddleware().requireAuthOrGuest(), s
 app.use('/api/v5/reviews', authSystem.getAuthMiddleware().requireAuthOrGuest(), reviewsRoutes);
 app.use('/api/v5/interactions', authSystem.getAuthMiddleware().requireAuthOrGuest(), interactionsRoutes);
 app.use('/api/v5/specials', authSystem.getAuthMiddleware().requireAuthOrGuest(), specialsRoutes);
+app.use('/api/v5/favorites', authSystem.getAuthMiddleware().requireAuthOrGuest(), favoritesRoutes);
+app.use('/api/v5/shtetl-stores', authSystem.getAuthMiddleware().requireAuthOrGuest(), shtetlStoresRoutes);
+app.use('/api/v5/shtetl-products', authSystem.getAuthMiddleware().requireAuthOrGuest(), shtetlProductsRoutes);
 
 // Search endpoint (requires authentication)
 app.get('/api/v5/search', 

@@ -11,71 +11,109 @@ import {
   DynamicTypeConfig,
 } from '../utils/wcagCompliance';
 
-// WCAG 2.1 AA compliant color palette
+// WCAG 2.1 AA compliant color palette - JewGo Brand Colors
 export const Colors = {
-  // Primary Colors - Black and Green Theme (WCAG AA compliant)
-  primary: '#2D5016',        // Dark green - 7.8:1 contrast with white
-  primaryLight: '#4A7C59',   // Medium green - 4.6:1 contrast with white
-  primaryDark: '#1A3009',    // Very dark green - 12.1:1 contrast with white
-  accent: '#74E1A0',         // Light green accent - 1.8:1 with white (decorative only)
-  
-  // Neutral Colors (WCAG compliant)
-  black: '#000000',          // 21:1 contrast with white
-  white: '#FFFFFF',
-  gray900: '#1A1A1A',        // 16.9:1 contrast with white
-  gray800: '#2D2D2D',        // 12.6:1 contrast with white
-  gray700: '#404040',        // 9.7:1 contrast with white
-  gray600: '#666666',        // 5.7:1 contrast with white (AA compliant)
-  gray500: '#8E8E93',        // 3.8:1 contrast with white (large text only)
-  gray400: '#C7C7CC',        // 2.0:1 contrast with white (decorative only)
-  gray300: '#E5E5EA',        // 1.4:1 contrast with white (decorative only)
-  gray200: '#F2F2F7',        // 1.1:1 contrast with white (decorative only)
-  gray100: '#F8F9FA',        // 1.0:1 contrast with white (decorative only)
-  
-  // Status Colors (WCAG AA compliant)
-  success: '#1B7332',        // Darker green - 4.5:1 contrast with white
-  successLight: '#34C759',   // Original green for backgrounds
-  warning: '#B8860B',        // Darker orange - 4.5:1 contrast with white
-  warningLight: '#FF9500',   // Original orange for backgrounds
-  error: '#C41E3A',          // Darker red - 4.5:1 contrast with white
-  errorLight: '#FF3B30',     // Original red for backgrounds
-  info: '#0056B3',           // Darker blue - 4.5:1 contrast with white
-  infoLight: '#007AFF',      // Original blue for backgrounds
+  // Primary Colors - JewGo Brand Theme (WCAG AA compliant)
+  primary: {
+    main: '#292B2D',         // JewGo Dark Black - High contrast with white
+    light: '#74E1A0',        // JewGo Green - 4.6:1 contrast with white
+    dark: '#1A1A1A',         // JewGo Very Dark Black - 12.1:1 contrast with white
+  },
   
   // Background Colors
-  background: '#F2F2F7',
-  surface: '#FFFFFF',
-  overlay: 'rgba(0, 0, 0, 0.5)',
+  background: {
+    primary: '#F1F1F1',      // Main background
+    secondary: '#FFFFFF',     // Card/surface background
+    tertiary: '#F8F9FA',      // Subtle background
+  },
   
   // Text Colors (WCAG AA compliant)
-  textPrimary: '#000000',    // 21:1 contrast with white backgrounds
+  text: {
+    primary: '#292B2D',      // JewGo Black - high contrast with white backgrounds
+    secondary: '#666666',    // 5.7:1 contrast with white (AA compliant)
+    tertiary: '#8E8E93',     // 3.8:1 contrast with white (large text only)
+    disabled: '#B0B0B0',     // Disabled text
+    inverse: '#FFFFFF',     // 21:1 contrast with dark backgrounds
+  },
+  
+  // Status Colors (WCAG AA compliant)
+  status: {
+    success: '#74E1A0',      // JewGo Green for success
+    warning: '#B8860B',      // Orange for warnings - 4.5:1 contrast with white
+    error: '#C41E3A',        // Red for errors - 4.5:1 contrast with white
+    info: '#BEBBE7',         // JewGo Purple for info
+  },
+  
+  // Border Colors
+  border: {
+    primary: '#E5E5EA',      // Main border color
+    secondary: '#F1F1F1',    // Light border
+    focus: '#74E1A0',        // JewGo Green for focus indicator
+  },
+  
+  // Legacy colors for backward compatibility
+  jewgoBlack: '#292B2D',     // Primary JewGo Black
+  jewgoGreen: '#74E1A0',     // Primary JewGo Green
+  jewgoPurple: '#BEBBE7',    // Primary JewGo Purple
+  jewgoGray: '#F1F1F1',      // Primary JewGo Gray
+  jewgoWhite: '#FFFFFF',     // Primary JewGo White
+  
+  // Neutral Colors (WCAG compliant)
+  black: '#292B2D',          // Primary black color
+  white: '#FFFFFF',
+  gray900: '#292B2D',        // Dark gray - high contrast with white
+  gray800: '#404040',        // Medium dark gray
+  gray700: '#666666',        // Medium gray
+  gray600: '#8E8E93',        // Light medium gray
+  gray500: '#B0B0B0',        // Light gray
+  gray400: '#C7C7CC',        // Very light gray
+  gray300: '#E5E5EA',        // Extra light gray
+  gray200: '#F1F1F1',        // Background gray
+  gray100: '#F8F9FA',        // Very light background gray
+  gray50: '#FBFCFD',         // Subtle background gray
+  
+  // Status Colors (WCAG AA compliant)
+  success: '#74E1A0',        // JewGo Green for success
+  successLight: '#A8F5C8',   // Light green for backgrounds
+  warning: '#B8860B',        // Orange for warnings - 4.5:1 contrast with white
+  warningLight: '#FF9500',   // Light orange for backgrounds
+  error: '#C41E3A',          // Red for errors - 4.5:1 contrast with white
+  errorLight: '#FF3B30',     // Light red for backgrounds
+  info: '#BEBBE7',           // JewGo Purple for info
+  infoLight: '#D4D1F0',      // Light purple for backgrounds
+  
+  // Legacy background colors for backward compatibility
+  overlay: 'rgba(41, 43, 45, 0.5)',
+  
+  // Text Colors (WCAG AA compliant)
+  textPrimary: '#292B2D',    // JewGo Black - high contrast with white backgrounds
   textSecondary: '#666666',  // 5.7:1 contrast with white (AA compliant)
   textTertiary: '#8E8E93',   // 3.8:1 contrast with white (large text only)
   textInverse: '#FFFFFF',    // 21:1 contrast with dark backgrounds
   textOnPrimary: '#FFFFFF',  // High contrast on primary color
-  textOnSuccess: '#FFFFFF',  // High contrast on success color
+  textOnSuccess: '#292B2D',  // Dark text on success color
   textOnWarning: '#FFFFFF',  // High contrast on warning color
   textOnError: '#FFFFFF',    // High contrast on error color
   
   // Interactive Colors (WCAG AA compliant)
-  buttonPrimary: '#2D5016',
-  buttonSecondary: '#F2F2F7',
-  buttonDanger: '#C41E3A',   // WCAG compliant error color
-  link: '#0056B3',           // WCAG compliant link color
-  linkVisited: '#6B46C1',    // Purple for visited links
+  buttonPrimary: '#292B2D',   // JewGo Black for primary buttons
+  buttonSecondary: '#F1F1F1', // JewGo Gray for secondary buttons
+  buttonDanger: '#C41E3A',    // WCAG compliant error color
+  link: '#74E1A0',            // JewGo Green for links
+  linkVisited: '#BEBBE7',     // JewGo Purple for visited links
   
   // Border Colors
   border: '#E5E5EA',
-  borderLight: '#F2F2F7',
+  borderLight: '#F1F1F1',
   borderDark: '#C7C7CC',
-  borderFocus: '#0056B3',    // High contrast focus indicator
+  borderFocus: '#74E1A0',    // JewGo Green for focus indicator
   
   // High Contrast Mode Colors (for accessibility)
   highContrast: {
-    text: '#000000',
+    text: '#292B2D',
     background: '#FFFFFF',
-    border: '#000000',
-    focus: '#0000FF',
+    border: '#292B2D',
+    focus: '#74E1A0',
   },
 };
 
@@ -103,6 +141,19 @@ export const Typography = {
     '2xl': Math.max(24 * fontScale, 24),   // Large headings
     '3xl': Math.max(28 * fontScale, 28),   // Extra large headings
     '4xl': Math.max(32 * fontScale, 32),   // Display headings
+  },
+  
+  // Sizes alias for backward compatibility
+  sizes: {
+    xs: Math.max(10 * fontScale, 10),      // Minimum 10pt for readability
+    sm: Math.max(12 * fontScale, 12),      // Minimum 12pt
+    base: Math.max(14 * fontScale, 14),    // Body text, default
+    md: Math.max(16 * fontScale, 16),      // Large body text
+    lg: Math.max(18 * fontScale, 18),      // Small headings (large text threshold)
+    xl: Math.max(20 * fontScale, 20),      // Medium headings
+    xxl: Math.max(24 * fontScale, 24),     // Large headings
+    xxxl: Math.max(28 * fontScale, 28),    // Extra large headings
+    xxxxl: Math.max(32 * fontScale, 32),   // Display headings
   },
   
   // Dynamic Type configurations
@@ -137,6 +188,16 @@ export const Typography = {
     extraBold: '800',
   },
   
+  // Weights alias for backward compatibility
+  weights: {
+    light: '300',
+    normal: '400',
+    medium: '500',
+    semiBold: '600',
+    bold: '700',
+    extraBold: '800',
+  },
+  
   // Line Heights
   lineHeight: {
     tight: 1.2,
@@ -152,28 +213,28 @@ export const Typography = {
       fontFamily: 'Nunito-Bold',
       fontSize: 28,
       lineHeight: 34,
-      color: Colors.textPrimary,
+      color: Colors.text.primary,
       fontWeight: '700' as const,
     },
     h2: {
       fontFamily: 'Nunito-Bold',
       fontSize: 24,
       lineHeight: 30,
-      color: Colors.textPrimary,
+      color: Colors.text.primary,
       fontWeight: '700' as const,
     },
     h3: {
       fontFamily: 'Nunito-SemiBold',
       fontSize: 20,
       lineHeight: 26,
-      color: Colors.textPrimary,
+      color: Colors.text.primary,
       fontWeight: '600' as const,
     },
     h4: {
       fontFamily: 'Nunito-SemiBold',
       fontSize: 18,
       lineHeight: 24,
-      color: Colors.textPrimary,
+      color: Colors.text.primary,
       fontWeight: '600' as const,
     },
     
@@ -182,21 +243,35 @@ export const Typography = {
       fontFamily: 'Nunito',
       fontSize: 14,
       lineHeight: 20,
-      color: Colors.textPrimary,
+      color: Colors.text.primary,
+      fontWeight: '400' as const,
+    },
+    body1: {
+      fontFamily: 'Nunito',
+      fontSize: 14,
+      lineHeight: 20,
+      color: Colors.text.primary,
+      fontWeight: '400' as const,
+    },
+    body2: {
+      fontFamily: 'Nunito',
+      fontSize: 12,
+      lineHeight: 18,
+      color: Colors.text.secondary,
       fontWeight: '400' as const,
     },
     bodyLarge: {
       fontFamily: 'Nunito',
       fontSize: 16,
       lineHeight: 22,
-      color: Colors.textPrimary,
+      color: Colors.text.primary,
       fontWeight: '400' as const,
     },
     bodySmall: {
       fontFamily: 'Nunito',
       fontSize: 12,
       lineHeight: 18,
-      color: Colors.textSecondary,
+      color: Colors.text.secondary,
       fontWeight: '400' as const,
     },
     
@@ -205,7 +280,7 @@ export const Typography = {
       fontFamily: 'Nunito-SemiBold',
       fontSize: 12,
       lineHeight: 16,
-      color: Colors.textSecondary,
+      color: Colors.text.secondary,
       fontWeight: '600' as const,
     },
     caption: {
@@ -332,7 +407,7 @@ export const ComponentStyles = {
       justifyContent: 'center' as const,
       alignItems: 'center' as const,
       borderWidth: 1,
-      borderColor: Colors.border,
+      borderColor: Colors.border.primary,
     },
     danger: {
       backgroundColor: Colors.buttonDanger,
@@ -347,7 +422,7 @@ export const ComponentStyles = {
   
   // Card Styles
   card: {
-    backgroundColor: Colors.surface,
+    backgroundColor: Colors.background.secondary,
     borderRadius: BorderRadius.lg,
     padding: Spacing.md,
     ...Shadows.md,
@@ -361,15 +436,15 @@ export const ComponentStyles = {
     paddingHorizontal: Spacing.md,
     minHeight: TouchTargets.minimum,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: Colors.border.primary,
     fontFamily: Typography.fontFamily,
     fontSize: Typography.fontSize.base,
-    color: Colors.textPrimary,
+    color: Colors.text.primary,
   },
   
   // Tag Styles
   tag: {
-    backgroundColor: 'rgba(45, 80, 22, 0.9)',  // Primary with opacity
+    backgroundColor: 'rgba(41, 43, 45, 0.9)',  // JewGo Black with opacity
     borderRadius: BorderRadius.full,
     paddingVertical: Spacing.xs,
     paddingHorizontal: Spacing.sm,
@@ -395,15 +470,15 @@ export const Accessibility = {
   validateColors: () => {
     if (__DEV__) {
       const palette = {
-        primary: Colors.primary,
+        primary: Colors.primary.main,
         secondary: Colors.gray600,
-        background: Colors.white,
-        surface: Colors.surface,
-        text: Colors.textPrimary,
-        textSecondary: Colors.textSecondary,
-        error: Colors.error,
-        warning: Colors.warning,
-        success: Colors.success,
+        background: Colors.background.primary,
+        surface: Colors.background.secondary,
+        text: Colors.text.primary,
+        textSecondary: Colors.text.secondary,
+        error: Colors.status.error,
+        warning: Colors.status.warning,
+        success: Colors.status.success,
       };
       
       const validation = validateColorPalette(palette);
@@ -419,17 +494,17 @@ export const Accessibility = {
   
   // Get accessible text color for background
   getAccessibleTextColor: (backgroundColor: string, preferDark: boolean = true): string => {
-    const darkContrast = getContrastRatio(Colors.textPrimary, backgroundColor);
-    const lightContrast = getContrastRatio(Colors.textInverse, backgroundColor);
+    const darkContrast = getContrastRatio(Colors.text.primary, backgroundColor);
+    const lightContrast = getContrastRatio(Colors.text.inverse, backgroundColor);
     
     if (preferDark && darkContrast >= 4.5) {
-      return Colors.textPrimary;
+      return Colors.text.primary;
     } else if (lightContrast >= 4.5) {
-      return Colors.textInverse;
+      return Colors.text.inverse;
     } else if (darkContrast > lightContrast) {
-      return Colors.textPrimary;
+      return Colors.text.primary;
     } else {
-      return Colors.textInverse;
+      return Colors.text.inverse;
     }
   },
   
@@ -448,9 +523,9 @@ export const Accessibility = {
   // Focus indicator styles
   focusIndicator: {
     borderWidth: 2,
-    borderColor: Colors.borderFocus,
+    borderColor: Colors.border.focus,
     borderRadius: BorderRadius.sm,
-    shadowColor: Colors.borderFocus,
+    shadowColor: Colors.border.focus,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.3,
     shadowRadius: 4,

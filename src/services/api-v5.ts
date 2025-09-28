@@ -527,6 +527,66 @@ class ApiV5Service {
       body: JSON.stringify(data),
     });
   }
+
+  // Mikvah methods
+  async createMikvah(mikvahData: any): Promise<ApiResponse<any>> {
+    return this.request('/mikvahs', {
+      method: 'POST',
+      body: JSON.stringify(mikvahData),
+    });
+  }
+
+  async getMikvahs(params?: any): Promise<ApiResponse<any[]>> {
+    const queryParams = new URLSearchParams(params).toString();
+    return this.request(`/mikvahs?${queryParams}`);
+  }
+
+  async getMikvahById(id: string): Promise<ApiResponse<any>> {
+    return this.request(`/mikvahs/${id}`);
+  }
+
+  async updateMikvah(id: string, data: any): Promise<ApiResponse<any>> {
+    return this.request(`/mikvahs/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteMikvah(id: string): Promise<ApiResponse<void>> {
+    return this.request(`/mikvahs/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Synagogue methods
+  async createSynagogue(synagogueData: any): Promise<ApiResponse<any>> {
+    return this.request('/synagogues', {
+      method: 'POST',
+      body: JSON.stringify(synagogueData),
+    });
+  }
+
+  async getSynagogues(params?: any): Promise<ApiResponse<any[]>> {
+    const queryParams = new URLSearchParams(params).toString();
+    return this.request(`/synagogues?${queryParams}`);
+  }
+
+  async getSynagogueById(id: string): Promise<ApiResponse<any>> {
+    return this.request(`/synagogues/${id}`);
+  }
+
+  async updateSynagogue(id: string, data: any): Promise<ApiResponse<any>> {
+    return this.request(`/synagogues/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteSynagogue(id: string): Promise<ApiResponse<void>> {
+    return this.request(`/synagogues/${id}`, {
+      method: 'DELETE',
+    });
+  }
 }
 
 // Create and export singleton instance

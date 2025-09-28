@@ -55,8 +55,8 @@ const generateMockData = (
     stores: 'Stores',
     shuk: 'Shuk',
     shtetl: 'Shtetl',
-    shidduch: 'Shidduch',
-    social: 'Social',
+    events: 'Events',
+    jobs: 'Jobs',
   };
 
   const categoryEmojis: Record<string, string> = {
@@ -66,8 +66,8 @@ const generateMockData = (
     stores: '🏪',
     shuk: '🥬',
     shtetl: '🏘️',
-    shidduch: '💕',
-    social: '👥',
+    events: '🎉',
+    jobs: '💼',
   };
 
   const mockTitles = [

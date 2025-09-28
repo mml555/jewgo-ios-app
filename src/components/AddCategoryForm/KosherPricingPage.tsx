@@ -1,17 +1,15 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, memo } from 'react';
 import {
   View,
   Text,
-  TextInput,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
-  Switch,
-  Modal,
 } from 'react-native';
 import { ListingFormData } from '../../screens/AddCategoryScreen';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../styles/designSystem';
+import { useResponsiveDimensions, getResponsiveLayout } from '../../utils/deviceAdaptation';
 import { hapticButtonPress } from '../../utils/hapticFeedback';
+import EnhancedKosherSelector from '../EnhancedKosherSelector';
 
 interface KosherPricingPageProps {
   formData: ListingFormData;
@@ -19,13 +17,16 @@ interface KosherPricingPageProps {
   category: string;
 }
 
-const KosherPricingPage: React.FC<KosherPricingPageProps> = ({
+const KosherPricingPage: React.FC<KosherPricingPageProps> = memo(({
   formData,
   onFormDataChange,
   category,
 }) => {
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
-  const [showAgencyModal, setShowAgencyModal] = useState(false);
+  
+  // Responsive design hooks
+  const dimensions = useResponsiveDimensions();
+  const responsiveLayout = getResponsiveLayout();
 
   const handleInputChange = useCallback((field: keyof ListingFormData, value: string | boolean) => {
     onFormDataChange({ [field]: value });
@@ -108,233 +109,29 @@ const KosherPricingPage: React.FC<KosherPricingPageProps> = ({
 
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <View style={styles.content}>
-        <Text style={styles.stepTitle}>Kosher Certification</Text>
-        <Text style={styles.stepDescription}>
-          Help customers understand your kosher certification and standards
-        </Text>
-
-        {/* Kosher Category Selection */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Kosher Category *</Text>
-          <View style={styles.categoryOptions}>
-            {kosherCategories.map((cat) => (
-              <TouchableOpacity
-                key={cat.value}
-                style={[
-                  styles.categoryOption,
-                  formData.kosher_category === cat.value && styles.categoryOptionSelected,
-                ]}
-                onPress={() => handleCategorySelect(cat.value)}
-                activeOpacity={0.7}
-                accessibilityRole="radio"
-                accessibilityState={{ selected: formData.kosher_category === cat.value }}
-                accessibilityLabel={`${cat.label}: ${cat.description}`}
-              >
-                <Text style={styles.categoryIcon}>{cat.icon}</Text>
-                <Text style={[
-                  styles.categoryOptionLabel,
-                  formData.kosher_category === cat.value && styles.categoryOptionLabelSelected,
-                ]}>
-                  {cat.label}
-                </Text>
-                <Text style={[
-                  styles.categoryDescription,
-                  formData.kosher_category === cat.value && styles.categoryDescriptionSelected,
-                ]}>
-                  {cat.description}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-          {errors.kosher_category && <Text style={styles.errorText}>{errors.kosher_category}</Text>}
-        </View>
-
-        {/* Certifying Agency Selection */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Certifying Agency *</Text>
-          <TouchableOpacity
-            style={[
-              styles.agencySelector,
-              formData.certifying_agency && styles.agencySelectorSelected,
-            ]}
-            onPress={() => {
-              hapticButtonPress();
-              setShowAgencyModal(true);
-            }}
-            activeOpacity={0.7}
-            accessibilityRole="button"
-            accessibilityLabel={`Select certifying agency. Current: ${formData.certifying_agency || 'None selected'}`}
-          >
-            <Text style={[
-              styles.agencySelectorText,
-              formData.certifying_agency && styles.agencySelectorTextSelected,
-              !formData.certifying_agency && styles.agencySelectorTextPlaceholder,
-            ]}>
-              {formData.certifying_agency || 'Select certifying agency'}
-            </Text>
-            <Text style={styles.agencySelectorIcon}>▼</Text>
-          </TouchableOpacity>
-          {errors.certifying_agency && <Text style={styles.errorText}>{errors.certifying_agency}</Text>}
-        </View>
-
-        {/* Custom Certifying Agency */}
-        {formData.certifying_agency === 'Other' && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Custom Certifying Agency</Text>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Agency Name</Text>
-              <TextInput
-                style={styles.input}
-                value={formData.custom_certifying_agency}
-                onChangeText={(value) => handleInputChange('custom_certifying_agency', value)}
-                placeholder="Enter certifying agency name"
-                placeholderTextColor={Colors.gray400}
-              />
-            </View>
-          </View>
-        )}
-
-        {/* Conditional Kosher Details */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Additional Kosher Details</Text>
-          
-          {/* Cholov Yisroel (for dairy establishments) */}
-          {formData.kosher_category === 'Dairy' && (
-            <TouchableOpacity
-              style={styles.checkboxContainer}
-              onPress={() => handleInputChange('is_cholov_yisroel', !formData.is_cholov_yisroel)}
-              activeOpacity={0.7}
-            >
-              <View style={[
-                styles.checkbox,
-                formData.is_cholov_yisroel && styles.checkboxChecked
-              ]}>
-                {formData.is_cholov_yisroel && (
-                  <Text style={styles.checkmark}>✓</Text>
-                )}
-              </View>
-              <Text style={styles.checkboxLabel}>Cholov Yisroel</Text>
-            </TouchableOpacity>
-          )}
-
-          {/* Pas Yisroel (for meat/pareve establishments) */}
-          {(formData.kosher_category === 'Meat' || formData.kosher_category === 'Pareve') && (
-            <TouchableOpacity
-              style={styles.checkboxContainer}
-              onPress={() => handleInputChange('is_pas_yisroel', !formData.is_pas_yisroel)}
-              activeOpacity={0.7}
-            >
-              <View style={[
-                styles.checkbox,
-                formData.is_pas_yisroel && styles.checkboxChecked
-              ]}>
-                {formData.is_pas_yisroel && (
-                  <Text style={styles.checkmark}>✓</Text>
-                )}
-              </View>
-              <Text style={styles.checkboxLabel}>Pas Yisroel</Text>
-            </TouchableOpacity>
-          )}
-
-          {/* Cholov Stam */}
-          <TouchableOpacity
-            style={styles.checkboxContainer}
-            onPress={() => handleInputChange('cholov_stam', !formData.cholov_stam)}
-            activeOpacity={0.7}
-          >
-            <View style={[
-              styles.checkbox,
-              formData.cholov_stam && styles.checkboxChecked
-            ]}>
-              {formData.cholov_stam && (
-                <Text style={styles.checkmark}>✓</Text>
-              )}
-            </View>
-            <Text style={styles.checkboxLabel}>Cholov Stam</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Information Section */}
-        <View style={styles.infoSection}>
-          <Text style={styles.infoTitle}>Kosher Certification Information</Text>
-          <Text style={styles.infoText}>
-            • Cholov Yisroel: Dairy products supervised by a Jew from milking to processing
-          </Text>
-          <Text style={styles.infoText}>
-            • Pas Yisroel: Bread and baked goods supervised by a Jew during baking
-          </Text>
-          <Text style={styles.infoText}>
-            • Cholov Stam: Dairy products from non-Jewish supervised facilities
-          </Text>
-        </View>
-      </View>
-
-      {/* Agency Selection Modal */}
-      <Modal
-        visible={showAgencyModal}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setShowAgencyModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <View style={styles.modalHeader}>
-              <TouchableOpacity 
-                onPress={() => setShowAgencyModal(false)}
-                style={styles.modalButton}
-                activeOpacity={0.7}
-                accessibilityRole="button"
-                accessibilityLabel="Cancel agency selection"
-              >
-                <Text style={styles.modalCancelButton}>Cancel</Text>
-              </TouchableOpacity>
-              <Text style={styles.modalTitle}>Select Agency</Text>
-              <TouchableOpacity 
-                onPress={() => setShowAgencyModal(false)}
-                style={styles.modalButton}
-                activeOpacity={0.7}
-                accessibilityRole="button"
-                accessibilityLabel="Done selecting agency"
-              >
-                <Text style={styles.modalDoneButton}>Done</Text>
-              </TouchableOpacity>
-            </View>
-            
-            <ScrollView style={styles.modalContent}>
-              {certifyingAgencies.map((item) => (
-                <TouchableOpacity
-                  key={item.name}
-                  style={[
-                    styles.agencyOption,
-                    formData.certifying_agency === item.name && styles.agencyOptionSelected,
-                  ]}
-                  onPress={() => handleAgencySelect(item.name)}
-                  activeOpacity={0.7}
-                  accessibilityRole="radio"
-                  accessibilityState={{ selected: formData.certifying_agency === item.name }}
-                  accessibilityLabel={`Select ${item.name} as certifying agency`}
-                >
-                  <Text style={styles.agencySymbol}>{item.symbol}</Text>
-                  <Text style={[
-                    styles.agencyName,
-                    formData.certifying_agency === item.name && styles.agencyNameSelected,
-                  ]}>
-                    {item.name}
-                  </Text>
-                  {formData.certifying_agency === item.name && (
-                    <Text style={styles.agencyCheckmark}>✓</Text>
-                  )}
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
+    <ScrollView 
+      style={styles.container} 
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={[
+        styles.content,
+        { paddingHorizontal: responsiveLayout.containerPadding }
+      ]}
+    >
+      <EnhancedKosherSelector
+        category={formData.kosher_category}
+        agency={formData.certifying_agency}
+        onCategoryChange={(category) => handleInputChange('kosher_category', category)}
+        onAgencyChange={(agency) => handleInputChange('certifying_agency', agency)}
+        customAgency={formData.custom_certifying_agency}
+        onCustomAgencyChange={(agency) => handleInputChange('custom_certifying_agency', agency)}
+        title="Kosher Certification"
+        subtitle="Help customers understand your kosher certification and standards"
+        compact={dimensions.isSmallScreen}
+        containerStyle={styles.enhancedKosherContainer}
+      />
     </ScrollView>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {
@@ -785,6 +582,11 @@ const styles = StyleSheet.create({
   infoBold: {
     fontWeight: '600',
   },
+  enhancedKosherContainer: {
+    marginBottom: Spacing.lg,
+  },
 });
+
+KosherPricingPage.displayName = 'KosherPricingPage';
 
 export default KosherPricingPage;

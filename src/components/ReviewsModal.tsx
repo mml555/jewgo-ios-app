@@ -383,7 +383,7 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   sortButton: {
-    backgroundColor: Colors.gray200,
+    backgroundColor: Colors.primary.main, // Black fill
     borderRadius: BorderRadius.full,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
@@ -391,21 +391,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: Colors.primary,
+    borderColor: Colors.status.success, // Light green border
   },
   sortButtonActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
+    backgroundColor: Colors.primary.main, // Black fill when active
+    borderColor: Colors.status.success, // Light green border when active
   },
   sortButtonText: {
     ...Typography.styles.body,
-    color: Colors.textPrimary,
+    color: Colors.text.inverse, // White text
     fontWeight: '600',
     fontFamily: 'Nunito-SemiBold',
   },
   sortButtonTextActive: {
     ...Typography.styles.body,
-    color: Colors.white,
+    color: Colors.text.inverse, // White text when active
     fontWeight: '600',
     fontFamily: 'Nunito-SemiBold',
   },

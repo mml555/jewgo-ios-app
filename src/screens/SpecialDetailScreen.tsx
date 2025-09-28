@@ -12,12 +12,12 @@ import {
   Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { BlurView } from '@react-native-community/blur';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import { apiService, SpecialOffer as ApiSpecialOffer } from '../services/api';
 import type { RootStackParamList } from '../types/navigation';
+import { useFavorites } from '../hooks/useFavorites';
 import FacebookIcon from '../components/FacebookIcon';
 import InstagramIcon from '../components/InstagramIcon';
 import TikTokIcon from '../components/TikTokIcon';
@@ -51,11 +51,11 @@ const SpecialDetailScreen: React.FC = () => {
   const route = useRoute<SpecialDetailRouteProp>();
   const navigation = useNavigation<SpecialDetailNavigationProp>();
   const { specialId } = route.params;
+  const { isFavorited, toggleFavorite } = useFavorites();
 
   const [special, setSpecial] = useState<DetailedSpecialOffer | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isFavorited, setIsFavorited] = useState(false);
   const [claiming, setClaiming] = useState(false);
   const [pressedButtons, setPressedButtons] = useState<Set<string>>(new Set());
 
@@ -200,10 +200,24 @@ const SpecialDetailScreen: React.FC = () => {
   }, [special?.address]);
 
   // Handle favorite toggle
-  const handleFavoritePress = useCallback(() => {
-    setIsFavorited(!isFavorited);
-    // TODO: Implement actual favorite functionality
-  }, [isFavorited]);
+  const handleFavoritePress = useCallback(async () => {
+    if (special?.business_id) {
+      // Pass entity data for guest users
+      const entityData = {
+        entity_name: special.business_name,
+        entity_type: special.category,
+        description: special.description,
+        address: special.business_address,
+        city: special.business_city,
+        state: special.business_state,
+        rating: special.business_rating,
+        review_count: special.business_review_count,
+        image_url: special.business_image_url,
+        category: special.category,
+      };
+      await toggleFavorite(special.business_id, entityData);
+    }
+  }, [special?.business_id, special?.business_name, special?.category, special?.description, special?.business_address, special?.business_city, special?.business_state, special?.business_rating, special?.business_review_count, special?.business_image_url, toggleFavorite]);
 
   // Format time remaining
   const formatTimeRemaining = (validUntil: string) => {
@@ -257,14 +271,14 @@ const SpecialDetailScreen: React.FC = () => {
         formatCount={formatCount}
         onReportPress={() => Alert.alert('Report', 'Report functionality would be implemented here')}
         onSharePress={() => Alert.alert('Share', 'Share functionality would be implemented here')}
-        onFavoritePress={() => setIsFavorited(!isFavorited)}
+        onFavoritePress={handleFavoritePress}
         centerContent={{
           type: 'claims_left',
           count: special.claims_left || 0
         }}
         rightContent={{
           type: 'search_favorite',
-          isFavorited: isFavorited,
+          isFavorited: special?.business_id ? isFavorited(special.business_id) : false,
           onSearchPress: () => Alert.alert('Search', 'Search functionality would be implemented here')
         }}
       />

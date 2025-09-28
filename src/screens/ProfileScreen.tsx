@@ -14,6 +14,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNavigation } from '@react-navigation/native';
 import MapIcon from '../components/MapIcon';
 import SpecialsIcon from '../components/SpecialsIcon';
+import HeartIcon from '../components/HeartIcon';
 import { Colors, Typography, Spacing, BorderRadius, Shadows, TouchTargets } from '../styles/designSystem';
 
 const ProfileScreen: React.FC = () => {
@@ -295,7 +296,7 @@ const ProfileScreen: React.FC = () => {
         {/* Quick Actions */}
         <View style={styles.quickActionsContainer}>
           <TouchableOpacity style={styles.quickActionButton} onPress={handleFavorites}>
-            <Text style={styles.quickActionIcon}>❤️</Text>
+            <HeartIcon size={24} color="#666" filled={true} />
             <Text style={styles.quickActionText}>Favorites</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.quickActionButton} onPress={handleReviews}>

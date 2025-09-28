@@ -1,7 +1,7 @@
 const crypto = require('crypto');
 
 class AuthController {
-  constructor(authService, rbacService, captchaService, mfaService, emailService, oidcService, keyRotationService) {
+  constructor(authService, rbacService, captchaService, mfaService, emailService, oidcService, keyRotationService, googleOAuthProvider, magicLinkProvider) {
     this.authService = authService;
     this.rbacService = rbacService;
     this.captchaService = captchaService;
@@ -9,6 +9,8 @@ class AuthController {
     this.emailService = emailService;
     this.oidcService = oidcService;
     this.keyRotationService = keyRotationService;
+    this.googleOAuthProvider = googleOAuthProvider;
+    this.magicLinkProvider = magicLinkProvider;
   }
 
   // ==============================================
@@ -1268,6 +1270,275 @@ class AuthController {
       res.status(500).json({
         error: 'server_error',
         error_description: 'Internal server error'
+      });
+    }
+  }
+
+  // ==============================================
+  // GOOGLE OAUTH AUTHENTICATION
+  // ==============================================
+
+  async googleOAuth(req, res) {
+    try {
+      const { idToken, deviceInfo } = req.body;
+      const ipAddress = req.ip;
+      const userAgent = req.headers['user-agent'];
+
+      if (!idToken) {
+        return res.status(400).json({
+          error: 'Google ID token is required',
+          code: 'MISSING_ID_TOKEN'
+        });
+      }
+
+      console.log('🔐 Google OAuth authentication attempt from:', ipAddress);
+
+      // Verify Google ID token
+      const verificationResult = await this.googleOAuthProvider.verifyIdToken(idToken);
+      
+      if (!verificationResult.success) {
+        return res.status(400).json({
+          error: 'Invalid Google ID token',
+          code: 'INVALID_ID_TOKEN',
+          details: verificationResult.error
+        });
+      }
+
+      const { userInfo } = verificationResult;
+      console.log('✅ Google OAuth verification successful for:', userInfo.email);
+
+      // Check if user exists
+      let user = await this.authService.findUserByEmail(userInfo.email);
+      
+      if (!user) {
+        // Create new user from Google OAuth data
+        console.log('👤 Creating new user from Google OAuth:', userInfo.email);
+        
+        user = await this.authService.createUser({
+          email: userInfo.email,
+          firstName: userInfo.firstName || '',
+          lastName: userInfo.lastName || '',
+          status: 'active', // Auto-activate Google OAuth users
+          emailVerified: userInfo.emailVerified,
+          profilePicture: userInfo.picture,
+          oauthProvider: 'google',
+          oauthId: userInfo.googleId,
+        });
+
+        // Log registration event
+        await this.authService.logAuthEvent(user.id, 'register', true, { 
+          method: 'google_oauth',
+          device_id: deviceInfo?.deviceId 
+        });
+      } else {
+        // Update existing user with Google OAuth info if needed
+        if (!user.oauthProvider || !user.oauthId) {
+          await this.authService.updateUserOAuthInfo(user.id, {
+            oauthProvider: 'google',
+            oauthId: userInfo.googleId,
+            profilePicture: userInfo.picture,
+          });
+        }
+
+        // Log login event
+        await this.authService.logAuthEvent(user.id, 'login', true, { 
+          method: 'google_oauth',
+          device_id: deviceInfo?.deviceId 
+        });
+      }
+
+      // Generate tokens
+      const tokens = await this.authService.generateTokens(user.id, deviceInfo);
+      
+      // Get user with roles and permissions
+      const userWithRoles = await this.rbacService.getUserWithRoles(user.id);
+
+      res.json({
+        success: true,
+        message: 'Google OAuth authentication successful',
+        user: {
+          id: userWithRoles.id,
+          email: userWithRoles.email,
+          firstName: userWithRoles.firstName,
+          lastName: userWithRoles.lastName,
+          status: userWithRoles.status,
+          roles: userWithRoles.roles,
+          permissions: userWithRoles.permissions,
+          profilePicture: userWithRoles.profilePicture,
+        },
+        tokens: {
+          accessToken: tokens.accessToken,
+          refreshToken: tokens.refreshToken,
+          expiresIn: tokens.expiresIn,
+          tokenType: 'Bearer'
+        }
+      });
+
+    } catch (error) {
+      console.error('Google OAuth authentication error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Google OAuth authentication failed',
+        message: error.message
+      });
+    }
+  }
+
+  // ==============================================
+  // MAGIC LINK AUTHENTICATION
+  // ==============================================
+
+  async sendMagicLink(req, res) {
+    try {
+      const { email, purpose = 'login' } = req.body;
+      const ipAddress = req.ip;
+
+      if (!email) {
+        return res.status(400).json({
+          error: 'Email is required',
+          code: 'MISSING_EMAIL'
+        });
+      }
+
+      console.log(`📧 Sending magic link to: ${email} for purpose: ${purpose}`);
+
+      // Generate magic link
+      const magicLinkResult = this.magicLinkProvider.generateMobileMagicLinkUrl(email, purpose);
+      
+      if (!magicLinkResult.success) {
+        return res.status(500).json({
+          error: 'Failed to generate magic link',
+          code: 'MAGIC_LINK_GENERATION_FAILED'
+        });
+      }
+
+      // Create email template
+      const emailTemplate = this.magicLinkProvider.createMagicLinkEmail(
+        email, 
+        magicLinkResult.url, 
+        purpose
+      );
+
+      // Send email
+      await this.emailService.sendEmail({
+        to: email,
+        subject: emailTemplate.subject,
+        html: emailTemplate.html,
+        text: emailTemplate.text,
+      });
+
+      console.log(`✅ Magic link sent successfully to: ${email}`);
+
+      res.json({
+        success: true,
+        message: 'Magic link sent successfully',
+        expiresAt: magicLinkResult.expiresAt
+      });
+
+    } catch (error) {
+      console.error('Magic link sending error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to send magic link',
+        message: error.message
+      });
+    }
+  }
+
+  async verifyMagicLink(req, res) {
+    try {
+      const { token, deviceInfo } = req.body;
+      const ipAddress = req.ip;
+
+      if (!token) {
+        return res.status(400).json({
+          error: 'Magic link token is required',
+          code: 'MISSING_TOKEN'
+        });
+      }
+
+      console.log('🔗 Verifying magic link from:', ipAddress);
+
+      // Verify magic link token
+      const verificationResult = this.magicLinkProvider.verifyMagicLink(token);
+      
+      if (!verificationResult.success) {
+        return res.status(400).json({
+          error: verificationResult.error,
+          code: verificationResult.code
+        });
+      }
+
+      const { email, purpose } = verificationResult;
+      console.log('✅ Magic link verification successful for:', email);
+
+      // Check if user exists
+      let user = await this.authService.findUserByEmail(email);
+      
+      if (purpose === 'register' && !user) {
+        // Create new user for registration
+        console.log('👤 Creating new user from magic link:', email);
+        
+        user = await this.authService.createUser({
+          email: email,
+          firstName: '',
+          lastName: '',
+          status: 'active', // Auto-activate magic link users
+          emailVerified: true,
+          oauthProvider: 'magic_link',
+        });
+
+        // Log registration event
+        await this.authService.logAuthEvent(user.id, 'register', true, { 
+          method: 'magic_link',
+          device_id: deviceInfo?.deviceId 
+        });
+      } else if (purpose === 'login' && user) {
+        // Log login event for existing user
+        await this.authService.logAuthEvent(user.id, 'login', true, { 
+          method: 'magic_link',
+          device_id: deviceInfo?.deviceId 
+        });
+      } else if (!user) {
+        return res.status(404).json({
+          error: 'User not found. Please register first.',
+          code: 'USER_NOT_FOUND'
+        });
+      }
+
+      // Generate tokens
+      const tokens = await this.authService.generateTokens(user.id, deviceInfo);
+      
+      // Get user with roles and permissions
+      const userWithRoles = await this.rbacService.getUserWithRoles(user.id);
+
+      res.json({
+        success: true,
+        message: 'Magic link authentication successful',
+        user: {
+          id: userWithRoles.id,
+          email: userWithRoles.email,
+          firstName: userWithRoles.firstName,
+          lastName: userWithRoles.lastName,
+          status: userWithRoles.status,
+          roles: userWithRoles.roles,
+          permissions: userWithRoles.permissions,
+          profilePicture: userWithRoles.profilePicture,
+        },
+        tokens: {
+          accessToken: tokens.accessToken,
+          refreshToken: tokens.refreshToken,
+          expiresIn: tokens.expiresIn,
+          tokenType: 'Bearer'
+        }
+      });
+
+    } catch (error) {
+      console.error('Magic link verification error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Magic link verification failed',
+        message: error.message
       });
     }
   }

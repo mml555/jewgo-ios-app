@@ -14,11 +14,11 @@ import {
   TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { BlurView } from '@react-native-community/blur';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useLocation, calculateDistance } from '../hooks/useLocation';
 import { apiService, DetailedListing, Review } from '../services/api';
 import { useReviews } from '../hooks/useReviews';
+import { useFavorites } from '../hooks/useFavorites';
 import EateryIcon from '../components/EateryIcon';
 import FacebookIcon from '../components/FacebookIcon';
 import InstagramIcon from '../components/InstagramIcon';
@@ -44,12 +44,12 @@ const ListingDetailScreen: React.FC = () => {
   const { itemId, categoryKey } = route.params as ListingDetailParams;
   const { location, getCurrentLocation } = useLocation();
   const { reviews, loading: reviewsLoading, error: reviewsError, writeReview, loadReviews } = useReviews();
+  const { isFavorited, toggleFavorite } = useFavorites();
 
   const [item, setItem] = useState<DetailedListing | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const [isFavorited, setIsFavorited] = useState(false);
   const [showReviewsModal, setShowReviewsModal] = useState(false);
   const [showWriteReviewModal, setShowWriteReviewModal] = useState(false);
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'rating_high' | 'rating_low' | 'verified' | 'recent' | 'rating_5' | 'rating_4' | 'rating_3' | 'rating_2' | 'rating_1'>('newest');
@@ -168,8 +168,23 @@ const ListingDetailScreen: React.FC = () => {
   };
 
   // Handle favorite toggle
-  const handleFavoriteToggle = () => {
-    setIsFavorited(!isFavorited);
+  const handleFavoriteToggle = async () => {
+    if (item?.id) {
+      // Pass entity data for guest users
+      const entityData = {
+        entity_name: item.title,
+        entity_type: item.entity_type || item.category_name,
+        description: item.description,
+        address: item.address,
+        city: item.city,
+        state: item.state,
+        rating: parseFloat(item.rating),
+        review_count: item.review_count,
+        image_url: item.image_url,
+        category: item.category_name,
+      };
+      await toggleFavorite(item.id, entityData);
+    }
   };
 
   // Handle rating press
@@ -451,7 +466,7 @@ const ListingDetailScreen: React.FC = () => {
             type: 'share_favorite',
             shareCount: item?.share_count || 0,
             likeCount: item?.like_count || 0,
-            isFavorited: isFavorited
+            isFavorited: item?.id ? isFavorited(item.id) : false
           }}
         />
 
@@ -740,34 +755,25 @@ const ListingDetailScreen: React.FC = () => {
             </View>
             
             {reviews && reviews.length > 0 ? (
-              <View style={styles.reviewsSectionContainer}>
+              <>
                 {reviews.slice(0, 5).map((review, index) => (
                   <View key={review.id || index} style={styles.reviewItem}>
                     <View style={styles.reviewHeader}>
-                      <View style={styles.reviewUserInfo}>
-                        <View style={styles.reviewUserAvatar}>
-                          <Text style={styles.reviewUserInitial}>
-                            {(review as any).user_name ? (review as any).user_name.charAt(0).toUpperCase() : 'U'}
+                      <Text style={styles.reviewAuthor}>
+                        {(review as any).user_name || 'Anonymous'}
+                      </Text>
+                      <View style={styles.reviewRating}>
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <Text 
+                            key={star} 
+                            style={[
+                              styles.reviewStar,
+                              star <= (Number(review.rating) || 0) && styles.reviewStarFilled
+                            ]}
+                          >
+                            ★
                           </Text>
-                        </View>
-                        <View style={styles.reviewUserDetails}>
-                          <Text style={styles.reviewUserName}>
-                            {(review as any).user_name || 'Anonymous User'}
-                          </Text>
-                          <View style={styles.reviewRating}>
-                            {[1, 2, 3, 4, 5].map((star) => (
-                              <Text 
-                                key={star} 
-                                style={[
-                                  styles.reviewStar,
-                                  star <= (Number(review.rating) || 0) && styles.reviewStarFilled
-                                ]}
-                              >
-                                ★
-                              </Text>
-                            ))}
-                          </View>
-                        </View>
+                        ))}
                       </View>
                     </View>
                     
@@ -776,13 +782,17 @@ const ListingDetailScreen: React.FC = () => {
                     )}
                     
                     {review.content && (
-                      <Text style={styles.reviewContent} numberOfLines={3}>
-                        {review.content}
-                      </Text>
+                      <Text style={styles.reviewText}>{review.content}</Text>
                     )}
+                    
+                    <View style={styles.reviewFooter}>
+                      <Text style={styles.reviewDate}>
+                        {new Date(review.created_at).toLocaleDateString()}
+                      </Text>
+                    </View>
                   </View>
                 ))}
-              </View>
+              </>
             ) : (
               <View style={styles.noReviewsContainer}>
                 <Text style={styles.noReviewsText}>No reviews yet</Text>
@@ -1065,7 +1075,7 @@ const styles = StyleSheet.create({
     textDecorationLine: 'underline',
   },
   orderButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.status.success, // Green background
     borderRadius: 25, // Pill shape like header buttons
     paddingVertical: Spacing.sm, // Reduced vertical padding
     paddingHorizontal: Spacing.lg,
@@ -1074,7 +1084,7 @@ const styles = StyleSheet.create({
     ...Shadows.md,
   },
   orderButtonPressed: {
-    backgroundColor: Colors.primaryDark,
+    backgroundColor: '#5CB85C', // Darker green when pressed
     transform: [{ scale: 0.98 }],
     ...Shadows.lg,
   },
@@ -1360,10 +1370,10 @@ const styles = StyleSheet.create({
   // Reviews Section Styles
   reviewsSectionContainer: {
     marginTop: Spacing.lg,
-    marginHorizontal: Spacing.sm,
-    backgroundColor: Colors.surface,
+    marginHorizontal: Spacing.sm, // Reduced margin for wider containers
+    backgroundColor: Colors.background.secondary, // Solid white background
     borderRadius: BorderRadius.lg,
-    padding: Spacing.md,
+    padding: Spacing.lg, // Increased padding for better spacing
     ...Shadows.sm,
   },
   reviewsSectionHeader: {
@@ -1393,14 +1403,17 @@ const styles = StyleSheet.create({
     fontFamily: 'Nunito-SemiBold',
   },
   viewMoreContainer: {
-    marginTop: Spacing.sm,
+    marginTop: Spacing.md, // Even top margin
+    marginBottom: Spacing.md, // Even bottom margin
     alignItems: 'center',
+    paddingHorizontal: Spacing.md, // Even horizontal padding
   },
   viewMoreButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main, // Black background
     borderRadius: BorderRadius['2xl'],
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm, // Original button size
+    paddingHorizontal: Spacing.lg, // Original button size
+    minWidth: 120, // Ensure minimum width
     ...Shadows.sm,
   },
   viewMoreButtonText: {
@@ -1412,40 +1425,18 @@ const styles = StyleSheet.create({
   reviewHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: Spacing.xs,
-  },
-  reviewUserInfo: {
-    flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
+    marginBottom: Spacing.sm, // Even spacing below header
   },
-  reviewUserAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: Colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: Spacing.sm,
-  },
-  reviewUserInitial: {
-    ...Typography.styles.bodyLarge,
-    color: Colors.white,
+  reviewAuthor: {
+    ...Typography.styles.body,
     fontWeight: '600',
-    fontFamily: 'Nunito-SemiBold',
-  },
-  reviewUserDetails: {
-    flex: 1,
-  },
-  reviewUserName: {
-    ...Typography.styles.bodyLarge,
-    fontWeight: '600',
-    marginBottom: 2,
+    color: Colors.textPrimary,
     fontFamily: 'Nunito-SemiBold',
   },
   reviewRating: {
     flexDirection: 'row',
+    alignItems: 'center',
   },
   reviewStar: {
     fontSize: 14,
@@ -1456,21 +1447,29 @@ const styles = StyleSheet.create({
     color: Colors.warning,
   },
   reviewDate: {
-    ...Typography.styles.caption,
-    color: Colors.textTertiary,
+    ...Typography.styles.bodySmall,
+    color: Colors.textSecondary,
     fontFamily: 'Nunito-Regular',
   },
   reviewTitle: {
-    ...Typography.styles.bodyLarge,
+    ...Typography.styles.body,
     fontWeight: '600',
-    marginBottom: Spacing.xs,
+    color: Colors.textPrimary,
+    marginBottom: Spacing.sm, // Even spacing below title
     fontFamily: 'Nunito-SemiBold',
   },
-  reviewContent: {
+  reviewText: {
     ...Typography.styles.body,
-    color: Colors.textSecondary,
-    lineHeight: 20,
+    color: Colors.textPrimary,
+    lineHeight: 22, // Even line height
+    flexWrap: 'wrap',
     fontFamily: 'Nunito-Regular',
+    marginBottom: Spacing.sm, // Even spacing below text
+  },
+  reviewFooter: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: Spacing.sm, // Even top margin
   },
   noReviewsContainer: {
     alignItems: 'center',
@@ -1490,13 +1489,12 @@ const styles = StyleSheet.create({
   },
   reviewItem: {
     backgroundColor: Colors.white,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.md,
-    marginHorizontal: Spacing.md,
-    marginBottom: Spacing.xs,
+    paddingHorizontal: Spacing.md, // Even horizontal padding
+    paddingVertical: Spacing.md, // Even vertical padding
+    marginHorizontal: Spacing.md, // Even horizontal margins
+    marginBottom: Spacing.md, // Even bottom margin
     borderRadius: BorderRadius.lg,
     ...Shadows.sm,
-    flex: 1,
   },
 });
 

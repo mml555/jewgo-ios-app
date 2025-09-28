@@ -13,7 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../contexts/AuthContext';
-import { TouchTargets } from '../styles/designSystem';
+import { TouchTargets, Spacing } from '../styles/designSystem';
 import { useResponsiveDimensions, useKeyboardAwareLayout, getResponsiveLayout } from '../utils/deviceAdaptation';
 import { KeyboardManager } from '../utils/keyboardManager';
 import { hapticNavigation, hapticSuccess } from '../utils/hapticFeedback';
@@ -22,6 +22,7 @@ import { useFormValidation } from '../hooks/useFormValidation';
 import SaveStatusIndicator from '../components/SaveStatusIndicator';
 // import ValidationSummary from '../components/ValidationSummary';
 import FormProgressIndicator from '../components/FormProgressIndicator';
+import EnhancedProgressIndicator from '../components/EnhancedProgressIndicator';
 import ConfirmationDialog from '../components/ConfirmationDialog';
 import SuccessCelebration from '../components/SuccessCelebration';
 import FormAnalyticsService from '../services/FormAnalytics';
@@ -743,12 +744,20 @@ const AddCategoryScreen: React.FC = () => {
   }, [formData, saveNow, clearSavedData, validateForm, analyticsSessionId, currentPage, analyticsService, apiV5Service, crashService]);
 
   const renderProgressBar = () => (
-    <FormProgressIndicator
+    <EnhancedProgressIndicator
       steps={formSteps}
       onStepPress={handleStepNavigation}
       allowStepJumping={true}
       showCompletionPercentage={true}
-      compact={true}
+      compact={dimensions.isSmallScreen}
+      showStepNumbers={true}
+      showStepIcons={false}
+      showStepDescriptions={false}
+      orientation="horizontal"
+      containerStyle={[
+        styles.enhancedProgressContainer,
+        { paddingHorizontal: responsiveLayout.containerPadding }
+      ]}
     />
   );
 
@@ -1144,6 +1153,9 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 16,
     color: '#8E8E93',
+  },
+  enhancedProgressContainer: {
+    marginBottom: Spacing.md,
   },
 });
 

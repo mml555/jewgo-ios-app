@@ -330,6 +330,9 @@ class ApiService {
       'shul': 'synagogue',
       'stores': 'store',
       'shuk': 'store',
+      'shtetl': 'synagogue', // Shtetl (community centers) map to synagogue entity type
+      'events': 'synagogue', // Events map to synagogue entity type
+      'jobs': 'synagogue', // Jobs map to synagogue entity type
       'restaurant': 'restaurant',
       'synagogue': 'synagogue',
       'store': 'store'

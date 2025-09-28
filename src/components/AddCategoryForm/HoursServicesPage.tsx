@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, memo } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,8 @@ import BusinessHoursSelector, { BusinessHoursData, DayHours } from '../BusinessH
 import { useResponsiveDimensions, getResponsiveLayout } from '../../utils/deviceAdaptation';
 import { KeyboardManager } from '../../utils/keyboardManager';
 import { hapticButtonPress } from '../../utils/hapticFeedback';
+import EnhancedFormInput from '../EnhancedFormInput';
+import EnhancedServiceSelection from '../EnhancedServiceSelection';
 
 interface HoursServicesPageProps {
   formData: ListingFormData;
@@ -21,7 +23,7 @@ interface HoursServicesPageProps {
   category: string;
 }
 
-const HoursServicesPage: React.FC<HoursServicesPageProps> = ({
+const HoursServicesPage: React.FC<HoursServicesPageProps> = memo(({
   formData,
   onFormDataChange,
   category,
@@ -310,140 +312,124 @@ const HoursServicesPage: React.FC<HoursServicesPageProps> = ({
         </View>
 
         {/* Service Options */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Service Options</Text>
-          
-          <TouchableOpacity
-            style={[
-              styles.checkboxContainer,
-              { minHeight: TouchTargets.minimum }
-            ]}
-            onPress={() => {
-              hapticButtonPress();
-              handleInputChange('delivery_available', !formData.delivery_available);
-            }}
-            activeOpacity={0.7}
-            accessibilityRole="checkbox"
-            accessibilityState={{ checked: formData.delivery_available }}
-            accessibilityLabel="Delivery available"
-          >
-            <View style={[
-              styles.checkbox,
-              formData.delivery_available && styles.checkboxChecked
-            ]}>
-              {formData.delivery_available && (
-                <Text style={styles.checkmark}>✓</Text>
-              )}
-            </View>
-            <Text style={styles.checkboxLabel}>Delivery Available</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.checkboxContainer,
-              { minHeight: TouchTargets.minimum }
-            ]}
-            onPress={() => {
-              hapticButtonPress();
-              handleInputChange('takeout_available', !formData.takeout_available);
-            }}
-            activeOpacity={0.7}
-            accessibilityRole="checkbox"
-            accessibilityState={{ checked: formData.takeout_available }}
-            accessibilityLabel="Takeout available"
-          >
-            <View style={[
-              styles.checkbox,
-              formData.takeout_available && styles.checkboxChecked
-            ]}>
-              {formData.takeout_available && (
-                <Text style={styles.checkmark}>✓</Text>
-              )}
-            </View>
-            <Text style={styles.checkboxLabel}>Takeout Available</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.checkboxContainer,
-              { minHeight: TouchTargets.minimum }
-            ]}
-            onPress={() => {
-              hapticButtonPress();
-              handleInputChange('catering_available', !formData.catering_available);
-            }}
-            activeOpacity={0.7}
-            accessibilityRole="checkbox"
-            accessibilityState={{ checked: formData.catering_available }}
-            accessibilityLabel="Catering available"
-          >
-            <View style={[
-              styles.checkbox,
-              formData.catering_available && styles.checkboxChecked
-            ]}>
-              {formData.catering_available && (
-                <Text style={styles.checkmark}>✓</Text>
-              )}
-            </View>
-            <Text style={styles.checkboxLabel}>Catering Available</Text>
-          </TouchableOpacity>
-        </View>
+        <EnhancedServiceSelection
+          services={{
+            delivery: formData.delivery_available,
+            takeout: formData.takeout_available,
+            catering: formData.catering_available,
+            dineIn: true, // Assume dine-in is always available
+            outdoorSeating: false,
+            parking: false,
+            wheelchairAccessible: false,
+            wifi: false,
+          }}
+          onServicesChange={(services) => {
+            handleInputChange('delivery_available', services.delivery);
+            handleInputChange('takeout_available', services.takeout);
+            handleInputChange('catering_available', services.catering);
+          }}
+          title="Service Options"
+          subtitle="Select the services your business offers"
+          compact={dimensions.isSmallScreen}
+          containerStyle={[
+            styles.enhancedServiceContainer,
+            { marginBottom: responsiveLayout.formSpacing }
+          ]}
+        />
 
         {/* Social Media Links */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Social Media Links</Text>
+          <Text style={[
+            styles.sectionTitle,
+            { fontSize: responsiveLayout.fontSize * 1.1, marginBottom: responsiveLayout.formSpacing }
+          ]}>
+            Social Media Links
+          </Text>
           
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Google Maps/Google My Business URL</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.google_listing_url}
-              onChangeText={(value) => handleInputChange('google_listing_url', value)}
-              placeholder="https://maps.google.com/..."
-              placeholderTextColor={Colors.gray400}
-              keyboardType="url"
-              autoCapitalize="none"
-            />
-          </View>
+          <EnhancedFormInput
+            label="Google Maps/Google My Business URL"
+            value={formData.google_listing_url}
+            onChangeText={(value) => handleInputChange('google_listing_url', value)}
+            placeholder="https://maps.google.com/..."
+            leftIcon="🗺️"
+            keyboardType="url"
+            autoCapitalize="none"
+            validation={(text) => {
+              if (!text.trim()) return { isValid: true };
+              const urlRegex = /^https?:\/\/.+/;
+              return {
+                isValid: urlRegex.test(text),
+                message: urlRegex.test(text) ? undefined : 'Please enter a valid URL'
+              };
+            }}
+            containerStyle={[
+              styles.enhancedInputContainer,
+              { marginBottom: responsiveLayout.formSpacing }
+            ]}
+          />
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Instagram Profile URL</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.instagram_link}
-              onChangeText={(value) => handleInputChange('instagram_link', value)}
-              placeholder="https://instagram.com/..."
-              placeholderTextColor={Colors.gray400}
-              keyboardType="url"
-              autoCapitalize="none"
-            />
-          </View>
+          <EnhancedFormInput
+            label="Instagram Profile URL"
+            value={formData.instagram_link}
+            onChangeText={(value) => handleInputChange('instagram_link', value)}
+            placeholder="https://instagram.com/..."
+            leftIcon="📸"
+            keyboardType="url"
+            autoCapitalize="none"
+            validation={(text) => {
+              if (!text.trim()) return { isValid: true };
+              const urlRegex = /^https?:\/\/.+/;
+              return {
+                isValid: urlRegex.test(text),
+                message: urlRegex.test(text) ? undefined : 'Please enter a valid URL'
+              };
+            }}
+            containerStyle={[
+              styles.enhancedInputContainer,
+              { marginBottom: responsiveLayout.formSpacing }
+            ]}
+          />
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Facebook Page URL</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.facebook_link}
-              onChangeText={(value) => handleInputChange('facebook_link', value)}
-              placeholder="https://facebook.com/..."
-              placeholderTextColor={Colors.gray400}
-              keyboardType="url"
-              autoCapitalize="none"
-            />
-          </View>
+          <EnhancedFormInput
+            label="Facebook Page URL"
+            value={formData.facebook_link}
+            onChangeText={(value) => handleInputChange('facebook_link', value)}
+            placeholder="https://facebook.com/..."
+            leftIcon="📘"
+            keyboardType="url"
+            autoCapitalize="none"
+            validation={(text) => {
+              if (!text.trim()) return { isValid: true };
+              const urlRegex = /^https?:\/\/.+/;
+              return {
+                isValid: urlRegex.test(text),
+                message: urlRegex.test(text) ? undefined : 'Please enter a valid URL'
+              };
+            }}
+            containerStyle={[
+              styles.enhancedInputContainer,
+              { marginBottom: responsiveLayout.formSpacing }
+            ]}
+          />
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>TikTok Profile URL</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.tiktok_link}
-              onChangeText={(value) => handleInputChange('tiktok_link', value)}
-              placeholder="https://tiktok.com/@..."
-              placeholderTextColor={Colors.gray400}
-              keyboardType="url"
-              autoCapitalize="none"
-            />
-          </View>
+          <EnhancedFormInput
+            label="TikTok Profile URL"
+            value={formData.tiktok_link}
+            onChangeText={(value) => handleInputChange('tiktok_link', value)}
+            placeholder="https://tiktok.com/@..."
+            leftIcon="🎵"
+            keyboardType="url"
+            autoCapitalize="none"
+            validation={(text) => {
+              if (!text.trim()) return { isValid: true };
+              const urlRegex = /^https?:\/\/.+/;
+              return {
+                isValid: urlRegex.test(text),
+                message: urlRegex.test(text) ? undefined : 'Please enter a valid URL'
+              };
+            }}
+            containerStyle={styles.enhancedInputContainer}
+          />
         </View>
 
         {/* Contact Preferences */}
@@ -531,7 +517,7 @@ const HoursServicesPage: React.FC<HoursServicesPageProps> = ({
       </View>
     </ScrollView>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {
@@ -739,6 +725,14 @@ const styles = StyleSheet.create({
   inputHalf: {
     marginBottom: Spacing.sm,
   },
+  enhancedInputContainer: {
+    marginBottom: Spacing.sm,
+  },
+  enhancedServiceContainer: {
+    marginBottom: Spacing.lg,
+  },
 });
+
+HoursServicesPage.displayName = 'HoursServicesPage';
 
 export default HoursServicesPage;

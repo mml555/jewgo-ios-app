@@ -11,79 +11,95 @@ import {
   ScrollView
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { BlurView } from '@react-native-community/blur';
 import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import { Colors, Typography, Spacing, BorderRadius, Shadows, TouchTargets } from '../styles/designSystem';
 import type { RootStackParamList } from '../types/navigation';
 import SpecialCard, { DealGridCard } from '../components/SpecialCard';
 import SpecialsIcon from '../components/SpecialsIcon';
-import { apiService, SpecialOffer as ApiSpecialOffer } from '../services/api';
+import BackIcon from '../components/icons/BackIcon';
+import SearchIcon from '../components/icons/SearchIcon';
+import { specialsService } from '../services/SpecialsService';
+import { Special, RestaurantWithSpecials, ActiveSpecial } from '../types/specials';
+import { useFavorites } from '../hooks/useFavorites';
 
 type NavigationProp = StackNavigationProp<RootStackParamList, 'SpecialDetail'>;
 
 const SpecialsScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
+  const { toggleFavorite } = useFavorites();
   
   // State management
-  const [specialOffers, setSpecialOffers] = useState<DealGridCard[]>([]);
+  const [specials, setSpecials] = useState<ActiveSpecial[]>([]);
+  const [restaurantsWithSpecials, setRestaurantsWithSpecials] = useState<RestaurantWithSpecials[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Transform API special offer to component format
-  const transformApiSpecial = (apiSpecial: ApiSpecialOffer): DealGridCard => {
+  // Transform enhanced special to component format
+  const transformSpecial = (special: ActiveSpecial): DealGridCard => {
     // Calculate time left in seconds
-    const validUntilDate = new Date(apiSpecial.valid_until);
+    const validUntilDate = new Date(special.validUntil);
     const now = new Date();
     const timeLeftSeconds = Math.max(0, Math.floor((validUntilDate.getTime() - now.getTime()) / 1000));
     
-    // Parse price range to get numeric values (fallback to reasonable defaults)
-    let originalPrice = 25.99;
-    let salePrice = 19.99;
-    
-    if (apiSpecial.price_range) {
-      // Try to extract price from price range like "$", "$$", "$$$"
-      const priceLevel = apiSpecial.price_range.length;
-      originalPrice = priceLevel * 8 + 15; // $=23, $$=31, $$$=39
-      salePrice = originalPrice * 0.8; // 20% off as default
-    }
+    // Use default pricing since ActiveSpecial doesn't have discount details
+    const originalPrice = 25.99;
+    const salePrice = 19.99;
 
     return {
-      id: apiSpecial.id,
-      title: apiSpecial.title,
-      imageUrl: apiSpecial.image_url || `https://picsum.photos/300/200?random=${apiSpecial.id}`,
+      id: special.id,
+      title: special.title,
+      imageUrl: `https://picsum.photos/300/200?random=${special.id}`,
       badge: {
-        text: apiSpecial.discount_display,
-        type: apiSpecial.discount_type === 'percentage' ? 'percent' : 
-              apiSpecial.discount_type === 'fixed_amount' ? 'amount' : 'custom'
+        text: special.discountLabel,
+        type: 'custom' // Default type since ActiveSpecial doesn't have discountType
       },
-      merchantName: apiSpecial.business_name,
+      merchantName: special.businessName,
       price: {
         original: originalPrice,
         sale: salePrice,
         currency: 'USD'
       },
       timeLeftSeconds: timeLeftSeconds,
-      expiresAt: apiSpecial.valid_until,
-      claimsLeft: Math.floor(Math.random() * 50) + 10, // Mock data for now
+      expiresAt: special.validUntil,
+      claimsLeft: special.maxClaimsTotal ? Math.max(0, special.maxClaimsTotal - special.claimsTotal) : 999,
       views: Math.floor(Math.random() * 2000) + 100, // Mock data for now
       isLiked: false,
       showHeart: true,
       ctaText: 'Click to Claim',
-      overlayTag: apiSpecial.category
+      overlayTag: 'Restaurant'
     };
   };
 
-  // Load specials from API
+  // Load specials from enhanced API
   const loadSpecials = useCallback(async () => {
     try {
       setError(null);
-      const response = await apiService.getSpecials(20, 0);
+      
+      // Use the fast materialized view endpoint for better performance
+      const response = await specialsService.getActiveSpecials({
+        limit: 20,
+        sortBy: 'priority',
+        sortOrder: 'desc'
+      });
       
       if (response.success && response.data) {
-        const transformedSpecials = response.data.specials.map(transformApiSpecial);
-        setSpecialOffers(transformedSpecials);
+        setSpecials(response.data.specials);
+        
+        // Also load restaurants with specials for enhanced data (optional)
+        try {
+          const restaurantsResponse = await specialsService.getRestaurantsWithSpecialsFast({
+            limit: 20
+          });
+          
+          if (restaurantsResponse.success && restaurantsResponse.data) {
+            setRestaurantsWithSpecials(restaurantsResponse.data.restaurants);
+          }
+        } catch (restaurantsError) {
+          console.warn('Failed to load restaurants with specials:', restaurantsError);
+          // Don't fail the entire load if this optional call fails
+        }
       } else {
         setError(response.error || 'Failed to load specials');
       }
@@ -107,26 +123,75 @@ const SpecialsScreen: React.FC = () => {
 
   const handleClaimOffer = useCallback(async (dealId: string) => {
     try {
-      const response = await apiService.claimSpecial(dealId);
+      const response = await specialsService.claimSpecial({
+        specialId: dealId,
+        userId: 'current-user-id', // TODO: Get from auth context
+        ipAddress: '127.0.0.1', // TODO: Get actual IP
+        userAgent: 'JewgoApp/1.0'
+      });
       
       if (response.success) {
-        Alert.alert('Success', response.data?.message || 'Deal claimed successfully!');
+        Alert.alert('Success', 'Special claimed successfully!');
+        
+        // Track the claim event
+        await specialsService.trackSpecialEvent({
+          specialId: dealId,
+          eventType: 'claim',
+          userId: 'current-user-id',
+          ipAddress: '127.0.0.1',
+          userAgent: 'JewgoApp/1.0'
+        });
+        
+        // Refresh the specials list to update claim counts
+        await loadSpecials();
       } else {
-        Alert.alert('Error', response.error || 'Failed to claim deal');
+        Alert.alert('Error', response.error || 'Failed to claim special');
       }
     } catch (err) {
-      console.error('Error claiming deal:', err);
-      Alert.alert('Error', 'Failed to claim deal');
+      console.error('Error claiming special:', err);
+      Alert.alert('Error', 'Failed to claim special');
     }
-  }, []);
+  }, [loadSpecials]);
 
-  const handleToggleLike = useCallback((dealId: string) => {
-    setSpecialOffers(prevOffers => 
-      prevOffers.map(offer => 
-        offer.id === dealId ? { ...offer, isLiked: !offer.isLiked } : offer
-      )
-    );
-  }, []);
+  const handleToggleLike = useCallback(async (dealId: string) => {
+    try {
+      // Find the special to get its business information
+      const special = specials.find(s => s.id === dealId);
+      if (!special) {
+        console.error('Special not found:', dealId);
+        return;
+      }
+
+      // Use business data from the ActiveSpecial
+      const businessName = special.businessName;
+      const businessCity = special.city;
+      const businessState = special.state;
+
+      // Prepare entity data for the favorites service
+      const entityData = {
+        entity_name: businessName,
+        entity_type: 'restaurant', // Specials are always for restaurants
+        description: special.discountLabel,
+        address: undefined, // ActiveSpecial doesn't have address
+        city: businessCity,
+        state: businessState,
+        rating: undefined, // ActiveSpecial doesn't have rating
+        review_count: undefined, // ActiveSpecial doesn't have review_count
+        image_url: undefined, // ActiveSpecial doesn't have image_url
+        category: 'restaurant',
+      };
+
+      const success = await toggleFavorite(special.businessId, entityData);
+      
+      if (success) {
+        console.log(`✅ Toggled favorite for restaurant: ${businessName}`);
+      } else {
+        console.error('❌ Failed to toggle favorite for restaurant:', businessName);
+      }
+    } catch (error) {
+      console.error('Error toggling favorite for special:', error);
+    }
+  }, [specials, toggleFavorite]);
 
   // Memoized render item for FlatList
   const renderItem = useCallback(({ item }: { item: DealGridCard }) => (
@@ -166,8 +231,8 @@ const SpecialsScreen: React.FC = () => {
       <RefreshControl
         refreshing={refreshing}
         onRefresh={handleRefresh}
-        tintColor="#007AFF"
-        colors={['#007AFF']}
+        tintColor={Colors.link}
+        colors={[Colors.link]}
       />
     ),
     [refreshing, handleRefresh]
@@ -210,13 +275,17 @@ const SpecialsScreen: React.FC = () => {
     { id: 'Store', name: 'Store' },
   ];
 
-  // Filter specials by selected category
+  // Transform specials to display format and filter by category
+  const transformedSpecials = useMemo(() => {
+    return specials.map(transformSpecial);
+  }, [specials]);
+
   const filteredSpecials = useMemo(() => {
     if (selectedCategory === 'all') {
-      return specialOffers;
+      return transformedSpecials;
     }
-    return specialOffers.filter(deal => deal.overlayTag === selectedCategory);
-  }, [specialOffers, selectedCategory]);
+    return transformedSpecials.filter(deal => deal.overlayTag === selectedCategory);
+  }, [transformedSpecials, selectedCategory]);
 
   // Memoized empty component
   const renderEmpty = useCallback(() => {
@@ -224,7 +293,7 @@ const SpecialsScreen: React.FC = () => {
     
     return (
       <View style={styles.emptyContainer}>
-        <SpecialsIcon size={64} color="#CCCCCC" />
+        <SpecialsIcon size={64} color={Colors.gray400} />
         <Text style={styles.emptyTitle}>No Specials Available</Text>
         <Text style={styles.emptyDescription}>
           Check back soon for exclusive deals and offers from your favorite Jewish community businesses.
@@ -239,12 +308,7 @@ const SpecialsScreen: React.FC = () => {
       {/* Header Bar - Matches ListingDetailScreen design */}
       <View style={styles.headerBarContainer}>
         <View style={styles.headerBarBackground} />
-        <BlurView
-          style={styles.headerBarBlur}
-          blurType="light"
-          blurAmount={20}
-          reducedTransparencyFallbackColor="rgba(255, 255, 255, 0.9)"
-        >
+        <View style={styles.headerBarBlur}>
           <TouchableOpacity 
             style={[
               styles.headerBackButton,
@@ -255,7 +319,7 @@ const SpecialsScreen: React.FC = () => {
             onPressOut={() => handlePressOut('back')}
             activeOpacity={0.7}
           >
-            <Text style={styles.headerBackIcon}>←</Text>
+            <BackIcon size={20} color={Colors.text.primary} />
           </TouchableOpacity>
           
           <View style={styles.headerTitle}>
@@ -272,9 +336,9 @@ const SpecialsScreen: React.FC = () => {
             onPressOut={() => handlePressOut('search')}
             activeOpacity={0.7}
           >
-            <Text style={styles.headerSearchIcon}>🔍</Text>
+            <SearchIcon size={16} color={Colors.text.primary} />
           </TouchableOpacity>
-        </BlurView>
+        </View>
       </View>
 
       {/* Page Subtitle */}
@@ -328,11 +392,11 @@ const SpecialsScreen: React.FC = () => {
   }
 
   // Show error state
-  if (error && specialOffers.length === 0) {
+  if (error && specials.length === 0) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.errorContainer}>
-          <SpecialsIcon size={64} color="#CCCCCC" />
+          <SpecialsIcon size={64} color={Colors.gray400} />
           <Text style={styles.errorTitle}>Unable to Load Specials</Text>
           <Text style={styles.errorDescription}>{error}</Text>
           <TouchableOpacity
@@ -377,7 +441,7 @@ const SpecialsScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F2F2F7', // Match CategoryGridScreen background
+    backgroundColor: Colors.background, // Match CategoryGridScreen background
   },
   listContent: {
     paddingHorizontal: 0,
@@ -394,7 +458,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.15)', // Subtle dark backdrop
+    backgroundColor: 'rgba(255, 255, 255, 0.95)', // White background
     marginHorizontal: Spacing.md,
     marginTop: Spacing.sm,
     marginBottom: Spacing.sm,
@@ -413,29 +477,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.sm,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderColor: 'rgba(0, 0, 0, 0.1)', // Light border for white background
     shadowColor: Colors.black,
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: 2,
     },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   headerBackButton: {
     justifyContent: 'center',
     alignItems: 'center',
     minWidth: 40,
+    backgroundColor: 'rgba(0, 0, 0, 0.05)', // Light grey container on white background
+    borderRadius: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
   },
   headerButtonPressed: {
     transform: [{ scale: 0.95 }],
     opacity: 0.8,
-  },
-  headerBackIcon: {
-    fontSize: 20,
-    color: Colors.textPrimary,
-    fontWeight: 'bold',
+    backgroundColor: 'rgba(0, 0, 0, 0.1)', // Darker when pressed
   },
   headerTitle: {
     flex: 1,
@@ -450,10 +514,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     minWidth: 40,
-  },
-  headerSearchIcon: {
-    fontSize: 18,
-    color: Colors.textPrimary,
+    backgroundColor: 'rgba(0, 0, 0, 0.05)', // Light grey container on white background
+    borderRadius: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
   },
   subtitleContainer: {
     paddingHorizontal: Spacing.md,

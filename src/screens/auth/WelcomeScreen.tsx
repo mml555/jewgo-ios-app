@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
 import { Colors, Typography, Spacing, Shadows } from '../../styles/designSystem';
+import HeartIcon from '../../components/HeartIcon';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -122,7 +123,7 @@ const WelcomeScreen: React.FC = () => {
           </View>
           
           <View style={styles.benefitItem}>
-            <Text style={styles.benefitIcon}>❤️</Text>
+            <HeartIcon size={24} color={Colors.primary} filled={true} />
             <Text style={styles.benefitText}>Save your favorite places</Text>
           </View>
           

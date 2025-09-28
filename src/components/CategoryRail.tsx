@@ -10,6 +10,7 @@ import {
 import MikvahIcon from './MikvahIcon';
 import EateryIcon from './EateryIcon';
 import StoreIcon from './StoreIcon';
+import HeartIcon from './HeartIcon';
 
 interface CategoryRailProps {
   activeCategory: string;
@@ -30,8 +31,8 @@ const CATEGORIES: Category[] = [
   { id: 'stores', name: 'Stores', icon: '🏪', iconComponent: StoreIcon },
   { id: 'shuk', name: 'Shuk', icon: '🥬' },
   { id: 'shtetl', name: 'Shtetl', icon: '🏘️' },
-  { id: 'shidduch', name: 'Shidduch', icon: '💕' },
-  { id: 'social', name: 'Social', icon: '👥' },
+  { id: 'events', name: 'Events', icon: '🎉', iconComponent: HeartIcon },
+  { id: 'jobs', name: 'Jobs', icon: '💼' },
 ];
 
 const { width: screenWidth } = Dimensions.get('window');

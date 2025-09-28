@@ -7,10 +7,23 @@ const defaultFilters: FilterOptions = {
   minRating: 0,
   kosherLevel: 'any',
   priceRange: 'any',
+  denomination: 'any',
+  storeType: 'any',
+  city: '',
+  state: '',
   hasParking: false,
   hasWifi: false,
   hasAccessibility: false,
   hasDelivery: false,
+  hasPrivateRooms: false,
+  hasHeating: false,
+  hasAirConditioning: false,
+  hasKosherKitchen: false,
+  hasMikvah: false,
+  hasLibrary: false,
+  hasYouthPrograms: false,
+  hasAdultEducation: false,
+  hasSocialEvents: false,
   openNow: false,
   openWeekends: false,
   sortBy: 'distance',
@@ -56,13 +69,26 @@ export const useFilters = (initialFilters?: Partial<FilterOptions>) => {
     // Check price range (if not 'any')
     if (filters.priceRange !== 'any') count++;
     
+    // Check denomination (if not 'any')
+    if (filters.denomination !== 'any') count++;
+    
+    // Check store type (if not 'any')
+    if (filters.storeType !== 'any') count++;
+    
+    // Check location filters
+    if (filters.city) count++;
+    if (filters.state) count++;
+    
     // Check sort (if not default distance/asc)
     if (filters.sortBy !== 'distance' || filters.sortOrder !== 'asc') count++;
     
     // Check boolean filters
     const booleanFilters = [
       'showOpenNow', 'hasParking', 'hasWifi', 
-      'hasAccessibility', 'hasDelivery', 'openNow', 'openWeekends'
+      'hasAccessibility', 'hasDelivery', 'hasPrivateRooms',
+      'hasHeating', 'hasAirConditioning', 'hasKosherKitchen',
+      'hasMikvah', 'hasLibrary', 'hasYouthPrograms',
+      'hasAdultEducation', 'hasSocialEvents', 'openNow', 'openWeekends'
     ];
     
     booleanFilters.forEach(key => {

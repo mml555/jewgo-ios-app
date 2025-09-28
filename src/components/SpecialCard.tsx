@@ -8,6 +8,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { Colors, Typography, Spacing, BorderRadius, Shadows, TouchTargets } from '../styles/designSystem';
+import HeartIcon from './HeartIcon';
 
 type CurrencyCode = "USD" | "ILS" | "EUR" | string;
 
@@ -128,9 +129,11 @@ const SpecialCard: React.FC<SpecialCardProps> = memo(({ item, onPress, onClaim, 
             accessibilityHint="Tap to toggle favorite status"
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Text style={[styles.heartIcon, item.isLiked && styles.heartIconActive]}>
-              {item.isLiked ? '♥' : '♡'}
-            </Text>
+            <HeartIcon 
+              size={20} 
+              color={item.isLiked ? Colors.error : Colors.textSecondary} 
+              filled={item.isLiked} 
+            />
           </TouchableOpacity>
         )}
       </View>
@@ -184,22 +187,18 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: Spacing.sm,
     left: Spacing.sm,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)', // Glassy background like CategoryCard
+    backgroundColor: 'rgba(0, 0, 0, 0.6)', // Dark background for better contrast
     borderRadius: BorderRadius.full,
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.xs,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)', // Glassy border
-    backdropFilter: 'blur(10px)', // Glassy effect
+    borderColor: 'rgba(255, 255, 255, 0.3)', // Light border for contrast
   },
   tagText: {
     ...Typography.styles.caption,
-    color: Colors.textPrimary, // Dark text for glassy background
+    color: Colors.text.inverse, // White text for dark background
     fontWeight: '700',
     textTransform: 'uppercase',
-    textShadowColor: 'rgba(255, 255, 255, 0.8)', // White shadow for contrast
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
   },
   heartButton: {
     position: 'absolute',

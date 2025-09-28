@@ -1,4 +1,4 @@
-import React, { memo, useState, useMemo } from 'react';
+import React, { memo, useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,9 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { CategoryItem } from '../hooks/useCategoryData';
 import { useLocation, calculateDistance } from '../hooks/useLocation';
+import { useFavorites } from '../hooks/useFavorites';
 import { Colors, Typography, Spacing, BorderRadius, Shadows, TouchTargets } from '../styles/designSystem';
+import HeartIcon from './HeartIcon';
 
 interface CategoryCardProps {
   item: CategoryItem;
@@ -24,9 +26,19 @@ const CARD_WIDTH = (screenWidth - ROW_PADDING - CARD_SPACING) / 2;
 const IMAGE_HEIGHT = (CARD_WIDTH * 3) / 4; // 4:3 aspect ratio
 
 const CategoryCard: React.FC<CategoryCardProps> = memo(({ item, categoryKey }) => {
-  const [isFavorited, setIsFavorited] = useState(false);
   const navigation = useNavigation();
   const { location } = useLocation();
+  const { isFavorited: isFavoritedHook, toggleFavorite, checkFavoriteStatus } = useFavorites();
+  const [isFavorited, setIsFavorited] = useState(false);
+
+  // Check favorite status on mount
+  useEffect(() => {
+    const checkStatus = async () => {
+      const status = await checkFavoriteStatus(item.id);
+      setIsFavorited(status);
+    };
+    checkStatus();
+  }, [item.id, checkFavoriteStatus]);
 
   // Calculate real distance if user location is available
   const realDistance = useMemo(() => {
@@ -84,8 +96,34 @@ const CategoryCard: React.FC<CategoryCardProps> = memo(({ item, categoryKey }) =
     });
   };
 
-  const handleHeartPress = () => {
-    setIsFavorited(!isFavorited);
+  const handleHeartPress = async () => {
+    try {
+      // Prepare entity data for the favorites service
+      const entityData = {
+        entity_name: item.title,
+        entity_type: item.entity_type || categoryKey,
+        description: item.description,
+        address: item.address,
+        city: item.city,
+        state: item.state,
+        rating: item.rating,
+        review_count: item.review_count,
+        image_url: item.image_url,
+        category: categoryKey,
+      };
+
+      const success = await toggleFavorite(item.id, entityData);
+      
+      if (success) {
+        // Update local state optimistically
+        setIsFavorited(!isFavorited);
+        console.log(`✅ ${isFavorited ? 'Removed from' : 'Added to'} favorites: ${item.title}`);
+      } else {
+        console.error('❌ Failed to toggle favorite for:', item.title);
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+    }
   };
 
   return (
@@ -122,9 +160,11 @@ const CategoryCard: React.FC<CategoryCardProps> = memo(({ item, categoryKey }) =
           accessibilityHint="Tap to toggle favorite status"
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Text style={[styles.heartIcon, isFavorited && styles.heartIconActive]}>
-            {isFavorited ? '♥' : '♡'}
-          </Text>
+          <HeartIcon 
+            size={20} 
+            color={isFavorited ? Colors.error : Colors.textSecondary} 
+            filled={isFavorited} 
+          />
         </TouchableOpacity>
       </View>
       
@@ -179,22 +219,18 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: Spacing.sm,
     left: Spacing.sm,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)', // Glassy background like details header
+    backgroundColor: 'rgba(0, 0, 0, 0.6)', // Dark background for better contrast
     borderRadius: BorderRadius.full,
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.xs,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)', // Glassy border
-    backdropFilter: 'blur(10px)', // Glassy effect
+    borderColor: 'rgba(255, 255, 255, 0.3)', // Light border for contrast
   },
   tagText: {
     ...Typography.styles.caption,
-    color: Colors.textPrimary, // Dark text for glassy background
+    color: Colors.text.inverse, // White text for dark background
     fontWeight: '700',
     textTransform: 'uppercase',
-    textShadowColor: 'rgba(255, 255, 255, 0.8)', // White shadow for contrast
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
   },
   heartButton: {
     position: 'absolute',
@@ -245,7 +281,7 @@ const styles = StyleSheet.create({
   },
   ratingStar: {
     fontSize: 14,
-    color: '#FFD700',
+    color: Colors.primary,
     marginRight: Spacing.xs,
   },
   ratingText: {

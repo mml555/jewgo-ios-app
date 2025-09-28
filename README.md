@@ -7,7 +7,7 @@ A React Native iOS application for the Jewish community, providing easy access t
 ### Core Functionality
 - **Bottom Tab Navigation**: Home, Favorites, Specials, Notifications, Profile
 - **Search Functionality**: Debounced search with real-time filtering
-- **Category System**: 8 categories (Mikvah, Eatery, Shul, Stores, Shuk, Shtetl, Shidduch, Social)
+- **Category System**: 8 categories (Mikvah, Eatery, Shul, Stores, Shuk, Shtetl, Events, Jobs)
 - **Grid Layout**: 2-column responsive grid with infinite scroll
 - **Pull-to-Refresh**: Smooth refresh functionality
 - **Detailed Views**: Comprehensive listing detail pages
@@ -48,11 +48,29 @@ The app features:
 
 ### Prerequisites
 - Node.js 18+
-- React Native CLI
+- Docker Desktop
 - Xcode 16+ (for iOS development)
 - iOS Simulator or physical iOS device
 
-### Installation
+### Quick Start (Recommended)
+
+**One command to start everything:**
+```bash
+./scripts/start-dev.sh
+```
+
+This script will automatically:
+- ✅ Start Docker services (PostgreSQL, Redis, Mailhog)
+- ✅ Start backend API server
+- ✅ Start Metro bundler
+- ✅ Build and launch iOS app
+
+**Stop everything:**
+```bash
+./scripts/stop-dev.sh
+```
+
+### Manual Installation
 
 1. **Clone the repository**
    ```bash
@@ -60,22 +78,40 @@ The app features:
    cd jewgo-ios-app
    ```
 
-2. **Install dependencies**
+2. **Start Docker services**
    ```bash
-   npm install
-   cd ios && pod install && cd ..
+   docker-compose up -d
    ```
 
-3. **Run the app**
+3. **Install and start backend**
+   ```bash
+   cd backend
+   npm install
+   npm start
+   ```
+
+4. **Install and start frontend**
+   ```bash
+   cd ..
+   npm install
+   cd ios && pod install && cd ..
+   npx react-native start
+   ```
+
+5. **Run the app**
    ```bash
    npx react-native run-ios
    ```
 
 ### Development
 
+- **Start everything**: `./scripts/start-dev.sh`
+- **Stop everything**: `./scripts/stop-dev.sh`
 - **Start Metro bundler**: `npx react-native start`
 - **Run on iOS**: `npx react-native run-ios --simulator="iPhone 16"`
 - **Clean build**: `npx react-native run-ios --simulator="iPhone 16" --reset-cache`
+
+For detailed setup instructions, see [Development Setup Guide](docs/developer/DEVELOPMENT_SETUP.md).
 
 ## 📁 Project Structure
 
@@ -141,8 +177,8 @@ src/
 - **Stores**: Jewish retail and services
 - **Shuk**: Markets and shopping
 - **Shtetl**: Community centers
-- **Shidduch**: Matchmaking services
-- **Social**: Community events and groups
+- **Events**: Community events and gatherings
+- **Jobs**: Employment opportunities
 
 ### Search & Filtering
 - **Real-time Search**: 250ms debounced input

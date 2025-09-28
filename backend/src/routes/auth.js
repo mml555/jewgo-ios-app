@@ -73,6 +73,23 @@ function createAuthRoutes(authController, authMiddleware) {
     authController.login.bind(authController)
   );
 
+  // Google OAuth authentication
+  router.post('/google',
+    authLimiter,
+    authController.googleOAuth.bind(authController)
+  );
+
+  // Magic link authentication
+  router.post('/magic-link/send',
+    passwordResetLimiter,
+    authController.sendMagicLink.bind(authController)
+  );
+
+  router.post('/magic-link/verify',
+    authLimiter,
+    authController.verifyMagicLink.bind(authController)
+  );
+
   // Token refresh
   router.post('/refresh',
     authLimiter,

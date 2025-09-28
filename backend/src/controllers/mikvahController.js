@@ -434,6 +434,172 @@ class MikvahController {
       });
     }
   }
+
+  // Create new mikvah
+  static async createMikvah(req, res) {
+    try {
+      const {
+        name,
+        description,
+        address,
+        city,
+        state,
+        zip_code,
+        latitude,
+        longitude,
+        phone,
+        email,
+        website,
+        kosher_level,
+        denomination,
+        has_parking,
+        has_accessibility,
+        has_private_rooms,
+        has_heating,
+        has_air_conditioning,
+        has_wifi,
+        price_per_use,
+        currency,
+        accepts_cash,
+        accepts_credit,
+        accepts_checks,
+        operating_hours,
+        facebook_url,
+        instagram_url,
+        website_url
+      } = req.body;
+
+      // Validate required fields
+      if (!name || !address || !city || !state || !zip_code || !kosher_level) {
+        return res.status(400).json({
+          success: false,
+          error: 'Missing required fields: name, address, city, state, zip_code, kosher_level'
+        });
+      }
+
+      const query = `
+        INSERT INTO mikvahs (
+          name, description, address, city, state, zip_code, latitude, longitude,
+          phone, email, website, kosher_level, denomination, has_parking,
+          has_accessibility, has_private_rooms, has_heating, has_air_conditioning,
+          has_wifi, price_per_use, currency, accepts_cash, accepts_credit,
+          accepts_checks, operating_hours, facebook_url, instagram_url, website_url
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29
+        ) RETURNING *
+      `;
+
+      const values = [
+        name, description, address, city, state, zip_code, latitude, longitude,
+        phone, email, website, kosher_level, denomination, has_parking,
+        has_accessibility, has_private_rooms, has_heating, has_air_conditioning,
+        has_wifi, price_per_use, currency, accepts_cash, accepts_credit,
+        accepts_checks, JSON.stringify(operating_hours || {}), facebook_url, instagram_url, website_url
+      ];
+
+      const result = await pool.query(query, values);
+      
+      res.status(201).json({
+        success: true,
+        data: {
+          mikvah: result.rows[0]
+        }
+      });
+    } catch (error) {
+      console.error('Error creating mikvah:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to create mikvah',
+        message: error.message
+      });
+    }
+  }
+
+  // Update mikvah
+  static async updateMikvah(req, res) {
+    try {
+      const { id } = req.params;
+      const updateFields = req.body;
+      
+      // Build dynamic update query
+      const setClause = Object.keys(updateFields)
+        .map((key, index) => `${key} = $${index + 2}`)
+        .join(', ');
+      
+      if (!setClause) {
+        return res.status(400).json({
+          success: false,
+          error: 'No fields to update'
+        });
+      }
+
+      const query = `
+        UPDATE mikvahs 
+        SET ${setClause}, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $1 AND is_active = true
+        RETURNING *
+      `;
+
+      const values = [id, ...Object.values(updateFields)];
+      const result = await pool.query(query, values);
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          error: 'Mikvah not found'
+        });
+      }
+
+      res.json({
+        success: true,
+        data: {
+          mikvah: result.rows[0]
+        }
+      });
+    } catch (error) {
+      console.error('Error updating mikvah:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to update mikvah',
+        message: error.message
+      });
+    }
+  }
+
+  // Delete mikvah (soft delete)
+  static async deleteMikvah(req, res) {
+    try {
+      const { id } = req.params;
+      
+      const query = `
+        UPDATE mikvahs 
+        SET is_active = false, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $1
+        RETURNING *
+      `;
+
+      const result = await pool.query(query, [id]);
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          error: 'Mikvah not found'
+        });
+      }
+
+      res.json({
+        success: true,
+        message: 'Mikvah deleted successfully'
+      });
+    } catch (error) {
+      console.error('Error deleting mikvah:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to delete mikvah',
+        message: error.message
+      });
+    }
+  }
 }
 
 module.exports = MikvahController;

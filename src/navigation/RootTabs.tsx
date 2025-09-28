@@ -6,6 +6,7 @@ import { Vibration } from 'react-native';
 import { Keyboard } from 'react-native';
 import { Colors, Typography, Spacing, TouchTargets } from '../styles/designSystem';
 import SpecialsIcon from '../components/SpecialsIcon';
+import HeartIcon from '../components/HeartIcon';
 
 // Import screens
 import HomeScreen from '../screens/HomeScreen';
@@ -72,8 +73,9 @@ function RootTabs() {
               label = 'Home';
               break;
             case 'Favorites':
-              icon = '❤️';
+              icon = '';
               label = 'Favorites';
+              iconComponent = HeartIcon;
               break;
             case 'Specials':
               icon = '⭐';

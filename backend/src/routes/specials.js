@@ -6,6 +6,9 @@ const router = express.Router();
 // GET /api/v5/specials - Get all specials
 router.get('/', SpecialsController.getAllSpecials);
 
+// GET /api/v5/specials/active - Get active specials (must be before /:id route)
+router.get('/active', SpecialsController.getActiveSpecials);
+
 // GET /api/v5/specials/search - Search specials (must be before /:id route)
 router.get('/search', SpecialsController.searchSpecials);
 

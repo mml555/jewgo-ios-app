@@ -41,8 +41,8 @@ const ActionBar: React.FC<ActionBarProps> = ({ onActionPress, currentCategory = 
       'stores': 'Store',
       'shuk': 'Shuk',
       'shtetl': 'Shtetl',
-      'shidduch': 'Shidduch',
-      'social': 'Social',
+      'events': 'Events',
+      'jobs': 'Jobs',
     };
     return categoryMap[categoryKey] || 'Place';
   };
@@ -51,7 +51,14 @@ const ActionBar: React.FC<ActionBarProps> = ({ onActionPress, currentCategory = 
     if (action === 'filters') {
       openFiltersModal();
     } else if (action === 'addCategory') {
-      (navigation as any).navigate('AddCategory', { category: currentCategory });
+      // Route to specific forms based on category
+      if (currentCategory === 'mikvah') {
+        (navigation as any).navigate('AddMikvah');
+      } else if (currentCategory === 'shul') {
+        (navigation as any).navigate('AddSynagogue');
+      } else {
+        (navigation as any).navigate('AddCategory', { category: currentCategory });
+      }
     } else if (action === 'liveMap') {
       // Pass the category key directly (it's already in the correct format)
       (navigation as any).navigate('LiveMap', { category: currentCategory });

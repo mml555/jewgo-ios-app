@@ -4,6 +4,7 @@ export interface EnvironmentConfig {
   nodeEnv: 'development' | 'staging' | 'production';
   apiBaseUrl: string;
   googlePlacesApiKey: string;
+  googleOAuthClientId: string;
   recaptchaSiteKey: string;
   enableAnalytics: boolean;
   enablePerformanceMonitoring: boolean;
@@ -27,13 +28,14 @@ export class ConfigService {
   }
 
   private loadConfig(): EnvironmentConfig {
-    // Force the correct API URL for development
-    const apiBaseUrl = __DEV__ ? 'http://localhost:3001/api/v5' : (Config.API_BASE_URL || 'https://api.jewgo.app/api/v5');
+    // Force the correct API URL for development - use 127.0.0.1 for iOS simulator compatibility
+    const apiBaseUrl = __DEV__ ? 'http://127.0.0.1:3001/api/v5' : (Config.API_BASE_URL || 'https://api.jewgo.app/api/v5');
     
     return {
       nodeEnv: (Config.NODE_ENV as 'development' | 'staging' | 'production') || 'development',
       apiBaseUrl: apiBaseUrl,
       googlePlacesApiKey: Config.GOOGLE_PLACES_API_KEY || '',
+      googleOAuthClientId: Config.GOOGLE_OAUTH_CLIENT_ID || '',
       recaptchaSiteKey: Config.RECAPTCHA_SITE_KEY || '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI', // Test key
       enableAnalytics: Config.ENABLE_ANALYTICS === 'true',
       enablePerformanceMonitoring: Config.ENABLE_PERFORMANCE_MONITORING === 'true',
@@ -82,6 +84,10 @@ export class ConfigService {
 
   public get googlePlacesApiKey(): string {
     return this.config.googlePlacesApiKey;
+  }
+
+  public get googleOAuthClientId(): string {
+    return this.config.googleOAuthClientId;
   }
 
   public get recaptchaSiteKey(): string {

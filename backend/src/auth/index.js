@@ -12,6 +12,8 @@ const AuthController = require('./AuthController');
 const GuestController = require('./GuestController');
 const ReCaptchaProvider = require('./providers/ReCaptchaProvider');
 const HCaptchaProvider = require('./providers/HCaptchaProvider');
+const GoogleOAuthProvider = require('./providers/GoogleOAuthProvider');
+const MagicLinkProvider = require('./providers/MagicLinkProvider');
 
 class AuthSystem {
   constructor(dbPool) {
@@ -25,13 +27,12 @@ class AuthSystem {
     this.oidcService = new OIDCService(dbPool);
     this.guestService = new GuestService(dbPool);
     this.authMiddleware = new AuthMiddleware(this.authService, this.rbacService, this.mfaService, this.keyRotationService, this.guestService);
-    this.authController = new AuthController(this.authService, this.rbacService, this.captchaService, this.mfaService, this.emailService, this.oidcService, this.keyRotationService);
+    this.initializeProviders();
+    this.authController = new AuthController(this.authService, this.rbacService, this.captchaService, this.mfaService, this.emailService, this.oidcService, this.keyRotationService, this.googleOAuthProvider, this.magicLinkProvider);
     this.guestController = new GuestController(this.guestService, this.authService);
-    
-    this.initializeCaptchaProviders();
   }
 
-  initializeCaptchaProviders() {
+  initializeProviders() {
     // Initialize reCAPTCHA providers
     if (process.env.RECAPTCHA_V2_SECRET_KEY) {
       const recaptchaV2Provider = new ReCaptchaProvider({
@@ -59,6 +60,31 @@ class AuthSystem {
         siteKey: process.env.HCAPTCHA_SITE_KEY
       });
       this.captchaService.registerProvider('hcaptcha', hcaptchaProvider);
+    }
+
+    // Initialize Google OAuth provider
+    if (process.env.GOOGLE_OAUTH_CLIENT_ID && process.env.GOOGLE_OAUTH_CLIENT_SECRET) {
+      this.googleOAuthProvider = new GoogleOAuthProvider({
+        clientId: process.env.GOOGLE_OAUTH_CLIENT_ID,
+        clientSecret: process.env.GOOGLE_OAUTH_CLIENT_SECRET,
+        redirectUri: process.env.GOOGLE_OAUTH_REDIRECT_URI || 'http://localhost:3001/auth/google/callback'
+      });
+      console.log('✅ Google OAuth provider initialized');
+    } else {
+      console.log('⚠️ Google OAuth provider not initialized - missing environment variables');
+    }
+
+    // Initialize Magic Link provider
+    if (process.env.MAGIC_LINK_SECRET && process.env.MAGIC_LINK_BASE_URL) {
+      this.magicLinkProvider = new MagicLinkProvider({
+        secretKey: process.env.MAGIC_LINK_SECRET,
+        baseUrl: process.env.MAGIC_LINK_BASE_URL,
+        frontendUrl: process.env.FRONTEND_URL || 'http://localhost:8081',
+        expirationTime: parseInt(process.env.MAGIC_LINK_EXPIRATION) || 15 * 60 * 1000 // 15 minutes
+      });
+      console.log('✅ Magic Link provider initialized');
+    } else {
+      console.log('⚠️ Magic Link provider not initialized - missing environment variables');
     }
   }
 

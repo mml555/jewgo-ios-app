@@ -72,8 +72,8 @@ class GuestService {
       console.log('✅ Creating guest session...');
       const deviceInfo = await this.getDeviceInfo();
       
-      // Temporary hardcoded API URL to bypass ConfigService issues
-      const apiUrl = 'http://localhost:3001/api/v5';
+      // Use 127.0.0.1 instead of localhost for iOS simulator compatibility
+      const apiUrl = 'http://127.0.0.1:3001/api/v5';
       
       const response = await fetch(`${apiUrl}/guest/create`, {
         method: 'POST',
@@ -106,7 +106,7 @@ class GuestService {
 
   async validateSession(token: string): Promise<boolean> {
     try {
-      const apiUrl = 'http://localhost:3001/api/v5';
+      const apiUrl = 'http://127.0.0.1:3001/api/v5';
       const response = await fetch(`${apiUrl}/guest/validate`, {
         method: 'POST',
         headers: {
@@ -135,7 +135,7 @@ class GuestService {
         return false;
       }
 
-      const apiUrl = 'http://localhost:3001/api/v5';
+      const apiUrl = 'http://127.0.0.1:3001/api/v5';
       const response = await fetch(`${apiUrl}/guest/extend`, {
         method: 'POST',
         headers: {
@@ -157,7 +157,7 @@ class GuestService {
     try {
       const token = await this.getGuestToken();
       if (token) {
-        const apiUrl = 'http://localhost:3001/api/v5';
+        const apiUrl = 'http://127.0.0.1:3001/api/v5';
         await fetch(`${apiUrl}/guest/revoke`, {
           method: 'DELETE',
           headers: {
@@ -234,7 +234,7 @@ class GuestService {
         throw new Error('No guest session found');
       }
 
-      const apiUrl = 'http://localhost:3001/api/v5';
+      const apiUrl = 'http://127.0.0.1:3001/api/v5';
       const response = await fetch(`${apiUrl}/guest/convert`, {
         method: 'POST',
         headers: {

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import { Spacing, Shadows } from '../styles/designSystem';
+import { filterOptionsService, CategoryFilterOptions } from '../services/FilterOptionsService';
 
 export interface FilterOptions {
   // Distance filters
@@ -20,14 +21,33 @@ export interface FilterOptions {
   minRating: number;
   
   // Category-specific filters
-  kosherLevel: 'any' | 'glatt' | 'chalav-yisrael' | 'pas-yisrael';
+  kosherLevel: 'any' | 'glatt' | 'chalav-yisrael' | 'pas-yisrael' | 'mehadrin' | 'regular';
   priceRange: 'any' | '$' | '$$' | '$$$' | '$$$$';
+  
+  // Denomination filters (for synagogues and mikvahs)
+  denomination: 'any' | 'orthodox' | 'conservative' | 'reform' | 'reconstructionist' | 'chabad' | 'sephardic' | 'ashkenazi';
+  
+  // Store type filters (for stores)
+  storeType: 'any' | 'grocery' | 'butcher' | 'bakery' | 'deli' | 'market' | 'specialty';
+  
+  // Location filters
+  city: string;
+  state: string;
   
   // Service filters
   hasParking: boolean;
   hasWifi: boolean;
   hasAccessibility: boolean;
   hasDelivery: boolean;
+  hasPrivateRooms: boolean;
+  hasHeating: boolean;
+  hasAirConditioning: boolean;
+  hasKosherKitchen: boolean;
+  hasMikvah: boolean;
+  hasLibrary: boolean;
+  hasYouthPrograms: boolean;
+  hasAdultEducation: boolean;
+  hasSocialEvents: boolean;
   
   // Time filters
   openNow: boolean;
@@ -52,10 +72,23 @@ const defaultFilters: FilterOptions = {
   minRating: 0,
   kosherLevel: 'any',
   priceRange: 'any',
+  denomination: 'any',
+  storeType: 'any',
+  city: '',
+  state: '',
   hasParking: false,
   hasWifi: false,
   hasAccessibility: false,
   hasDelivery: false,
+  hasPrivateRooms: false,
+  hasHeating: false,
+  hasAirConditioning: false,
+  hasKosherKitchen: false,
+  hasMikvah: false,
+  hasLibrary: false,
+  hasYouthPrograms: false,
+  hasAdultEducation: false,
+  hasSocialEvents: false,
   openNow: false,
   openWeekends: false,
   sortBy: 'distance',
@@ -70,6 +103,31 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
   category,
 }) => {
   const [filters, setFilters] = useState<FilterOptions>(currentFilters);
+  const [filterOptions, setFilterOptions] = useState<CategoryFilterOptions | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  // Load filter options when modal opens
+  useEffect(() => {
+    if (visible && category) {
+      loadFilterOptions();
+    }
+  }, [visible, category]);
+
+  const loadFilterOptions = useCallback(async () => {
+    if (!category) return;
+    
+    setLoading(true);
+    try {
+      const response = await filterOptionsService.getFilterOptions(category);
+      if (response.success && response.data) {
+        setFilterOptions(response.data);
+      }
+    } catch (error) {
+      console.error('Error loading filter options:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [category]);
 
   const handleFilterChange = useCallback((key: keyof FilterOptions, value: any) => {
     setFilters(prev => ({ ...prev, [key]: value }));
@@ -161,66 +219,130 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
     </View>
   );
 
-  const renderKosherFilter = () => (
-    <View style={styles.filterSection}>
-      <Text style={styles.sectionTitle}>Kosher Level</Text>
-      <View style={styles.kosherContainer}>
-        {[
-          { key: 'any', label: 'Any' },
-          { key: 'glatt', label: 'Glatt Kosher' },
-          { key: 'chalav-yisrael', label: 'Chalav Yisrael' },
-          { key: 'pas-yisrael', label: 'Pas Yisrael' },
-        ].map((option) => (
-          <TouchableOpacity
-            key={option.key}
-            style={[
-              styles.kosherButton,
-              filters.kosherLevel === option.key && styles.kosherButtonActive
-            ]}
-            onPress={() => handleFilterChange('kosherLevel', option.key)}
-          >
-            <Text style={[
-              styles.kosherButtonText,
-              filters.kosherLevel === option.key && styles.kosherButtonTextActive
-            ]}>
-              {option.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
+  const renderKosherFilter = () => {
+    if (!filterOptions?.kosherLevels.length) return null;
+    
+    return (
+      <View style={styles.filterSection}>
+        <Text style={styles.sectionTitle}>Kosher Level</Text>
+        <View style={styles.kosherContainer}>
+          {[
+            { key: 'any', label: 'Any', count: filterOptions.kosherLevels.reduce((sum, opt) => sum + (opt.count || 0), 0) },
+            ...filterOptions.kosherLevels
+          ].map((option) => (
+            <TouchableOpacity
+              key={option.value}
+              style={[
+                styles.kosherButton,
+                filters.kosherLevel === option.value && styles.kosherButtonActive
+              ]}
+              onPress={() => handleFilterChange('kosherLevel', option.value)}
+            >
+              <Text style={[
+                styles.kosherButtonText,
+                filters.kosherLevel === option.value && styles.kosherButtonTextActive
+              ]}>
+                {option.label} {option.count ? `(${option.count})` : ''}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
-    </View>
-  );
+    );
+  };
 
-  const renderPriceFilter = () => (
-    <View style={styles.filterSection}>
-      <Text style={styles.sectionTitle}>Price Range</Text>
-      <View style={styles.priceContainer}>
-        {[
-          { key: 'any', label: 'Any' },
-          { key: '$', label: '$' },
-          { key: '$$', label: '$$' },
-          { key: '$$$', label: '$$$' },
-          { key: '$$$$', label: '$$$$' },
-        ].map((option) => (
-          <TouchableOpacity
-            key={option.key}
-            style={[
-              styles.priceButton,
-              filters.priceRange === option.key && styles.priceButtonActive
-            ]}
-            onPress={() => handleFilterChange('priceRange', option.key)}
-          >
-            <Text style={[
-              styles.priceButtonText,
-              filters.priceRange === option.key && styles.priceButtonTextActive
-            ]}>
-              {option.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
+  const renderPriceFilter = () => {
+    if (!filterOptions?.priceRanges.length) return null;
+    
+    return (
+      <View style={styles.filterSection}>
+        <Text style={styles.sectionTitle}>Price Range</Text>
+        <View style={styles.priceContainer}>
+          {filterOptions.priceRanges.map((option) => (
+            <TouchableOpacity
+              key={option.value}
+              style={[
+                styles.priceButton,
+                filters.priceRange === option.value && styles.priceButtonActive
+              ]}
+              onPress={() => handleFilterChange('priceRange', option.value)}
+            >
+              <Text style={[
+                styles.priceButtonText,
+                filters.priceRange === option.value && styles.priceButtonTextActive
+              ]}>
+                {option.label} {option.count ? `(${option.count})` : ''}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
-    </View>
-  );
+    );
+  };
+
+  const renderDenominationFilter = () => {
+    if (!filterOptions?.denominations.length) return null;
+    
+    return (
+      <View style={styles.filterSection}>
+        <Text style={styles.sectionTitle}>Denomination</Text>
+        <View style={styles.denominationContainer}>
+          {[
+            { value: 'any', label: 'Any', count: filterOptions.denominations.reduce((sum, opt) => sum + (opt.count || 0), 0) },
+            ...filterOptions.denominations
+          ].map((option) => (
+            <TouchableOpacity
+              key={option.value}
+              style={[
+                styles.denominationButton,
+                filters.denomination === option.value && styles.denominationButtonActive
+              ]}
+              onPress={() => handleFilterChange('denomination', option.value)}
+            >
+              <Text style={[
+                styles.denominationButtonText,
+                filters.denomination === option.value && styles.denominationButtonTextActive
+              ]}>
+                {option.label} {option.count ? `(${option.count})` : ''}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+    );
+  };
+
+  const renderStoreTypeFilter = () => {
+    if (!filterOptions?.storeTypes.length) return null;
+    
+    return (
+      <View style={styles.filterSection}>
+        <Text style={styles.sectionTitle}>Store Type</Text>
+        <View style={styles.storeTypeContainer}>
+          {[
+            { value: 'any', label: 'Any', count: filterOptions.storeTypes.reduce((sum, opt) => sum + (opt.count || 0), 0) },
+            ...filterOptions.storeTypes
+          ].map((option) => (
+            <TouchableOpacity
+              key={option.value}
+              style={[
+                styles.storeTypeButton,
+                filters.storeType === option.value && styles.storeTypeButtonActive
+              ]}
+              onPress={() => handleFilterChange('storeType', option.value)}
+            >
+              <Text style={[
+                styles.storeTypeButtonText,
+                filters.storeType === option.value && styles.storeTypeButtonTextActive
+              ]}>
+                {option.label} {option.count ? `(${option.count})` : ''}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+    );
+  };
 
   const renderSortOptions = () => (
     <View style={styles.filterSection}>
@@ -282,31 +404,70 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
     </View>
   );
 
-  const renderServiceFilters = () => (
-    <View style={styles.filterSection}>
-      <Text style={styles.sectionTitle}>Services & Amenities</Text>
-      <View style={styles.serviceContainer}>
-        {[
+  const renderServiceFilters = () => {
+    const getAvailableAmenities = () => {
+      if (!filterOptions?.amenities.length) {
+        // Fallback to basic amenities if no dynamic data
+        return [
           { key: 'hasParking', label: 'Parking Available' },
           { key: 'hasWifi', label: 'Free WiFi' },
           { key: 'hasAccessibility', label: 'Accessible' },
           { key: 'hasDelivery', label: 'Delivery Available' },
           { key: 'openNow', label: 'Open Now' },
           { key: 'openWeekends', label: 'Open Weekends' },
-        ].map((service) => (
-          <View key={service.key} style={styles.serviceRow}>
-            <Text style={styles.serviceLabel}>{service.label}</Text>
-            <Switch
-              value={filters[service.key as keyof FilterOptions] as boolean}
-              onValueChange={(value) => handleFilterChange(service.key as keyof FilterOptions, value)}
-              trackColor={{ false: '#E5E5EA', true: '#74e1a0' }}
-              thumbColor={filters[service.key as keyof FilterOptions] ? '#FFFFFF' : '#FFFFFF'}
-            />
-          </View>
-        ))}
+        ];
+      }
+
+      // Map dynamic amenities to filter keys
+      const amenityMap: Record<string, string> = {
+        'Parking Available': 'hasParking',
+        'Free WiFi': 'hasWifi',
+        'Accessible': 'hasAccessibility',
+        'Delivery Available': 'hasDelivery',
+        'Private Rooms': 'hasPrivateRooms',
+        'Heating': 'hasHeating',
+        'Air Conditioning': 'hasAirConditioning',
+        'Kosher Kitchen': 'hasKosherKitchen',
+        'Mikvah Available': 'hasMikvah',
+        'Library': 'hasLibrary',
+        'Youth Programs': 'hasYouthPrograms',
+        'Adult Education': 'hasAdultEducation',
+        'Social Events': 'hasSocialEvents',
+      };
+
+      return filterOptions.amenities
+        .filter(amenity => amenityMap[amenity.label])
+        .map(amenity => ({
+          key: amenityMap[amenity.label],
+          label: amenity.label,
+          count: amenity.count
+        }));
+    };
+
+    const availableAmenities = getAvailableAmenities();
+    if (!availableAmenities.length) return null;
+
+    return (
+      <View style={styles.filterSection}>
+        <Text style={styles.sectionTitle}>Services & Amenities</Text>
+        <View style={styles.serviceContainer}>
+          {availableAmenities.map((service) => (
+            <View key={service.key} style={styles.serviceRow}>
+              <Text style={styles.serviceLabel}>
+                {service.label} {service.count ? `(${service.count})` : ''}
+              </Text>
+              <Switch
+                value={filters[service.key as keyof FilterOptions] as boolean}
+                onValueChange={(value) => handleFilterChange(service.key as keyof FilterOptions, value)}
+                trackColor={{ false: '#E5E5EA', true: '#74e1a0' }}
+                thumbColor={filters[service.key as keyof FilterOptions] ? '#FFFFFF' : '#FFFFFF'}
+              />
+            </View>
+          ))}
+        </View>
       </View>
-    </View>
-  );
+    );
+  };
 
   return (
     <Modal
@@ -331,9 +492,16 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
 
         {/* Content */}
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          {loading && (
+            <View style={styles.loadingContainer}>
+              <Text style={styles.loadingText}>Loading filter options...</Text>
+            </View>
+          )}
           {renderDistanceSlider()}
           {renderRatingFilter()}
           {renderKosherFilter()}
+          {renderDenominationFilter()}
+          {renderStoreTypeFilter()}
           {renderPriceFilter()}
           {renderSortOptions()}
           {renderServiceFilters()}
@@ -630,6 +798,68 @@ const styles = StyleSheet.create({
     fontSize: 14, // Smaller text
     color: '#FFFFFF',
     fontWeight: '600',
+  },
+  // New filter component styles
+  denominationContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  denominationButton: {
+    paddingVertical: 4,
+    paddingHorizontal: Spacing.sm,
+    borderRadius: 25,
+    backgroundColor: '#F2F2F7',
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+    ...Shadows.sm,
+  },
+  denominationButtonActive: {
+    backgroundColor: '#74e1a0',
+    borderColor: '#74e1a0',
+  },
+  denominationButtonText: {
+    fontSize: 12,
+    color: '#666666',
+    fontWeight: '500',
+  },
+  denominationButtonTextActive: {
+    color: '#FFFFFF',
+  },
+  storeTypeContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  storeTypeButton: {
+    paddingVertical: 4,
+    paddingHorizontal: Spacing.sm,
+    borderRadius: 25,
+    backgroundColor: '#F2F2F7',
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+    ...Shadows.sm,
+  },
+  storeTypeButtonActive: {
+    backgroundColor: '#74e1a0',
+    borderColor: '#74e1a0',
+  },
+  storeTypeButtonText: {
+    fontSize: 12,
+    color: '#666666',
+    fontWeight: '500',
+  },
+  storeTypeButtonTextActive: {
+    color: '#FFFFFF',
+  },
+  loadingContainer: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 14,
+    color: '#666666',
+    fontStyle: 'italic',
   },
 });
 

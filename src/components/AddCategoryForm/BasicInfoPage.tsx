@@ -1,18 +1,18 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, memo } from 'react';
 import {
   View,
   Text,
-  TextInput,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Switch,
   Alert,
 } from 'react-native';
 import { ListingFormData } from '../../screens/AddCategoryScreen';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../styles/designSystem';
+import { useResponsiveDimensions, getResponsiveLayout } from '../../utils/deviceAdaptation';
 import { hapticButtonPress } from '../../utils/hapticFeedback';
 import CustomAddressAutocomplete from '../CustomAddressAutocomplete';
+import EnhancedFormInput from '../EnhancedFormInput';
 
 interface BasicInfoPageProps {
   formData: ListingFormData;
@@ -20,12 +20,16 @@ interface BasicInfoPageProps {
   category: string;
 }
 
-const BasicInfoPage: React.FC<BasicInfoPageProps> = ({
+const BasicInfoPage: React.FC<BasicInfoPageProps> = memo(({
   formData,
   onFormDataChange,
   category,
 }) => {
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  
+  // Responsive design hooks
+  const dimensions = useResponsiveDimensions();
+  const responsiveLayout = getResponsiveLayout();
 
   const handleInputChange = useCallback((field: keyof ListingFormData, value: string | boolean) => {
     onFormDataChange({ [field]: value });
@@ -220,35 +224,23 @@ const BasicInfoPage: React.FC<BasicInfoPageProps> = ({
           <Text style={styles.sectionTitle}>Basic Business Information</Text>
           
           {/* Business Name */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Business Name *</Text>
-            <View style={[styles.inputWrapper, errors.name && styles.inputError]}>
-              <Text style={styles.inputIcon}>🏢</Text>
-              <TextInput
-                style={styles.input}
-                value={formData.name}
-                onChangeText={(value) => {
-                  handleInputChange('name', value);
-                  const error = validateField('name', value);
-                  if (error) {
-                    setErrors(prev => ({ ...prev, name: error }));
-                  }
-                }}
-                onBlur={() => {
-                  const error = validateField('name', formData.name);
-                  if (error) {
-                    setErrors(prev => ({ ...prev, name: error }));
-                  }
-                }}
-                placeholder="Enter business name"
-                placeholderTextColor={Colors.gray400}
-              />
-              {formData.name && !errors.name && (
-                <Text style={styles.successIcon}>✓</Text>
-              )}
-            </View>
-            {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
-          </View>
+          <EnhancedFormInput
+            label="Business Name"
+            value={formData.name}
+            onChangeText={(value) => handleInputChange('name', value)}
+            placeholder="Enter business name"
+            leftIcon="🏢"
+            required
+            error={errors.name}
+            validation={(text) => ({
+              isValid: text.length >= 2,
+              message: text.length < 2 ? 'Business name must be at least 2 characters' : undefined
+            })}
+            containerStyle={[
+              styles.enhancedInputContainer,
+              { marginBottom: responsiveLayout.formSpacing }
+            ]}
+          />
 
           {/* Business Address */}
           <View style={styles.inputGroup}>
@@ -275,78 +267,110 @@ const BasicInfoPage: React.FC<BasicInfoPageProps> = ({
           </View>
 
           {/* Phone and Email Row */}
-          <View style={styles.rowContainer}>
-            <View style={styles.inputHalf}>
-              <Text style={styles.label}>Phone Number *</Text>
-              <View style={styles.inputWrapper}>
-                <Text style={styles.inputIcon}>📞</Text>
-                <TextInput
-                  style={[styles.input, errors.phone && styles.inputError]}
-                  value={formData.phone}
-                  onChangeText={(value) => handleInputChange('phone', formatPhoneNumber(value))}
-                  placeholder="(555) 123-4567"
-                  placeholderTextColor={Colors.gray400}
-                  keyboardType="phone-pad"
-                />
-                {formData.phone && !errors.phone && (
-                  <Text style={styles.successIcon}>✓</Text>
-                )}
-              </View>
-              {errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
+          <View style={[
+            styles.rowContainer,
+            { 
+              flexDirection: dimensions.isSmallScreen ? 'column' : 'row',
+              gap: responsiveLayout.formSpacing,
+            }
+          ]}>
+            <View style={[
+              styles.inputHalf,
+              { 
+                flex: dimensions.isSmallScreen ? 1 : 0.48,
+                marginBottom: dimensions.isSmallScreen ? responsiveLayout.formSpacing : 0,
+              }
+            ]}>
+              <EnhancedFormInput
+                label="Phone Number"
+                value={formData.phone}
+                onChangeText={(value) => handleInputChange('phone', formatPhoneNumber(value))}
+                placeholder="(555) 123-4567"
+                leftIcon="📞"
+                keyboardType="phone-pad"
+                required
+                error={errors.phone}
+                validation={(text) => ({
+                  isValid: text.length >= 10,
+                  message: text.length < 10 ? 'Please enter a valid phone number' : undefined
+                })}
+                containerStyle={styles.enhancedInputContainer}
+              />
             </View>
-            <View style={styles.inputHalf}>
-              <Text style={styles.label}>Business Email *</Text>
-              <View style={styles.inputWrapper}>
-                <Text style={styles.inputIcon}>✉️</Text>
-                <TextInput
-                  style={[styles.input, errors.business_email && styles.inputError]}
-                  value={formData.business_email}
-                  onChangeText={(value) => handleInputChange('business_email', value)}
-                  placeholder="business@example.com"
-                  placeholderTextColor={Colors.gray400}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                />
-                {formData.business_email && !errors.business_email && (
-                  <Text style={styles.successIcon}>✓</Text>
-                )}
-              </View>
-              {errors.business_email && <Text style={styles.errorText}>{errors.business_email}</Text>}
+            <View style={[
+              styles.inputHalf,
+              { 
+                flex: dimensions.isSmallScreen ? 1 : 0.48,
+              }
+            ]}>
+              <EnhancedFormInput
+                label="Business Email"
+                value={formData.business_email}
+                onChangeText={(value) => handleInputChange('business_email', value)}
+                placeholder="business@example.com"
+                leftIcon="✉️"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                required
+                error={errors.business_email}
+                validation={(text) => ({
+                  isValid: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text),
+                  message: !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text) ? 'Please enter a valid email address' : undefined
+                })}
+                containerStyle={styles.enhancedInputContainer}
+              />
             </View>
           </View>
 
           {/* Website */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Website</Text>
-            <View style={styles.inputWrapper}>
-              <Text style={styles.inputIcon}>🌐</Text>
-              <TextInput
-                style={styles.input}
-                value={formData.website}
-                onChangeText={(value) => handleInputChange('website', value)}
-                placeholder="https://www.example.com"
-                placeholderTextColor={Colors.gray400}
-                keyboardType="url"
-                autoCapitalize="none"
-              />
-              {formData.website && (
-                <Text style={styles.successIcon}>✓</Text>
-              )}
-            </View>
-            <Text style={styles.suggestionText}>
-              💡 A website helps customers find more information about your business
-            </Text>
-          </View>
+          <EnhancedFormInput
+            label="Website"
+            value={formData.website}
+            onChangeText={(value) => handleInputChange('website', value)}
+            placeholder="https://www.example.com"
+            leftIcon="🌐"
+            keyboardType="url"
+            autoCapitalize="none"
+            suggestion="A website helps customers find more information about your business"
+            validation={(text) => {
+              if (!text.trim()) return { isValid: true };
+              const urlRegex = /^https?:\/\/.+/;
+              return {
+                isValid: urlRegex.test(text),
+                message: urlRegex.test(text) ? undefined : 'Please enter a valid website URL (include http:// or https://)'
+              };
+            }}
+            containerStyle={[
+              styles.enhancedInputContainer,
+              { marginBottom: responsiveLayout.formSpacing }
+            ]}
+          />
 
           {/* Listing Type */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Type of Listing *</Text>
-            <View style={styles.listingTypeContainer}>
+            <Text style={[
+              styles.label,
+              { fontSize: responsiveLayout.fontSize, marginBottom: responsiveLayout.formSpacing }
+            ]}>
+              Type of Listing *
+            </Text>
+            <View style={[
+              styles.listingTypeContainer,
+              {
+                flexDirection: dimensions.isSmallScreen ? 'column' : 'row',
+                gap: responsiveLayout.formSpacing,
+              }
+            ]}>
               {listingTypes.map((type) => (
                 <TouchableOpacity
                   key={type.value}
                   style={[
                     styles.listingTypeOption,
+                    {
+                      minHeight: responsiveLayout.buttonHeight,
+                      padding: responsiveLayout.formSpacing,
+                      flex: dimensions.isSmallScreen ? 1 : 0.3,
+                    },
                     formData.listing_type === type.value && styles.listingTypeOptionSelected,
                   ]}
                   onPress={() => handleListingTypeSelect(type.value)}
@@ -355,9 +379,15 @@ const BasicInfoPage: React.FC<BasicInfoPageProps> = ({
                   accessibilityState={{ selected: formData.listing_type === type.value }}
                   accessibilityLabel={`Select ${type.label} as business type`}
                 >
-                  <Text style={styles.listingTypeIcon}>{type.icon}</Text>
+                  <Text style={[
+                    styles.listingTypeIcon,
+                    { fontSize: dimensions.isSmallScreen ? 20 : 24 }
+                  ]}>
+                    {type.icon}
+                  </Text>
                   <Text style={[
                     styles.listingTypeLabel,
+                    { fontSize: dimensions.isSmallScreen ? responsiveLayout.fontSize * 0.9 : responsiveLayout.fontSize },
                     formData.listing_type === type.value && styles.listingTypeLabelSelected,
                   ]}>
                     {type.label}
@@ -365,59 +395,86 @@ const BasicInfoPage: React.FC<BasicInfoPageProps> = ({
                 </TouchableOpacity>
               ))}
             </View>
-            {errors.listing_type && <Text style={styles.errorText}>{errors.listing_type}</Text>}
+            {errors.listing_type && (
+              <Text style={[
+                styles.errorText,
+                { fontSize: responsiveLayout.fontSize * 0.9, marginTop: responsiveLayout.formSpacing }
+              ]}>
+                {errors.listing_type}
+              </Text>
+            )}
           </View>
         </View>
 
         {/* Conditional Owner Information */}
         {formData.is_owner_submission && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Owner Information</Text>
+            <Text style={[
+              styles.sectionTitle,
+              { fontSize: responsiveLayout.fontSize * 1.1, marginBottom: responsiveLayout.formSpacing }
+            ]}>
+              Owner Information
+            </Text>
             
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Owner Name *</Text>
-              <TextInput
-                style={[styles.input, errors.owner_name && styles.inputError]}
-                value={formData.owner_name}
-                onChangeText={(value) => handleInputChange('owner_name', value)}
-                placeholder="Enter owner's full name"
-                placeholderTextColor={Colors.gray400}
-              />
-              {errors.owner_name && <Text style={styles.errorText}>{errors.owner_name}</Text>}
-            </View>
+            <EnhancedFormInput
+              label="Owner Name"
+              value={formData.owner_name}
+              onChangeText={(value) => handleInputChange('owner_name', value)}
+              placeholder="Enter owner's full name"
+              leftIcon="👤"
+              required
+              error={errors.owner_name}
+              validation={(text) => ({
+                isValid: text.length >= 2,
+                message: text.length < 2 ? 'Owner name must be at least 2 characters' : undefined
+              })}
+              containerStyle={[
+                styles.enhancedInputContainer,
+                { marginBottom: responsiveLayout.formSpacing }
+              ]}
+            />
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Owner Email *</Text>
-              <TextInput
-                style={[styles.input, errors.owner_email && styles.inputError]}
-                value={formData.owner_email}
-                onChangeText={(value) => handleInputChange('owner_email', value)}
-                placeholder="owner@example.com"
-                placeholderTextColor={Colors.gray400}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-              {errors.owner_email && <Text style={styles.errorText}>{errors.owner_email}</Text>}
-            </View>
+            <EnhancedFormInput
+              label="Owner Email"
+              value={formData.owner_email}
+              onChangeText={(value) => handleInputChange('owner_email', value)}
+              placeholder="owner@example.com"
+              leftIcon="✉️"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              required
+              error={errors.owner_email}
+              validation={(text) => ({
+                isValid: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text),
+                message: !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text) ? 'Please enter a valid email address' : undefined
+              })}
+              containerStyle={[
+                styles.enhancedInputContainer,
+                { marginBottom: responsiveLayout.formSpacing }
+              ]}
+            />
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Owner Phone *</Text>
-              <TextInput
-                style={[styles.input, errors.owner_phone && styles.inputError]}
-                value={formData.owner_phone}
-                onChangeText={(value) => handleInputChange('owner_phone', value)}
-                placeholder="(555) 123-4567"
-                placeholderTextColor={Colors.gray400}
-                keyboardType="phone-pad"
-              />
-              {errors.owner_phone && <Text style={styles.errorText}>{errors.owner_phone}</Text>}
-            </View>
+            <EnhancedFormInput
+              label="Owner Phone"
+              value={formData.owner_phone}
+              onChangeText={(value) => handleInputChange('owner_phone', formatPhoneNumber(value))}
+              placeholder="(555) 123-4567"
+              leftIcon="📞"
+              keyboardType="phone-pad"
+              required
+              error={errors.owner_phone}
+              validation={(text) => ({
+                isValid: text.length >= 10,
+                message: text.length < 10 ? 'Please enter a valid phone number' : undefined
+              })}
+              containerStyle={styles.enhancedInputContainer}
+            />
           </View>
         )}
       </View>
     </ScrollView>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {
@@ -702,6 +759,11 @@ const styles = StyleSheet.create({
   listingTypeLabelSelected: {
     color: Colors.primary,
   },
+  enhancedInputContainer: {
+    marginBottom: Spacing.sm,
+  },
 });
+
+BasicInfoPage.displayName = 'BasicInfoPage';
 
 export default BasicInfoPage;

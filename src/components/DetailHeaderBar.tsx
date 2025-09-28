@@ -5,9 +5,15 @@ import {
   StyleSheet,
   TouchableOpacity,
 } from 'react-native';
-import { BlurView } from '@react-native-community/blur';
 import { useNavigation } from '@react-navigation/native';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../styles/designSystem';
+import BackIcon from './icons/BackIcon';
+import FlagIcon from './icons/FlagIcon';
+import EyeIcon from './icons/EyeIcon';
+import ShareIcon from './icons/ShareIcon';
+import HeartIcon from './HeartIcon';
+import SearchIcon from './icons/SearchIcon';
+import GiftIcon from './icons/GiftIcon';
 
 interface DetailHeaderBarProps {
   pressedButtons: Set<string>;
@@ -53,12 +59,7 @@ const DetailHeaderBar: React.FC<DetailHeaderBarProps> = ({
   return (
     <View style={styles.headerBarContainer}>
       <View style={styles.headerBarBackground} />
-      <BlurView
-        style={styles.headerBarBlur}
-        blurType="light"
-        blurAmount={20}
-        reducedTransparencyFallbackColor="rgba(255, 255, 255, 0.9)"
-      >
+      <View style={styles.headerBarBlur}>
         <TouchableOpacity 
           style={[
             styles.headerBackButton,
@@ -69,7 +70,7 @@ const DetailHeaderBar: React.FC<DetailHeaderBarProps> = ({
           onPressOut={() => handlePressOut('back')}
           activeOpacity={0.7}
         >
-          <Text style={styles.headerBackIcon}>←</Text>
+          <BackIcon size={20} color={Colors.text.primary} />
         </TouchableOpacity>
         
         <TouchableOpacity 
@@ -82,20 +83,20 @@ const DetailHeaderBar: React.FC<DetailHeaderBarProps> = ({
           onPressOut={() => handlePressOut('report')}
           activeOpacity={0.7}
         >
-          <Text style={styles.reportFlagIcon}>🚩</Text>
+          <FlagIcon size={18} color={Colors.status.error} />
         </TouchableOpacity>
         
         {/* Center Content - View Count or Claims Left */}
         {centerContent?.type === 'view_count' && (
           <View style={styles.viewCountGroup}>
-            <Text style={styles.eyeIcon}>👁</Text>
+            <EyeIcon size={14} color={Colors.primary.main} />
             <Text style={styles.viewCount}>{formatCount(centerContent.count)}</Text>
           </View>
         )}
         
         {centerContent?.type === 'claims_left' && (
           <View style={styles.claimsCountGroup}>
-            <Text style={styles.claimsIcon}>🎫</Text>
+            <GiftIcon size={14} color={Colors.text.secondary} />
             <Text style={styles.claimsCount}>{formatCount(centerContent.count)}</Text>
           </View>
         )}
@@ -114,7 +115,7 @@ const DetailHeaderBar: React.FC<DetailHeaderBarProps> = ({
               activeOpacity={0.7}
             >
               <View style={styles.headerButtonGroup}>
-                <Text style={styles.shareIcon}>↗</Text>
+                <ShareIcon size={16} color={Colors.text.primary} />
                 <Text style={styles.headerButtonCount}>{formatCount(rightContent.shareCount)}</Text>
               </View>
             </TouchableOpacity>
@@ -130,9 +131,11 @@ const DetailHeaderBar: React.FC<DetailHeaderBarProps> = ({
               activeOpacity={0.7}
             >
               <View style={styles.headerButtonGroup}>
-                <Text style={[styles.heartIcon, rightContent.isFavorited && styles.heartIconActive]}>
-                  {rightContent.isFavorited ? '♥' : '♡'}
-                </Text>
+                <HeartIcon 
+                  size={16} 
+                  color={rightContent.isFavorited ? Colors.status.error : Colors.gray400}
+                  filled={rightContent.isFavorited}
+                />
                 <Text style={styles.headerButtonCount}>{formatCount(rightContent.likeCount)}</Text>
               </View>
             </TouchableOpacity>
@@ -151,7 +154,7 @@ const DetailHeaderBar: React.FC<DetailHeaderBarProps> = ({
               onPressOut={() => handlePressOut('search')}
               activeOpacity={0.7}
             >
-              <Text style={styles.shareIcon}>🔍</Text>
+              <SearchIcon size={16} color={Colors.text.primary} />
             </TouchableOpacity>
             
             <TouchableOpacity 
@@ -164,13 +167,15 @@ const DetailHeaderBar: React.FC<DetailHeaderBarProps> = ({
               onPressOut={() => handlePressOut('favorite')}
               activeOpacity={0.7}
             >
-              <Text style={[styles.favoriteIcon, rightContent.isFavorited && styles.favoriteIconActive]}>
-                {rightContent.isFavorited ? '♥' : '♡'}
-              </Text>
+              <HeartIcon 
+                size={20} 
+                color={rightContent.isFavorited ? Colors.status.error : Colors.gray400}
+                filled={rightContent.isFavorited}
+              />
             </TouchableOpacity>
           </>
         )}
-      </BlurView>
+      </View>
     </View>
   );
 };
@@ -186,7 +191,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.15)', // Subtle dark backdrop
+    backgroundColor: 'rgba(255, 255, 255, 0.95)', // White background
     marginHorizontal: Spacing.md,
     marginTop: Spacing.sm,
     marginBottom: Spacing.sm,
@@ -205,38 +210,38 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.sm,
     overflow: 'hidden', // Ensure blur effect stays within border radius
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderColor: 'rgba(0, 0, 0, 0.1)', // Light border for white background
     shadowColor: Colors.black,
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: 2,
     },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   headerBackButton: {
     justifyContent: 'center',
     alignItems: 'center',
     minWidth: 40, // Consistent with other buttons
+    backgroundColor: 'rgba(0, 0, 0, 0.05)', // Light grey container on white background
+    borderRadius: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
   },
   headerButtonPressed: {
     transform: [{ scale: 0.95 }],
     opacity: 0.8,
-  },
-  headerBackIcon: {
-    fontSize: 20,
-    color: Colors.textPrimary,
-    fontWeight: 'bold',
+    backgroundColor: 'rgba(0, 0, 0, 0.1)', // Darker when pressed
   },
   reportFlagButton: {
     justifyContent: 'center',
     alignItems: 'center',
     minWidth: 40, // Consistent with other buttons
-  },
-  reportFlagIcon: {
-    fontSize: 18,
-    color: Colors.error,
+    backgroundColor: 'rgba(0, 0, 0, 0.05)', // Light grey container on white background
+    borderRadius: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
   },
   headerButtonGroup: {
     flexDirection: 'row',
@@ -255,10 +260,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     minWidth: 40, // Consistent with other button groups
-  },
-  eyeIcon: {
-    fontSize: 14,
-    color: Colors.primary, // Blue color for eye icon
+    backgroundColor: 'rgba(0, 0, 0, 0.05)', // Light grey container on white background
+    borderRadius: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
   },
   viewCount: {
     fontSize: 12,
@@ -270,10 +275,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     minWidth: 40, // Consistent with other button groups
-  },
-  claimsIcon: {
-    fontSize: 14,
-    color: Colors.textSecondary,
+    backgroundColor: 'rgba(0, 0, 0, 0.05)', // Light grey container on white background
+    borderRadius: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
   },
   claimsCount: {
     fontSize: 10,
@@ -284,35 +289,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     minWidth: 40, // Consistent with other buttons
-  },
-  shareIcon: {
-    fontSize: 16,
-    color: Colors.textPrimary,
-    fontWeight: 'bold',
+    backgroundColor: 'rgba(0, 0, 0, 0.05)', // Light grey container on white background
+    borderRadius: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
   },
   heartButton: {
     justifyContent: 'center',
     alignItems: 'center',
     minWidth: 40, // Consistent with other buttons
-  },
-  heartIcon: {
-    fontSize: 16,
-    color: Colors.textPrimary,
-  },
-  heartIconActive: {
-    color: Colors.error,
+    backgroundColor: 'rgba(0, 0, 0, 0.05)', // Light grey container on white background
+    borderRadius: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
   },
   favoriteButton: {
     justifyContent: 'center',
     alignItems: 'center',
     minWidth: 40, // Consistent with other buttons
-  },
-  favoriteIcon: {
-    fontSize: 20,
-    color: Colors.gray400,
-  },
-  favoriteIconActive: {
-    color: Colors.error,
+    backgroundColor: 'rgba(0, 0, 0, 0.05)', // Light grey container on white background
+    borderRadius: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
   },
 });
 
