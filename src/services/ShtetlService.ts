@@ -1,6 +1,8 @@
 // Shtetl Service for managing stores and products
 import { configService } from '../config/ConfigService';
 import { ShtetlStore, Product, CreateStoreForm, CreateProductForm, ShtetlStoreResponse, ProductResponse } from '../types/shtetl';
+import guestService from './GuestService';
+import authService from './AuthService';
 
 class ShtetlService {
   private baseUrl: string;
@@ -12,8 +14,20 @@ class ShtetlService {
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
     
+    // Get authentication headers
+    let authHeaders: Record<string, string> = {};
+    
+    if (authService.isAuthenticated()) {
+      // User is authenticated - use user token
+      authHeaders = await authService.getAuthHeaders();
+    } else if (guestService.isGuestAuthenticated()) {
+      // Guest is authenticated - use guest token
+      authHeaders = await guestService.getAuthHeadersAsync();
+    }
+
     const defaultHeaders = {
       'Content-Type': 'application/json',
+      ...authHeaders,
     };
 
     const response = await fetch(url, {
@@ -61,24 +75,21 @@ class ShtetlService {
     const queryString = queryParams.toString();
     
     try {
-      // Try the specific shtetl-stores endpoint first
-      const endpoint = `/api/v5/shtetl-stores${queryString ? `?${queryString}` : ''}`;
+      // Use the working stores endpoint directly
+      const endpoint = `/api/v5/stores${queryString ? `?${queryString}` : ''}`;
       return await this.request<ShtetlStoreResponse>(endpoint);
     } catch (error) {
-      // Fallback to regular stores endpoint if shtetl-stores doesn't exist
-      console.log('ShtetlService: Falling back to stores endpoint');
-      const fallbackEndpoint = `/api/v5/stores${queryString ? `?${queryString}` : ''}`;
-      return await this.request<ShtetlStoreResponse>(fallbackEndpoint);
+      console.error('ShtetlService: Error fetching stores:', error);
+      throw error;
     }
   }
 
   async getStore(storeId: string): Promise<{ success: boolean; data: { store: ShtetlStore }; error?: string }> {
     try {
-      return await this.request(`/api/v5/shtetl-stores/${storeId}`);
-    } catch (error) {
-      // Fallback to regular stores endpoint
-      console.log('ShtetlService: Falling back to stores endpoint for getStore');
       return await this.request(`/api/v5/stores/${storeId}`);
+    } catch (error) {
+      console.error('ShtetlService: Error fetching single store:', error);
+      throw error;
     }
   }
 

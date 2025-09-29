@@ -15,6 +15,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNavigation } from '@react-navigation/native';
 import SpecialsIcon from '../components/SpecialsIcon';
 import HeartIcon from '../components/HeartIcon';
+import DatabaseDashboardButton from '../components/DatabaseDashboardButton';
 import { Colors, Typography, Spacing, BorderRadius, Shadows, TouchTargets } from '../styles/designSystem';
 import shtetlService from '../services/ShtetlService';
 
@@ -162,6 +163,13 @@ const ProfileScreen: React.FC = () => {
       setStoreIdsLoading(true);
       setStoreIdsError(null);
 
+      // Only try to load stores if user is authenticated
+      if (!isAuthenticated && !isGuestAuthenticated) {
+        setStoreIds([]);
+        setStoreIdsError('Please login to view stores.');
+        return;
+      }
+
       const response = await shtetlService.getStores({
         limit: 50,
         sortBy: 'created_at',
@@ -190,7 +198,7 @@ const ProfileScreen: React.FC = () => {
     } finally {
       setStoreIdsLoading(false);
     }
-  }, []);
+  }, [isAuthenticated, isGuestAuthenticated]);
 
   useEffect(() => {
     loadStoreIds();
@@ -412,6 +420,15 @@ const ProfileScreen: React.FC = () => {
           <TouchableOpacity style={styles.menuItem} onPress={handleDashboard}>
             <Text style={styles.menuIcon}>📊</Text>
             <Text style={styles.menuText}>Product Dashboard</Text>
+            <Text style={styles.menuArrow}>›</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.menuItem} 
+            onPress={() => navigation.navigate('DatabaseDashboard' as never)}
+          >
+            <Text style={styles.menuIcon}>🗄️</Text>
+            <Text style={styles.menuText}>Database Dashboard</Text>
             <Text style={styles.menuArrow}>›</Text>
           </TouchableOpacity>
 
