@@ -92,6 +92,11 @@ const ListingDetailScreen: React.FC = () => {
 
   // Calculate real distance if user location is available
   const realDistance = useMemo(() => {
+    console.log('📍 DEBUG: realDistance calculation - item:', item ? 'loaded' : 'null', 'location:', location ? 'available' : 'null');
+    if (item) {
+      console.log('📍 DEBUG: item coordinates - lat:', item.latitude, 'lng:', item.longitude);
+    }
+    
     if (location && item?.latitude && item?.longitude) {
       const distance = calculateDistance(
         location.latitude,
@@ -898,6 +903,7 @@ const styles = StyleSheet.create({
     height: 280,
     borderRadius: 25,
     marginHorizontal: 0, // No margins since ScrollView handles positioning
+    backgroundColor: Colors.white, // Add solid background for shadow efficiency
     shadowColor: '#000',
     shadowOffset: {
       width: 0,

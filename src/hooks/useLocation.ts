@@ -15,7 +15,7 @@ let globalLocationState: LocationState = {
 const listeners = new Set<(state: LocationState) => void>();
 
 const notifyListeners = () => {
-  console.log('🔥 NOTIFYING LISTENERS:', { 
+
     listeners: listeners.size,
     hasLocation: !!globalLocationState.location 
   });
@@ -76,7 +76,7 @@ export const useLocation = () => {
   // Update global state and notify listeners
   const updateGlobalState = useCallback((updater: (prev: LocationState) => LocationState) => {
     const newState = updater(globalLocationState);
-    console.log('🔥 UPDATING GLOBAL STATE:', { 
+
       oldLocation: globalLocationState.location ? 'has location' : 'no location',
       newLocation: newState.location ? 'has location' : 'no location',
       listeners: listeners.size 

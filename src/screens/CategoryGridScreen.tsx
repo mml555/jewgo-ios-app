@@ -50,7 +50,7 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
     pageSize: 20,
   });
 
-  console.log('🔥 CATEGORY GRID SCREEN - categoryKey:', categoryKey, 'data.length:', data.length);
+
 
   // Handle location permission request
   const handleLocationPermissionRequest = useCallback(async () => {
@@ -82,7 +82,7 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
 
   // Apply filters and sorting to the data
   const filteredData = useMemo(() => {
-    console.log('🔥 FILTERING DATA - original data.length:', data.length, 'location:', !!location, 'filters:', filters);
+
     const filtered = data.filter(item => {
       // Distance filter - calculate real distance if location available
       if (location && item.coordinate && filters.maxDistance < 100) {
@@ -96,22 +96,19 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
         // For testing: if distance is extremely large (like iOS simulator SF to NYC),
         // don't apply distance filter to avoid filtering out all items
         if (distance > 5000) {
-          console.log('🔥 DISTANCE TOO LARGE FOR FILTERING:', distance, 'miles - skipping distance filter');
+          // Distance too large for filtering - skip
         } else if (distance > filters.maxDistance) {
-          console.log('🔥 FILTERED OUT BY DISTANCE:', item.name, 'distance:', distance, 'maxDistance:', filters.maxDistance);
           return false;
         }
       }
 
       // Rating filter
       if (filters.minRating > 0 && (!item.rating || item.rating < filters.minRating)) {
-        console.log('🔥 FILTERED OUT BY RATING:', item.name, 'rating:', item.rating, 'minRating:', filters.minRating);
         return false;
       }
 
       // Price range filter
       if (filters.priceRange !== 'any' && item.price !== filters.priceRange) {
-        console.log('🔥 FILTERED OUT BY PRICE:', item.name, 'price:', item.price, 'priceRange:', filters.priceRange);
         return false;
       }
 
@@ -119,7 +116,6 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
       if (filters.kosherLevel !== 'any') {
         const itemKosherLevel = item.kosher_level || item.kosherLevel;
         if (!itemKosherLevel || itemKosherLevel !== filters.kosherLevel) {
-          console.log('🔥 FILTERED OUT BY KOSHER LEVEL:', item.name, 'kosherLevel:', itemKosherLevel, 'filter:', filters.kosherLevel);
           return false;
         }
       }
@@ -128,7 +124,6 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
       if (filters.denomination !== 'any') {
         const itemDenomination = item.denomination;
         if (!itemDenomination || itemDenomination !== filters.denomination) {
-          console.log('🔥 FILTERED OUT BY DENOMINATION:', item.name, 'denomination:', itemDenomination, 'filter:', filters.denomination);
           return false;
         }
       }
@@ -137,98 +132,90 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
       if (filters.storeType !== 'any') {
         const itemStoreType = item.store_type || item.storeType;
         if (!itemStoreType || itemStoreType !== filters.storeType) {
-          console.log('🔥 FILTERED OUT BY STORE TYPE:', item.name, 'storeType:', itemStoreType, 'filter:', filters.storeType);
           return false;
         }
       }
 
       // Location filters
       if (filters.city && item.city && item.city.toLowerCase() !== filters.city.toLowerCase()) {
-        console.log('🔥 FILTERED OUT BY CITY:', item.name, 'city:', item.city, 'filter:', filters.city);
         return false;
       }
 
       if (filters.state && item.state && item.state.toLowerCase() !== filters.state.toLowerCase()) {
-        console.log('🔥 FILTERED OUT BY STATE:', item.name, 'state:', item.state, 'filter:', filters.state);
         return false;
       }
 
       // Amenity filters
       if (filters.hasParking && !item.hasParking) {
-        console.log('🔥 FILTERED OUT BY PARKING:', item.name, 'hasParking:', item.hasParking);
         return false;
       }
 
       if (filters.hasWifi && !item.hasWifi) {
-        console.log('🔥 FILTERED OUT BY WIFI:', item.name, 'hasWifi:', item.hasWifi);
         return false;
       }
 
       if (filters.hasAccessibility && !item.hasAccessibility) {
-        console.log('🔥 FILTERED OUT BY ACCESSIBILITY:', item.name, 'hasAccessibility:', item.hasAccessibility);
         return false;
       }
 
       if (filters.hasDelivery && !item.hasDelivery) {
-        console.log('🔥 FILTERED OUT BY DELIVERY:', item.name, 'hasDelivery:', item.hasDelivery);
         return false;
       }
 
       // Additional amenity filters
       if (filters.hasPrivateRooms && !item.hasPrivateRooms) {
-        console.log('🔥 FILTERED OUT BY PRIVATE ROOMS:', item.name, 'hasPrivateRooms:', item.hasPrivateRooms);
         return false;
       }
 
       if (filters.hasHeating && !item.hasHeating) {
-        console.log('🔥 FILTERED OUT BY HEATING:', item.name, 'hasHeating:', item.hasHeating);
+
         return false;
       }
 
       if (filters.hasAirConditioning && !item.hasAirConditioning) {
-        console.log('🔥 FILTERED OUT BY AIR CONDITIONING:', item.name, 'hasAirConditioning:', item.hasAirConditioning);
+
         return false;
       }
 
       if (filters.hasKosherKitchen && !item.hasKosherKitchen) {
-        console.log('🔥 FILTERED OUT BY KOSHER KITCHEN:', item.name, 'hasKosherKitchen:', item.hasKosherKitchen);
+
         return false;
       }
 
       if (filters.hasMikvah && !item.hasMikvah) {
-        console.log('🔥 FILTERED OUT BY MIKVAH:', item.name, 'hasMikvah:', item.hasMikvah);
+
         return false;
       }
 
       if (filters.hasLibrary && !item.hasLibrary) {
-        console.log('🔥 FILTERED OUT BY LIBRARY:', item.name, 'hasLibrary:', item.hasLibrary);
+
         return false;
       }
 
       if (filters.hasYouthPrograms && !item.hasYouthPrograms) {
-        console.log('🔥 FILTERED OUT BY YOUTH PROGRAMS:', item.name, 'hasYouthPrograms:', item.hasYouthPrograms);
+
         return false;
       }
 
       if (filters.hasAdultEducation && !item.hasAdultEducation) {
-        console.log('🔥 FILTERED OUT BY ADULT EDUCATION:', item.name, 'hasAdultEducation:', item.hasAdultEducation);
+
         return false;
       }
 
       if (filters.hasSocialEvents && !item.hasSocialEvents) {
-        console.log('🔥 FILTERED OUT BY SOCIAL EVENTS:', item.name, 'hasSocialEvents:', item.hasSocialEvents);
+
         return false;
       }
 
       // Open now filter
       if (filters.openNow && !item.isOpen) {
-        console.log('🔥 FILTERED OUT BY OPEN NOW:', item.name, 'isOpen:', item.isOpen);
+
         return false;
       }
 
       // Weekend filter
       if (filters.openWeekends && !item.openWeekends) {
-        console.log('🔥 FILTERED OUT BY WEEKEND:', item.name, 'openWeekends:', item.openWeekends);
+
         return false;
       }
 
@@ -237,7 +224,7 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
 
     // Auto-sort by distance when location is available
     if (location) {
-      console.log('🔥 SORTING BY DISTANCE - location available');
+
       filtered.sort((a, b) => {
         // If both items have coordinates, sort by distance
         if (a.coordinate && b.coordinate) {
@@ -265,7 +252,7 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
       });
     }
 
-    console.log('🔥 FILTERED AND SORTED DATA - filtered.length:', filtered.length);
+
     return filtered;
   }, [data, filters, location]);
 

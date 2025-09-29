@@ -121,6 +121,7 @@ const styles = StyleSheet.create({
     width: screenWidth - (Spacing.md * 2), // Full width of the ScrollView
     height: '100%',
     marginHorizontal: 0, // No margins since ScrollView handles positioning
+    backgroundColor: Colors.white, // Add solid background for shadow efficiency
     shadowColor: '#000',
     shadowOffset: {
       width: 0,

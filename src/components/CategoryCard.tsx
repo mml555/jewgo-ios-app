@@ -42,7 +42,7 @@ const CategoryCard: React.FC<CategoryCardProps> = memo(({ item, categoryKey }) =
 
   // Calculate real distance if user location is available
   const realDistance = useMemo(() => {
-    console.log('🔥 CATEGORY CARD LOCATION CHECK:', `hasLocation: ${!!location}, hasItemCoordinate: ${!!item.coordinate}, locationData: ${location ? `${location.latitude}, ${location.longitude}` : 'none'}`);
+
     
     if (location && item.coordinate && item.coordinate.latitude && item.coordinate.longitude) {
       console.log('📍 CALCULATING DISTANCE:', `userLocation: ${location.latitude}, ${location.longitude}, businessLocation: ${item.coordinate.latitude}, ${item.coordinate.longitude}, businessName: ${item.title}`);

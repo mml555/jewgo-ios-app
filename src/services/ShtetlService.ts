@@ -65,15 +65,21 @@ class ShtetlService {
       const endpoint = `/api/v5/shtetl-stores${queryString ? `?${queryString}` : ''}`;
       return await this.request<ShtetlStoreResponse>(endpoint);
     } catch (error) {
-      // Fallback to entities endpoint if shtetl-stores doesn't exist
-      console.log('ShtetlService: Falling back to entities endpoint');
-      const fallbackEndpoint = `/api/v5/entities?entityType=shtetl${queryString ? `&${queryString}` : ''}`;
+      // Fallback to regular stores endpoint if shtetl-stores doesn't exist
+      console.log('ShtetlService: Falling back to stores endpoint');
+      const fallbackEndpoint = `/api/v5/stores${queryString ? `?${queryString}` : ''}`;
       return await this.request<ShtetlStoreResponse>(fallbackEndpoint);
     }
   }
 
   async getStore(storeId: string): Promise<{ success: boolean; data: { store: ShtetlStore }; error?: string }> {
-    return this.request(`/api/v5/shtetl-stores/${storeId}`);
+    try {
+      return await this.request(`/api/v5/shtetl-stores/${storeId}`);
+    } catch (error) {
+      // Fallback to regular stores endpoint
+      console.log('ShtetlService: Falling back to stores endpoint for getStore');
+      return await this.request(`/api/v5/stores/${storeId}`);
+    }
   }
 
   async createStore(storeData: CreateStoreForm): Promise<{ success: boolean; data: { store: ShtetlStore }; error?: string }> {

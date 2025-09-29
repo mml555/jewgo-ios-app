@@ -209,6 +209,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-evenly', // Even spacing between all elements
     paddingHorizontal: Spacing.sm,
     overflow: 'hidden', // Ensure blur effect stays within border radius
+    backgroundColor: 'rgba(255, 255, 255, 0.9)', // Add solid background for shadow efficiency
     borderWidth: 1,
     borderColor: 'rgba(0, 0, 0, 0.1)', // Light border for white background
     shadowColor: Colors.black,
