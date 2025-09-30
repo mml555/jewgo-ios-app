@@ -75,9 +75,29 @@ class ShtetlService {
     const queryString = queryParams.toString();
     
     try {
-      // Use the working stores endpoint directly
-      const endpoint = `/api/v5/stores${queryString ? `?${queryString}` : ''}`;
-      return await this.request<ShtetlStoreResponse>(endpoint);
+      // Use the working stores endpoint directly (remove /api/v5 prefix since it's in baseUrl)
+      const endpoint = `/stores${queryString ? `?${queryString}` : ''}`;
+      const response = await this.request<any>(endpoint);
+      
+      // Transform the API response to match the expected interface
+      // API returns data.entities but frontend expects data.stores
+      if (response.success && response.data) {
+        const transformedResponse: ShtetlStoreResponse = {
+          success: response.success,
+          data: {
+            stores: response.data.entities || [],
+            pagination: response.data.pagination || {
+              page: 1,
+              limit: 20,
+              total: 0,
+              hasMore: false
+            }
+          }
+        };
+        return transformedResponse;
+      }
+      
+      return response;
     } catch (error) {
       console.error('ShtetlService: Error fetching stores:', error);
       throw error;
@@ -86,7 +106,21 @@ class ShtetlService {
 
   async getStore(storeId: string): Promise<{ success: boolean; data: { store: ShtetlStore }; error?: string }> {
     try {
-      return await this.request(`/api/v5/stores/${storeId}`);
+      const response = await this.request<any>(`/stores/${storeId}`);
+      
+      // Transform the API response to match the expected interface
+      // API returns data.entity but frontend expects data.store
+      if (response.success && response.data) {
+        const transformedResponse = {
+          success: response.success,
+          data: {
+            store: response.data.entity
+          }
+        };
+        return transformedResponse;
+      }
+      
+      return response;
     } catch (error) {
       console.error('ShtetlService: Error fetching single store:', error);
       throw error;
@@ -94,21 +128,49 @@ class ShtetlService {
   }
 
   async createStore(storeData: CreateStoreForm): Promise<{ success: boolean; data: { store: ShtetlStore }; error?: string }> {
-    return this.request(`/api/v5/shtetl-stores`, {
+    const response = await this.request<any>(`/stores`, {
       method: 'POST',
       body: JSON.stringify(storeData),
     });
+    
+    // Transform the API response to match the expected interface
+    // API returns data.entity but frontend expects data.store
+    if (response.success && response.data) {
+      const transformedResponse = {
+        success: response.success,
+        data: {
+          store: response.data.entity
+        }
+      };
+      return transformedResponse;
+    }
+    
+    return response;
   }
 
   async updateStore(storeId: string, updateData: Partial<CreateStoreForm>): Promise<{ success: boolean; data: { store: ShtetlStore }; error?: string }> {
-    return this.request(`/api/v5/shtetl-stores/${storeId}`, {
+    const response = await this.request<any>(`/stores/${storeId}`, {
       method: 'PUT',
       body: JSON.stringify(updateData),
     });
+    
+    // Transform the API response to match the expected interface
+    // API returns data.entity but frontend expects data.store
+    if (response.success && response.data) {
+      const transformedResponse = {
+        success: response.success,
+        data: {
+          store: response.data.entity
+        }
+      };
+      return transformedResponse;
+    }
+    
+    return response;
   }
 
   async deleteStore(storeId: string): Promise<{ success: boolean; message: string; error?: string }> {
-    return this.request(`/api/v5/shtetl-stores/${storeId}`, {
+    return this.request(`/stores/${storeId}`, {
       method: 'DELETE',
     });
   }
@@ -128,7 +190,7 @@ class ShtetlService {
     }
 
     const queryString = queryParams.toString();
-    const endpoint = `/api/v5/shtetl-stores/${storeId}/reviews${queryString ? `?${queryString}` : ''}`;
+    const endpoint = `/shtetl-stores/${storeId}/reviews${queryString ? `?${queryString}` : ''}`;
     
     return this.request(endpoint);
   }
@@ -138,7 +200,7 @@ class ShtetlService {
     title: string;
     content: string;
   }): Promise<{ success: boolean; data: { review: any }; error?: string }> {
-    return this.request(`/api/v5/shtetl-stores/${storeId}/reviews`, {
+    return this.request(`/shtetl-stores/${storeId}/reviews`, {
       method: 'POST',
       body: JSON.stringify(reviewData),
     });
@@ -168,31 +230,31 @@ class ShtetlService {
     }
 
     const queryString = queryParams.toString();
-    const endpoint = `/api/v5/shtetl-products/stores/${storeId}/products${queryString ? `?${queryString}` : ''}`;
+    const endpoint = `/shtetl-products/stores/${storeId}/products${queryString ? `?${queryString}` : ''}`;
     
     return this.request<ProductResponse>(endpoint);
   }
 
   async getProduct(productId: string): Promise<{ success: boolean; data: { product: Product }; error?: string }> {
-    return this.request(`/api/v5/shtetl-products/${productId}`);
+    return this.request(`/shtetl-products/${productId}`);
   }
 
   async createProduct(storeId: string, productData: CreateProductForm): Promise<{ success: boolean; data: { product: Product }; error?: string }> {
-    return this.request(`/api/v5/shtetl-products/stores/${storeId}/products`, {
+    return this.request(`/shtetl-products/stores/${storeId}/products`, {
       method: 'POST',
       body: JSON.stringify(productData),
     });
   }
 
   async updateProduct(productId: string, updateData: Partial<CreateProductForm>): Promise<{ success: boolean; data: { product: Product }; error?: string }> {
-    return this.request(`/api/v5/shtetl-products/${productId}`, {
+    return this.request(`/shtetl-products/${productId}`, {
       method: 'PUT',
       body: JSON.stringify(updateData),
     });
   }
 
   async deleteProduct(productId: string): Promise<{ success: boolean; message: string; error?: string }> {
-    return this.request(`/api/v5/shtetl-products/${productId}`, {
+    return this.request(`/shtetl-products/${productId}`, {
       method: 'DELETE',
     });
   }
@@ -222,7 +284,7 @@ class ShtetlService {
     });
 
     const queryString = queryParams.toString();
-    const endpoint = `/api/v5/shtetl-products/search?${queryString}`;
+    const endpoint = `/shtetl-products/search?${queryString}`;
     
     return this.request(endpoint);
   }

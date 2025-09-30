@@ -9,7 +9,10 @@ export interface CategoryItem {
   imageUrl: string;
   category: string;
   rating?: number;
-  // Removed mock distance field - distance calculated from real coordinates
+  // Location coordinates - directly from API response
+  latitude?: number;
+  longitude?: number;
+  // Legacy coordinate structure for backward compatibility
   coordinate?: {
     latitude: number;
     longitude: number;
@@ -23,6 +26,13 @@ export interface CategoryItem {
   hasWifi?: boolean;
   hasAccessibility?: boolean;
   hasDelivery?: boolean;
+  // Additional fields from API response
+  entity_type?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  review_count?: number;
+  image_url?: string;
 }
 
 interface UseCategoryDataOptions {

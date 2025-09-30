@@ -1,6 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import DeviceInfo from 'react-native-device-info';
 import { configService } from '../config/ConfigService';
+
+// Optional DeviceInfo import to prevent crashes
+let DeviceInfo: any = null;
+try {
+  DeviceInfo = require('react-native-device-info');
+} catch (error) {
+  console.warn('DeviceInfo not available, using fallback values');
+}
 
 export interface GuestUser {
   id: string;
@@ -69,11 +76,14 @@ class GuestService {
 
   async createGuestSession(): Promise<GuestSession> {
     try {
-      console.log('✅ Creating guest session...');
+      console.log('🔐 GuestService: Creating guest session...');
       const deviceInfo = await this.getDeviceInfo();
+      console.log('🔐 GuestService: Device info:', deviceInfo);
       
-      // Use 127.0.0.1 instead of localhost for iOS simulator compatibility
-      const apiUrl = 'http://127.0.0.1:3001/api/v5';
+      // Use config service for API URL
+      const config = configService.getConfig();
+      const apiUrl = config.apiBaseUrl;
+      console.log('🔐 GuestService: API URL:', apiUrl);
       
       const response = await fetch(`${apiUrl}/guest/create`, {
         method: 'POST',
@@ -85,10 +95,12 @@ class GuestService {
 
       if (!response.ok) {
         const errorData = await response.json();
+        console.error('🔐 GuestService: API Error:', errorData);
         throw new Error(errorData.error || 'Failed to create guest session');
       }
 
       const data = await response.json();
+      console.log('🔐 GuestService: API Response:', data);
       const guestSession = data.data;
 
       // Store guest session
@@ -96,17 +108,19 @@ class GuestService {
       await AsyncStorage.setItem(this.GUEST_SESSION_KEY, JSON.stringify(guestSession));
       
       this.guestSession = guestSession;
+      console.log('🔐 GuestService: Guest session created successfully:', guestSession.guestUser.id);
       return guestSession;
 
     } catch (error) {
-      console.error('Create guest session error:', error);
+      console.error('🔐 GuestService: Create guest session error:', error);
       throw error;
     }
   }
 
   async validateSession(token: string): Promise<boolean> {
     try {
-      const apiUrl = 'http://127.0.0.1:3001/api/v5';
+      const config = configService.getConfig();
+      const apiUrl = config.apiBaseUrl;
       const response = await fetch(`${apiUrl}/guest/validate`, {
         method: 'POST',
         headers: {
@@ -135,7 +149,8 @@ class GuestService {
         return false;
       }
 
-      const apiUrl = 'http://127.0.0.1:3001/api/v5';
+      const config = configService.getConfig();
+      const apiUrl = config.apiBaseUrl;
       const response = await fetch(`${apiUrl}/guest/extend`, {
         method: 'POST',
         headers: {
@@ -157,7 +172,8 @@ class GuestService {
     try {
       const token = await this.getGuestToken();
       if (token) {
-        const apiUrl = 'http://127.0.0.1:3001/api/v5';
+        const config = configService.getConfig();
+        const apiUrl = config.apiBaseUrl;
         await fetch(`${apiUrl}/guest/revoke`, {
           method: 'DELETE',
           headers: {
@@ -234,7 +250,8 @@ class GuestService {
         throw new Error('No guest session found');
       }
 
-      const apiUrl = 'http://127.0.0.1:3001/api/v5';
+      const config = configService.getConfig();
+      const apiUrl = config.apiBaseUrl;
       const response = await fetch(`${apiUrl}/guest/convert`, {
         method: 'POST',
         headers: {
@@ -273,11 +290,15 @@ class GuestService {
       let model = 'simulator';
       let systemVersion = '17.0';
 
-      try {
-        platform = DeviceInfo.getPlatform();
-        model = await DeviceInfo.getModel();
-        systemVersion = await DeviceInfo.getSystemVersion();
-      } catch (deviceError) {
+      if (DeviceInfo) {
+        try {
+          platform = DeviceInfo.getPlatform();
+          model = await DeviceInfo.getModel();
+          systemVersion = await DeviceInfo.getSystemVersion();
+        } catch (deviceError) {
+          console.log('DeviceInfo not available, using fallback values');
+        }
+      } else {
         console.log('DeviceInfo not available, using fallback values');
       }
 

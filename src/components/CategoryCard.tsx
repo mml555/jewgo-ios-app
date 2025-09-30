@@ -44,14 +44,14 @@ const CategoryCard: React.FC<CategoryCardProps> = memo(({ item, categoryKey }) =
   const realDistance = useMemo(() => {
 
     
-    if (location && item.coordinate && item.coordinate.latitude && item.coordinate.longitude) {
-      console.log('📍 CALCULATING DISTANCE:', `userLocation: ${location.latitude}, ${location.longitude}, businessLocation: ${item.coordinate.latitude}, ${item.coordinate.longitude}, businessName: ${item.title}`);
+    if (location && item.latitude && item.longitude) {
+      console.log('📍 CALCULATING DISTANCE:', `userLocation: ${location.latitude}, ${location.longitude}, businessLocation: ${item.latitude}, ${item.longitude}, businessName: ${item.title}`);
       
       const distance = calculateDistance(
         location.latitude,
         location.longitude,
-        Number(item.coordinate.latitude),
-        Number(item.coordinate.longitude)
+        Number(item.latitude),
+        Number(item.longitude)
       );
       
       console.log('📍 DISTANCE RESULT:', `distance: ${distance.toFixed(1)} miles, businessName: ${item.title}, userLocation: San Francisco (iOS Simulator), businessLocation: NYC Area`);
@@ -65,9 +65,9 @@ const CategoryCard: React.FC<CategoryCardProps> = memo(({ item, categoryKey }) =
       
       return distance;
     }
-    console.log('📍 No location or coordinates available for card:', `hasLocation: ${!!location}, hasItemCoordinate: ${!!item.coordinate}, hasZipCode: ${!!item.zip_code}, zipCode: ${item.zip_code}, hasPrice: ${!!item.price}, price: ${item.price}`);
+    console.log('📍 No location or coordinates available for card:', `hasLocation: ${!!location}, hasItemLat: ${!!item.latitude}, hasItemLng: ${!!item.longitude}, hasZipCode: ${!!item.zip_code}, zipCode: ${item.zip_code}, hasPrice: ${!!item.price}, price: ${item.price}`);
     return null; // Return null to trigger zipcode fallback, not mock distance
-  }, [location, item.coordinate]);
+  }, [location, item.latitude, item.longitude]);
 
   const handlePress = () => {
     (navigation as any).navigate('ListingDetail', {
@@ -261,7 +261,7 @@ const styles = StyleSheet.create({
   },
   ratingStar: {
     fontSize: 14,
-    color: Colors.primary,
+    color: Colors.primary.main,
     marginRight: Spacing.xs,
   },
   ratingText: {

@@ -176,13 +176,12 @@ const AmenitiesServicesPage: React.FC<AmenitiesServicesPageProps> = ({
                   <View style={styles.amenityHeader}>
                     <Text style={styles.amenityIcon}>{amenity.icon}</Text>
                     <View style={[
-                      styles.toggleSwitch,
-                      amenity.enabled && styles.toggleSwitchActive
+                      styles.checkbox,
+                      amenity.enabled && styles.checkboxChecked
                     ]}>
-                      <View style={[
-                        styles.toggleThumb,
-                        amenity.enabled && styles.toggleThumbActive
-                      ]} />
+                      {amenity.enabled && (
+                        <Text style={styles.checkmark}>✓</Text>
+                      )}
                     </View>
                   </View>
                   <Text style={[
@@ -223,13 +222,12 @@ const AmenitiesServicesPage: React.FC<AmenitiesServicesPageProps> = ({
                   <View style={styles.serviceHeader}>
                     <Text style={styles.serviceIcon}>{service.icon}</Text>
                     <View style={[
-                      styles.toggleSwitch,
-                      service.enabled && styles.toggleSwitchActive
+                      styles.checkbox,
+                      service.enabled && styles.checkboxChecked
                     ]}>
-                      <View style={[
-                        styles.toggleThumb,
-                        service.enabled && styles.toggleThumbActive
-                      ]} />
+                      {service.enabled && (
+                        <Text style={styles.checkmark}>✓</Text>
+                      )}
                     </View>
                   </View>
                   <Text style={[
@@ -373,26 +371,24 @@ const styles = StyleSheet.create({
   serviceDescriptionSelected: {
     color: Colors.primary.dark,
   },
-  toggleSwitch: {
-    width: 50,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: Colors.border.primary,
-    justifyContent: 'center',
-    paddingHorizontal: 2,
-  },
-  toggleSwitchActive: {
-    backgroundColor: Colors.primary.main,
-  },
-  toggleThumb: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: Colors.border.primary,
     backgroundColor: Colors.background.primary,
-    alignSelf: 'flex-start',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  toggleThumbActive: {
-    alignSelf: 'flex-end',
+  checkboxChecked: {
+    backgroundColor: Colors.primary.main,
+    borderColor: Colors.primary.main,
+  },
+  checkmark: {
+    color: Colors.background.primary,
+    fontSize: 12,
+    fontWeight: 'bold',
   },
 });
 

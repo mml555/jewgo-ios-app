@@ -88,6 +88,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (guestService.isGuestAuthenticated()) {
         const guest = guestService.getGuestUser();
         setGuestUser(guest);
+      } else if (!authService.isAuthenticated()) {
+        // If no authentication is available, create a guest session automatically
+        console.log('🔐 AuthContext: No authentication found, creating guest session...');
+        try {
+          await createGuestSession();
+          console.log('🔐 AuthContext: Guest session created successfully');
+        } catch (error) {
+          console.error('🔐 AuthContext: Failed to create guest session:', error);
+        }
       }
     } catch (error) {
       console.error('Auth initialization error:', error);

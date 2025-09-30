@@ -85,12 +85,12 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
 
     const filtered = data.filter(item => {
       // Distance filter - calculate real distance if location available
-      if (location && item.coordinate && filters.maxDistance < 100) {
+      if (location && item.latitude && item.longitude && filters.maxDistance < 100) {
         const distance = calculateDistance(
           location.latitude,
           location.longitude,
-          item.coordinate.latitude,
-          item.coordinate.longitude
+          item.latitude,
+          item.longitude
         );
         
         // For testing: if distance is extremely large (like iOS simulator SF to NYC),
@@ -227,25 +227,25 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
 
       filtered.sort((a, b) => {
         // If both items have coordinates, sort by distance
-        if (a.coordinate && b.coordinate) {
+        if (a.latitude && a.longitude && b.latitude && b.longitude) {
           const distanceA = calculateDistance(
             location.latitude,
             location.longitude,
-            a.coordinate.latitude,
-            a.coordinate.longitude
+            a.latitude,
+            a.longitude
           );
           const distanceB = calculateDistance(
             location.latitude,
             location.longitude,
-            b.coordinate.latitude,
-            b.coordinate.longitude
+            b.latitude,
+            b.longitude
           );
           return distanceA - distanceB; // Sort closest first
         }
         
         // If only one has coordinates, prioritize it
-        if (a.coordinate && !b.coordinate) return -1;
-        if (!a.coordinate && b.coordinate) return 1;
+        if (a.latitude && a.longitude && (!b.latitude || !b.longitude)) return -1;
+        if ((!a.latitude || !a.longitude) && b.latitude && b.longitude) return 1;
         
         // If neither has coordinates, maintain original order
         return 0;

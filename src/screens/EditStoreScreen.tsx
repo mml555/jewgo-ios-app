@@ -10,7 +10,6 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -281,15 +280,57 @@ const EditStoreScreen: React.FC = () => {
               <Text style={styles.sectionTitle}>Services</Text>
               <View style={styles.serviceRow}>
                 <Text style={styles.serviceLabel}>Delivery Available</Text>
-                <Switch value={formData.deliveryAvailable} onValueChange={value => handleInputChange('deliveryAvailable', value)} />
+                <TouchableOpacity
+                  style={[
+                    styles.checkbox,
+                    formData.deliveryAvailable && styles.checkboxChecked
+                  ]}
+                  onPress={() => handleInputChange('deliveryAvailable', !formData.deliveryAvailable)}
+                  activeOpacity={0.7}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: formData.deliveryAvailable }}
+                  accessibilityLabel="Toggle delivery available"
+                >
+                  {formData.deliveryAvailable && (
+                    <Text style={styles.checkmark}>✓</Text>
+                  )}
+                </TouchableOpacity>
               </View>
               <View style={styles.serviceRow}>
                 <Text style={styles.serviceLabel}>Pickup Available</Text>
-                <Switch value={formData.pickupAvailable} onValueChange={value => handleInputChange('pickupAvailable', value)} />
+                <TouchableOpacity
+                  style={[
+                    styles.checkbox,
+                    formData.pickupAvailable && styles.checkboxChecked
+                  ]}
+                  onPress={() => handleInputChange('pickupAvailable', !formData.pickupAvailable)}
+                  activeOpacity={0.7}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: formData.pickupAvailable }}
+                  accessibilityLabel="Toggle pickup available"
+                >
+                  {formData.pickupAvailable && (
+                    <Text style={styles.checkmark}>✓</Text>
+                  )}
+                </TouchableOpacity>
               </View>
               <View style={styles.serviceRow}>
                 <Text style={styles.serviceLabel}>Shipping Available</Text>
-                <Switch value={formData.shippingAvailable} onValueChange={value => handleInputChange('shippingAvailable', value)} />
+                <TouchableOpacity
+                  style={[
+                    styles.checkbox,
+                    formData.shippingAvailable && styles.checkboxChecked
+                  ]}
+                  onPress={() => handleInputChange('shippingAvailable', !formData.shippingAvailable)}
+                  activeOpacity={0.7}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: formData.shippingAvailable }}
+                  accessibilityLabel="Toggle shipping available"
+                >
+                  {formData.shippingAvailable && (
+                    <Text style={styles.checkmark}>✓</Text>
+                  )}
+                </TouchableOpacity>
               </View>
             </View>
           </View>
@@ -470,6 +511,25 @@ const styles = StyleSheet.create({
   serviceLabel: {
     ...Typography.body1,
     color: Colors.gray900,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: Colors.gray300,
+    backgroundColor: Colors.background.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: Colors.accent,
+    borderColor: Colors.accent,
+  },
+  checkmark: {
+    color: Colors.background.primary,
+    fontSize: 12,
+    fontWeight: 'bold',
   },
 });
 

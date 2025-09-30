@@ -320,6 +320,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     borderWidth: 2,
     borderColor: Colors.primary.main,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   buttonDisabled: {
     backgroundColor: Colors.gray300,

@@ -18,6 +18,7 @@ import HeartIcon from '../components/HeartIcon';
 import DatabaseDashboardButton from '../components/DatabaseDashboardButton';
 import { Colors, Typography, Spacing, BorderRadius, Shadows, TouchTargets } from '../styles/designSystem';
 import shtetlService from '../services/ShtetlService';
+import { ShtetlStore } from '../types/shtetl';
 
 const ProfileScreen: React.FC = () => {
   const { 
@@ -39,9 +40,9 @@ const ProfileScreen: React.FC = () => {
     reviews: 0,
     entities: 0,
   });
-  const [storeIds, setStoreIds] = useState<string[]>([]);
-  const [storeIdsLoading, setStoreIdsLoading] = useState(false);
-  const [storeIdsError, setStoreIdsError] = useState<string | null>(null);
+  const [stores, setStores] = useState<ShtetlStore[]>([]);
+  const [storesLoading, setStoresLoading] = useState(false);
+  const [storesError, setStoresError] = useState<string | null>(null);
   const [showStoreSelector, setShowStoreSelector] = useState(false);
   const [showStoreActions, setShowStoreActions] = useState(false);
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
@@ -158,15 +159,15 @@ const ProfileScreen: React.FC = () => {
     Alert.alert('Settings', 'App settings coming soon!');
   };
 
-  const loadStoreIds = useCallback(async () => {
+  const loadStores = useCallback(async () => {
     try {
-      setStoreIdsLoading(true);
-      setStoreIdsError(null);
+      setStoresLoading(true);
+      setStoresError(null);
 
       // Only try to load stores if user is authenticated
       if (!isAuthenticated && !isGuestAuthenticated) {
-        setStoreIds([]);
-        setStoreIdsError('Please login to view stores.');
+        setStores([]);
+        setStoresError('Please login to view stores.');
         return;
       }
 
@@ -177,41 +178,44 @@ const ProfileScreen: React.FC = () => {
       });
 
       if (response.success && response.data?.stores) {
-        const ids = response.data.stores
-          .map(store => store.id)
-          .filter((id): id is string => Boolean(id));
+        const storeList = response.data.stores;
 
-        if (ids.length === 0) {
-          setStoreIds([]);
-          setStoreIdsError('No stores available yet.');
+        if (storeList.length === 0) {
+          setStores([]);
+          setStoresError('No stores available yet.');
         } else {
-          setStoreIds(ids);
+          setStores(storeList);
         }
       } else {
-        setStoreIds([]);
-        setStoreIdsError(response.error || 'Unable to load stores.');
+        setStores([]);
+        setStoresError(response.error || 'Unable to load stores.');
       }
     } catch (error) {
-      console.error('Error loading store IDs:', error);
-      setStoreIdsError('Unable to load stores. Showing sample data.');
-      setStoreIds(['demo-store', 'sample-store-1', 'sample-store-2']);
+      console.error('Error loading stores:', error);
+      setStoresError('Unable to load stores. Showing sample data.');
+      // Create sample stores with names for demo
+      setStores([
+        { id: 'demo-store', name: 'Demo Store', description: 'Sample store for demonstration', ownerId: 'demo', ownerName: 'Demo Owner', address: '123 Demo St', city: 'Demo City', state: 'DC', zipCode: '12345', isActive: true, isVerified: false, rating: 4.5, reviewCount: 10, productCount: 5, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), storeType: 'general', deliveryAvailable: true, pickupAvailable: true, shippingAvailable: false },
+        { id: 'sample-store-1', name: 'Sample Store 1', description: 'Another sample store', ownerId: 'demo', ownerName: 'Demo Owner', address: '456 Sample Ave', city: 'Sample City', state: 'DC', zipCode: '12346', isActive: true, isVerified: true, rating: 4.2, reviewCount: 8, productCount: 3, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), storeType: 'food', deliveryAvailable: false, pickupAvailable: true, shippingAvailable: true },
+        { id: 'sample-store-2', name: 'Sample Store 2', description: 'Third sample store', ownerId: 'demo', ownerName: 'Demo Owner', address: '789 Example Blvd', city: 'Example City', state: 'DC', zipCode: '12347', isActive: true, isVerified: false, rating: 4.8, reviewCount: 15, productCount: 7, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), storeType: 'clothing', deliveryAvailable: true, pickupAvailable: false, shippingAvailable: true }
+      ]);
     } finally {
-      setStoreIdsLoading(false);
+      setStoresLoading(false);
     }
   }, [isAuthenticated, isGuestAuthenticated]);
 
   useEffect(() => {
-    loadStoreIds();
-  }, [loadStoreIds]);
+    loadStores();
+  }, [loadStores]);
 
   const handleDashboard = () => {
-    if (storeIdsLoading) {
+    if (storesLoading) {
       Alert.alert('Loading Stores', 'Store dashboards are still loading. Please try again in a moment.');
       return;
     }
 
-    if (storeIds.length === 0) {
-      Alert.alert('No Stores', storeIdsError || 'No stores are available yet.');
+    if (stores.length === 0) {
+      Alert.alert('No Stores', storesError || 'No stores are available yet.');
       return;
     }
 
@@ -456,31 +460,31 @@ const ProfileScreen: React.FC = () => {
         <View style={styles.menuContainer}>
           <View style={styles.storeHeader}>
             <Text style={styles.sectionTitle}>Store Dashboards</Text>
-            <TouchableOpacity style={styles.storeRefreshButton} onPress={loadStoreIds}>
+            <TouchableOpacity style={styles.storeRefreshButton} onPress={loadStores}>
               <Text style={styles.storeRefreshText}>Refresh</Text>
             </TouchableOpacity>
           </View>
 
-          {storeIdsError && storeIds.length > 0 && (
-            <Text style={styles.storeInfoText}>{storeIdsError}</Text>
+          {storesError && stores.length > 0 && (
+            <Text style={styles.storeInfoText}>{storesError}</Text>
           )}
 
-          {storeIdsLoading ? (
+          {storesLoading ? (
             <View style={styles.storeLoadingRow}>
               <ActivityIndicator size="small" color={Colors.primary.main} />
               <Text style={styles.storeLoadingText}>Loading stores...</Text>
             </View>
-          ) : storeIds.length > 0 ? (
-            storeIds.map(storeId => (
+          ) : stores.length > 0 ? (
+            stores.map(store => (
               <TouchableOpacity
-                key={storeId}
+                key={store.id}
                 style={styles.storeItem}
-                onPress={() => handleStoreSelect(storeId)}
+                onPress={() => handleStoreSelect(store.id)}
               >
                 <Text style={styles.menuIcon}>🏪</Text>
                 <View style={styles.storeItemContent}>
-                  <Text style={styles.menuText}>Store ID</Text>
-                  <Text style={styles.storeIdValue}>{storeId}</Text>
+                  <Text style={styles.menuText}>{store.name}</Text>
+                  <Text style={styles.storeIdValue}>{store.storeType} • {store.city}, {store.state}</Text>
                 </View>
                 <Text style={styles.menuArrow}>›</Text>
               </TouchableOpacity>
@@ -488,7 +492,7 @@ const ProfileScreen: React.FC = () => {
           ) : (
             <View style={styles.storeEmptyState}>
               <Text style={styles.storeEmptyText}>
-                {storeIdsError || 'No stores found. Create a store to view dashboards.'}
+                {storesError || 'No stores found. Create a store to view dashboards.'}
               </Text>
             </View>
           )}
@@ -559,13 +563,16 @@ const ProfileScreen: React.FC = () => {
             <Text style={styles.storeModalTitle}>Select a store</Text>
 
             <ScrollView style={styles.storeModalList}>
-              {storeIds.map(storeId => (
+              {stores.map(store => (
                 <TouchableOpacity
-                  key={storeId}
+                  key={store.id}
                   style={styles.storeModalItem}
-                  onPress={() => handleStoreSelect(storeId)}
+                  onPress={() => handleStoreSelect(store.id)}
                 >
-                  <Text style={styles.storeModalItemText}>{storeId}</Text>
+                  <View style={styles.storeModalItemContent}>
+                    <Text style={styles.storeModalItemText}>{store.name}</Text>
+                    <Text style={styles.storeModalItemSubtext}>{store.storeType} • {store.city}, {store.state}</Text>
+                  </View>
                   <Text style={styles.storeModalItemArrow}>›</Text>
                 </TouchableOpacity>
               ))}
@@ -1011,9 +1018,18 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     backgroundColor: Colors.gray50,
   },
+  storeModalItemContent: {
+    flex: 1,
+  },
   storeModalItemText: {
     fontSize: 16,
     color: Colors.gray900,
+    fontWeight: '500',
+  },
+  storeModalItemSubtext: {
+    fontSize: 14,
+    color: Colors.gray600,
+    marginTop: 2,
   },
   storeModalItemArrow: {
     fontSize: 20,

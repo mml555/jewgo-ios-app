@@ -6,7 +6,6 @@ import {
   Modal,
   TouchableOpacity,
   ScrollView,
-  Switch,
   Alert,
 } from 'react-native';
 import { Spacing, Shadows } from '../styles/designSystem';
@@ -456,12 +455,21 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
               <Text style={styles.serviceLabel}>
                 {service.label} {service.count ? `(${service.count})` : ''}
               </Text>
-              <Switch
-                value={filters[service.key as keyof FilterOptions] as boolean}
-                onValueChange={(value) => handleFilterChange(service.key as keyof FilterOptions, value)}
-                trackColor={{ false: '#E5E5EA', true: '#74e1a0' }}
-                thumbColor={filters[service.key as keyof FilterOptions] ? '#FFFFFF' : '#FFFFFF'}
-              />
+              <TouchableOpacity
+                style={[
+                  styles.checkbox,
+                  filters[service.key as keyof FilterOptions] && styles.checkboxChecked
+                ]}
+                onPress={() => handleFilterChange(service.key as keyof FilterOptions, !filters[service.key as keyof FilterOptions])}
+                activeOpacity={0.7}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: filters[service.key as keyof FilterOptions] as boolean }}
+                accessibilityLabel={`Toggle ${service.label}`}
+              >
+                {filters[service.key as keyof FilterOptions] && (
+                  <Text style={styles.checkmark}>✓</Text>
+                )}
+              </TouchableOpacity>
             </View>
           ))}
         </View>
@@ -761,6 +769,25 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#000000',
     fontWeight: '500',
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: '#E5E5EA',
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: '#74e1a0',
+    borderColor: '#74e1a0',
+  },
+  checkmark: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
   footer: {
     flexDirection: 'row',
