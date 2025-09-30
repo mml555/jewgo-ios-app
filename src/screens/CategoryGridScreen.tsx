@@ -14,6 +14,7 @@ import { useCategoryData, CategoryItem } from '../hooks/useCategoryData';
 import { useFilters } from '../hooks/useFilters';
 import { useLocation, calculateDistance } from '../hooks/useLocation';
 import CategoryCard from '../components/CategoryCard';
+import JobCard from '../components/JobCard';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../styles/designSystem';
 
 interface CategoryGridScreenProps {
@@ -258,12 +259,23 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
 
   // Memoized render item to prevent unnecessary re-renders
   const renderItem = useCallback(
-    ({ item }: { item: CategoryItem }) => (
-      <CategoryCard
-        item={item}
-        categoryKey={categoryKey}
-      />
-    ),
+    ({ item }: { item: CategoryItem }) => {
+      // Use JobCard for jobs category, CategoryCard for all others
+      if (categoryKey === 'jobs') {
+        return (
+          <JobCard
+            item={item}
+            categoryKey={categoryKey}
+          />
+        );
+      }
+      return (
+        <CategoryCard
+          item={item}
+          categoryKey={categoryKey}
+        />
+      );
+    },
     [categoryKey]
   );
 

@@ -734,6 +734,254 @@ class SpecialsController {
       });
     }
   }
+
+  // POST /api/v5/specials - Create a new special
+  static async createSpecial(req, res) {
+    try {
+      const {
+        business_id,
+        title,
+        subtitle,
+        description,
+        discount_type,
+        discount_value,
+        discount_label,
+        valid_from,
+        valid_until,
+        priority = 0,
+        max_claims_total,
+        max_claims_per_user = 1,
+        requires_code = false,
+        code_hint,
+        terms,
+        hero_image_url,
+        is_active = true
+      } = req.body;
+
+      console.log(`📝 Creating new special: ${title} for business: ${business_id}`);
+
+      // Validate required fields
+      if (!business_id || !title || !discount_type || !discount_label || !valid_from || !valid_until) {
+        return res.status(400).json({
+          success: false,
+          error: 'Missing required fields: business_id, title, discount_type, discount_label, valid_from, valid_until'
+        });
+      }
+
+      // Validate date range
+      const validFromDate = new Date(valid_from);
+      const validUntilDate = new Date(valid_until);
+      
+      if (validUntilDate <= validFromDate) {
+        return res.status(400).json({
+          success: false,
+          error: 'valid_until must be after valid_from'
+        });
+      }
+
+      const insertQuery = `
+        INSERT INTO specials (
+          business_id, title, subtitle, description, discount_type, discount_value,
+          discount_label, valid_from, valid_until, priority, max_claims_total,
+          max_claims_per_user, requires_code, code_hint, terms, hero_image_url,
+          is_active, created_at, updated_at
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, NOW(), NOW()
+        ) RETURNING *
+      `;
+
+      const values = [
+        business_id, title, subtitle || null, description || null, discount_type,
+        discount_value || null, discount_label, valid_from, valid_until, priority,
+        max_claims_total || null, max_claims_per_user, requires_code, code_hint || null,
+        terms || null, hero_image_url || null, is_active
+      ];
+
+      const result = await getPool().query(insertQuery, values);
+      const newSpecial = result.rows[0];
+
+      // Transform the response to match frontend expectations
+      const transformedSpecial = {
+        id: newSpecial.id,
+        title: newSpecial.title,
+        subtitle: newSpecial.subtitle,
+        description: newSpecial.description,
+        businessId: newSpecial.business_id,
+        discountType: newSpecial.discount_type,
+        discountValue: newSpecial.discount_value?.toString(),
+        discountLabel: newSpecial.discount_label,
+        validFrom: newSpecial.valid_from,
+        validUntil: newSpecial.valid_until,
+        priority: newSpecial.priority,
+        maxClaimsTotal: newSpecial.max_claims_total,
+        maxClaimsPerUser: newSpecial.max_claims_per_user,
+        requiresCode: newSpecial.requires_code,
+        codeHint: newSpecial.code_hint,
+        terms: newSpecial.terms,
+        heroImageUrl: newSpecial.hero_image_url,
+        isEnabled: newSpecial.is_active,
+        createdAt: newSpecial.created_at,
+        updatedAt: newSpecial.updated_at
+      };
+
+      res.status(201).json({
+        success: true,
+        data: {
+          special: transformedSpecial
+        }
+      });
+    } catch (error) {
+      console.error('Error creating special:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Internal server error',
+        message: error.message
+      });
+    }
+  }
+
+  // PUT /api/v5/specials/:id - Update a special
+  static async updateSpecial(req, res) {
+    try {
+      const { id } = req.params;
+      const updateData = req.body;
+
+      console.log(`📝 Updating special: ${id} with data:`, updateData);
+
+      // Build dynamic update query
+      const updateFields = [];
+      const values = [];
+      let paramCount = 0;
+
+      // Map frontend field names to database field names
+      const fieldMapping = {
+        business_id: 'business_id',
+        title: 'title',
+        subtitle: 'subtitle',
+        description: 'description',
+        discount_type: 'discount_type',
+        discount_value: 'discount_value',
+        discount_label: 'discount_label',
+        valid_from: 'valid_from',
+        valid_until: 'valid_until',
+        priority: 'priority',
+        max_claims_total: 'max_claims_total',
+        max_claims_per_user: 'max_claims_per_user',
+        requires_code: 'requires_code',
+        code_hint: 'code_hint',
+        terms: 'terms',
+        hero_image_url: 'hero_image_url',
+        is_active: 'is_active'
+      };
+
+      Object.entries(updateData).forEach(([key, value]) => {
+        if (fieldMapping[key] && value !== undefined) {
+          paramCount++;
+          updateFields.push(`${fieldMapping[key]} = $${paramCount}`);
+          values.push(value);
+        }
+      });
+
+      if (updateFields.length === 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'No valid fields to update'
+        });
+      }
+
+      // Add updated_at and id to values
+      paramCount++;
+      updateFields.push(`updated_at = NOW()`);
+      values.push(id);
+
+      const updateQuery = `
+        UPDATE specials 
+        SET ${updateFields.join(', ')}
+        WHERE id = $${paramCount}
+        RETURNING *
+      `;
+
+      const result = await getPool().query(updateQuery, values);
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          error: 'Special not found'
+        });
+      }
+
+      const updatedSpecial = result.rows[0];
+
+      // Transform the response
+      const transformedSpecial = {
+        id: updatedSpecial.id,
+        title: updatedSpecial.title,
+        subtitle: updatedSpecial.subtitle,
+        description: updatedSpecial.description,
+        businessId: updatedSpecial.business_id,
+        discountType: updatedSpecial.discount_type,
+        discountValue: updatedSpecial.discount_value?.toString(),
+        discountLabel: updatedSpecial.discount_label,
+        validFrom: updatedSpecial.valid_from,
+        validUntil: updatedSpecial.valid_until,
+        priority: updatedSpecial.priority,
+        maxClaimsTotal: updatedSpecial.max_claims_total,
+        maxClaimsPerUser: updatedSpecial.max_claims_per_user,
+        requiresCode: updatedSpecial.requires_code,
+        codeHint: updatedSpecial.code_hint,
+        terms: updatedSpecial.terms,
+        heroImageUrl: updatedSpecial.hero_image_url,
+        isEnabled: updatedSpecial.is_active,
+        createdAt: updatedSpecial.created_at,
+        updatedAt: updatedSpecial.updated_at
+      };
+
+      res.json({
+        success: true,
+        data: {
+          special: transformedSpecial
+        }
+      });
+    } catch (error) {
+      console.error('Error updating special:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Internal server error',
+        message: error.message
+      });
+    }
+  }
+
+  // DELETE /api/v5/specials/:id - Delete a special
+  static async deleteSpecial(req, res) {
+    try {
+      const { id } = req.params;
+
+      console.log(`🗑️ Deleting special: ${id}`);
+
+      const deleteQuery = 'DELETE FROM specials WHERE id = $1 RETURNING id';
+      const result = await getPool().query(deleteQuery, [id]);
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          error: 'Special not found'
+        });
+      }
+
+      res.json({
+        success: true,
+        message: 'Special deleted successfully'
+      });
+    } catch (error) {
+      console.error('Error deleting special:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Internal server error',
+        message: error.message
+      });
+    }
+  }
 }
 
 module.exports = SpecialsController;

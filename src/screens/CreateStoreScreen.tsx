@@ -251,10 +251,15 @@ const CreateStoreScreen: React.FC = () => {
     >
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <Text style={styles.title}>Create Your Store</Text>
-          <Text style={styles.subtitle}>
-            Set up your shtetl store and start selling to the community
-          </Text>
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+            <Text style={styles.backButtonText}>← Back</Text>
+          </TouchableOpacity>
+          <View style={styles.headerContent}>
+            <Text style={styles.title}>Create Your Store</Text>
+            <Text style={styles.subtitle}>
+              Set up your shtetl store and start selling to the community
+            </Text>
+          </View>
         </View>
 
         <View style={styles.form}>
@@ -427,10 +432,25 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: Colors.white,
     padding: Spacing.lg,
     borderBottomWidth: 1,
     borderBottomColor: Colors.gray200,
+  },
+  backButton: {
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    marginRight: Spacing.md,
+  },
+  backButtonText: {
+    ...Typography.body1,
+    color: Colors.primary.main,
+    fontWeight: '600',
+  },
+  headerContent: {
+    flex: 1,
   },
   title: {
     ...Typography.h1,

@@ -10,7 +10,6 @@ import {
   ActivityIndicator,
   TextInput,
   Modal,
-  Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 // Using emoji icons instead of vector icons to avoid dependencies
@@ -519,17 +518,39 @@ const DatabaseDashboard: React.FC = () => {
               <View style={styles.formRow}>
                 <View style={styles.switchGroup}>
                   <Text style={styles.formLabel}>Verified</Text>
-                  <Switch
-                    value={selectedEntity.is_verified}
-                    onValueChange={(value) => setSelectedEntity({...selectedEntity, is_verified: value})}
-                  />
+                  <TouchableOpacity
+                    style={[
+                      styles.checkbox,
+                      selectedEntity.is_verified && styles.checkboxChecked
+                    ]}
+                    onPress={() => setSelectedEntity({...selectedEntity, is_verified: !selectedEntity.is_verified})}
+                    activeOpacity={0.7}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: selectedEntity.is_verified }}
+                    accessibilityLabel="Toggle verified status"
+                  >
+                    {selectedEntity.is_verified && (
+                      <Text style={styles.checkmark}>✓</Text>
+                    )}
+                  </TouchableOpacity>
                 </View>
                 <View style={styles.switchGroup}>
                   <Text style={styles.formLabel}>Active</Text>
-                  <Switch
-                    value={selectedEntity.is_active}
-                    onValueChange={(value) => setSelectedEntity({...selectedEntity, is_active: value})}
-                  />
+                  <TouchableOpacity
+                    style={[
+                      styles.checkbox,
+                      selectedEntity.is_active && styles.checkboxChecked
+                    ]}
+                    onPress={() => setSelectedEntity({...selectedEntity, is_active: !selectedEntity.is_active})}
+                    activeOpacity={0.7}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: selectedEntity.is_active }}
+                    accessibilityLabel="Toggle active status"
+                  >
+                    {selectedEntity.is_active && (
+                      <Text style={styles.checkmark}>✓</Text>
+                    )}
+                  </TouchableOpacity>
                 </View>
               </View>
 
@@ -855,6 +876,26 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   saveButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  // Checkbox styles
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: '#ddd',
+    backgroundColor: 'transparent',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: '#2196F3',
+    borderColor: '#2196F3',
+  },
+  checkmark: {
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',

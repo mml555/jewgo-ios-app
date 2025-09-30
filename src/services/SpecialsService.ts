@@ -135,6 +135,26 @@ class SpecialsService {
     return this.request<{ special: SpecialWithDetails }>(`/specials/${id}`);
   }
 
+  // Search specials with filters
+  async searchSpecials(params?: {
+    q?: string;
+    category?: string;
+    business_id?: string;
+    active_only?: boolean;
+  }): Promise<ApiResponse<{ specials: Special[] }>> {
+    const queryParams = new URLSearchParams();
+    
+    if (params?.q) queryParams.append('q', params.q);
+    if (params?.category) queryParams.append('category', params.category);
+    if (params?.business_id) queryParams.append('business_id', params.business_id);
+    if (params?.active_only !== undefined) queryParams.append('active_only', params.active_only.toString());
+    
+    const queryString = queryParams.toString();
+    const endpoint = `/specials/search${queryString ? `?${queryString}` : ''}`;
+    
+    return this.request<{ specials: Special[] }>(endpoint);
+  }
+
   // Create a new special
   async createSpecial(data: CreateSpecialRequest): Promise<ApiResponse<{ special: Special }>> {
     return this.request<{ special: Special }>('/specials', {

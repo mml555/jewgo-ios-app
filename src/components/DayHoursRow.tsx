@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Switch,
   AccessibilityInfo,
 } from 'react-native';
 import TimePickerInput from './TimePickerInput';
@@ -218,27 +217,29 @@ const DayHoursRow: React.FC<DayHoursRowProps> = memo(({
           >
             {isOpen ? 'Open' : 'Closed'}
           </Text>
-          <Switch
-            value={isOpen}
-            onValueChange={handleToggleOpen}
-            trackColor={{
-              false: Colors.gray300,
-              true: Colors.accent,
-            }}
-            thumbColor={isOpen ? Colors.primary.main : Colors.gray500}
-            ios_backgroundColor={Colors.gray300}
+          <TouchableOpacity
+            style={[
+              styles.checkbox,
+              isOpen && styles.checkboxChecked
+            ]}
+            onPress={handleToggleOpen}
+            activeOpacity={0.7}
             accessibilityLabel={`${day} is currently ${isOpen ? 'open' : 'closed'}`}
             accessibilityHint={generateAccessibilityHint(
               `${isOpen ? 'close' : 'open'} ${day}`,
               isOpen ? 'This will hide the time pickers' : 'This will show the time pickers'
             )}
-            accessibilityRole="switch"
+            accessibilityRole="checkbox"
             accessibilityState={{ 
               disabled: loading,
               checked: isOpen,
             }}
             disabled={loading}
-          />
+          >
+            {isOpen && (
+              <Text style={styles.checkmark}>✓</Text>
+            )}
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -536,6 +537,26 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
     textAlign: 'center',
+  },
+  // Checkbox styles
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: Colors.gray300,
+    backgroundColor: 'transparent',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: Colors.accent,
+    borderColor: Colors.accent,
+  },
+  checkmark: {
+    color: Colors.white,
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
 

@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
-  Switch,
   Alert,
 } from 'react-native';
 import { Spacing, Shadows } from '../styles/designSystem';
@@ -71,12 +70,21 @@ const SettingsScreen: React.FC = () => {
                 Receive notifications about updates
               </Text>
             </View>
-            <Switch
-              value={notificationsEnabled}
-              onValueChange={setNotificationsEnabled}
-              trackColor={{false: '#767577', true: '#007AFF'}}
-              thumbColor={notificationsEnabled ? '#ffffff' : '#f4f3f4'}
-            />
+            <TouchableOpacity
+              style={[
+                styles.checkbox,
+                notificationsEnabled && styles.checkboxChecked
+              ]}
+              onPress={() => setNotificationsEnabled(!notificationsEnabled)}
+              activeOpacity={0.7}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: notificationsEnabled }}
+              accessibilityLabel="Toggle notifications"
+            >
+              {notificationsEnabled && (
+                <Text style={styles.checkmark}>✓</Text>
+              )}
+            </TouchableOpacity>
           </View>
 
           <View style={styles.settingItem}>
@@ -86,12 +94,21 @@ const SettingsScreen: React.FC = () => {
                 Use dark theme throughout the app
               </Text>
             </View>
-            <Switch
-              value={darkModeEnabled}
-              onValueChange={setDarkModeEnabled}
-              trackColor={{false: '#767577', true: '#007AFF'}}
-              thumbColor={darkModeEnabled ? '#ffffff' : '#f4f3f4'}
-            />
+            <TouchableOpacity
+              style={[
+                styles.checkbox,
+                darkModeEnabled && styles.checkboxChecked
+              ]}
+              onPress={() => setDarkModeEnabled(!darkModeEnabled)}
+              activeOpacity={0.7}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: darkModeEnabled }}
+              accessibilityLabel="Toggle dark mode"
+            >
+              {darkModeEnabled && (
+                <Text style={styles.checkmark}>✓</Text>
+              )}
+            </TouchableOpacity>
           </View>
 
           <View style={styles.settingItem}>
@@ -101,12 +118,21 @@ const SettingsScreen: React.FC = () => {
                 Allow app to access your location
               </Text>
             </View>
-            <Switch
-              value={locationEnabled}
-              onValueChange={setLocationEnabled}
-              trackColor={{false: '#767577', true: '#007AFF'}}
-              thumbColor={locationEnabled ? '#ffffff' : '#f4f3f4'}
-            />
+            <TouchableOpacity
+              style={[
+                styles.checkbox,
+                locationEnabled && styles.checkboxChecked
+              ]}
+              onPress={() => setLocationEnabled(!locationEnabled)}
+              activeOpacity={0.7}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: locationEnabled }}
+              accessibilityLabel="Toggle location services"
+            >
+              {locationEnabled && (
+                <Text style={styles.checkmark}>✓</Text>
+              )}
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -274,6 +300,27 @@ const styles = StyleSheet.create({
     ...Shadows.md,
   },
   logoutText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  // Checkbox styles
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: Colors.gray400,
+    backgroundColor: 'transparent',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  checkboxChecked: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  checkmark: {
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',

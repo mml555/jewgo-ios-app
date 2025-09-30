@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Typography, Spacing, BorderRadius, Shadows, TouchTargets } from '../styles/designSystem';
 import EateryIcon from '../components/EateryIcon';
@@ -218,13 +218,21 @@ const NotificationsScreen: React.FC = () => {
                 </Text>
               </View>
               
-              <Switch
-                value={value}
-                onValueChange={() => handleSettingToggle(key)}
-                trackColor={{ false: Colors.gray300, true: Colors.primary.main }}
-                thumbColor={value ? Colors.white : Colors.gray400}
-                ios_backgroundColor={Colors.gray300}
-              />
+              <TouchableOpacity
+                style={[
+                  styles.checkbox,
+                  value && styles.checkboxChecked
+                ]}
+                onPress={() => handleSettingToggle(key)}
+                activeOpacity={0.7}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: value }}
+                accessibilityLabel={`Toggle ${key}`}
+              >
+                {value && (
+                  <Text style={styles.checkmark}>✓</Text>
+                )}
+              </TouchableOpacity>
             </View>
           ))}
         </View>
@@ -425,6 +433,25 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: Colors.primary.main,
+    borderColor: Colors.primary.main,
+  },
+  checkmark: {
+    color: Colors.white,
+    fontSize: 12,
+    fontWeight: 'bold',
   },
 });
 

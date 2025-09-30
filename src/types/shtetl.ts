@@ -24,6 +24,7 @@ export interface ShtetlStore {
   updatedAt: string;
   // Store-specific fields
   storeType: 'general' | 'food' | 'clothing' | 'books' | 'jewelry' | 'art' | 'services';
+  category: 'shtetl' | 'shuk' | 'eatery' | 'shul' | 'mikvah' | 'services' | 'housing' | 'events' | 'jobs'; // Category determines if store should have product dashboard
   kosherLevel?: 'glatt' | 'chalav-yisrael' | 'pas-yisrael';
   deliveryAvailable: boolean;
   pickupAvailable: boolean;

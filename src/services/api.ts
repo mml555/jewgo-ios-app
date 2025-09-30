@@ -323,6 +323,27 @@ class ApiService {
 
   // Get listings by category
   async getListingsByCategory(categoryKey: string, limit: number = 100, offset: number = 0): Promise<ApiResponse<{ listings: Listing[] }>> {
+    // Special handling for jobs category - use dedicated jobs endpoint
+    if (categoryKey === 'jobs') {
+      console.log('🔍 Fetching jobs from dedicated endpoint');
+      try {
+        const response = await this.request(`/jobs?limit=${limit}&offset=${offset}&isActive=true`);
+        
+        if (response.success && response.data) {
+          console.log('🔍 Raw jobs data sample:', response.data[0]);
+          // Transform jobs data to match listing format
+          const transformedListings = response.data.map((job: any) => this.transformJobToListing(job));
+          console.log('🔍 Transformed job sample:', transformedListings[0]);
+          return {
+            success: true,
+            data: { listings: transformedListings }
+          };
+        }
+      } catch (error) {
+        console.error('Failed to fetch jobs:', error);
+      }
+    }
+    
     // Map category keys to entity types (available for both V5 and fallback)
     const categoryToEntityType: Record<string, string> = {
       'mikvah': 'mikvah',
@@ -332,7 +353,6 @@ class ApiService {
       'shuk': 'store',
       'shtetl': 'synagogue', // Shtetl (community centers) map to synagogue entity type
       'events': 'synagogue', // Events map to synagogue entity type
-      'jobs': 'synagogue', // Jobs map to synagogue entity type
       'restaurant': 'restaurant',
       'synagogue': 'synagogue',
       'store': 'store'
@@ -531,6 +551,62 @@ class ApiService {
       like_count: entity.like_count || 0,
       share_count: entity.share_count || 0
     };
+  }
+
+  // Transform job to listing format
+  private transformJobToListing(job: any): Listing {
+    // Format location for display
+    let locationDisplay = 'Remote';
+    if (!job.is_remote && job.city && job.state) {
+      locationDisplay = `${job.city}, ${job.state}`;
+    } else if (job.location_type === 'hybrid' && job.city) {
+      locationDisplay = `Hybrid - ${job.city}`;
+    }
+    
+    return {
+      id: job.id,
+      title: job.title,
+      description: job.description,
+      long_description: job.description,
+      category_id: 'jobs',
+      owner_id: job.poster_id || '',
+      address: job.address || locationDisplay,
+      city: job.city || 'Various',
+      state: job.state || '',
+      zip_code: job.zip_code || '',
+      phone: job.contact_phone || '',
+      email: job.contact_email || '',
+      website: job.application_url || '',
+      facebook_url: '',
+      instagram_url: '',
+      whatsapp_url: '',
+      tiktok_url: '',
+      rating: '0',
+      review_count: 0,
+      is_verified: job.jewish_organization || false,
+      is_active: job.is_active,
+      created_at: job.created_at,
+      updated_at: job.updated_at,
+      category_name: 'Jobs',
+      category_emoji: '💼',
+      latitude: job.latitude ? parseFloat(job.latitude) : 0,
+      longitude: job.longitude ? parseFloat(job.longitude) : 0,
+      // Job-specific fields stored for JobCard component
+      job_type: job.job_type,
+      location_type: job.location_type,
+      compensation: job.compensation_display || job.compensation_min ? `$${job.compensation_min}` : undefined,
+      tags: job.tags || [],
+      is_remote: job.is_remote,
+      is_urgent: job.is_urgent,
+      // Additional job data
+      business_hours: [],
+      images: [],
+      recent_reviews: [],
+      kosher_certifications: [],
+      view_count: job.view_count || 0,
+      like_count: 0,
+      share_count: 0
+    } as any; // Use 'as any' since we're adding custom fields
   }
 
   // Helper function to convert day name to number

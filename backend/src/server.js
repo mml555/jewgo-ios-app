@@ -24,6 +24,7 @@ const specialsRoutes = require('./routes/specials');
 const favoritesRoutes = require('./routes/favorites');
 const shtetlStoresRoutes = require('./routes/shtetlStores');
 const shtetlProductsRoutes = require('./routes/shtetlProducts');
+const jobsRoutes = require('./routes/jobs');
 const statsRoutes = require('./routes/stats');
 
 const app = express();
@@ -125,6 +126,7 @@ app.use('/api/v5/specials', authSystem.getAuthMiddleware().requireAuthOrGuest(),
 app.use('/api/v5/favorites', authSystem.getAuthMiddleware().requireAuthOrGuest(), favoritesRoutes);
 app.use('/api/v5/shtetl-stores', authSystem.getAuthMiddleware().requireAuthOrGuest(), shtetlStoresRoutes);
 app.use('/api/v5/shtetl-products', authSystem.getAuthMiddleware().requireAuthOrGuest(), shtetlProductsRoutes);
+app.use('/api/v5/jobs', authSystem.getAuthMiddleware().requireAuthOrGuest(), jobsRoutes);
 // Public dashboard endpoints (no authentication required)
 app.get('/api/v5/dashboard/entities/stats', async (req, res) => {
   try {

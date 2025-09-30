@@ -213,6 +213,9 @@ const EditStoreScreen: React.FC = () => {
       >
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.header}>
+            <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+              <Text style={styles.backButtonText}>← Back</Text>
+            </TouchableOpacity>
             <View style={styles.headerContent}>
               <Text style={styles.title}>Edit Store</Text>
               <Text style={styles.subtitle}>Update your store information</Text>
@@ -372,9 +375,19 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.gray200,
   },
+  backButton: {
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+  },
+  backButtonText: {
+    ...Typography.body1,
+    color: Colors.primary.main,
+    fontWeight: '600',
+  },
   headerContent: {
     flex: 1,
     marginRight: Spacing.md,
+    alignItems: 'center',
   },
   title: {
     ...Typography.h1,

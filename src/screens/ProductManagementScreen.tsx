@@ -10,11 +10,15 @@ import {
   RefreshControl,
   Alert,
   Modal,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { Product, CreateProductForm } from '../types/shtetl';
 import ProductCard from '../components/ProductCard';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../styles/designSystem';
+import shtetlService from '../services/ShtetlService';
 
 interface ProductManagementParams {
   storeId: string;
@@ -31,77 +35,42 @@ const ProductManagementScreen: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [formData, setFormData] = useState<CreateProductForm>({
+    name: '',
+    description: '',
+    price: 0,
+    category: '',
+    images: [],
+    isKosher: false,
+    kosherCertification: '',
+    stockQuantity: 0,
+    sku: '',
+    weight: 0,
+    tags: [],
+  });
 
   const loadProducts = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       
-      // TODO: Replace with actual API call
-      // const response = await shtetlService.getStoreProducts(storeId);
+      const response = await shtetlService.getStoreProducts(storeId, {
+        limit: 100,
+        sortBy: 'created_at',
+        sortOrder: 'DESC',
+      });
       
-      // Mock data for now
-      const mockProducts: Product[] = [
-        {
-          id: '1',
-          storeId: storeId,
-          name: 'Pastrami Sandwich',
-          description: 'Traditional pastrami on rye with mustard',
-          price: 12.99,
-          currency: 'USD',
-          category: 'sandwiches',
-          images: ['https://picsum.photos/300/200?random=1'],
-          isActive: true,
-          isKosher: true,
-          kosherCertification: 'OU',
-          stockQuantity: 10,
-          sku: 'PAST-001',
-          tags: ['meat', 'sandwich', 'traditional'],
-          createdAt: '2024-01-15T10:00:00Z',
-          updatedAt: '2024-01-15T10:00:00Z',
-        },
-        {
-          id: '2',
-          storeId: storeId,
-          name: 'Matzo Ball Soup',
-          description: 'Homemade chicken soup with fluffy matzo balls',
-          price: 8.99,
-          currency: 'USD',
-          category: 'soup',
-          images: ['https://picsum.photos/300/200?random=2'],
-          isActive: true,
-          isKosher: true,
-          kosherCertification: 'OU',
-          stockQuantity: 5,
-          sku: 'SOUP-001',
-          tags: ['soup', 'chicken', 'traditional'],
-          createdAt: '2024-01-15T10:00:00Z',
-          updatedAt: '2024-01-15T10:00:00Z',
-        },
-        {
-          id: '3',
-          storeId: storeId,
-          name: 'Challah Bread',
-          description: 'Fresh baked challah for Shabbat',
-          price: 6.99,
-          currency: 'USD',
-          category: 'bread',
-          images: ['https://picsum.photos/300/200?random=3'],
-          isActive: false,
-          isKosher: true,
-          kosherCertification: 'OU',
-          stockQuantity: 0,
-          sku: 'CHAL-001',
-          tags: ['bread', 'shabbat', 'fresh'],
-          createdAt: '2024-01-15T10:00:00Z',
-          updatedAt: '2024-01-15T10:00:00Z',
-        },
-      ];
-
-      setProducts(mockProducts);
-    } catch (err) {
-      setError('Failed to load products');
-      console.error('Error loading products:', err);
+      if (response.success && response.data?.products) {
+        setProducts(response.data.products);
+      } else {
+        setError(response.error || 'No products found for this store.');
+        setProducts([]);
+      }
+    } catch (error) {
+      console.error('Error loading products:', error);
+      setError('Unable to load products for this store.');
+      setProducts([]);
     } finally {
       setLoading(false);
     }
@@ -114,13 +83,105 @@ const ProductManagementScreen: React.FC = () => {
   }, [loadProducts]);
 
   const handleCreateProduct = useCallback(() => {
+    setFormData({
+      name: '',
+      description: '',
+      price: 0,
+      category: '',
+      images: [],
+      isKosher: false,
+      kosherCertification: '',
+      stockQuantity: 0,
+      sku: '',
+      weight: 0,
+      tags: [],
+    });
+    setEditingProduct(null);
     setShowCreateModal(true);
   }, []);
 
   const handleEditProduct = useCallback((product: Product) => {
+    setFormData({
+      name: product.name,
+      description: product.description || '',
+      price: product.price,
+      category: product.category || '',
+      images: product.images || [],
+      isKosher: product.isKosher || false,
+      kosherCertification: product.kosherCertification || '',
+      stockQuantity: product.stockQuantity || 0,
+      sku: product.sku || '',
+      weight: product.weight || 0,
+      tags: product.tags || [],
+    });
     setEditingProduct(product);
     setShowCreateModal(true);
   }, []);
+
+  const handleInputChange = useCallback((field: keyof CreateProductForm, value: any) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value,
+    }));
+  }, []);
+
+  const validateForm = useCallback(() => {
+    if (!formData.name.trim()) {
+      Alert.alert('Validation Error', 'Product name is required.');
+      return false;
+    }
+    if (!formData.description.trim()) {
+      Alert.alert('Validation Error', 'Product description is required.');
+      return false;
+    }
+    if (formData.price <= 0) {
+      Alert.alert('Validation Error', 'Product price must be greater than 0.');
+      return false;
+    }
+    if (!formData.category.trim()) {
+      Alert.alert('Validation Error', 'Product category is required.');
+      return false;
+    }
+    return true;
+  }, [formData]);
+
+  const handleSaveProduct = useCallback(async () => {
+    if (!validateForm()) {
+      return;
+    }
+
+    setSaving(true);
+    try {
+      let response;
+      if (editingProduct) {
+        // Update existing product
+        response = await shtetlService.updateProduct(editingProduct.id, formData);
+      } else {
+        // Create new product
+        response = await shtetlService.createProduct(storeId, formData);
+      }
+
+      if (response.success) {
+        Alert.alert(
+          'Success',
+          editingProduct ? 'Product updated successfully!' : 'Product created successfully!',
+          [{ text: 'OK', onPress: () => {
+            setShowCreateModal(false);
+            setEditingProduct(null);
+            loadProducts(); // Refresh the product list
+          }}]
+        );
+      } else {
+        Alert.alert('Error', response.error || 'Failed to save product. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error saving product:', error);
+      Alert.alert('Error', 'Failed to save product. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  }, [formData, editingProduct, storeId, validateForm, loadProducts]);
+
 
   const handleDeleteProduct = useCallback((product: Product) => {
     Alert.alert(
@@ -133,11 +194,14 @@ const ProductManagementScreen: React.FC = () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              // TODO: Replace with actual API call
-              // await shtetlService.deleteProduct(product.id);
+              const response = await shtetlService.deleteProduct(product.id);
               
-              setProducts(prev => prev.filter(p => p.id !== product.id));
-              Alert.alert('Success', 'Product deleted successfully');
+              if (response.success) {
+                setProducts(prev => prev.filter(p => p.id !== product.id));
+                Alert.alert('Success', 'Product deleted successfully');
+              } else {
+                Alert.alert('Error', response.error || 'Failed to delete product');
+              }
             } catch (error) {
               Alert.alert('Error', 'Failed to delete product');
               console.error('Error deleting product:', error);
@@ -150,17 +214,22 @@ const ProductManagementScreen: React.FC = () => {
 
   const handleToggleProductStatus = useCallback(async (product: Product) => {
     try {
-      // TODO: Replace with actual API call
-      // await shtetlService.updateProduct(product.id, { isActive: !product.isActive });
+      const response = await shtetlService.updateProduct(product.id, { 
+        isActive: !product.isActive 
+      });
       
-      setProducts(prev => prev.map(p => 
-        p.id === product.id ? { ...p, isActive: !p.isActive } : p
-      ));
-      
-      Alert.alert(
-        'Success',
-        `Product ${!product.isActive ? 'activated' : 'deactivated'} successfully`
-      );
+      if (response.success) {
+        setProducts(prev => prev.map(p => 
+          p.id === product.id ? { ...p, isActive: !p.isActive } : p
+        ));
+        
+        Alert.alert(
+          'Success',
+          `Product ${!product.isActive ? 'activated' : 'deactivated'} successfully`
+        );
+      } else {
+        Alert.alert('Error', response.error || 'Failed to update product status');
+      }
     } catch (error) {
       Alert.alert('Error', 'Failed to update product status');
       console.error('Error updating product:', error);
@@ -179,6 +248,10 @@ const ProductManagementScreen: React.FC = () => {
   const renderHeader = () => {
     return (
       <View style={styles.header}>
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          <Text style={styles.backButtonText}>← Back</Text>
+        </TouchableOpacity>
+        
         <View style={styles.headerContent}>
           <Text style={styles.title}>Product Management</Text>
           <Text style={styles.subtitle}>
@@ -287,38 +360,203 @@ const ProductManagementScreen: React.FC = () => {
   };
 
   const renderCreateModal = () => {
+    const productCategories = [
+      { key: 'food', label: '🍽️ Food & Beverages', emoji: '🍽️' },
+      { key: 'clothing', label: '👕 Clothing & Accessories', emoji: '👕' },
+      { key: 'books', label: '📚 Books & Media', emoji: '📚' },
+      { key: 'jewelry', label: '💎 Jewelry & Watches', emoji: '💎' },
+      { key: 'art', label: '🎨 Art & Crafts', emoji: '🎨' },
+      { key: 'electronics', label: '📱 Electronics', emoji: '📱' },
+      { key: 'home', label: '🏠 Home & Garden', emoji: '🏠' },
+      { key: 'health', label: '💊 Health & Beauty', emoji: '💊' },
+      { key: 'toys', label: '🧸 Toys & Games', emoji: '🧸' },
+      { key: 'sports', label: '⚽ Sports & Outdoors', emoji: '⚽' },
+      { key: 'automotive', label: '🚗 Automotive', emoji: '🚗' },
+      { key: 'general', label: '📦 General', emoji: '📦' },
+    ];
+
+    const renderTextInput = (label: string, field: keyof CreateProductForm, options: any = {}) => (
+      <View style={styles.inputGroup}>
+        <Text style={styles.inputLabel}>{label} {options.required ? '*' : ''}</Text>
+        <TextInput
+          style={[styles.textInput, options.multiline && styles.textArea]}
+          value={options.isTags ? (Array.isArray(formData[field]) ? formData[field].join(', ') : '') : (formData[field]?.toString() || '')}
+          onChangeText={(text) => {
+            let value: any = text;
+            if (field === 'price' || field === 'weight') {
+              value = parseFloat(text) || 0;
+            } else if (field === 'stockQuantity') {
+              value = parseInt(text) || 0;
+            } else if (options.isTags) {
+              // Convert comma-separated string to array
+              value = text.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+            }
+            handleInputChange(field, value);
+          }}
+          placeholder={options.placeholder}
+          placeholderTextColor={Colors.gray400}
+          keyboardType={options.keyboardType || 'default'}
+          multiline={options.multiline}
+          numberOfLines={options.numberOfLines}
+        />
+      </View>
+    );
+
+    const renderCheckbox = (label: string, field: keyof CreateProductForm, description?: string) => (
+      <View style={styles.checkboxRow}>
+        <View style={styles.checkboxLabelContainer}>
+          <Text style={styles.checkboxLabel}>{label}</Text>
+          {description && <Text style={styles.checkboxDescription}>{description}</Text>}
+        </View>
+        <TouchableOpacity
+          style={[
+            styles.checkbox,
+            formData[field] && styles.checkboxChecked
+          ]}
+          onPress={() => handleInputChange(field, !formData[field])}
+          activeOpacity={0.7}
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: !!formData[field] }}
+          accessibilityLabel={`Toggle ${label}`}
+        >
+          {formData[field] && (
+            <Text style={styles.checkmark}>✓</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+    );
+
     return (
       <Modal
         visible={showCreateModal}
         animationType="slide"
         presentationStyle="pageSheet"
       >
-        <View style={styles.modalContainer}>
+        <KeyboardAvoidingView 
+          style={styles.modalContainer}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>
-              {editingProduct ? 'Edit Product' : 'Add New Product'}
-            </Text>
             <TouchableOpacity
-              style={styles.closeButton}
+              style={styles.cancelButton}
               onPress={() => {
                 setShowCreateModal(false);
                 setEditingProduct(null);
               }}
             >
-              <Text style={styles.closeButtonText}>✕</Text>
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>
+              {editingProduct ? 'Edit Product' : 'Add New Product'}
+            </Text>
+            <TouchableOpacity
+              style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+              onPress={handleSaveProduct}
+              disabled={saving}
+            >
+              {saving ? (
+                <ActivityIndicator color={Colors.white} size="small" />
+              ) : (
+                <Text style={styles.saveButtonText}>Save</Text>
+              )}
             </TouchableOpacity>
           </View>
           
-          <ScrollView style={styles.modalContent}>
-            <Text style={styles.comingSoonText}>
-              Product creation form coming soon!
-            </Text>
-            <Text style={styles.comingSoonDescription}>
-              This will include fields for product name, description, price, images, 
-              inventory, and more.
-            </Text>
+          <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+            {/* Basic Information */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Basic Information</Text>
+              {renderTextInput('Product Name *', 'name', { 
+                placeholder: 'Enter product name',
+                required: true 
+              })}
+              {renderTextInput('Description *', 'description', { 
+                placeholder: 'Describe your product...',
+                multiline: true,
+                numberOfLines: 4,
+                required: true 
+              })}
+              {renderTextInput('SKU', 'sku', { 
+                placeholder: 'Product SKU (optional)' 
+              })}
+            </View>
+
+            {/* Pricing */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Pricing & Inventory</Text>
+              {renderTextInput('Price *', 'price', { 
+                placeholder: '0.00',
+                keyboardType: 'numeric',
+                required: true 
+              })}
+              {renderTextInput('Stock Quantity', 'stockQuantity', { 
+                placeholder: '0',
+                keyboardType: 'numeric' 
+              })}
+            </View>
+
+            {/* Category */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Category *</Text>
+              <View style={styles.categoryGrid}>
+                {productCategories.map(category => (
+                  <TouchableOpacity
+                    key={category.key}
+                    style={[
+                      styles.categoryOption,
+                      formData.category === category.key && styles.categoryOptionSelected,
+                    ]}
+                    onPress={() => handleInputChange('category', category.key)}
+                  >
+                    <Text style={styles.categoryEmoji}>{category.emoji}</Text>
+                    <Text style={[
+                      styles.categoryLabel,
+                      formData.category === category.key && styles.categoryLabelSelected,
+                    ]}>
+                      {category.label.replace(`${category.emoji} `, '')}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Physical Properties */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Physical Properties</Text>
+              {renderTextInput('Weight (lbs)', 'weight', { 
+                placeholder: '0.0',
+                keyboardType: 'numeric' 
+              })}
+            </View>
+
+            {/* Kosher Information */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Kosher Information</Text>
+              {renderCheckbox(
+                'Kosher Product',
+                'isKosher',
+                'Check if this product is kosher certified'
+              )}
+              {formData.isKosher && renderTextInput('Kosher Certification', 'kosherCertification', { 
+                placeholder: 'e.g., OU, OK, Star-K' 
+              })}
+            </View>
+
+            {/* Tags */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Tags</Text>
+              <Text style={styles.tagsDescription}>
+                Add tags to help customers find your product (comma-separated)
+              </Text>
+              {renderTextInput('Tags', 'tags', { 
+                placeholder: 'e.g., organic, handmade, gift',
+                multiline: true,
+                numberOfLines: 2,
+                isTags: true
+              })}
+            </View>
           </ScrollView>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     );
   };
@@ -428,6 +666,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  backButton: {
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    marginRight: Spacing.sm,
+  },
+  backButtonText: {
+    ...Typography.body1,
+    color: Colors.primary.main,
+    fontWeight: '600',
   },
   headerContent: {
     flex: 1,
@@ -586,6 +834,141 @@ const styles = StyleSheet.create({
     color: Colors.gray600,
     textAlign: 'center',
     lineHeight: 24,
+  },
+  // Form styles
+  cancelButton: {
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+  },
+  cancelButtonText: {
+    ...Typography.body1,
+    color: Colors.gray600,
+  },
+  saveButton: {
+    backgroundColor: Colors.primary.main,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.md,
+    minWidth: 60,
+    alignItems: 'center',
+  },
+  saveButtonDisabled: {
+    backgroundColor: Colors.gray300,
+  },
+  saveButtonText: {
+    ...Typography.body1,
+    color: Colors.white,
+    fontWeight: '600',
+  },
+  section: {
+    marginBottom: Spacing.xl,
+  },
+  sectionTitle: {
+    ...Typography.h3,
+    color: Colors.gray900,
+    marginBottom: Spacing.md,
+  },
+  inputGroup: {
+    marginBottom: Spacing.md,
+  },
+  inputLabel: {
+    ...Typography.body2,
+    color: Colors.gray700,
+    marginBottom: Spacing.xs,
+    fontWeight: '500',
+  },
+  textInput: {
+    borderWidth: 1,
+    borderColor: Colors.gray300,
+    borderRadius: BorderRadius.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    ...Typography.body1,
+    color: Colors.gray900,
+    backgroundColor: Colors.white,
+  },
+  textArea: {
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
+  categoryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.sm,
+  },
+  categoryOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.gray300,
+    backgroundColor: Colors.white,
+    marginBottom: Spacing.sm,
+    minWidth: '45%',
+  },
+  categoryOptionSelected: {
+    borderColor: Colors.primary.main,
+    backgroundColor: Colors.primary.light,
+  },
+  categoryEmoji: {
+    fontSize: 16,
+    marginRight: Spacing.xs,
+  },
+  categoryLabel: {
+    ...Typography.body2,
+    color: Colors.gray700,
+    flex: 1,
+  },
+  categoryLabelSelected: {
+    color: Colors.primary.main,
+    fontWeight: '600',
+  },
+  checkboxRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: Spacing.sm,
+  },
+  checkboxLabelContainer: {
+    flex: 1,
+    marginRight: Spacing.md,
+  },
+  checkboxLabel: {
+    ...Typography.body1,
+    color: Colors.gray900,
+    fontWeight: '500',
+  },
+  checkboxDescription: {
+    ...Typography.body2,
+    color: Colors.gray600,
+    marginTop: Spacing.xs,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: Colors.gray300,
+    backgroundColor: Colors.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: Colors.primary.main,
+    borderColor: Colors.primary.main,
+  },
+  checkmark: {
+    color: Colors.white,
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  tagsDescription: {
+    ...Typography.body2,
+    color: Colors.gray600,
+    marginBottom: Spacing.sm,
+    fontStyle: 'italic',
   },
 });
 

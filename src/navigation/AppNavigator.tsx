@@ -15,6 +15,7 @@ import ProductManagementScreen from '../screens/ProductManagementScreen';
 import ProductDetailScreen from '../screens/ProductDetailScreen';
 import EditStoreScreen from '../screens/EditStoreScreen';
 import StoreSpecialsScreen from '../screens/StoreSpecialsScreen';
+import EditSpecialScreen from '../screens/EditSpecialScreen';
 import DatabaseDashboard from '../screens/DatabaseDashboard';
 
 const Stack = createStackNavigator();
@@ -97,7 +98,7 @@ const AppNavigator: React.FC = () => {
         component={CreateStoreScreen}
         options={{
           headerShown: false,
-          presentation: 'modal',
+          presentation: 'card',
         }}
       />
       <Stack.Screen 
@@ -121,12 +122,20 @@ const AppNavigator: React.FC = () => {
         component={EditStoreScreen}
         options={{
           headerShown: false,
-          presentation: 'modal',
+          presentation: 'card',
         }}
       />
       <Stack.Screen
         name="StoreSpecials"
         component={StoreSpecialsScreen}
+        options={{
+          headerShown: false,
+          presentation: 'card',
+        }}
+      />
+      <Stack.Screen
+        name="EditSpecial"
+        component={EditSpecialScreen}
         options={{
           headerShown: false,
           presentation: 'card',

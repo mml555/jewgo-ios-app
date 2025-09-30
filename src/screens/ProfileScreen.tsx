@@ -195,9 +195,9 @@ const ProfileScreen: React.FC = () => {
       setStoresError('Unable to load stores. Showing sample data.');
       // Create sample stores with names for demo
       setStores([
-        { id: 'demo-store', name: 'Demo Store', description: 'Sample store for demonstration', ownerId: 'demo', ownerName: 'Demo Owner', address: '123 Demo St', city: 'Demo City', state: 'DC', zipCode: '12345', isActive: true, isVerified: false, rating: 4.5, reviewCount: 10, productCount: 5, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), storeType: 'general', deliveryAvailable: true, pickupAvailable: true, shippingAvailable: false },
-        { id: 'sample-store-1', name: 'Sample Store 1', description: 'Another sample store', ownerId: 'demo', ownerName: 'Demo Owner', address: '456 Sample Ave', city: 'Sample City', state: 'DC', zipCode: '12346', isActive: true, isVerified: true, rating: 4.2, reviewCount: 8, productCount: 3, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), storeType: 'food', deliveryAvailable: false, pickupAvailable: true, shippingAvailable: true },
-        { id: 'sample-store-2', name: 'Sample Store 2', description: 'Third sample store', ownerId: 'demo', ownerName: 'Demo Owner', address: '789 Example Blvd', city: 'Example City', state: 'DC', zipCode: '12347', isActive: true, isVerified: false, rating: 4.8, reviewCount: 15, productCount: 7, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), storeType: 'clothing', deliveryAvailable: true, pickupAvailable: false, shippingAvailable: true }
+        { id: 'demo-store', name: 'Demo Store', description: 'Sample store for demonstration', ownerId: 'demo', ownerName: 'Demo Owner', address: '123 Demo St', city: 'Demo City', state: 'DC', zipCode: '12345', isActive: true, isVerified: false, rating: 4.5, reviewCount: 10, productCount: 5, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), storeType: 'general', category: 'shuk', deliveryAvailable: true, pickupAvailable: true, shippingAvailable: false },
+        { id: 'sample-store-1', name: 'Sample Store 1', description: 'Another sample store', ownerId: 'demo', ownerName: 'Demo Owner', address: '456 Sample Ave', city: 'Sample City', state: 'DC', zipCode: '12346', isActive: true, isVerified: true, rating: 4.2, reviewCount: 8, productCount: 3, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), storeType: 'food', category: 'shuk', deliveryAvailable: false, pickupAvailable: true, shippingAvailable: true },
+        { id: 'sample-store-2', name: 'Sample Store 2', description: 'Third sample store', ownerId: 'demo', ownerName: 'Demo Owner', address: '789 Example Blvd', city: 'Example City', state: 'DC', zipCode: '12347', isActive: true, isVerified: false, rating: 4.8, reviewCount: 15, productCount: 7, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), storeType: 'clothing', category: 'shtetl', deliveryAvailable: true, pickupAvailable: false, shippingAvailable: true }
       ]);
     } finally {
       setStoresLoading(false);
@@ -232,6 +232,28 @@ const ProfileScreen: React.FC = () => {
     if (!selectedStoreId) return;
     setShowStoreActions(false);
     navigation.navigate('ProductManagement' as never, { storeId: selectedStoreId } as never);
+  };
+
+  // Check if the selected store should have a product dashboard
+  const shouldShowProductDashboard = () => {
+    if (!selectedStoreId) return false;
+    const selectedStore = stores.find(store => store.id === selectedStoreId);
+    if (!selectedStore) return false;
+    
+    // Show product dashboard for both 'shtetl' and 'shuk' category stores
+    // Other categories should not see the product dashboard
+    return selectedStore.category === 'shtetl' || selectedStore.category === 'shuk';
+  };
+
+  // Check if the selected store should have a specials dashboard
+  const shouldShowSpecialsDashboard = () => {
+    if (!selectedStoreId) return false;
+    const selectedStore = stores.find(store => store.id === selectedStoreId);
+    if (!selectedStore) return false;
+    
+    // Hide specials dashboard for 'shtetl' and 'shuk' category stores
+    // Show specials dashboard for all other categories
+    return selectedStore.category !== 'shtetl' && selectedStore.category !== 'shuk';
   };
 
   const handleNavigateToStoreEdit = () => {
@@ -599,14 +621,16 @@ const ProfileScreen: React.FC = () => {
             <Text style={styles.storeModalTitle}>Manage Store</Text>
             <Text style={styles.storeModalSubtitle}>{selectedStoreId}</Text>
 
-            <TouchableOpacity style={styles.storeActionButton} onPress={handleNavigateToProducts}>
-              <Text style={styles.storeActionEmoji}>🛒</Text>
-              <View style={styles.storeActionTextContainer}>
-                <Text style={styles.storeActionTitle}>Product Dashboard</Text>
-                <Text style={styles.storeActionSubtitle}>Review products, edit inventory, and manage visibility</Text>
-              </View>
-              <Text style={styles.storeActionArrow}>›</Text>
-            </TouchableOpacity>
+            {shouldShowProductDashboard() && (
+              <TouchableOpacity style={styles.storeActionButton} onPress={handleNavigateToProducts}>
+                <Text style={styles.storeActionEmoji}>🛒</Text>
+                <View style={styles.storeActionTextContainer}>
+                  <Text style={styles.storeActionTitle}>Product Dashboard</Text>
+                  <Text style={styles.storeActionSubtitle}>Review products, edit inventory, and manage visibility</Text>
+                </View>
+                <Text style={styles.storeActionArrow}>›</Text>
+              </TouchableOpacity>
+            )}
 
             <TouchableOpacity style={styles.storeActionButton} onPress={handleNavigateToStoreEdit}>
               <Text style={styles.storeActionEmoji}>🏪</Text>
@@ -617,14 +641,16 @@ const ProfileScreen: React.FC = () => {
               <Text style={styles.storeActionArrow}>›</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.storeActionButton} onPress={handleNavigateToSpecials}>
-              <Text style={styles.storeActionEmoji}>🔥</Text>
-              <View style={styles.storeActionTextContainer}>
-                <Text style={styles.storeActionTitle}>Manage Specials</Text>
-                <Text style={styles.storeActionSubtitle}>Edit promotions, adjust priority, and control availability</Text>
-              </View>
-              <Text style={styles.storeActionArrow}>›</Text>
-            </TouchableOpacity>
+            {shouldShowSpecialsDashboard() && (
+              <TouchableOpacity style={styles.storeActionButton} onPress={handleNavigateToSpecials}>
+                <Text style={styles.storeActionEmoji}>🔥</Text>
+                <View style={styles.storeActionTextContainer}>
+                  <Text style={styles.storeActionTitle}>Manage Specials</Text>
+                  <Text style={styles.storeActionSubtitle}>Edit promotions, adjust priority, and control availability</Text>
+                </View>
+                <Text style={styles.storeActionArrow}>›</Text>
+              </TouchableOpacity>
+            )}
 
             <TouchableOpacity
               style={styles.storeModalCloseButton}
