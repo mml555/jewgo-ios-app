@@ -19,6 +19,8 @@ import { useLocation, calculateDistance } from '../hooks/useLocation';
 import { apiService, DetailedListing, Review } from '../services/api';
 import { useReviews } from '../hooks/useReviews';
 import { useFavorites } from '../hooks/useFavorites';
+import { DistanceDisplay } from '../components/DistanceDisplay';
+import { useLocationSimple } from '../hooks/useLocationSimple';
 import EateryIcon from '../components/EateryIcon';
 import FacebookIcon from '../components/FacebookIcon';
 import InstagramIcon from '../components/InstagramIcon';
@@ -28,7 +30,9 @@ import ReviewsModal from '../components/ReviewsModal';
 import WriteReviewModal from '../components/WriteReviewModal';
 import ImageCarousel from '../components/ImageCarousel';
 import DetailHeaderBar from '../components/DetailHeaderBar';
+import BusinessSpecials from '../components/BusinessSpecials';
 import { Colors, Typography, Spacing, BorderRadius, Shadows, TouchTargets } from '../styles/designSystem';
+import { infoLog } from '../utils/logger';
 
 // Types
 interface ListingDetailParams {
@@ -43,6 +47,7 @@ const ListingDetailScreen: React.FC = () => {
   const navigation = useNavigation();
   const { itemId, categoryKey } = route.params as ListingDetailParams;
   const { location, getCurrentLocation } = useLocation();
+  const { accuracyAuthorization } = useLocationSimple();
   const { reviews, loading: reviewsLoading, error: reviewsError, writeReview, loadReviews } = useReviews();
   const { isFavorited, toggleFavorite } = useFavorites();
 
@@ -71,13 +76,24 @@ const ListingDetailScreen: React.FC = () => {
   };
 
   // Handle special card navigation
-  const handleSpecialPress = (specialType: string) => {
-    // For now, we'll show an alert. In a real app, this would navigate to a special details page
-    Alert.alert(
-      `${specialType} Details`,
-      `This would navigate to the ${specialType.toLowerCase()} details page with more information, terms, and conditions.`,
-      [{ text: 'OK' }]
-    );
+  const handleSpecialPress = (specialId: string) => {
+    // Navigate to the special detail screen
+    navigation.navigate('SpecialDetail', { 
+      specialId: specialId,
+      businessId: itemId // Pass the business ID for context
+    });
+  };
+
+  // Handle viewing all specials for this business
+  const handleViewAllSpecials = () => {
+    // Navigate to specials screen with business filter
+    navigation.navigate('MainTabs', {
+      screen: 'Specials',
+      params: { 
+        businessId: itemId,
+        businessName: item?.name || 'Business'
+      }
+    });
   };
 
   // Handle social media press
@@ -92,32 +108,36 @@ const ListingDetailScreen: React.FC = () => {
 
   // Calculate real distance if user location is available
   const realDistance = useMemo(() => {
-    console.log('📍 DEBUG: realDistance calculation - item:', item ? 'loaded' : 'null', 'location:', location ? 'available' : 'null');
+    infoLog('📍 DEBUG: realDistance calculation - item:', item ? 'loaded' : 'null', 'location:', location ? 'available' : 'null');
     if (item) {
-      console.log('📍 DEBUG: item coordinates - lat:', item.latitude, 'lng:', item.longitude);
+      infoLog('📍 DEBUG: item coordinates - lat:', item.latitude, 'lng:', item.longitude);
     }
     
     if (location && item?.latitude && item?.longitude) {
-      const distance = calculateDistance(
+      const distanceMiles = calculateDistance(
         location.latitude,
         location.longitude,
         item.latitude,
         item.longitude
       );
-      console.log('📍 Distance calculated:', `${distance.toFixed(1)} miles`);
-      console.log('📍 Location coords:', location.latitude, location.longitude);
-      console.log('📍 Item coords:', item.latitude, item.longitude);
+      
+      // Convert miles to meters
+      const distanceMeters = distanceMiles * 1609.34;
+      
+      infoLog('📍 Distance calculated:', `${distanceMeters.toFixed(0)} meters (${distanceMiles.toFixed(1)} miles)`);
+      infoLog('📍 Location coords:', location.latitude, location.longitude);
+      infoLog('📍 Item coords:', item.latitude, item.longitude);
       
       // For testing: allow larger distances since iOS simulator gives SF location
-      // In production, this should be much smaller (like 50-100 miles)
-      if (distance > 20000) { // 20,000 miles - basically anywhere on Earth
-        console.log('📍 Distance too large, likely incorrect coordinates');
+      // In production, this should be much smaller (like 50-100 miles = 80-160km)
+      if (distanceMeters > 16093400) { // 10,000 miles in meters - more reasonable threshold
+        infoLog('📍 Distance too large, likely incorrect coordinates');
         return null;
       }
       
-      return distance;
+      return distanceMeters;
     }
-    console.log('📍 No location or coordinates available:', `hasLocation: ${!!location}, hasItemLat: ${!!item?.latitude}, hasItemLng: ${!!item?.longitude}`);
+    infoLog('📍 No location or coordinates available:', `hasLocation: ${!!location}, hasItemLat: ${!!item?.latitude}, hasItemLng: ${!!item?.longitude}`);
     return null;
   }, [location, item]);
 
@@ -125,12 +145,12 @@ const ListingDetailScreen: React.FC = () => {
   const fetchItemDetails = useCallback(async () => {
     try {
       setLoading(true);
-      console.log('🔍 DEBUG: Fetching item details for ID:', itemId, 'Category:', categoryKey);
+      infoLog('🔍 DEBUG: Fetching item details for ID:', itemId, 'Category:', categoryKey);
       const response = await apiService.getListing(itemId);
-      console.log('🔍 DEBUG: getListing response:', response);
+      infoLog('🔍 DEBUG: getListing response:', response);
       
       if (response.success && response.data) {
-        console.log('🔍 DEBUG: Setting item data:', response.data.listing);
+        infoLog('🔍 DEBUG: Setting item data:', response.data.listing);
         setItem(response.data.listing);
         // Load reviews separately to avoid circular dependency
         loadReviews(itemId);
@@ -164,7 +184,7 @@ const ListingDetailScreen: React.FC = () => {
     // ScrollView width is now screen width minus margins
     const imageWidth = screenWidth - (Spacing.md * 2); // Image width
     const index = Math.round(contentOffset.x / imageWidth);
-    console.log('🖼️ Image swipe - contentOffset.x:', contentOffset.x, 'imageWidth:', imageWidth, 'index:', index);
+    infoLog('🖼️ Image swipe - contentOffset.x:', contentOffset.x, 'imageWidth:', imageWidth, 'index:', index);
     setActiveImageIndex(index);
   };
 
@@ -457,7 +477,10 @@ const ListingDetailScreen: React.FC = () => {
           handlePressOut={handlePressOut}
           formatCount={formatCount}
           onReportPress={handleReportListing}
-          onSharePress={() => Alert.alert('Share', 'Share functionality would be implemented here')}
+          onSharePress={() => {
+            // TODO: Implement share functionality
+            infoLog('Share business:', itemId);
+          }}
           onFavoritePress={handleFavoriteToggle}
           centerContent={{
             type: 'view_count',
@@ -510,9 +533,21 @@ const ListingDetailScreen: React.FC = () => {
           {/* Price and Distance */}
           <View style={styles.infoRow}>
             <Text style={styles.priceText}>{(item as any).price_range || '$$'}</Text>
-            <Text style={styles.distanceText}>
-              {realDistance ? `${realDistance.toFixed(1)} mi` : (item.zip_code ? `${item.zip_code}` : 'Location N/A')}
-            </Text>
+            {realDistance ? (
+              <DistanceDisplay
+                distanceMeters={realDistance}
+                accuracyContext={{
+                  accuracyAuthorization,
+                  isApproximate: false
+                }}
+                textStyle={styles.distanceText}
+                options={{ unit: 'imperial' }}
+              />
+            ) : (
+              <Text style={styles.distanceText}>
+                {item.zip_code ? `${item.zip_code}` : 'Location N/A'}
+              </Text>
+            )}
           </View>
 
           {/* Hours */}
@@ -629,65 +664,14 @@ const ListingDetailScreen: React.FC = () => {
           {/* Divider */}
           <View style={styles.divider} />
 
-          {/* Special Cards */}
-          <View style={styles.specialCardsContainer}>
-            <TouchableOpacity 
-              style={[
-                styles.specialCard,
-                pressedButtons.has('happy-hour') && styles.specialCardPressed
-              ]}
-              onPress={() => handleSpecialPress('Happy Hour')}
-              onPressIn={() => handlePressIn('happy-hour')}
-              onPressOut={() => handlePressOut('happy-hour')}
-              activeOpacity={0.8}
-            >
-              <View style={styles.specialCardImage}>
-                <Text style={styles.specialCardImageText}>🍺</Text>
-              </View>
-              <View style={styles.specialCardContent}>
-                <Text style={styles.specialCardTitle}>Happy Hour</Text>
-                <Text style={styles.specialCardDescription}>50% off drinks</Text>
-                <Text style={styles.specialCardDescription}>4-6 PM</Text>
-              </View>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[
-                styles.specialCard,
-                pressedButtons.has('student-deal') && styles.specialCardPressed
-              ]}
-              onPress={() => handleSpecialPress('Student Deal')}
-              onPressIn={() => handlePressIn('student-deal')}
-              onPressOut={() => handlePressOut('student-deal')}
-              activeOpacity={0.8}
-            >
-              <View style={styles.specialCardImage}>
-                <Text style={styles.specialCardImageText}>🎓</Text>
-              </View>
-              <View style={styles.specialCardContent}>
-                <Text style={styles.specialCardTitle}>Student Deal</Text>
-                <Text style={styles.specialCardDescription}>15% off with ID</Text>
-              </View>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[
-                styles.specialCard,
-                pressedButtons.has('weekend-deal') && styles.specialCardPressed
-              ]}
-              onPress={() => handleSpecialPress('Weekend Deal')}
-              onPressIn={() => handlePressIn('weekend-deal')}
-              onPressOut={() => handlePressOut('weekend-deal')}
-              activeOpacity={0.8}
-            >
-              <View style={styles.specialCardImage}>
-                <EateryIcon size={24} color="#FFFFFF" />
-              </View>
-              <View style={styles.specialCardContent}>
-                <Text style={styles.specialCardTitle}>Weekend Deal</Text>
-                <Text style={styles.specialCardDescription}>Free appetizer</Text>
-                <Text style={styles.specialCardDescription}>with entree</Text>
-              </View>
-            </TouchableOpacity>
-          </View>
+          {/* Business Specials */}
+          <BusinessSpecials
+            businessId={itemId}
+            businessName={item?.name || 'Business'}
+            onSpecialPress={handleSpecialPress}
+            onViewAllPress={handleViewAllSpecials}
+            maxDisplayCount={3}
+          />
 
           {/* Social Media Icons */}
           {(item.facebook_url || item.instagram_url || item.whatsapp_url || item.tiktok_url) && (
@@ -1152,60 +1136,6 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     textAlign: 'center',
     lineHeight: 20,
-  },
-  specialCardsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: Spacing.md,
-    gap: Spacing.sm,
-  },
-  specialCard: {
-    flex: 1,
-    backgroundColor: Colors.surface,
-    borderRadius: BorderRadius.md,
-    padding: Spacing.md,
-    borderWidth: 1,
-    borderColor: Colors.gray200,
-    flexDirection: 'column',
-    alignItems: 'center',
-    ...Shadows.sm,
-  },
-  specialCardPressed: {
-    backgroundColor: Colors.gray100,
-    borderColor: Colors.primary.main,
-    transform: [{ scale: 0.98 }],
-    ...Shadows.md,
-  },
-  specialCardImage: {
-    width: 70,
-    height: 70,
-    backgroundColor: Colors.primary.main,
-    borderRadius: BorderRadius.sm,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: Spacing.sm,
-  },
-  specialCardImageText: {
-    fontSize: 28,
-  },
-  specialCardContent: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  specialCardTitle: {
-    ...Typography.styles.caption,
-    color: Colors.primary.main,
-    fontWeight: '600',
-    marginBottom: 4,
-    textAlign: 'center',
-  },
-  specialCardDescription: {
-    ...Typography.styles.caption,
-    color: Colors.textSecondary,
-    fontSize: 10,
-    lineHeight: 12,
-    marginBottom: 1,
-    textAlign: 'center',
   },
   divider: {
     height: 1,

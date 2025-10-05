@@ -146,7 +146,7 @@ const LiveMapScreen: React.FC = () => {
       distance: item.distance,
       latitude: item.latitude || (40.7128 + (Math.random() - 0.5) * 0.15), // NYC area with more spread
       longitude: item.longitude || (-74.0060 + (Math.random() - 0.5) * 0.15),
-      imageUrl: item.images && item.images.length > 0 ? item.images[0] : item.imageUrl, // Use first image from enhanced data
+      imageUrl: item.images && item.images.length > 0 ? item.images[0].url : item.imageUrl, // Use first image from enhanced data
     }));
     console.log('🗺️ Converted mapListings:', converted);
     return converted;
@@ -596,15 +596,11 @@ const LiveMapScreen: React.FC = () => {
 
   // Send marker updates to WebView when markerData changes (with debouncing)
   useEffect(() => {
-    console.log('🗺️ Marker data updated:', `markerDataLength: ${markerData.length}, filteredListingsLength: ${filteredListings.length}, mapLoaded: ${mapLoaded}, hasWebView: ${!!webViewRef.current}`);
-    
-    if (webViewRef.current && markerData.length > 0) {
+    if (webViewRef.current && markerData.length > 0 && mapLoaded) {
       const message = JSON.stringify({
         type: 'update_markers',
         listings: markerData
       });
-
-      console.log('🗺️ Sending markers to WebView:', markerData.length, 'markers');
       
       // Debounce marker updates to prevent flickering
       const timeoutId = setTimeout(() => {
@@ -615,7 +611,7 @@ const LiveMapScreen: React.FC = () => {
       
       return () => clearTimeout(timeoutId);
     }
-  }, [markerData, mapLoaded, filteredListings.length]);
+  }, [markerData.length, mapLoaded]); // Simplified dependencies to prevent infinite loop
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>

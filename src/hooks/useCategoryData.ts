@@ -1,6 +1,19 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { apiService, Listing } from '../services/api';
 import MikvahIcon from '../components/MikvahIcon';
+import { debugLog } from '../utils/logger';
+
+// Helper function to get the correct image URL from database or fallback to placeholder
+const getImageUrl = (listing: Listing): string => {
+  if (listing.images && listing.images.length > 0) {
+    // Find the primary image first, then fallback to first image
+    const primaryImage = listing.images.find((img: any) => img.is_primary);
+    return primaryImage ? primaryImage.url : listing.images[0].url;
+  } else {
+    // Fallback to placeholder only if no images exist in database
+    return `https://picsum.photos/300/225?random=${listing.id || ''}`;
+  }
+};
 
 export interface CategoryItem {
   id: string;
@@ -220,7 +233,6 @@ export const useCategoryData = ({
     
     if (cachedData && cachedData.lastQuery === query) {
       // Load from cache
-      console.log('🔥 LOADING FROM CACHE:', cacheKey, 'data.length:', cachedData.data.length);
       setData(cachedData.data);
       setCurrentPage(cachedData.currentPage);
       setHasMore(cachedData.hasMore);
@@ -229,7 +241,7 @@ export const useCategoryData = ({
       initialLoadRef.current = true; // Mark as loaded from cache
     } else {
       // Reset for new category/query
-      console.log('🔥 RESETTING DATA FOR NEW CATEGORY/QUERY:', cacheKey);
+      debugLog('🔥 RESETTING DATA FOR NEW CATEGORY/QUERY:', cacheKey);
       setData([]);
       setCurrentPage(1);
       setHasMore(true);
@@ -263,9 +275,7 @@ export const useCategoryData = ({
       const offset = (currentPage - 1) * pageSize;
       
       // Try to fetch from API first with category-specific call and pagination
-      console.log('🔥 API CALL: Fetching listings for category:', categoryKey, 'page:', currentPage, 'offset:', offset, 'limit:', pageSize);
       const response = await apiService.getListingsByCategory(categoryKey, pageSize, offset);
-      console.log('🔥 API RESPONSE:', response);
       
       if (response.success && response.data) {
         // Filter listings by query if provided
@@ -292,10 +302,13 @@ export const useCategoryData = ({
             id: String(listing.id || ''),
             title: String(listing.title || 'Unknown'),
             description: String(listing.description || 'No description available'),
-            imageUrl: String(`https://picsum.photos/300/225?random=${listing.id || ''}`),
+            imageUrl: String(getImageUrl(listing)),
             category: String(listing.category_name || 'unknown'),
             rating: Number(parseFloat(listing.rating) || 0),
             zip_code: String(listing.zip_code || '00000'),
+            // Add coordinates directly to the item
+            latitude: listing.latitude ? Number(listing.latitude) : undefined,
+            longitude: listing.longitude ? Number(listing.longitude) : undefined,
             // Provide all optional fields with safe defaults
             price: '$$',
             isOpen: true,
@@ -318,7 +331,7 @@ export const useCategoryData = ({
           return safeItem;
         });
 
-        console.log('🔥 PROCESSED DATA: newData count:', newData.length);
+        // Processed data successfully
         
         if (newData.length > 0) {
           try {
@@ -340,13 +353,12 @@ export const useCategoryData = ({
               lastQuery: queryRef.current,
             });
             
-            console.log('🔥 SAVED TO CACHE:', cacheKey, 'data.length:', updatedData.length, 'page:', newPage);
+            // Saved to cache successfully
             
             return updatedData;
           });
           } catch (error) {
-            console.error('🔥 ERROR in setData:', error);
-            console.error('🔥 newData:', newData);
+            console.error('Error updating data:', error);
             // Fallback to empty array if there's an error
             setData([]);
           }
@@ -378,7 +390,7 @@ export const useCategoryData = ({
       setLoading(false);
       loadingRef.current = false;
     }
-  }, [categoryKey, pageSize, hasMore, currentPage]); // Added currentPage to dependencies
+  }, [categoryKey, pageSize, hasMore]); // Removed currentPage to prevent infinite loop
 
   const refresh = useCallback(async () => {
     if (loadingRef.current) return;
@@ -389,7 +401,7 @@ export const useCategoryData = ({
     // Clear cache for this category/query combination
     const cacheKey = `${categoryKey}-${queryRef.current}`;
     categoryDataCache.delete(cacheKey);
-    console.log('🔥 CLEARED CACHE FOR REFRESH:', cacheKey);
+    debugLog('🔥 CLEARED CACHE FOR REFRESH:', cacheKey);
 
     try {
       // Try to fetch from API first with category-specific call
@@ -420,10 +432,13 @@ export const useCategoryData = ({
             id: String(listing.id || ''),
             title: String(listing.title || 'Unknown'),
             description: String(listing.description || 'No description available'),
-            imageUrl: String(`https://picsum.photos/300/225?random=${listing.id || ''}`),
+            imageUrl: String(getImageUrl(listing)),
             category: String(listing.category_name || 'unknown'),
             rating: Number(parseFloat(listing.rating) || 0),
             zip_code: String(listing.zip_code || '00000'),
+            // Add coordinates directly to the item
+            latitude: listing.latitude ? Number(listing.latitude) : undefined,
+            longitude: listing.longitude ? Number(listing.longitude) : undefined,
             // Provide all optional fields with safe defaults
             price: '$$',
             isOpen: true,

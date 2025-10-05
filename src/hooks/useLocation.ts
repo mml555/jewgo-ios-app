@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Geolocation from '@react-native-community/geolocation';
 import { PermissionsAndroid, Platform, Alert } from 'react-native';
+import { debugLog } from '../utils/logger';
 
 // Global location state to share across all components
 let globalLocationState: LocationState = {
@@ -15,9 +16,14 @@ let globalLocationState: LocationState = {
 const listeners = new Set<(state: LocationState) => void>();
 
 const notifyListeners = () => {
-  console.log('🔥 Location state changed:', {
+  debugLog('🔥 Location state changed:', {
     listeners: listeners.size,
-    hasLocation: !!globalLocationState.location 
+    hasLocation: !!globalLocationState.location,
+    location: globalLocationState.location ? `${globalLocationState.location.latitude}, ${globalLocationState.location.longitude}` : 'null',
+    permissionGranted: globalLocationState.permissionGranted,
+    permissionRequested: globalLocationState.permissionRequested,
+    loading: globalLocationState.loading,
+    error: globalLocationState.error
   });
   listeners.forEach(listener => listener(globalLocationState));
 };
@@ -76,7 +82,7 @@ export const useLocation = () => {
   // Update global state and notify listeners
   const updateGlobalState = useCallback((updater: (prev: LocationState) => LocationState) => {
     const newState = updater(globalLocationState);
-    console.log('🔥 Updating global location state:', {
+    debugLog('🔥 Updating global location state:', {
       oldLocation: globalLocationState.location ? 'has location' : 'no location',
       newLocation: newState.location ? 'has location' : 'no location',
       listeners: listeners.size 
@@ -259,11 +265,46 @@ export const useLocation = () => {
 
   // Auto-request location on mount
   useEffect(() => {
-    if (Platform.OS === 'ios') {
-      // On iOS, assume permission is granted if in Info.plist
-      setState(prev => ({ ...prev, permissionGranted: true, permissionRequested: true }));
-    }
-  }, []);
+    const initializeLocation = async () => {
+      debugLog('🔥 Initializing location on mount, Platform:', Platform.OS);
+      
+      if (Platform.OS === 'ios') {
+        // On iOS, assume permission is granted if in Info.plist
+        debugLog('🔥 Setting iOS permission as granted');
+        updateGlobalState(prev => ({ ...prev, permissionGranted: true, permissionRequested: true }));
+        
+        // Actually get the location after setting permission as granted
+        try {
+          debugLog('🔥 Attempting to get location on iOS...');
+          const location = await getCurrentLocation();
+          if (location) {
+            debugLog('🔥 Auto-initialized location on iOS:', location);
+          } else {
+            debugLog('🔥 Failed to get location on iOS - returned null');
+          }
+        } catch (error) {
+          console.error('🔥 Failed to auto-initialize location on iOS:', error);
+        }
+      } else {
+        // On Android, try to get location if permission is already granted
+        try {
+          debugLog('🔥 Attempting to get location on Android...');
+          const location = await getCurrentLocation();
+          if (location) {
+            debugLog('🔥 Auto-initialized location on Android:', location);
+          } else {
+            debugLog('🔥 Failed to get location on Android - returned null');
+          }
+        } catch (error) {
+          console.error('🔥 Failed to auto-initialize location on Android:', error);
+        }
+      }
+    };
+
+    // Add a small delay to ensure the hook is fully initialized
+    const timer = setTimeout(initializeLocation, 100);
+    return () => clearTimeout(timer);
+  }, []); // Remove dependencies to avoid circular dependency
 
   return {
     ...state,

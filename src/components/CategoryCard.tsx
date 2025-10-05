@@ -12,11 +12,17 @@ import { CategoryItem } from '../hooks/useCategoryData';
 import { useLocation, calculateDistance } from '../hooks/useLocation';
 import { useFavorites } from '../hooks/useFavorites';
 import { Colors, Typography, Spacing, BorderRadius, Shadows, TouchTargets } from '../styles/designSystem';
+import { favoritesEventService } from '../services/FavoritesEventService';
 import HeartIcon from './HeartIcon';
+import { debugLog } from '../utils/logger';
+import { DistanceDisplay } from './DistanceDisplay';
+import { useLocationSimple } from '../hooks/useLocationSimple';
 
 interface CategoryCardProps {
   item: CategoryItem;
   categoryKey: string;
+  onFavoriteToggle?: (entityId: string, isFavorited: boolean) => void;
+  isInitiallyFavorited?: boolean;
 }
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -25,47 +31,63 @@ const CARD_SPACING = 8; // Space between cards in a row
 const CARD_WIDTH = (screenWidth - ROW_PADDING - CARD_SPACING) / 2;
 const IMAGE_HEIGHT = (CARD_WIDTH * 3) / 4; // 4:3 aspect ratio
 
-const CategoryCard: React.FC<CategoryCardProps> = memo(({ item, categoryKey }) => {
+const CategoryCard: React.FC<CategoryCardProps> = ({ item, categoryKey, onFavoriteToggle, isInitiallyFavorited }) => {
+  debugLog('🔄 CategoryCard render - props:', { 
+    title: item.title, 
+    hasOnFavoriteToggle: !!onFavoriteToggle, 
+    isInitiallyFavorited,
+    componentType: 'CategoryCard'
+  });
+  
   const navigation = useNavigation();
   const { location } = useLocation();
+  const { accuracyAuthorization } = useLocationSimple();
   const { isFavorited: isFavoritedHook, toggleFavorite, checkFavoriteStatus } = useFavorites();
-  const [isFavorited, setIsFavorited] = useState(false);
+  const [isFavorited, setIsFavorited] = useState(isInitiallyFavorited || false);
+  const [imageError, setImageError] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
 
-  // Check favorite status on mount
+  // Check favorite status on mount (only if not initially favorited)
   useEffect(() => {
-    const checkStatus = async () => {
-      const status = await checkFavoriteStatus(item.id);
-      setIsFavorited(status);
-    };
-    checkStatus();
-  }, [item.id, checkFavoriteStatus]);
+    if (isInitiallyFavorited === undefined) {
+      const checkStatus = async () => {
+        const status = await checkFavoriteStatus(item.id);
+        debugLog('🔄 CategoryCard checking favorite status for', item.title, ':', status);
+        setIsFavorited(status);
+      };
+      checkStatus();
+    } else {
+      debugLog('🔄 CategoryCard using initial favorite status for', item.title, ':', isInitiallyFavorited);
+    }
+  }, [item.id, checkFavoriteStatus, isInitiallyFavorited]);
 
-  // Calculate real distance if user location is available
-  const realDistance = useMemo(() => {
-
-    
+  // Calculate real distance if user location is available (in meters)
+  const realDistanceMeters = useMemo(() => {
     if (location && item.latitude && item.longitude) {
-      console.log('📍 CALCULATING DISTANCE:', `userLocation: ${location.latitude}, ${location.longitude}, businessLocation: ${item.latitude}, ${item.longitude}, businessName: ${item.title}`);
+      debugLog('📍 CALCULATING DISTANCE:', `userLocation: ${location.latitude}, ${location.longitude}, businessLocation: ${item.latitude}, ${item.longitude}, businessName: ${item.title}`);
       
-      const distance = calculateDistance(
+      const distanceMiles = calculateDistance(
         location.latitude,
         location.longitude,
         Number(item.latitude),
         Number(item.longitude)
       );
       
-      console.log('📍 DISTANCE RESULT:', `distance: ${distance.toFixed(1)} miles, businessName: ${item.title}, userLocation: San Francisco (iOS Simulator), businessLocation: NYC Area`);
+      // Convert miles to meters
+      const distanceMeters = distanceMiles * 1609.34;
+      
+      debugLog('📍 DISTANCE RESULT:', `distance: ${distanceMeters.toFixed(0)} meters (${distanceMiles.toFixed(1)} miles), businessName: ${item.title}`);
       
       // For testing: allow larger distances since iOS simulator gives SF location
-      // In production, this should be much smaller (like 50-100 miles)
-      if (distance > 20000) { // 20,000 miles - basically anywhere on Earth
-        console.log('📍 Distance too large, likely incorrect coordinates');
+      // In production, this should be much smaller (like 50-100 miles = 80-160km)
+      if (distanceMeters > 16093400) { // 10,000 miles in meters - more reasonable threshold
+        debugLog('📍 Distance too large, likely incorrect coordinates');
         return null;
       }
       
-      return distance;
+      return distanceMeters;
     }
-    console.log('📍 No location or coordinates available for card:', `hasLocation: ${!!location}, hasItemLat: ${!!item.latitude}, hasItemLng: ${!!item.longitude}, hasZipCode: ${!!item.zip_code}, zipCode: ${item.zip_code}, hasPrice: ${!!item.price}, price: ${item.price}`);
+    debugLog('📍 No location or coordinates available for card:', `hasLocation: ${!!location}, hasItemLat: ${!!item.latitude}, hasItemLng: ${!!item.longitude}, hasZipCode: ${!!item.zip_code}, zipCode: ${item.zip_code}, hasPrice: ${!!item.price}, price: ${item.price}`);
     return null; // Return null to trigger zipcode fallback, not mock distance
   }, [location, item.latitude, item.longitude]);
 
@@ -78,6 +100,8 @@ const CategoryCard: React.FC<CategoryCardProps> = memo(({ item, categoryKey }) =
 
   const handleHeartPress = async () => {
     try {
+      debugLog('🔄 CategoryCard heart pressed for', item.title, 'current isFavorited:', isFavorited);
+      
       // Prepare entity data for the favorites service
       const entityData = {
         entity_name: item.title,
@@ -96,8 +120,20 @@ const CategoryCard: React.FC<CategoryCardProps> = memo(({ item, categoryKey }) =
       
       if (success) {
         // Update local state optimistically
-        setIsFavorited(!isFavorited);
-        console.log(`✅ ${isFavorited ? 'Removed from' : 'Added to'} favorites: ${item.title}`);
+        const newFavorited = !isFavorited;
+        setIsFavorited(newFavorited);
+        debugLog(`✅ ${isFavorited ? 'Removed from' : 'Added to'} favorites: ${item.title}`);
+        
+        // Notify parent component about the toggle
+        if (onFavoriteToggle) {
+          debugLog('🔄 CategoryCard calling onFavoriteToggle with:', { id: item.id, isFavorited: newFavorited });
+          onFavoriteToggle(item.id, newFavorited);
+        } else {
+          debugLog('🔄 CategoryCard: onFavoriteToggle callback not provided');
+        }
+        
+        // Notify global favorites system of the update
+        favoritesEventService.notifyFavoritesUpdated();
       } else {
         console.error('❌ Failed to toggle favorite for:', item.title);
       }
@@ -117,13 +153,49 @@ const CategoryCard: React.FC<CategoryCardProps> = memo(({ item, categoryKey }) =
       accessibilityHint="Tap to view details"
     >
       <View style={styles.imageContainer}>
-        <Image
-          source={{ uri: item.imageUrl }}
-          style={styles.image}
-          resizeMode="cover"
-          accessible={true}
-          accessibilityLabel={`Image for ${item.title}`}
-        />
+        {!imageError && item.imageUrl ? (
+          <Image
+            key={`${item.imageUrl}-${retryCount}`} // Force re-render on retry
+            source={{ uri: item.imageUrl }}
+            style={styles.image}
+            resizeMode="cover"
+            accessible={true}
+            accessibilityLabel={`Image for ${item.title}`}
+            onError={(error) => {
+              debugLog('🖼️ Image load error for', item.title, ':', error.nativeEvent.error);
+              if (retryCount < 2) {
+                // Retry loading the image up to 2 times
+                setTimeout(() => {
+                  setRetryCount(prev => prev + 1);
+                  setImageError(false);
+                }, 1000 * (retryCount + 1)); // Exponential backoff
+              } else {
+                setImageError(true);
+              }
+            }}
+            onLoad={() => {
+              debugLog('🖼️ Image loaded successfully for', item.title);
+              setImageError(false);
+            }}
+          />
+        ) : (
+          <View style={styles.placeholderContainer}>
+            <Text style={styles.placeholderIcon}>
+              {categoryKey === 'restaurant' ? '🍽️' : 
+               categoryKey === 'synagogue' ? '🕍' : 
+               categoryKey === 'store' ? '🏪' : 
+               categoryKey === 'mikvah' ? '💧' : 
+               categoryKey === 'jobs' ? '💼' : '🏢'}
+            </Text>
+            <Text style={styles.placeholderText}>
+              {categoryKey === 'restaurant' ? 'Restaurant' : 
+               categoryKey === 'synagogue' ? 'Synagogue' : 
+               categoryKey === 'store' ? 'Store' : 
+               categoryKey === 'mikvah' ? 'Mikvah' : 
+               categoryKey === 'jobs' ? 'Job' : 'Business'}
+            </Text>
+          </View>
+        )}
         
         {/* Tag on top left */}
         <View style={styles.tagContainer}>
@@ -165,23 +237,37 @@ const CategoryCard: React.FC<CategoryCardProps> = memo(({ item, categoryKey }) =
         {/* Price and Distance - matches details page layout */}
         <View style={styles.infoRow}>
           <Text style={styles.priceText}>{String(item.price || '$$')}</Text>
-          <Text style={styles.distanceText}>
-            {realDistance ? `${Number(realDistance).toFixed(1)} mi` : (item.zip_code ? String(item.zip_code) : 'N/A')}
-          </Text>
+          {realDistanceMeters ? (
+            <DistanceDisplay
+              distanceMeters={realDistanceMeters}
+              accuracyContext={{
+                accuracyAuthorization,
+                isApproximate: false
+              }}
+              style={styles.distanceContainer}
+              textStyle={styles.distanceText}
+              options={{ unit: 'imperial' }}
+            />
+          ) : (
+            <Text style={styles.distanceText}>
+              {item.zip_code ? String(item.zip_code) : 'N/A'}
+            </Text>
+          )}
         </View>
       </View>
     </TouchableOpacity>
   );
-});
+};
 
 CategoryCard.displayName = 'CategoryCard';
 
 const styles = StyleSheet.create({
   container: {
     width: CARD_WIDTH,
-    backgroundColor: 'transparent',
+    backgroundColor: Colors.background.secondary, // Add solid background for shadow calculation
     borderRadius: BorderRadius.lg,
     padding: 0, // Remove padding to align with image edges
+    ...Shadows.sm, // Add subtle shadow for depth
   },
   imageContainer: {
     position: 'relative',
@@ -190,10 +276,33 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.lg,
     overflow: 'hidden',
     marginBottom: Spacing.sm,
+    backgroundColor: Colors.background.tertiary, // Add background color for when image fails to load
   },
   image: {
     width: '100%',
     height: '100%',
+  },
+  placeholderContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.background.tertiary,
+  },
+  placeholderIcon: {
+    fontSize: 40,
+    marginBottom: Spacing.sm,
+    opacity: 0.7,
+  },
+  placeholderText: {
+    ...Typography.styles.bodySmall,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    fontWeight: '500',
+    textTransform: 'capitalize',
   },
   tagContainer: {
     position: 'absolute',
@@ -281,6 +390,11 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: Spacing.sm,
   },
+  distanceContainer: {
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    minWidth: 50, // Ensure minimum width for proper alignment
+  },
   distanceText: {
     ...Typography.styles.body,
     color: Colors.textSecondary,
@@ -291,3 +405,40 @@ const styles = StyleSheet.create({
 });
 
 export default CategoryCard;
+
+// Custom comparison function for memo to ensure proper re-rendering
+const areEqual = (prevProps: CategoryCardProps, nextProps: CategoryCardProps) => {
+  const callbackChanged = prevProps.onFavoriteToggle !== nextProps.onFavoriteToggle;
+  const initialStatusChanged = prevProps.isInitiallyFavorited !== nextProps.isInitiallyFavorited;
+  const itemChanged = prevProps.item.id !== nextProps.item.id || 
+                      prevProps.item.title !== nextProps.item.title ||
+                      prevProps.categoryKey !== nextProps.categoryKey;
+  
+  const shouldReRender = callbackChanged || initialStatusChanged || itemChanged;
+  
+  debugLog('🔄 CategoryCardWithMemo memo comparison:', {
+    title: nextProps.item.title,
+    callbackChanged,
+    initialStatusChanged,
+    itemChanged,
+    shouldReRender,
+    prevCallback: !!prevProps.onFavoriteToggle,
+    nextCallback: !!nextProps.onFavoriteToggle
+  });
+  
+  return !shouldReRender;
+};
+
+export const CategoryCardWithMemo = memo(({ item, categoryKey, onFavoriteToggle, isInitiallyFavorited }: CategoryCardProps) => {
+  debugLog('🔄 CategoryCardWithMemo render - props:', { 
+    title: item.title, 
+    hasOnFavoriteToggle: !!onFavoriteToggle, 
+    isInitiallyFavorited,
+    componentType: 'CategoryCardWithMemo'
+  });
+  
+  return <CategoryCard item={item} categoryKey={categoryKey} onFavoriteToggle={onFavoriteToggle} isInitiallyFavorited={isInitiallyFavorited} />;
+}, areEqual);
+
+// Also export the regular CategoryCard with memo for other uses
+export const CategoryCardMemo = memo(CategoryCard);

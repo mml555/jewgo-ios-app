@@ -171,8 +171,8 @@ class ApiV5Service {
     this.accessToken = token;
   }
 
-  private getHeaders(): HeadersInit {
-    const headers: HeadersInit = {
+  private getHeaders(): Record<string, string> {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
 

@@ -22,12 +22,28 @@ import SearchIcon from '../components/icons/SearchIcon';
 import { specialsService } from '../services/SpecialsService';
 import { Special, RestaurantWithSpecials, ActiveSpecial } from '../types/specials';
 import { useFavorites } from '../hooks/useFavorites';
+import { infoLog } from '../utils/logger';
+import guestService from '../services/GuestService';
 
 type NavigationProp = StackNavigationProp<RootStackParamList, 'SpecialDetail'>;
 
-const SpecialsScreen: React.FC = () => {
+interface SpecialsScreenProps {
+  route?: {
+    params?: {
+      businessId?: string;
+      businessName?: string;
+    };
+  };
+}
+
+const SpecialsScreen: React.FC<SpecialsScreenProps> = ({ route }) => {
   const navigation = useNavigation<NavigationProp>();
   const { toggleFavorite } = useFavorites();
+  
+  // Get route params for business filtering
+  const businessId = route?.params?.businessId;
+  const businessName = route?.params?.businessName;
+  const isFilteredByBusiness = !!businessId;
   
   // State management
   const [specials, setSpecials] = useState<ActiveSpecial[]>([]);
@@ -77,39 +93,63 @@ const SpecialsScreen: React.FC = () => {
     try {
       setError(null);
       
-      // Use the fast materialized view endpoint for better performance
-      const response = await specialsService.getActiveSpecials({
-        limit: 20,
-        sortBy: 'priority',
-        sortOrder: 'desc'
-      });
+      let response;
       
-      if (response.success && response.data) {
-        setSpecials(response.data.specials);
-        
-        // Also load restaurants with specials for enhanced data (optional)
-        try {
-          const restaurantsResponse = await specialsService.getRestaurantsWithSpecialsFast({
-            limit: 20
-          });
-          
-          if (restaurantsResponse.success && restaurantsResponse.data) {
-            setRestaurantsWithSpecials(restaurantsResponse.data.restaurants);
-          }
-        } catch (restaurantsError) {
-          console.warn('Failed to load restaurants with specials:', restaurantsError);
-          // Don't fail the entire load if this optional call fails
+      if (isFilteredByBusiness && businessId) {
+        // Load specials for a specific business
+        response = await specialsService.getRestaurantSpecials(businessId);
+        if (response.success && response.data) {
+          // Transform Special[] to ActiveSpecial[] format
+          const activeSpecials: ActiveSpecial[] = response.data.specials.map(special => ({
+            id: special.id,
+            businessId: special.businessId,
+            businessName: special.business?.name || special.business_name || 'Unknown Business',
+            title: special.title,
+            discountLabel: special.discountLabel,
+            validUntil: special.validUntil,
+            claimsTotal: special.claimsTotal,
+            maxClaimsTotal: special.maxClaimsTotal,
+            city: special.business?.city || special.business_city || '',
+            state: special.business?.state || special.business_state || '',
+          }));
+          setSpecials(activeSpecials);
         }
       } else {
-        setError(response.error || 'Failed to load specials');
+        // Use the fast materialized view endpoint for better performance
+        response = await specialsService.getActiveSpecials({
+          limit: 20,
+          sortBy: 'priority',
+          sortOrder: 'desc'
+        });
+        
+        if (response.success && response.data) {
+          setSpecials(response.data.specials);
+          
+          // Also load restaurants with specials for enhanced data (optional)
+          try {
+            const restaurantsResponse = await specialsService.getRestaurantsWithSpecialsFast({
+              limit: 20
+            });
+            
+            if (restaurantsResponse.success && restaurantsResponse.data) {
+              setRestaurantsWithSpecials(restaurantsResponse.data.restaurants);
+            }
+          } catch (restaurantsError) {
+            // Don't fail the entire load if this optional call fails
+          }
+        }
       }
+      
+             if (!response?.success) {
+               setError(response?.error || 'Failed to load specials');
+             }
     } catch (err) {
       console.error('Error loading specials:', err);
       setError('Failed to load specials');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [businessId, isFilteredByBusiness]);
 
   // Load specials on component mount
   useEffect(() => {
@@ -117,7 +157,7 @@ const SpecialsScreen: React.FC = () => {
   }, [loadSpecials]);
 
   const handleOfferPress = useCallback((deal: DealGridCard) => {
-    console.log('Deal pressed:', deal.title);
+    infoLog('Deal pressed:', deal.title);
     navigation.navigate('SpecialDetail', { specialId: deal.id });
   }, [navigation]);
 
@@ -184,7 +224,7 @@ const SpecialsScreen: React.FC = () => {
       const success = await toggleFavorite(special.businessId, entityData);
       
       if (success) {
-        console.log(`✅ Toggled favorite for restaurant: ${businessName}`);
+        infoLog(`✅ Toggled favorite for restaurant: ${businessName}`);
       } else {
         console.error('❌ Failed to toggle favorite for restaurant:', businessName);
       }
@@ -323,7 +363,9 @@ const SpecialsScreen: React.FC = () => {
           </TouchableOpacity>
           
           <View style={styles.headerTitle}>
-            <Text style={styles.headerTitleText}>Specials</Text>
+            <Text style={styles.headerTitleText}>
+              {isFilteredByBusiness ? businessName || 'Business Specials' : 'Specials'}
+            </Text>
           </View>
           
           <TouchableOpacity 
@@ -331,7 +373,10 @@ const SpecialsScreen: React.FC = () => {
               styles.headerSearchButton,
               pressedButtons.has('search') && styles.headerButtonPressed
             ]}
-            onPress={() => Alert.alert('Search', 'Search functionality would be implemented here')}
+            onPress={() => {
+              // TODO: Implement search functionality
+              infoLog('Search from specials screen');
+            }}
             onPressIn={() => handlePressIn('search')}
             onPressOut={() => handlePressOut('search')}
             activeOpacity={0.7}
@@ -343,41 +388,48 @@ const SpecialsScreen: React.FC = () => {
 
       {/* Page Subtitle */}
       <View style={styles.subtitleContainer}>
-        <Text style={styles.subtitle}>Exclusive deals and offers</Text>
+        <Text style={styles.subtitle}>
+          {isFilteredByBusiness 
+            ? `Current specials and offers from ${businessName || 'this business'}`
+            : 'Exclusive deals and offers'
+          }
+        </Text>
       </View>
 
-      {/* Category Filter Buttons */}
-      <View style={styles.categoryContainer}>
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.categoryScrollContent}
-        >
-          {categories.map((category) => (
-            <TouchableOpacity
-              key={category.id}
-              style={[
-                styles.categoryButton,
-                selectedCategory === category.id && styles.categoryButtonActive
-              ]}
-              onPress={() => setSelectedCategory(category.id)}
-              accessible={true}
-              accessibilityRole="button"
-              accessibilityLabel={`Filter by ${category.name}`}
-              accessibilityState={{ selected: selectedCategory === category.id }}
-            >
-              <Text style={[
-                styles.categoryButtonText,
-                selectedCategory === category.id && styles.categoryButtonTextActive
-              ]}>
-                {category.name}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
+      {/* Category Filter Buttons - Only show when not filtered by business */}
+      {!isFilteredByBusiness && (
+        <View style={styles.categoryContainer}>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.categoryScrollContent}
+          >
+            {categories.map((category) => (
+              <TouchableOpacity
+                key={category.id}
+                style={[
+                  styles.categoryButton,
+                  selectedCategory === category.id && styles.categoryButtonActive
+                ]}
+                onPress={() => setSelectedCategory(category.id)}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel={`Filter by ${category.name}`}
+                accessibilityState={{ selected: selectedCategory === category.id }}
+              >
+                <Text style={[
+                  styles.categoryButtonText,
+                  selectedCategory === category.id && styles.categoryButtonTextActive
+                ]}>
+                  {category.name}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
     </View>
-  ), [selectedCategory, categories, pressedButtons, navigation, handlePressIn, handlePressOut]);
+  ), [selectedCategory, categories, pressedButtons, navigation, handlePressIn, handlePressOut, isFilteredByBusiness, businessName]);
 
   // Show loading state
   if (loading) {

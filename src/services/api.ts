@@ -4,6 +4,7 @@ import { configService } from '../config/ConfigService';
 import { apiV5Service, EntityType, Entity, SearchParams } from './api-v5';
 import authService from './AuthService';
 import guestService from './GuestService';
+import { debugLog } from '../utils/logger';
 
 export interface ApiResponse<T> {
   success: boolean;
@@ -139,7 +140,7 @@ class ApiService {
   ): Promise<ApiResponse<T>> {
     try {
       const url = `${this.baseUrl}${endpoint}`;
-      console.log('🌐 API Request:', url);
+      debugLog('🌐 API Request:', url);
       
       // Get authentication headers
       let authHeaders: Record<string, string> = {};
@@ -152,7 +153,7 @@ class ApiService {
         authHeaders = await guestService.getAuthHeadersAsync();
       }
       
-      console.log('🔐 Auth headers:', authHeaders);
+      debugLog('🔐 Auth headers:', authHeaders);
       
       const response = await fetch(url, {
         headers: {
@@ -313,9 +314,9 @@ class ApiService {
           data: { listings }
         };
       } catch (error) {
-        console.log('V5 API not available, falling back to local data');
+        debugLog('V5 API not available, falling back to local data');
         // Fall back to local mock data
-        return this.getMockListings(limit, offset);
+        return this.getListings(limit, offset);
       }
     }
     return this.request(`/entities?limit=${limit}&offset=${offset}`);
@@ -325,15 +326,16 @@ class ApiService {
   async getListingsByCategory(categoryKey: string, limit: number = 100, offset: number = 0): Promise<ApiResponse<{ listings: Listing[] }>> {
     // Special handling for jobs category - use dedicated jobs endpoint
     if (categoryKey === 'jobs') {
-      console.log('🔍 Fetching jobs from dedicated endpoint');
+      debugLog('🔍 Fetching jobs from dedicated endpoint');
       try {
         const response = await this.request(`/jobs?limit=${limit}&offset=${offset}&isActive=true`);
         
         if (response.success && response.data) {
-          console.log('🔍 Raw jobs data sample:', response.data[0]);
+          const dataArray = response.data as any[];
+          debugLog('🔍 Raw jobs data sample:', dataArray[0]);
           // Transform jobs data to match listing format
-          const transformedListings = response.data.map((job: any) => this.transformJobToListing(job));
-          console.log('🔍 Transformed job sample:', transformedListings[0]);
+          const transformedListings = dataArray.map((job: any) => this.transformJobToListing(job));
+          debugLog('🔍 Transformed job sample:', transformedListings[0]);
           return {
             success: true,
             data: { listings: transformedListings }
@@ -359,7 +361,7 @@ class ApiService {
     };
 
     const entityType = categoryToEntityType[categoryKey] || categoryKey;
-    console.log('🔍 Entity type mapping:', `categoryKey: ${categoryKey}, entityType: ${entityType}`);
+    debugLog('🔍 Entity type mapping:', `categoryKey: ${categoryKey}, entityType: ${entityType}`);
 
     if (this.isV5Api) {
       try {
@@ -369,52 +371,60 @@ class ApiService {
         });
         
         if (response.success && response.data) {
-          console.log('🔍 Raw backend data sample:', response.data.entities[0]);
+          debugLog('🔍 Raw backend data sample:', response.data.entities[0]);
           const transformedListings = response.data.entities.map(entity => this.transformEntityToLegacyListing(entity));
-          console.log('🔍 Transformed data sample:', transformedListings[0]);
+          debugLog('🔍 Transformed data sample:', transformedListings[0]);
           return {
             success: true,
             data: { listings: transformedListings }
           };
         }
       } catch (error) {
-        console.log('V5 API not available, falling back to local data');
+        debugLog('V5 API not available, falling back to local data');
       }
     }
     
     // Use mapped entity type for fallback request
-    console.log('🔍 Making fallback request with entityType:', entityType);
+    debugLog('🔍 Making fallback request with entityType:', entityType);
     const fallbackResponse = await this.request(`/entities?entityType=${entityType}&limit=${limit}&offset=${offset}`);
-    console.log('🔍 Fallback response:', fallbackResponse);
+    debugLog('🔍 Fallback response:', fallbackResponse);
     
-    if (fallbackResponse.success && fallbackResponse.data?.entities) {
-      console.log('🔍 Raw entity sample from fallback:', fallbackResponse.data.entities[0]);
+    if (fallbackResponse.success && fallbackResponse.data) {
+      const data = fallbackResponse.data as any;
+      if (data.entities) {
+        debugLog('🔍 Raw entity sample from fallback:', data.entities[0]);
+        
+        // Transform the fallback data to match the expected format
+        const transformedListings = data.entities.map((entity: any) => this.transformEntityToLegacyListing(entity));
+      debugLog('🔍 Transformed fallback sample:', transformedListings[0]);
       
-      // Transform the fallback data to match the expected format
-      const transformedListings = fallbackResponse.data.entities.map(entity => this.transformEntityToLegacyListing(entity));
-      console.log('🔍 Transformed fallback sample:', transformedListings[0]);
-      
-      return {
-        success: true,
-        data: { listings: transformedListings }
-      };
+        return {
+          success: true,
+          data: { listings: transformedListings }
+        };
+      }
     }
     
-    return fallbackResponse;
+    return {
+      success: false,
+      data: { listings: [] },
+      error: 'No data available'
+    };
   }
 
   // Get single listing with details
   async getListing(id: string): Promise<ApiResponse<{ listing: DetailedListing }>> {
-    console.log('🔍 DEBUG: getListing called with id:', id);
+    debugLog('🔍 DEBUG: getListing called with id:', id);
     
     if (this.isV5Api) {
       // Try to get from entities endpoint first (legacy)
       try {
-        console.log('🔍 Trying legacy entities endpoint:', `/entities/${id}`);
+        debugLog('🔍 Trying legacy entities endpoint:', `/entities/${id}`);
         const response = await this.request(`/entities/${id}`);
         if (response.success && response.data) {
           // Transform the entity data to match expected format
-          const entity = response.data.entity || response.data;
+          const data = response.data as any;
+          const entity = data.entity || data;
           const transformedListing = this.transformEntityToLegacyListing(entity);
           
           return {
@@ -423,7 +433,7 @@ class ApiService {
           };
         }
       } catch (error) {
-        console.log('Legacy entities endpoint failed, trying category-specific endpoints', error);
+        debugLog('Legacy entities endpoint failed, trying category-specific endpoints', error);
       }
 
       // If entities endpoint fails, try category-specific endpoints
@@ -436,7 +446,8 @@ class ApiService {
             const response = await this.request(`/${category}/${id}`);
             if (response.success && response.data) {
               // Transform the response to match the expected format
-              const transformedListing = this.transformEntityToLegacyListing(response.data.entity || response.data);
+              const data = response.data as any;
+              const transformedListing = this.transformEntityToLegacyListing(data.entity || data);
               return {
                 success: true,
                 data: { listing: transformedListing }
@@ -492,8 +503,13 @@ class ApiService {
     return this.request(`/search?q=${encodeURIComponent(query)}`);
   }
 
+  // Get job details
+  async getJobDetails(jobId: string): Promise<ApiResponse<{ job: any }>> {
+    return this.request(`/jobs/${jobId}`);
+  }
+
   // Transform V5 entity to legacy listing format
-  private transformEntityToLegacyListing(entity: any): Listing {
+  private transformEntityToLegacyListing(entity: any): DetailedListing {
     // Transform business hours from backend format to frontend format
     const business_hours = entity.business_hours ? entity.business_hours.map((hour: any) => ({
       day_of_week: this.getDayOfWeekNumber(hour.day_of_week),
@@ -611,7 +627,7 @@ class ApiService {
 
   // Helper function to convert day name to number
   private getDayOfWeekNumber(dayName: string): number {
-    const days = {
+    const days: Record<string, number> = {
       'sunday': 0,
       'monday': 1,
       'tuesday': 2,
@@ -797,7 +813,7 @@ class ApiService {
       const special = specialsResponse.data.specials.find(s => s.id === id);
       if (special) {
         // Add some delay to simulate network request
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise<void>(resolve => setTimeout(resolve, 500));
         
         return {
           success: true,

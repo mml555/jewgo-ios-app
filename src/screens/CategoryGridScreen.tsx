@@ -28,7 +28,7 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
 }) => {
   const navigation = useNavigation();
   const { filters } = useFilters();
-  const { location, requestLocationPermission, permissionGranted } = useLocation();
+  const { location, requestLocationPermission, permissionGranted, getCurrentLocation, loading: locationLoading } = useLocation();
 
   // Redirect to ShtetlScreen for shtetl category
   useEffect(() => {
@@ -80,6 +80,36 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
       );
     }
   }, [requestLocationPermission]);
+
+  // Handle manual location refresh
+  const handleLocationRefresh = useCallback(async () => {
+    try {
+      console.log('🔥 Manual location refresh requested');
+      const location = await getCurrentLocation();
+      if (location) {
+        console.log('🔥 Manual location refresh successful:', location);
+        Alert.alert(
+          'Location Updated!',
+          `Your location has been updated. You can now see distances to nearby businesses.`,
+          [{ text: 'Great!' }]
+        );
+      } else {
+        console.log('🔥 Manual location refresh failed - no location returned');
+        Alert.alert(
+          'Location Update Failed',
+          'Unable to get your current location. Please check your device settings and try again.',
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error) {
+      console.error('Error refreshing location:', error);
+      Alert.alert(
+        'Error',
+        'Failed to refresh location. Please check your device settings.',
+        [{ text: 'OK' }]
+      );
+    }
+  }, [getCurrentLocation]);
 
   // Apply filters and sorting to the data
   const filteredData = useMemo(() => {
@@ -375,7 +405,7 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
   return (
     <View style={styles.container}>
       {/* Location Permission Banner */}
-      {!location && (
+      {!location && !permissionGranted && (
         <TouchableOpacity 
           style={styles.locationPermissionBanner}
           onPress={handleLocationPermissionRequest}
@@ -392,10 +422,32 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
         </TouchableOpacity>
       )}
       
+      {/* Location Permission Granted but No Location Banner */}
+      {!location && permissionGranted && (
+        <TouchableOpacity 
+          style={styles.locationPermissionBanner}
+          onPress={handleLocationRefresh}
+          activeOpacity={0.8}
+        >
+          <View style={styles.bannerContent}>
+            <Text style={styles.bannerIcon}>🔄</Text>
+            <View style={styles.bannerTextContainer}>
+              <Text style={styles.bannerTitle}>Refresh Location</Text>
+              <Text style={styles.bannerSubtitle}>Tap to get your current location</Text>
+            </View>
+            <Text style={styles.bannerButton}>
+              {locationLoading ? 'Getting...' : 'Refresh'}
+            </Text>
+          </View>
+        </TouchableOpacity>
+      )}
+      
       {/* Location Enabled Indicator */}
       {location && (
         <View style={styles.locationIndicator}>
-          <Text style={styles.locationIndicatorText}>📍 Location enabled - showing distances</Text>
+          <Text style={styles.locationIndicatorText}>
+            📍 Location enabled - showing distances ({location.latitude.toFixed(4)}, {location.longitude.toFixed(4)})
+          </Text>
         </View>
       )}
       <FlatList

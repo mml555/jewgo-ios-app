@@ -26,6 +26,7 @@ const shtetlStoresRoutes = require('./routes/shtetlStores');
 const shtetlProductsRoutes = require('./routes/shtetlProducts');
 const jobsRoutes = require('./routes/jobs');
 const statsRoutes = require('./routes/stats');
+const nearbyRoutes = require('./routes/nearby');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -127,6 +128,7 @@ app.use('/api/v5/favorites', authSystem.getAuthMiddleware().requireAuthOrGuest()
 app.use('/api/v5/shtetl-stores', authSystem.getAuthMiddleware().requireAuthOrGuest(), shtetlStoresRoutes);
 app.use('/api/v5/shtetl-products', authSystem.getAuthMiddleware().requireAuthOrGuest(), shtetlProductsRoutes);
 app.use('/api/v5/jobs', authSystem.getAuthMiddleware().requireAuthOrGuest(), jobsRoutes);
+app.use('/api/v1', nearbyRoutes); // New optimized nearby API
 // Public dashboard endpoints (no authentication required)
 app.get('/api/v5/dashboard/entities/stats', async (req, res) => {
   try {

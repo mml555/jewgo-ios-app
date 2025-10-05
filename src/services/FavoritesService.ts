@@ -1,5 +1,6 @@
 import { apiService } from './api';
 import { LocalFavoritesService, LocalFavorite } from './LocalFavoritesService';
+import { debugLog } from '../utils/logger';
 
 export interface Favorite {
   id: string;
@@ -85,24 +86,89 @@ class FavoritesService {
         const localFavorites = await LocalFavoritesService.getLocalFavorites();
         const paginatedFavorites = localFavorites.slice(offset, offset + limit);
         
-        // Convert LocalFavorite to Favorite format
-        const favorites: Favorite[] = paginatedFavorites.map(local => ({
-          id: `local_${local.entity_id}`,
-          entity_id: local.entity_id,
-          entity_name: local.entity_name,
-          entity_type: local.entity_type,
-          description: local.description || null,
-          address: local.address || null,
-          city: local.city || null,
-          state: local.state || null,
-          rating: local.rating || null,
-          review_count: local.review_count || null,
-          is_active: true,
-          image_url: local.image_url || null,
-          favorited_at: local.favorited_at,
-          category: local.category,
-          distance: null,
-          phone: null,
+        // Convert LocalFavorite to Favorite format and enhance with current entity data
+        const favorites: Favorite[] = await Promise.all(paginatedFavorites.map(async (local) => {
+          try {
+            // Try to fetch current entity data to get updated images and info
+            const entityResponse = await (apiService as any).request(`/entities/${local.entity_id}`);
+            const entity = entityResponse.success ? (entityResponse.data.entity || entityResponse.data) : null;
+            
+            debugLog(`🖼️ Entity fetch for ${local.entity_name}:`, {
+              success: entityResponse.success,
+              hasEntity: !!entity,
+              hasImages: !!(entity?.images && entity.images.length > 0),
+              imageCount: entity?.images?.length || 0,
+              firstImageUrl: entity?.images?.[0]?.url || 'none'
+            });
+            
+            // Map entity types to match database
+            const entityTypeMap: { [key: string]: string } = {
+              'shul': 'synagogue',
+              'eatery': 'restaurant',
+              'synagogue': 'synagogue',
+              'restaurant': 'restaurant',
+              'mikvah': 'mikvah',
+              'store': 'store'
+            };
+            
+            const mappedEntityType = entityTypeMap[local.entity_type] || local.entity_type;
+            
+            return {
+              id: `local_${local.entity_id}`,
+              entity_id: local.entity_id,
+              entity_name: entity?.name || local.entity_name,
+              entity_type: entity?.entity_type || mappedEntityType,
+              description: entity?.description || local.description || null,
+              address: entity?.address || local.address || null,
+              city: entity?.city || local.city || null,
+              state: entity?.state || local.state || null,
+              rating: entity?.rating || local.rating || null,
+              review_count: entity?.review_count || local.review_count || null,
+              is_active: entity?.is_active ?? true,
+              // Use current entity images if available, otherwise fallback to stored image_url
+              image_url: (entity?.images && entity.images.length > 0) 
+                ? entity.images.find((img: any) => img.is_primary)?.url || entity.images[0]?.url
+                : local.image_url || null,
+              favorited_at: local.favorited_at,
+              category: entity?.category_name || local.category,
+              distance: null,
+              phone: entity?.phone || null,
+            };
+          } catch (error) {
+            console.warn(`Failed to fetch entity data for ${local.entity_id}:`, error);
+            
+            // Map entity types for fallback too
+            const entityTypeMap: { [key: string]: string } = {
+              'shul': 'synagogue',
+              'eatery': 'restaurant',
+              'synagogue': 'synagogue',
+              'restaurant': 'restaurant',
+              'mikvah': 'mikvah',
+              'store': 'store'
+            };
+            
+            const mappedEntityType = entityTypeMap[local.entity_type] || local.entity_type;
+            
+            // Fallback to local data if entity fetch fails
+            return {
+              id: `local_${local.entity_id}`,
+              entity_id: local.entity_id,
+              entity_name: local.entity_name,
+              entity_type: mappedEntityType,
+              description: local.description || null,
+              address: local.address || null,
+              city: local.city || null,
+              state: local.state || null,
+              rating: local.rating || null,
+              review_count: local.review_count || null,
+              is_active: true,
+              image_url: local.image_url || null,
+              favorited_at: local.favorited_at,
+              category: local.category,
+              distance: null,
+              phone: null,
+            };
+          }
         }));
 
         return {
@@ -142,7 +208,6 @@ class FavoritesService {
           // For now, return an error asking for entity data
           return {
             success: false,
-            error: 'Entity data required for guest favorites',
             message: 'Please provide entity information when adding to favorites'
           };
         }
@@ -275,8 +340,11 @@ class FavoritesService {
           if (!entityData) {
             return {
               success: false,
-              error: 'Entity data required for guest favorites',
-              message: 'Please provide entity information when adding to favorites'
+              data: {
+                message: 'Please provide entity information when adding to favorites',
+                is_favorited: false,
+                entity_id: entityId
+              }
             };
           }
           
@@ -333,7 +401,8 @@ class FavoritesService {
       return result;
     } catch (error) {
       console.error('Error during migration:', error);
-      return { success: 0, failed: 0, errors: [error.message] };
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return { success: 0, failed: 0, errors: [errorMessage] };
     }
   }
 }

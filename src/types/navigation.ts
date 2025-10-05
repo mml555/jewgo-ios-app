@@ -7,6 +7,7 @@ export type RootStackParamList = {
   };
   SpecialDetail: {
     specialId: string;
+    businessId?: string;
   };
   AddCategory: undefined;
   LiveMap: undefined;
@@ -15,7 +16,10 @@ export type RootStackParamList = {
 export type TabParamList = {
   Home: undefined;
   Favorites: undefined;
-  Specials: undefined;
+  Specials: {
+    businessId?: string;
+    businessName?: string;
+  } | undefined;
   Notifications: undefined;
   Profile: undefined;
 };

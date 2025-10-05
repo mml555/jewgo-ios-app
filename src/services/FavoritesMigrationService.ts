@@ -44,10 +44,11 @@ export class FavoritesMigrationService {
       };
     } catch (error) {
       console.error('❌ Error during favorites migration:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
       return {
         success: 0,
         failed: 0,
-        errors: [error.message],
+        errors: [errorMessage],
         total: 0,
       };
     }

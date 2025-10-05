@@ -8,9 +8,12 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { CategoryItem } from '../hooks/useCategoryData';
+import { useLocation, calculateDistance } from '../hooks/useLocation';
 import { useFavorites } from '../hooks/useFavorites';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../styles/designSystem';
 import HeartIcon from './HeartIcon';
+import { DistanceDisplay } from './DistanceDisplay';
+import { useLocationSimple } from '../hooks/useLocationSimple';
 
 interface JobCardProps {
   item: CategoryItem & {
@@ -41,6 +44,8 @@ const TAG_COLORS: Record<string, { bg: string; text: string }> = {
 
 const JobCard: React.FC<JobCardProps> = memo(({ item, categoryKey }) => {
   const navigation = useNavigation();
+  const { location } = useLocation();
+  const { accuracyAuthorization } = useLocationSimple();
   const { checkFavoriteStatus, toggleFavorite } = useFavorites();
   const [isFavorited, setIsFavorited] = useState(false);
 
@@ -54,9 +59,8 @@ const JobCard: React.FC<JobCardProps> = memo(({ item, categoryKey }) => {
   }, [item.id, checkFavoriteStatus]);
 
   const handlePress = () => {
-    (navigation as any).navigate('ListingDetail', {
-      itemId: item.id,
-      categoryKey: categoryKey,
+    (navigation as any).navigate('JobDetail', {
+      jobId: item.id,
     });
   };
 
@@ -90,6 +94,36 @@ const JobCard: React.FC<JobCardProps> = memo(({ item, categoryKey }) => {
     }
   };
 
+  // Calculate real distance if user location is available (in meters)
+  const realDistanceMeters = useMemo(() => {
+    if (location && item.latitude && item.longitude) {
+      console.log('📍 CALCULATING DISTANCE (JobCard):', `userLocation: ${location.latitude}, ${location.longitude}, businessLocation: ${item.latitude}, ${item.longitude}, businessName: ${item.title}`);
+      
+      const distanceMiles = calculateDistance(
+        location.latitude,
+        location.longitude,
+        Number(item.latitude),
+        Number(item.longitude)
+      );
+      
+      // Convert miles to meters
+      const distanceMeters = distanceMiles * 1609.34;
+      
+      console.log('📍 DISTANCE RESULT (JobCard):', `distance: ${distanceMeters.toFixed(0)} meters (${distanceMiles.toFixed(1)} miles), businessName: ${item.title}`);
+      
+      // For testing: allow larger distances since iOS simulator gives SF location
+      // In production, this should be much smaller (like 50-100 miles = 80-160km)
+      if (distanceMeters > 16093400) { // 10,000 miles in meters - more reasonable threshold
+        console.log('📍 Distance too large, likely incorrect coordinates');
+        return null;
+      }
+      
+      return distanceMeters;
+    }
+    console.log('📍 No location or coordinates available for job card:', `hasLocation: ${!!location}, hasItemLat: ${!!item.latitude}, hasItemLng: ${!!item.longitude}, hasZipCode: ${!!item.zip_code}, zipCode: ${item.zip_code}`);
+    return null; // Return null to trigger zipcode fallback, not mock distance
+  }, [location, item.latitude, item.longitude]);
+
   // Extract and format job details from the item
   const jobData = useMemo(() => {
     // Ensure we have a valid item
@@ -99,6 +133,7 @@ const JobCard: React.FC<JobCardProps> = memo(({ item, categoryKey }) => {
         location: 'Location TBD',
         compensation: 'Salary TBD',
         tags: ['full-time'],
+        distance: null,
       };
     }
 
@@ -106,17 +141,17 @@ const JobCard: React.FC<JobCardProps> = memo(({ item, categoryKey }) => {
     const jobTitle = (item.title || 'Job Title').replace(/💼\s*/, '').trim();
     
     // Format location
-    let location = 'Location TBD';
+    let locationText = 'Location TBD';
     if (item.is_remote || item.location_type === 'remote') {
-      location = 'Remote';
+      locationText = 'Remote';
     } else if (item.location_type === 'hybrid') {
-      location = item.city && item.state 
+      locationText = item.city && item.state 
         ? `Hybrid - ${item.city}, ${item.state}` 
         : 'Hybrid';
     } else if (item.city && item.state) {
-      location = `${item.city}, ${item.state}`;
+      locationText = `${item.city}, ${item.state}`;
     } else if (item.city) {
-      location = item.city;
+      locationText = item.city;
     }
     
     // Format compensation - use compensation field first, fall back to price
@@ -157,11 +192,12 @@ const JobCard: React.FC<JobCardProps> = memo(({ item, categoryKey }) => {
     
     return {
       jobTitle,
-      location,
+      location: locationText,
       compensation,
       tags: uniqueTags,
+      distance: realDistanceMeters, // Added distance in meters
     };
-  }, [item]);
+  }, [item, realDistanceMeters]);
 
   return (
     <TouchableOpacity
@@ -196,7 +232,7 @@ const JobCard: React.FC<JobCardProps> = memo(({ item, categoryKey }) => {
           {jobData.jobTitle}
         </Text>
         
-        {/* Line 2: Location + Compensation */}
+        {/* Line 2: Location + Compensation + Distance */}
         <View style={styles.infoRow}>
           <Text style={styles.locationText} numberOfLines={1}>
             {jobData.location}
@@ -205,6 +241,20 @@ const JobCard: React.FC<JobCardProps> = memo(({ item, categoryKey }) => {
           <Text style={styles.compensationText} numberOfLines={1}>
             {jobData.compensation}
           </Text>
+          {jobData.distance && (
+            <>
+              <Text style={styles.dot}>•</Text>
+              <DistanceDisplay
+                distanceMeters={jobData.distance}
+                accuracyContext={{
+                  accuracyAuthorization,
+                  isApproximate: false
+                }}
+                textStyle={styles.distanceText}
+                options={{ unit: 'imperial' }}
+              />
+            </>
+          )}
         </View>
         
         {/* Tags */}
@@ -286,6 +336,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.primary.main,
     fontWeight: '600',
+    flexShrink: 1,
+  },
+  distanceText: {
+    ...Typography.styles.body,
+    fontSize: 14,
+    color: Colors.textSecondary,
+    fontWeight: '500',
     flexShrink: 1,
   },
   tagsContainer: {

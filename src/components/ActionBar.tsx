@@ -134,7 +134,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingTop: Spacing.sm,
     paddingBottom: Spacing.sm,
-    backgroundColor: Colors.surface,
+    backgroundColor: Colors.background.secondary,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
@@ -165,7 +165,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   actionButtonActive: {
-    backgroundColor: Colors.accent,
+    backgroundColor: Colors.primary.light,
   },
 });
 

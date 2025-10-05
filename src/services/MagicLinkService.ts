@@ -54,7 +54,7 @@ class MagicLinkService {
       
       // Parse URL to extract token
       const urlObj = new URL(url);
-      const token = urlObj.searchParams.get('token');
+      const token = urlObj.searchParams?.get('token') || this.extractTokenFromUrl(url);
       
       if (!token) {
         throw new Error('No token found in magic link');
@@ -66,6 +66,14 @@ class MagicLinkService {
       console.error('Deep link handling error:', error);
       throw new Error(error.message || 'Failed to handle magic link');
     }
+  }
+
+  /**
+   * Extract token from URL as fallback for React Native
+   */
+  private extractTokenFromUrl(url: string): string | null {
+    const match = url.match(/[?&]token=([^&]+)/);
+    return match ? match[1] : null;
   }
 
   /**

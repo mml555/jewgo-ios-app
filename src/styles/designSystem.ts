@@ -102,8 +102,7 @@ export const Colors = {
   link: '#74E1A0',            // JewGo Green for links
   linkVisited: '#BEBBE7',     // JewGo Purple for visited links
   
-  // Border Colors
-  border: '#E5E5EA',
+  // Border Colors (legacy - use Colors.border object instead)
   borderLight: '#F1F1F1',
   borderDark: '#C7C7CC',
   borderFocus: '#74E1A0',    // JewGo Green for focus indicator
@@ -407,7 +406,7 @@ export const ComponentStyles = {
       justifyContent: 'center' as const,
       alignItems: 'center' as const,
       borderWidth: 1,
-      borderColor: Colors.border.primary,
+      borderColor: '#E5E5EA',
     },
     danger: {
       backgroundColor: Colors.buttonDanger,
@@ -523,9 +522,9 @@ export const Accessibility = {
   // Focus indicator styles
   focusIndicator: {
     borderWidth: 2,
-    borderColor: Colors.border.focus,
+    borderColor: Colors.borderFocus,
     borderRadius: BorderRadius.sm,
-    shadowColor: Colors.border.focus,
+    shadowColor: Colors.borderFocus,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.3,
     shadowRadius: 4,

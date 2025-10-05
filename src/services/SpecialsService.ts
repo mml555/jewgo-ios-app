@@ -31,14 +31,29 @@ class SpecialsService {
     this.baseUrl = baseUrl || configService.apiBaseUrl;
   }
 
-  private async getHeaders(): Promise<HeadersInit> {
-    const headers: HeadersInit = {
+  private async getHeaders(): Promise<Record<string, string>> {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
 
     // Get guest token for authentication
-    const authHeaders = await guestService.getAuthHeadersAsync();
-    return { ...headers, ...authHeaders };
+    try {
+      const authHeaders = await guestService.getAuthHeadersAsync();
+      return { ...headers, ...authHeaders };
+    } catch (error) {
+      // Try to create a guest session if none exists
+      try {
+        if (!guestService.isGuestAuthenticated()) {
+          await guestService.createGuestSession();
+        }
+        const authHeaders = await guestService.getAuthHeadersAsync();
+        return { ...headers, ...authHeaders };
+      } catch (createError) {
+        console.error('🔐 SpecialsService: Failed to create guest session:', createError);
+        // Return headers without authentication - this will fail but at least we can see the error
+        return headers;
+      }
+    }
   }
 
   private async request<T>(
@@ -47,10 +62,10 @@ class SpecialsService {
   ): Promise<ApiResponse<T>> {
     try {
       const url = `${this.baseUrl}${endpoint}`;
-      console.log('🎯 Specials API Request:', url);
+      const headers = await this.getHeaders();
 
       const response = await fetch(url, {
-        headers: await this.getHeaders(),
+        headers,
         ...options,
       });
 
@@ -210,7 +225,7 @@ class SpecialsService {
 
   // Get active specials for a specific restaurant
   async getRestaurantSpecials(restaurantId: string): Promise<ApiResponse<{ specials: Special[] }>> {
-    return this.request<{ specials: Special[] }>(`/specials/restaurant/${restaurantId}`);
+    return this.searchSpecials({ business_id: restaurantId, active_only: true });
   }
 
   // Get the top special for a specific restaurant
@@ -413,18 +428,12 @@ class SpecialsService {
     longitude?: number;
     radius?: number;
   }): Promise<ApiResponse<{ restaurants: RestaurantWithSpecials[] }>> {
-    const queryParams = new URLSearchParams();
-    
-    if (params?.page) queryParams.append('page', params.page.toString());
-    if (params?.limit) queryParams.append('limit', params.limit.toString());
-    if (params?.latitude) queryParams.append('lat', params.latitude.toString());
-    if (params?.longitude) queryParams.append('lng', params.longitude.toString());
-    if (params?.radius) queryParams.append('radius', params.radius.toString());
-
-    const queryString = queryParams.toString();
-    const endpoint = `/specials/restaurants/fast${queryString ? `?${queryString}` : ''}`;
-    
-    return this.request<{ restaurants: RestaurantWithSpecials[] }>(endpoint);
+    // For now, return empty array since this endpoint doesn't exist in backend
+    // TODO: Implement this endpoint in the backend or use a different approach
+    return Promise.resolve({
+      success: true,
+      data: { restaurants: [] }
+    });
   }
 
   // =============================================================================

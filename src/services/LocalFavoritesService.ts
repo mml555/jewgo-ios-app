@@ -173,7 +173,8 @@ export class LocalFavoritesService {
           }
         } catch (error) {
           failed++;
-          errors.push(`Error migrating ${favorite.entity_name}: ${error.message}`);
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          errors.push(`Error migrating ${favorite.entity_name}: ${errorMessage}`);
           console.error(`❌ Error migrating ${favorite.entity_name}:`, error);
         }
       }
@@ -187,7 +188,8 @@ export class LocalFavoritesService {
       return { success, failed, errors };
     } catch (error) {
       console.error('Error during migration:', error);
-      return { success: 0, failed: 0, errors: [error.message] };
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return { success: 0, failed: 0, errors: [errorMessage] };
     }
   }
 }

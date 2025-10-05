@@ -15,9 +15,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
-import { apiService, SpecialOffer as ApiSpecialOffer } from '../services/api';
+import { specialsService } from '../services/SpecialsService';
 import type { RootStackParamList } from '../types/navigation';
 import { useFavorites } from '../hooks/useFavorites';
+import type { SpecialWithDetails } from '../types/specials';
 import FacebookIcon from '../components/FacebookIcon';
 import InstagramIcon from '../components/InstagramIcon';
 import TikTokIcon from '../components/TikTokIcon';
@@ -26,9 +27,10 @@ import MapPinIcon from '../components/MapPinIcon';
 import ImageCarousel from '../components/ImageCarousel';
 import DetailHeaderBar from '../components/DetailHeaderBar';
 import { Colors, Typography, Spacing, BorderRadius, Shadows, TouchTargets } from '../styles/designSystem';
+import { infoLog } from '../utils/logger';
 
 // Enhanced special offer interface for detail view
-export interface DetailedSpecialOffer extends ApiSpecialOffer {
+export interface DetailedSpecialOffer extends SpecialWithDetails {
   claims_left: number;
   view_count: number;
   gallery?: string[]; // Array of image URLs for carousel
@@ -85,9 +87,30 @@ const SpecialDetailScreen: React.FC = () => {
 
   // Handle business press - navigate to business/store details
   const handleBusinessPress = (businessId: string) => {
+    if (!special) return;
+    
+    // Determine category key based on business entity type or category
+    const getCategoryKey = (entityType?: string, category?: string): string => {
+      // Map entity types to category keys
+      const entityTypeToCategoryKey: Record<string, string> = {
+        'restaurant': 'eatery',
+        'synagogue': 'shul',
+        'mikvah': 'mikvah',
+        'store': 'stores',
+      };
+      
+      // First try entity type, then category, then default to eatery
+      const businessEntityType = special?.business?.entity_type || special?.category || entityType || category;
+      return entityTypeToCategoryKey[businessEntityType] || 'eatery';
+    };
+    
+    const categoryKey = getCategoryKey(special.business?.entity_type, special.category);
+    
     // Navigate to the business listing detail page
-    // This would need to be implemented based on your navigation structure
-    Alert.alert('Business Details', `This would navigate to business details for ID: ${businessId}`);
+    navigation.navigate('ListingDetail', {
+      itemId: businessId,
+      categoryKey: categoryKey
+    });
   };
 
 
@@ -97,22 +120,27 @@ const SpecialDetailScreen: React.FC = () => {
       setLoading(true);
       setError(null);
       
-      const response = await apiService.getSpecial(specialId);
+      const response = await specialsService.getSpecial(specialId);
       
       if (response.success && response.data) {
-        // Transform to detailed special with mock additional data
+        // Transform to detailed special with additional data
         const baseSpecial = response.data.special;
         const detailedSpecial: DetailedSpecialOffer = {
           ...baseSpecial,
-          claims_left: Math.floor(Math.random() * 50) + 5, // Mock claims left
-          view_count: Math.floor(Math.random() * 2000) + 100, // Mock view count
-          original_price: baseSpecial.discount_type === 'percentage' ? '$24.99' : '$29.99',
-          address: '1234 Main St, New York NY, 10001',
-          phone: '(555) 123-4567',
-          website: 'https://example.com',
-          facebook_url: 'https://facebook.com/business',
-          instagram_url: 'https://instagram.com/business',
-          whatsapp_url: 'https://wa.me/15551234567',
+          claims_left: baseSpecial.claims_left || Math.floor(Math.random() * 50) + 5,
+          view_count: baseSpecial.views_count || Math.floor(Math.random() * 2000) + 100,
+          original_price: baseSpecial.discountType === 'percentage' ? '$24.99' : '$29.99',
+          address: baseSpecial.business?.address || '1234 Main St, New York NY, 10001',
+          phone: baseSpecial.business?.phone || '(555) 123-4567',
+          website: baseSpecial.business?.website || 'https://example.com',
+          facebook_url: baseSpecial.business?.facebook_url || 'https://facebook.com/business',
+          instagram_url: baseSpecial.business?.instagram_url || 'https://instagram.com/business',
+          whatsapp_url: baseSpecial.business?.whatsapp_url || 'https://wa.me/15551234567',
+          gallery: baseSpecial.media?.map(m => m.url) || [
+            `https://picsum.photos/400/300?random=${baseSpecial.id}1`,
+            `https://picsum.photos/400/300?random=${baseSpecial.id}2`,
+            `https://picsum.photos/400/300?random=${baseSpecial.id}3`
+          ]
         };
         
         setSpecial(detailedSpecial);
@@ -269,8 +297,14 @@ const SpecialDetailScreen: React.FC = () => {
         handlePressIn={handlePressIn}
         handlePressOut={handlePressOut}
         formatCount={formatCount}
-        onReportPress={() => Alert.alert('Report', 'Report functionality would be implemented here')}
-        onSharePress={() => Alert.alert('Share', 'Share functionality would be implemented here')}
+        onReportPress={() => {
+          // TODO: Implement report functionality
+          infoLog('Report special:', special.id);
+        }}
+        onSharePress={() => {
+          // TODO: Implement share functionality
+          infoLog('Share special:', special.id);
+        }}
         onFavoritePress={handleFavoritePress}
         centerContent={{
           type: 'claims_left',
@@ -279,7 +313,10 @@ const SpecialDetailScreen: React.FC = () => {
         rightContent={{
           type: 'search_favorite',
           isFavorited: special?.business_id ? isFavorited(special.business_id) : false,
-          onSearchPress: () => Alert.alert('Search', 'Search functionality would be implemented here')
+          onSearchPress: () => {
+            // TODO: Implement search functionality
+            infoLog('Search from special detail');
+          }
         }}
       />
 
