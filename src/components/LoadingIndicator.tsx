@@ -6,7 +6,12 @@ import {
   Animated,
   ActivityIndicator,
 } from 'react-native';
-import { Colors, Typography, Spacing, BorderRadius } from '../styles/designSystem';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+} from '../styles/designSystem';
 import {
   createFadeAnimation,
   createPulseAnimation,
@@ -31,234 +36,296 @@ interface LoadingIndicatorProps {
   announceToScreenReader?: boolean;
 }
 
-const LoadingIndicator: React.FC<LoadingIndicatorProps> = memo(({
-  visible,
-  message = 'Loading...',
-  progress = 0,
-  showProgress = false,
-  variant = 'spinner',
-  size = 'medium',
-  overlay = true,
-  announceToScreenReader = true,
-}) => {
-  const containerOpacity = useRef(new Animated.Value(0)).current;
-  const spinValue = useRef(new Animated.Value(0)).current;
-  const pulseValue = useRef(new Animated.Value(1)).current;
-  const progressValue = useRef(new Animated.Value(0)).current;
-  const dotsAnimations = useRef([
-    new Animated.Value(0),
-    new Animated.Value(0),
-    new Animated.Value(0),
-  ]).current;
+const LoadingIndicator: React.FC<LoadingIndicatorProps> = memo(
+  ({
+    visible,
+    message = 'Loading...',
+    progress = 0,
+    showProgress = false,
+    variant = 'spinner',
+    size = 'medium',
+    overlay = true,
+    announceToScreenReader = true,
+  }) => {
+    const containerOpacity = useRef(new Animated.Value(0)).current;
+    const spinValue = useRef(new Animated.Value(0)).current;
+    const pulseValue = useRef(new Animated.Value(1)).current;
+    const progressValue = useRef(new Animated.Value(0)).current;
+    const dotsAnimations = useRef([
+      new Animated.Value(0),
+      new Animated.Value(0),
+      new Animated.Value(0),
+    ]).current;
 
-  // Show/hide animation
-  useEffect(() => {
-    if (visible) {
-      // Announce loading to screen reader
-      if (announceToScreenReader) {
-        announceForScreenReader(
-          generateSemanticDescription('status', message, 'Please wait while content loads'),
-          'polite'
+    // Track all running animations for cleanup
+    const activeAnimations = useRef<Animated.CompositeAnimation[]>([]);
+
+    // Show/hide animation
+    useEffect(() => {
+      if (visible) {
+        // Announce loading to screen reader
+        if (announceToScreenReader) {
+          announceForScreenReader(
+            generateSemanticDescription(
+              'status',
+              message,
+              'Please wait while content loads',
+            ),
+            'polite',
+          );
+        }
+
+        // Fade in container
+        const fadeInAnim = createFadeAnimation(
+          containerOpacity,
+          1,
+          AnimationConfig.fast,
         );
+        activeAnimations.current.push(fadeInAnim);
+        fadeInAnim.start();
+
+        // Start variant-specific animations
+        startVariantAnimation();
+      } else {
+        // Fade out container
+        const fadeOutAnim = createFadeAnimation(
+          containerOpacity,
+          0,
+          AnimationConfig.fast,
+        );
+        activeAnimations.current.push(fadeOutAnim);
+        fadeOutAnim.start();
+
+        // Stop all animations
+        stopAllAnimations();
       }
 
-      // Fade in container
-      createFadeAnimation(containerOpacity, 1, AnimationConfig.fast).start();
+      // Cleanup on unmount
+      return () => {
+        stopAllAnimations();
+      };
+    }, [visible, message, announceToScreenReader]);
 
-      // Start variant-specific animations
-      startVariantAnimation();
-    } else {
-      // Fade out container
-      createFadeAnimation(containerOpacity, 0, AnimationConfig.fast).start();
-      
-      // Stop all animations
-      stopAllAnimations();
-    }
-  }, [visible, message, announceToScreenReader]);
+    // Update progress animation
+    useEffect(() => {
+      if (showProgress && visible) {
+        const progressAnim = Animated.timing(progressValue, {
+          toValue: progress / 100,
+          duration: AnimationConfig.normal,
+          useNativeDriver: false,
+        });
+        activeAnimations.current.push(progressAnim);
+        progressAnim.start();
+      }
+    }, [progress, showProgress, visible]);
 
-  // Update progress animation
-  useEffect(() => {
-    if (showProgress && visible) {
-      Animated.timing(progressValue, {
-        toValue: progress / 100,
-        duration: AnimationConfig.normal,
-        useNativeDriver: false,
-      }).start();
-    }
-  }, [progress, showProgress, visible]);
+    const startVariantAnimation = () => {
+      switch (variant) {
+        case 'spinner':
+          const spinAnim = createSpinAnimation(spinValue);
+          activeAnimations.current.push(spinAnim);
+          spinAnim.start();
+          break;
+        case 'pulse':
+          const pulseAnim = createPulseAnimation(
+            pulseValue,
+            0.8,
+            1.2,
+            AnimationConfig.slow,
+          );
+          activeAnimations.current.push(pulseAnim);
+          pulseAnim.start();
+          break;
+        case 'dots':
+          startDotsAnimation();
+          break;
+        case 'progress':
+          // Progress animation is handled in useEffect above
+          break;
+      }
+    };
 
-  const startVariantAnimation = () => {
-    switch (variant) {
-      case 'spinner':
-        createSpinAnimation(spinValue).start();
-        break;
-      case 'pulse':
-        createPulseAnimation(pulseValue, 0.8, 1.2, AnimationConfig.slow).start();
-        break;
-      case 'dots':
-        startDotsAnimation();
-        break;
-      case 'progress':
-        // Progress animation is handled in useEffect above
-        break;
-    }
-  };
+    const startDotsAnimation = () => {
+      const dotAnimations = dotsAnimations.map((dot, index) =>
+        Animated.loop(
+          Animated.sequence([
+            Animated.delay(index * 200),
+            Animated.timing(dot, {
+              toValue: 1,
+              duration: 400,
+              useNativeDriver: true,
+            }),
+            Animated.timing(dot, {
+              toValue: 0,
+              duration: 400,
+              useNativeDriver: true,
+            }),
+          ]),
+        ),
+      );
 
-  const startDotsAnimation = () => {
-    const dotAnimations = dotsAnimations.map((dot, index) =>
-      Animated.loop(
-        Animated.sequence([
-          Animated.delay(index * 200),
-          Animated.timing(dot, {
-            toValue: 1,
-            duration: 400,
-            useNativeDriver: true,
-          }),
-          Animated.timing(dot, {
-            toValue: 0,
-            duration: 400,
-            useNativeDriver: true,
-          }),
-        ])
-      )
+      const parallelAnim = Animated.parallel(dotAnimations);
+      activeAnimations.current.push(parallelAnim);
+      parallelAnim.start();
+    };
+
+    const stopAllAnimations = () => {
+      // Stop all tracked animations
+      activeAnimations.current.forEach(anim => {
+        try {
+          anim.stop();
+        } catch (e) {
+          // Ignore errors when stopping animations
+        }
+      });
+      activeAnimations.current = [];
+
+      // Stop animated values
+      spinValue.stopAnimation();
+      pulseValue.stopAnimation();
+      progressValue.stopAnimation();
+      dotsAnimations.forEach(dot => dot.stopAnimation());
+    };
+
+    const renderSpinner = () => (
+      <Animated.View
+        style={[
+          styles.spinnerContainer,
+          {
+            transform: [{ rotate: interpolateRotation(spinValue) }],
+          },
+        ]}
+      >
+        <ActivityIndicator
+          size={size === 'small' ? 'small' : 'large'}
+          color={Colors.primary.main}
+          accessibilityLabel="Loading spinner"
+        />
+      </Animated.View>
     );
 
-    Animated.parallel(dotAnimations).start();
-  };
-
-  const stopAllAnimations = () => {
-    spinValue.stopAnimation();
-    pulseValue.stopAnimation();
-    progressValue.stopAnimation();
-    dotsAnimations.forEach(dot => dot.stopAnimation());
-  };
-
-  const renderSpinner = () => (
-    <Animated.View
-      style={[
-        styles.spinnerContainer,
-        {
-          transform: [{ rotate: interpolateRotation(spinValue) }],
-        },
-      ]}
-    >
-      <ActivityIndicator
-        size={size === 'small' ? 'small' : 'large'}
-        color={Colors.primary.main}
-        accessibilityLabel="Loading spinner"
+    const renderPulse = () => (
+      <Animated.View
+        style={[
+          styles.pulseContainer,
+          (styles as any)[
+            `pulse${size.charAt(0).toUpperCase() + size.slice(1)}`
+          ],
+          {
+            transform: [{ scale: pulseValue }],
+          },
+        ]}
       />
-    </Animated.View>
-  );
+    );
 
-  const renderPulse = () => (
-    <Animated.View
-      style={[
-        styles.pulseContainer,
-        styles[`pulse${size.charAt(0).toUpperCase() + size.slice(1)}`],
-        {
-          transform: [{ scale: pulseValue }],
-        },
-      ]}
-    />
-  );
-
-  const renderDots = () => (
-    <View style={styles.dotsContainer}>
-      {dotsAnimations.map((dot, index) => (
-        <Animated.View
-          key={index}
-          style={[
-            styles.dot,
-            styles[`dot${size.charAt(0).toUpperCase() + size.slice(1)}`],
-            {
-              opacity: interpolateOpacity(dot),
-              transform: [{ scale: dot }],
-            },
-          ]}
-        />
-      ))}
-    </View>
-  );
-
-  const renderProgress = () => (
-    <View style={styles.progressContainer}>
-      <View style={styles.progressBar}>
-        <Animated.View
-          style={[
-            styles.progressFill,
-            {
-              width: progressValue.interpolate({
-                inputRange: [0, 1],
-                outputRange: ['0%', '100%'],
-              }),
-            },
-          ]}
-        />
-      </View>
-      {showProgress && (
-        <Text style={styles.progressText} accessibilityRole="text">
-          {Math.round(progress)}%
-        </Text>
-      )}
-    </View>
-  );
-
-  const renderLoadingContent = () => {
-    switch (variant) {
-      case 'spinner':
-        return renderSpinner();
-      case 'pulse':
-        return renderPulse();
-      case 'dots':
-        return renderDots();
-      case 'progress':
-        return renderProgress();
-      default:
-        return renderSpinner();
-    }
-  };
-
-  if (!visible) {
-    return null;
-  }
-
-  const containerStyle = overlay ? styles.overlayContainer : styles.inlineContainer;
-
-  return (
-    <Animated.View
-      style={[
-        containerStyle,
-        styles[`container${size.charAt(0).toUpperCase() + size.slice(1)}`],
-        {
-          opacity: containerOpacity,
-        },
-      ]}
-      accessibilityRole="progressbar"
-      accessibilityLabel={message}
-      accessibilityValue={showProgress ? { now: progress, min: 0, max: 100 } : undefined}
-      accessibilityLiveRegion="polite"
-      importantForAccessibility="yes"
-    >
-      {overlay && <View style={styles.backdrop} />}
-      
-      <View style={styles.content}>
-        {renderLoadingContent()}
-        
-        {message && (
-          <Text 
+    const renderDots = () => (
+      <View style={styles.dotsContainer}>
+        {dotsAnimations.map((dot, index) => (
+          <Animated.View
+            key={index}
             style={[
-              styles.message,
-              styles[`message${size.charAt(0).toUpperCase() + size.slice(1)}`],
+              styles.dot,
+              (styles as any)[
+                `dot${size.charAt(0).toUpperCase() + size.slice(1)}`
+              ],
+              {
+                opacity: interpolateOpacity(dot),
+                transform: [{ scale: dot }],
+              },
             ]}
-            accessibilityRole="text"
-          >
-            {message}
+          />
+        ))}
+      </View>
+    );
+
+    const renderProgress = () => (
+      <View style={styles.progressContainer}>
+        <View style={styles.progressBar}>
+          <Animated.View
+            style={[
+              styles.progressFill,
+              {
+                width: progressValue.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: ['0%', '100%'],
+                }),
+              },
+            ]}
+          />
+        </View>
+        {showProgress && (
+          <Text style={styles.progressText} accessibilityRole="text">
+            {Math.round(progress)}%
           </Text>
         )}
       </View>
-    </Animated.View>
-  );
-});
+    );
+
+    const renderLoadingContent = () => {
+      switch (variant) {
+        case 'spinner':
+          return renderSpinner();
+        case 'pulse':
+          return renderPulse();
+        case 'dots':
+          return renderDots();
+        case 'progress':
+          return renderProgress();
+        default:
+          return renderSpinner();
+      }
+    };
+
+    if (!visible) {
+      return null;
+    }
+
+    const containerStyle = overlay
+      ? styles.overlayContainer
+      : styles.inlineContainer;
+
+    return (
+      <Animated.View
+        style={[
+          containerStyle,
+          (styles as any)[
+            `container${size.charAt(0).toUpperCase() + size.slice(1)}`
+          ],
+          {
+            opacity: containerOpacity,
+          },
+        ]}
+        accessibilityRole="progressbar"
+        accessibilityLabel={message}
+        accessibilityValue={
+          showProgress ? { now: progress, min: 0, max: 100 } : undefined
+        }
+        accessibilityLiveRegion="polite"
+        importantForAccessibility="yes"
+      >
+        {overlay && <View style={styles.backdrop} />}
+
+        <View style={styles.content}>
+          {renderLoadingContent()}
+
+          {message && (
+            <Text
+              style={[
+                styles.message,
+                (styles as any)[
+                  `message${size.charAt(0).toUpperCase() + size.slice(1)}`
+                ],
+              ]}
+              accessibilityRole="text"
+            >
+              {message}
+            </Text>
+          )}
+        </View>
+      </Animated.View>
+    );
+  },
+);
 
 const styles = StyleSheet.create({
   overlayContainer: {

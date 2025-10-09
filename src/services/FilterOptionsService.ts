@@ -1,4 +1,5 @@
 import { apiService } from './api';
+import { errorLog } from '../utils/logger';
 
 export interface FilterOption {
   value: string;
@@ -12,13 +13,13 @@ export interface CategoryFilterOptions {
   priceRanges: FilterOption[];
   denominations: FilterOption[];
   storeTypes: FilterOption[];
-  
+
   // Amenity filters
   amenities: FilterOption[];
-  
+
   // Service-specific filters
   services: FilterOption[];
-  
+
   // Location-based filters
   cities: FilterOption[];
   states: FilterOption[];
@@ -49,37 +50,40 @@ class FilterOptionsService {
 
       // Map category keys to entity types
       const categoryToEntityType: Record<string, string> = {
-        'eatery': 'restaurant',
-        'shul': 'synagogue', 
-        'mikvah': 'mikvah',
-        'stores': 'store',
-        'shuk': 'store',
-        'shtetl': 'synagogue',
-        'events': 'synagogue',
-        'jobs': 'synagogue',
-        'restaurant': 'restaurant',
-        'synagogue': 'synagogue',
-        'store': 'store'
+        eatery: 'restaurant',
+        shul: 'synagogue',
+        mikvah: 'mikvah',
+        stores: 'store',
+        shtetl: 'synagogue',
+        events: 'synagogue',
+        jobs: 'synagogue',
+        restaurant: 'restaurant',
+        synagogue: 'synagogue',
+        store: 'store',
       };
 
       const entityType = categoryToEntityType[categoryKey] || categoryKey;
-      
+
       // Fetch all entities for this category to analyze available options
-      const response = await apiService.getListingsByCategory(categoryKey, 1000, 0);
-      
+      const response = await apiService.getListingsByCategory(
+        categoryKey,
+        1000,
+        0,
+      );
+
       if (!response.success || !response.data?.listings) {
         return { success: false, error: 'Failed to fetch category data' };
       }
 
       const listings = response.data.listings;
       const filterOptions = this.analyzeFilterOptions(listings, entityType);
-      
+
       // Cache the results
       this.setCachedOptions(cacheKey, filterOptions);
-      
+
       return { success: true, data: filterOptions };
     } catch (error) {
-      console.error('Error fetching filter options:', error);
+      errorLog('Error fetching filter options:', error);
       return { success: false, error: 'Failed to fetch filter options' };
     }
   }
@@ -87,7 +91,10 @@ class FilterOptionsService {
   /**
    * Analyze listings to extract available filter options
    */
-  private analyzeFilterOptions(listings: any[], entityType: string): CategoryFilterOptions {
+  private analyzeFilterOptions(
+    listings: any[],
+    entityType: string,
+  ): CategoryFilterOptions {
     const options: CategoryFilterOptions = {
       kosherLevels: [],
       priceRanges: [],
@@ -96,7 +103,7 @@ class FilterOptionsService {
       amenities: [],
       services: [],
       cities: [],
-      states: []
+      states: [],
     };
 
     // Extract unique values and their counts
@@ -117,7 +124,10 @@ class FilterOptionsService {
 
       // Denominations (for synagogues and mikvahs)
       if (listing.denomination) {
-        denominations.set(listing.denomination, (denominations.get(listing.denomination) || 0) + 1);
+        denominations.set(
+          listing.denomination,
+          (denominations.get(listing.denomination) || 0) + 1,
+        );
       }
 
       // Store types (for stores)
@@ -154,9 +164,21 @@ class FilterOptionsService {
     options.priceRanges = [
       { value: 'any', label: 'Any Price', count: listings.length },
       { value: '$', label: '$', count: this.countByPriceRange(listings, '$') },
-      { value: '$$', label: '$$', count: this.countByPriceRange(listings, '$$') },
-      { value: '$$$', label: '$$$', count: this.countByPriceRange(listings, '$$$') },
-      { value: '$$$$', label: '$$$$', count: this.countByPriceRange(listings, '$$$$') }
+      {
+        value: '$$',
+        label: '$$',
+        count: this.countByPriceRange(listings, '$$'),
+      },
+      {
+        value: '$$$',
+        label: '$$$',
+        count: this.countByPriceRange(listings, '$$$'),
+      },
+      {
+        value: '$$$$',
+        label: '$$$$',
+        count: this.countByPriceRange(listings, '$$$$'),
+      },
     ];
 
     return options;
@@ -167,19 +189,32 @@ class FilterOptionsService {
    */
   private extractAmenities(listing: any, amenities: Map<string, number>) {
     const amenityFields = [
-      'has_parking', 'hasParking',
-      'has_wifi', 'hasWifi', 
-      'has_accessibility', 'hasAccessibility',
-      'has_delivery', 'hasDelivery',
-      'has_private_rooms', 'hasPrivateRooms',
-      'has_heating', 'hasHeating',
-      'has_air_conditioning', 'hasAirConditioning',
-      'has_kosher_kitchen', 'hasKosherKitchen',
-      'has_mikvah', 'hasMikvah',
-      'has_library', 'hasLibrary',
-      'has_youth_programs', 'hasYouthPrograms',
-      'has_adult_education', 'hasAdultEducation',
-      'has_social_events', 'hasSocialEvents'
+      'has_parking',
+      'hasParking',
+      'has_wifi',
+      'hasWifi',
+      'has_accessibility',
+      'hasAccessibility',
+      'has_delivery',
+      'hasDelivery',
+      'has_private_rooms',
+      'hasPrivateRooms',
+      'has_heating',
+      'hasHeating',
+      'has_air_conditioning',
+      'hasAirConditioning',
+      'has_kosher_kitchen',
+      'hasKosherKitchen',
+      'has_mikvah',
+      'hasMikvah',
+      'has_library',
+      'hasLibrary',
+      'has_youth_programs',
+      'hasYouthPrograms',
+      'has_adult_education',
+      'hasAdultEducation',
+      'has_social_events',
+      'hasSocialEvents',
     ];
 
     amenityFields.forEach(field => {
@@ -193,7 +228,11 @@ class FilterOptionsService {
   /**
    * Extract services from listing data
    */
-  private extractServices(listing: any, services: Map<string, number>, entityType: string) {
+  private extractServices(
+    listing: any,
+    services: Map<string, number>,
+    entityType: string,
+  ) {
     // Handle services array
     if (listing.services && Array.isArray(listing.services)) {
       listing.services.forEach((service: string) => {
@@ -204,10 +243,14 @@ class FilterOptionsService {
     // Handle specific service fields based on entity type
     if (entityType === 'synagogue') {
       const serviceFields = [
-        'daily_minyan', 'dailyMinyan',
-        'shabbat_services', 'shabbatServices', 
-        'holiday_services', 'holidayServices',
-        'lifecycle_services', 'lifecycleServices'
+        'daily_minyan',
+        'dailyMinyan',
+        'shabbat_services',
+        'shabbatServices',
+        'holiday_services',
+        'holidayServices',
+        'lifecycle_services',
+        'lifecycleServices',
       ];
 
       serviceFields.forEach(field => {
@@ -224,32 +267,32 @@ class FilterOptionsService {
    */
   private getAmenityLabel(field: string): string {
     const labels: Record<string, string> = {
-      'has_parking': 'Parking Available',
-      'hasParking': 'Parking Available',
-      'has_wifi': 'Free WiFi',
-      'hasWifi': 'Free WiFi',
-      'has_accessibility': 'Accessible',
-      'hasAccessibility': 'Accessible',
-      'has_delivery': 'Delivery Available',
-      'hasDelivery': 'Delivery Available',
-      'has_private_rooms': 'Private Rooms',
-      'hasPrivateRooms': 'Private Rooms',
-      'has_heating': 'Heating',
-      'hasHeating': 'Heating',
-      'has_air_conditioning': 'Air Conditioning',
-      'hasAirConditioning': 'Air Conditioning',
-      'has_kosher_kitchen': 'Kosher Kitchen',
-      'hasKosherKitchen': 'Kosher Kitchen',
-      'has_mikvah': 'Mikvah Available',
-      'hasMikvah': 'Mikvah Available',
-      'has_library': 'Library',
-      'hasLibrary': 'Library',
-      'has_youth_programs': 'Youth Programs',
-      'hasYouthPrograms': 'Youth Programs',
-      'has_adult_education': 'Adult Education',
-      'hasAdultEducation': 'Adult Education',
-      'has_social_events': 'Social Events',
-      'hasSocialEvents': 'Social Events'
+      has_parking: 'Parking Available',
+      hasParking: 'Parking Available',
+      has_wifi: 'Free WiFi',
+      hasWifi: 'Free WiFi',
+      has_accessibility: 'Accessible',
+      hasAccessibility: 'Accessible',
+      has_delivery: 'Delivery Available',
+      hasDelivery: 'Delivery Available',
+      has_private_rooms: 'Private Rooms',
+      hasPrivateRooms: 'Private Rooms',
+      has_heating: 'Heating',
+      hasHeating: 'Heating',
+      has_air_conditioning: 'Air Conditioning',
+      hasAirConditioning: 'Air Conditioning',
+      has_kosher_kitchen: 'Kosher Kitchen',
+      hasKosherKitchen: 'Kosher Kitchen',
+      has_mikvah: 'Mikvah Available',
+      hasMikvah: 'Mikvah Available',
+      has_library: 'Library',
+      hasLibrary: 'Library',
+      has_youth_programs: 'Youth Programs',
+      hasYouthPrograms: 'Youth Programs',
+      has_adult_education: 'Adult Education',
+      hasAdultEducation: 'Adult Education',
+      has_social_events: 'Social Events',
+      hasSocialEvents: 'Social Events',
     };
     return labels[field] || field;
   }
@@ -259,14 +302,14 @@ class FilterOptionsService {
    */
   private getServiceLabel(field: string): string {
     const labels: Record<string, string> = {
-      'daily_minyan': 'Daily Minyan',
-      'dailyMinyan': 'Daily Minyan',
-      'shabbat_services': 'Shabbat Services',
-      'shabbatServices': 'Shabbat Services',
-      'holiday_services': 'Holiday Services',
-      'holidayServices': 'Holiday Services',
-      'lifecycle_services': 'Lifecycle Services',
-      'lifecycleServices': 'Lifecycle Services'
+      daily_minyan: 'Daily Minyan',
+      dailyMinyan: 'Daily Minyan',
+      shabbat_services: 'Shabbat Services',
+      shabbatServices: 'Shabbat Services',
+      holiday_services: 'Holiday Services',
+      holidayServices: 'Holiday Services',
+      lifecycle_services: 'Lifecycle Services',
+      lifecycleServices: 'Lifecycle Services',
     };
     return labels[field] || field;
   }
@@ -289,7 +332,7 @@ class FilterOptionsService {
       .map(([value, count]) => ({
         value,
         label: this.formatLabel(value),
-        count
+        count,
       }))
       .sort((a, b) => b.count - a.count); // Sort by count descending
   }
@@ -318,7 +361,10 @@ class FilterOptionsService {
   /**
    * Set cached options with expiry
    */
-  private setCachedOptions(cacheKey: string, options: CategoryFilterOptions): void {
+  private setCachedOptions(
+    cacheKey: string,
+    options: CategoryFilterOptions,
+  ): void {
     this.cache.set(cacheKey, options);
     this.cacheExpiry.set(cacheKey, Date.now() + this.CACHE_DURATION);
   }

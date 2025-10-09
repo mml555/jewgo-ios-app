@@ -1,12 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { configService } from '../config/ConfigService';
+import { warnLog, errorLog, debugLog } from '../utils/logger';
 
 // Optional DeviceInfo import to prevent crashes
 let DeviceInfo: any = null;
 try {
   DeviceInfo = require('react-native-device-info');
 } catch (error) {
-  console.warn('DeviceInfo not available, using fallback values');
+  warnLog('DeviceInfo not available, using fallback values');
 }
 
 export interface GuestUser {
@@ -38,6 +39,8 @@ class GuestService {
   private readonly GUEST_TOKEN_KEY = '@jewgo_guest_token';
   private readonly GUEST_SESSION_KEY = '@jewgo_guest_session';
   private guestSession: GuestSession | null = null;
+  private isCreatingSession: boolean = false;
+  private creationPromise: Promise<GuestSession> | null = null;
 
   // ==============================================
   // INITIALIZATION
@@ -50,22 +53,19 @@ class GuestService {
 
       if (storedToken && storedSession) {
         const session = JSON.parse(storedSession);
-        
+
         // Check if session is still valid
         if (new Date(session.expiresAt) > new Date()) {
-          // Validate with server
-          const isValid = await this.validateSession(storedToken);
-          if (isValid) {
-            this.guestSession = session;
-            return;
-          }
+          this.guestSession = session;
+          debugLog('🔐 GuestService: Restored valid session from storage');
+          return;
         }
-        
+
         // Session invalid or expired, clear it
         await this.clearGuestSession();
       }
     } catch (error) {
-      console.error('Guest service initialization error:', error);
+      errorLog('Guest service initialization error:', error);
       await this.clearGuestSession();
     }
   }
@@ -74,17 +74,55 @@ class GuestService {
   // GUEST SESSION MANAGEMENT
   // ==============================================
 
-  async createGuestSession(): Promise<GuestSession> {
+  async createGuestSession(retryCount: number = 0): Promise<GuestSession> {
+    // If already creating a session, return the existing promise
+    if (this.isCreatingSession && this.creationPromise) {
+      debugLog(
+        '🔐 GuestService: Session creation already in progress, waiting...',
+      );
+      return this.creationPromise;
+    }
+
+    // If we already have a valid session, return it
+    if (
+      this.guestSession &&
+      new Date(this.guestSession.expiresAt) > new Date()
+    ) {
+      debugLog('🔐 GuestService: Using existing valid session');
+      return this.guestSession;
+    }
+
+    // Create new session with retry logic
+    this.isCreatingSession = true;
+    this.creationPromise = this._createGuestSessionWithRetry(retryCount);
+
     try {
-      console.log('🔐 GuestService: Creating guest session...');
+      const session = await this.creationPromise;
+      return session;
+    } finally {
+      this.isCreatingSession = false;
+      this.creationPromise = null;
+    }
+  }
+
+  private async _createGuestSessionWithRetry(
+    retryCount: number = 0,
+    maxRetries: number = 3,
+  ): Promise<GuestSession> {
+    try {
+      debugLog(
+        '🔐 GuestService: Creating guest session... (attempt ' +
+          (retryCount + 1) +
+          ')',
+      );
       const deviceInfo = await this.getDeviceInfo();
-      console.log('🔐 GuestService: Device info:', deviceInfo);
-      
+      debugLog('🔐 GuestService: Device info:', deviceInfo);
+
       // Use config service for API URL
       const config = configService.getConfig();
       const apiUrl = config.apiBaseUrl;
-      console.log('🔐 GuestService: API URL:', apiUrl);
-      
+      debugLog('🔐 GuestService: API URL:', apiUrl);
+
       const response = await fetch(`${apiUrl}/guest/create`, {
         method: 'POST',
         headers: {
@@ -95,24 +133,67 @@ class GuestService {
 
       if (!response.ok) {
         const errorData = await response.json();
-        console.error('🔐 GuestService: API Error:', errorData);
+
+        // If rate limited and we have retries left, wait and retry
+        if (response.status === 429 && retryCount < maxRetries) {
+          const retryAfter = errorData.retryAfter || 60;
+          const backoffDelay = Math.min(
+            retryAfter * 1000,
+            Math.pow(2, retryCount) * 1000,
+          );
+
+          warnLog(
+            `🔐 GuestService: Rate limited, retrying in ${
+              backoffDelay / 1000
+            }s...`,
+          );
+
+          await new Promise(resolve => setTimeout(resolve, backoffDelay));
+          return this._createGuestSessionWithRetry(retryCount + 1, maxRetries);
+        }
+
+        errorLog('🔐 GuestService: API Error:', errorData);
         throw new Error(errorData.error || 'Failed to create guest session');
       }
 
       const data = await response.json();
-      console.log('🔐 GuestService: API Response:', data);
+      debugLog('🔐 GuestService: API Response:', data);
       const guestSession = data.data;
 
       // Store guest session
-      await AsyncStorage.setItem(this.GUEST_TOKEN_KEY, guestSession.sessionToken);
-      await AsyncStorage.setItem(this.GUEST_SESSION_KEY, JSON.stringify(guestSession));
-      
-      this.guestSession = guestSession;
-      console.log('🔐 GuestService: Guest session created successfully:', guestSession.guestUser.id);
-      return guestSession;
+      await AsyncStorage.setItem(
+        this.GUEST_TOKEN_KEY,
+        guestSession.sessionToken,
+      );
+      await AsyncStorage.setItem(
+        this.GUEST_SESSION_KEY,
+        JSON.stringify(guestSession),
+      );
 
-    } catch (error) {
-      console.error('🔐 GuestService: Create guest session error:', error);
+      this.guestSession = guestSession;
+      debugLog(
+        '🔐 GuestService: Guest session created successfully:',
+        guestSession.guestUser.id,
+      );
+      return guestSession;
+    } catch (error: any) {
+      // Only retry on network errors, not on other errors
+      if (
+        retryCount < maxRetries &&
+        error.message?.includes('Network request failed')
+      ) {
+        const backoffDelay = Math.pow(2, retryCount) * 1000;
+        warnLog(
+          `🔐 GuestService: Network error, retrying in ${
+            backoffDelay / 1000
+          }s...`,
+        );
+
+        await new Promise(resolve => setTimeout(resolve, backoffDelay));
+        return this._createGuestSessionWithRetry(retryCount + 1, maxRetries);
+      }
+
+      errorLog('🔐 GuestService: Create guest session error:', error);
       throw error;
     }
   }
@@ -135,9 +216,8 @@ class GuestService {
 
       const data = await response.json();
       return data.success;
-
     } catch (error) {
-      console.error('Validate guest session error:', error);
+      errorLog('Validate guest session error:', error);
       return false;
     }
   }
@@ -161,9 +241,8 @@ class GuestService {
       });
 
       return response.ok;
-
     } catch (error) {
-      console.error('Extend guest session error:', error);
+      errorLog('Extend guest session error:', error);
       return false;
     }
   }
@@ -182,7 +261,7 @@ class GuestService {
         });
       }
     } catch (error) {
-      console.error('Revoke guest session error:', error);
+      errorLog('Revoke guest session error:', error);
     } finally {
       await this.clearGuestSession();
     }
@@ -194,7 +273,7 @@ class GuestService {
       await AsyncStorage.removeItem(this.GUEST_SESSION_KEY);
       this.guestSession = null;
     } catch (error) {
-      console.error('Clear guest session error:', error);
+      errorLog('Clear guest session error:', error);
     }
   }
 
@@ -203,29 +282,40 @@ class GuestService {
   // ==============================================
 
   isGuestAuthenticated(): boolean {
-    return this.guestSession !== null && new Date(this.guestSession.expiresAt) > new Date();
+    return (
+      this.guestSession !== null &&
+      new Date(this.guestSession.expiresAt) > new Date()
+    );
   }
 
   getGuestUser(): GuestUser | null {
     return this.guestSession?.guestUser || null;
   }
 
-  getGuestPermissions(): Array<{name: string; resource: string}> {
+  getGuestPermissions(): Array<{ name: string; resource: string }> {
     return this.guestSession?.permissions || [];
   }
 
   async getGuestToken(): Promise<string | null> {
     try {
-      return await AsyncStorage.getItem(this.GUEST_TOKEN_KEY);
+      const token = await AsyncStorage.getItem(this.GUEST_TOKEN_KEY);
+      // Only log occasionally to avoid console spam (1% of the time)
+      if (__DEV__ && Math.random() < 0.01) {
+        debugLog(
+          '🔍 GuestService: getGuestToken - retrieved token:',
+          token ? 'present' : 'missing',
+        );
+      }
+      return token;
     } catch (error) {
-      console.error('Get guest token error:', error);
+      errorLog('Get guest token error:', error);
       return null;
     }
   }
 
   hasGuestPermission(permission: string, resource?: string): boolean {
     const permissions = this.getGuestPermissions();
-    
+
     return permissions.some(p => {
       if (p.name === permission) {
         return !resource || p.resource === resource;
@@ -267,14 +357,13 @@ class GuestService {
       }
 
       const data = await response.json();
-      
+
       // Clear guest session after conversion
       await this.clearGuestSession();
-      
-      return data;
 
+      return data;
     } catch (error) {
-      console.error('Convert guest to user error:', error);
+      errorLog('Convert guest to user error:', error);
       throw error;
     }
   }
@@ -296,10 +385,10 @@ class GuestService {
           model = await DeviceInfo.getModel();
           systemVersion = await DeviceInfo.getSystemVersion();
         } catch (deviceError) {
-          console.log('DeviceInfo not available, using fallback values');
+          debugLog('DeviceInfo not available, using fallback values');
         }
       } else {
-        console.log('DeviceInfo not available, using fallback values');
+        debugLog('DeviceInfo not available, using fallback values');
       }
 
       return {
@@ -307,11 +396,13 @@ class GuestService {
         model,
         osVersion: systemVersion,
         screenResolution: '390x844', // iPhone 16 resolution
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/New_York',
+        timezone:
+          Intl.DateTimeFormat().resolvedOptions().timeZone ||
+          'America/New_York',
         language: 'en-US',
       };
     } catch (error) {
-      console.error('Get device info error:', error);
+      errorLog('Get device info error:', error);
       // Complete fallback device info
       return {
         platform: 'ios',
@@ -328,9 +419,12 @@ class GuestService {
   // API HELPERS
   // ==============================================
 
-  async makeAuthenticatedRequest(url: string, options: RequestInit = {}): Promise<Response> {
+  async makeAuthenticatedRequest(
+    url: string,
+    options: RequestInit = {},
+  ): Promise<Response> {
     const token = await this.getGuestToken();
-    
+
     if (!token) {
       throw new Error('No guest session available');
     }
@@ -352,6 +446,13 @@ class GuestService {
 
   async getAuthHeadersAsync(): Promise<Record<string, string>> {
     const token = await this.getGuestToken();
+    // Only log occasionally to avoid console spam (1% of the time)
+    if (__DEV__ && Math.random() < 0.01) {
+      debugLog(
+        '🔍 GuestService: getAuthHeadersAsync - token:',
+        token ? 'present' : 'missing',
+      );
+    }
     return token ? { 'X-Guest-Token': token } : {};
   }
 }

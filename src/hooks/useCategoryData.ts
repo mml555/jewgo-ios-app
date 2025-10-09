@@ -1,14 +1,16 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { apiService, Listing } from '../services/api';
 import MikvahIcon from '../components/MikvahIcon';
-import { debugLog } from '../utils/logger';
+import { debugLog, errorLog, warnLog } from '../utils/logger';
 
 // Helper function to get the correct image URL from database or fallback to placeholder
 const getImageUrl = (listing: Listing): string => {
   if (listing.images && listing.images.length > 0) {
     // Find the primary image first, then fallback to first image
     const primaryImage = listing.images.find((img: any) => img.is_primary);
-    return primaryImage ? primaryImage.url : listing.images[0].url;
+    return primaryImage
+      ? (primaryImage as any).url
+      : (listing.images[0] as any).url;
   } else {
     // Fallback to placeholder only if no images exist in database
     return `https://picsum.photos/300/225?random=${listing.id || ''}`;
@@ -69,14 +71,13 @@ const generateMockData = (
   categoryKey: string,
   query: string = '',
   page: number = 1,
-  pageSize: number = 20
+  pageSize: number = 20,
 ): CategoryItem[] => {
   const categoryNames: Record<string, string> = {
     mikvah: 'Mikvah',
     eatery: 'Eatery',
     shul: 'Shul',
     stores: 'Stores',
-    shuk: 'Shuk',
     shtetl: 'Shtetl',
     events: 'Events',
     jobs: 'Jobs',
@@ -87,7 +88,6 @@ const generateMockData = (
     eatery: '🍽️',
     shul: '🕍',
     stores: '🏪',
-    shuk: '🥬',
     shtetl: '🏘️',
     events: '🎉',
     jobs: '💼',
@@ -166,18 +166,27 @@ const generateMockData = (
     const index = startIndex + i;
     const title = mockTitles[index % mockTitles.length];
     const description = mockDescriptions[index % mockDescriptions.length];
-    
+
     // Filter by query if provided
-    if (query && !title.toLowerCase().includes(query.toLowerCase()) && 
-        !description.toLowerCase().includes(query.toLowerCase())) {
+    if (
+      query &&
+      !title.toLowerCase().includes(query.toLowerCase()) &&
+      !description.toLowerCase().includes(query.toLowerCase())
+    ) {
       continue;
     }
 
-    const kosherLevels: Array<'glatt' | 'chalav-yisrael' | 'pas-yisrael'> = ['glatt', 'chalav-yisrael', 'pas-yisrael'];
+    const kosherLevels: Array<'glatt' | 'chalav-yisrael' | 'pas-yisrael'> = [
+      'glatt',
+      'chalav-yisrael',
+      'pas-yisrael',
+    ];
     const priceRanges = ['$', '$$', '$$$', '$$$$'];
-    
+
     items.push({
-      id: `mock-${categoryKey}-${index}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: `mock-${categoryKey}-${index}-${Date.now()}-${Math.random()
+        .toString(36)
+        .substr(2, 9)}`,
       title: `${categoryEmojis[categoryKey]} ${title}`,
       description,
       imageUrl: `https://picsum.photos/300/225?random=${index}`,
@@ -185,13 +194,21 @@ const generateMockData = (
       rating: Math.round((Math.random() * 2 + 3) * 10) / 10, // 3.0-5.0
       coordinate: {
         latitude: 40.7128 + (Math.random() - 0.5) * 0.2, // NYC area with variation
-        longitude: -74.0060 + (Math.random() - 0.5) * 0.2,
+        longitude: -74.006 + (Math.random() - 0.5) * 0.2,
       },
-      zip_code: `112${Math.floor(Math.random() * 10)}${Math.floor(Math.random() * 10)}`, // Mock NYC zip codes
-      price: Math.random() > 0.3 ? priceRanges[Math.floor(Math.random() * priceRanges.length)] : undefined,
+      zip_code: `112${Math.floor(Math.random() * 10)}${Math.floor(
+        Math.random() * 10,
+      )}`, // Mock NYC zip codes
+      price:
+        Math.random() > 0.3
+          ? priceRanges[Math.floor(Math.random() * priceRanges.length)]
+          : undefined,
       isOpen: Math.random() > 0.3, // 70% chance of being open
       openWeekends: Math.random() > 0.2, // 80% chance of being open weekends
-      kosherLevel: Math.random() > 0.4 ? kosherLevels[Math.floor(Math.random() * kosherLevels.length)] : undefined,
+      kosherLevel:
+        Math.random() > 0.4
+          ? kosherLevels[Math.floor(Math.random() * kosherLevels.length)]
+          : undefined,
       hasParking: Math.random() > 0.3, // 70% chance of having parking
       hasWifi: Math.random() > 0.4, // 60% chance of having wifi
       hasAccessibility: Math.random() > 0.5, // 50% chance of being accessible
@@ -203,12 +220,15 @@ const generateMockData = (
 };
 
 // Global cache to store data per category
-const categoryDataCache = new Map<string, {
-  data: CategoryItem[];
-  currentPage: number;
-  hasMore: boolean;
-  lastQuery: string;
-}>();
+const categoryDataCache = new Map<
+  string,
+  {
+    data: CategoryItem[];
+    currentPage: number;
+    hasMore: boolean;
+    lastQuery: string;
+  }
+>();
 
 export const useCategoryData = ({
   categoryKey,
@@ -221,7 +241,7 @@ export const useCategoryData = ({
   const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  
+
   const loadingRef = useRef(false);
   const queryRef = useRef(query);
   const initialLoadRef = useRef(false);
@@ -230,7 +250,7 @@ export const useCategoryData = ({
   useEffect(() => {
     const cacheKey = `${categoryKey}-${query}`;
     const cachedData = categoryDataCache.get(cacheKey);
-    
+
     if (cachedData && cachedData.lastQuery === query) {
       // Load from cache
       setData(cachedData.data);
@@ -241,7 +261,7 @@ export const useCategoryData = ({
       initialLoadRef.current = true; // Mark as loaded from cache
     } else {
       // Reset for new category/query
-      debugLog('🔥 RESETTING DATA FOR NEW CATEGORY/QUERY:', cacheKey);
+      // debugLog('🔥 RESETTING DATA FOR NEW CATEGORY/QUERY:', cacheKey);
       setData([]);
       setCurrentPage(1);
       setHasMore(true);
@@ -253,8 +273,13 @@ export const useCategoryData = ({
 
   // Load initial data
   useEffect(() => {
-    
-    if (data.length === 0 && !loading && !refreshing && !loadingRef.current && !initialLoadRef.current) {
+    if (
+      data.length === 0 &&
+      !loading &&
+      !refreshing &&
+      !loadingRef.current &&
+      !initialLoadRef.current
+    ) {
       initialLoadRef.current = true;
       loadMore();
     } else {
@@ -273,102 +298,118 @@ export const useCategoryData = ({
     try {
       // Calculate offset based on current page and page size
       const offset = (currentPage - 1) * pageSize;
-      
+
       // Try to fetch from API first with category-specific call and pagination
-      const response = await apiService.getListingsByCategory(categoryKey, pageSize, offset);
-      
+      const response = await apiService.getListingsByCategory(
+        categoryKey,
+        pageSize,
+        offset,
+      );
+
       if (response.success && response.data) {
         // Filter listings by query if provided
-        let filteredListings = response.data.entities || response.data.listings || response.data;
-        
+        let filteredListings =
+          (response.data as any).entities ||
+          response.data.listings ||
+          response.data;
+
         // Ensure filteredListings is an array
         if (!Array.isArray(filteredListings)) {
-          console.warn('API response data is not an array:', filteredListings);
+          warnLog('API response data is not an array:', filteredListings);
           filteredListings = [];
         }
-        
+
         if (queryRef.current) {
           const query = queryRef.current.toLowerCase();
-          filteredListings = filteredListings.filter(listing => 
-            listing.title.toLowerCase().includes(query) || 
-            listing.description.toLowerCase().includes(query)
+          filteredListings = filteredListings.filter(
+            (listing: any) =>
+              listing.title.toLowerCase().includes(query) ||
+              listing.description.toLowerCase().includes(query),
           );
         }
 
         // Convert API listings to our CategoryItem format
-        const newData: CategoryItem[] = filteredListings.map((listing: Listing) => {
-          // Create a complete, safe data structure with all required fields
-          const safeItem: CategoryItem = {
-            id: String(listing.id || ''),
-            title: String(listing.title || 'Unknown'),
-            description: String(listing.description || 'No description available'),
-            imageUrl: String(getImageUrl(listing)),
-            category: String(listing.category_name || 'unknown'),
-            rating: Number(parseFloat(listing.rating) || 0),
-            zip_code: String(listing.zip_code || '00000'),
-            // Add coordinates directly to the item
-            latitude: listing.latitude ? Number(listing.latitude) : undefined,
-            longitude: listing.longitude ? Number(listing.longitude) : undefined,
-            // Provide all optional fields with safe defaults
-            price: '$$',
-            isOpen: true,
-            openWeekends: true,
-            kosherLevel: 'glatt',
-            hasParking: false,
-            hasWifi: false,
-            hasAccessibility: false,
-            hasDelivery: false,
-          };
-          
-          // Add coordinate only if valid
-          if (listing.latitude && listing.longitude) {
-            safeItem.coordinate = {
-              latitude: Number(listing.latitude),
-              longitude: Number(listing.longitude),
+        const newData: CategoryItem[] = filteredListings.map(
+          (listing: Listing) => {
+            // Create a complete, safe data structure with all required fields
+            const safeItem: CategoryItem = {
+              id: String(listing.id || ''),
+              title: String(listing.title || 'Unknown'),
+              description: String(
+                listing.description || 'No description available',
+              ),
+              imageUrl: String(getImageUrl(listing)),
+              category: String(listing.category_name || 'unknown'),
+              rating: Number(parseFloat(listing.rating) || 0),
+              zip_code: String(listing.zip_code || '00000'),
+              // Add coordinates directly to the item
+              latitude: listing.latitude ? Number(listing.latitude) : undefined,
+              longitude: listing.longitude
+                ? Number(listing.longitude)
+                : undefined,
+              // Provide all optional fields with safe defaults
+              price: '$$',
+              isOpen: true,
+              openWeekends: true,
+              kosherLevel: 'glatt',
+              hasParking: false,
+              hasWifi: false,
+              hasAccessibility: false,
+              hasDelivery: false,
             };
-          }
-          
-          return safeItem;
-        });
+
+            // Add coordinate only if valid
+            if (listing.latitude && listing.longitude) {
+              safeItem.coordinate = {
+                latitude: Number(listing.latitude),
+                longitude: Number(listing.longitude),
+              };
+            }
+
+            return safeItem;
+          },
+        );
 
         // Processed data successfully
-        
+
         if (newData.length > 0) {
           try {
             setData(prevData => {
               // Filter out any items that already exist to prevent duplicates
               const existingIds = new Set(prevData.map(item => item.id));
-              const uniqueNewData = newData.filter(item => !existingIds.has(item.id));
+              const uniqueNewData = newData.filter(
+                item => !existingIds.has(item.id),
+              );
               const updatedData = [...prevData, ...uniqueNewData];
-            
-            // Save to cache
-            const cacheKey = `${categoryKey}-${queryRef.current}`;
-            const newPage = currentPage + 1;
-            const newHasMore = newData.length >= pageSize;
-            
-            categoryDataCache.set(cacheKey, {
-              data: updatedData,
-              currentPage: newPage,
-              hasMore: newHasMore,
-              lastQuery: queryRef.current,
+
+              // Save to cache
+              const cacheKey = `${categoryKey}-${queryRef.current}`;
+              const newPage = currentPage + 1;
+              const newHasMore = newData.length >= pageSize;
+
+              categoryDataCache.set(cacheKey, {
+                data: updatedData,
+                currentPage: newPage,
+                hasMore: newHasMore,
+                lastQuery: queryRef.current,
+              });
+
+              // Saved to cache successfully
+
+              return updatedData;
             });
-            
-            // Saved to cache successfully
-            
-            return updatedData;
-          });
           } catch (error) {
-            console.error('Error updating data:', error);
+            errorLog('Error updating data:', error);
             // Fallback to empty array if there's an error
             setData([]);
           }
           setCurrentPage(prev => prev + 1);
         }
-        
+
         // Set hasMore to false if we got fewer items than expected (indicating end of data)
         if (newData.length < pageSize) {
           setHasMore(false);
-          
+
           // Update cache with hasMore = false
           const cacheKey = `${categoryKey}-${queryRef.current}`;
           const cachedData = categoryDataCache.get(cacheKey);
@@ -379,12 +420,12 @@ export const useCategoryData = ({
         }
       } else {
         // API failed - show error instead of mock data
-        console.warn('API failed:', response.error);
+        warnLog('API failed:', response.error);
         setError(response.error || 'Failed to load data');
         setHasMore(false);
       }
     } catch (err) {
-      console.error('Failed to load data:', err);
+      errorLog('Failed to load data:', err);
       setError('Failed to load data');
     } finally {
       setLoading(false);
@@ -397,7 +438,7 @@ export const useCategoryData = ({
 
     setRefreshing(true);
     setError(null);
-    
+
     // Clear cache for this category/query combination
     const cacheKey = `${categoryKey}-${queryRef.current}`;
     categoryDataCache.delete(cacheKey);
@@ -406,61 +447,71 @@ export const useCategoryData = ({
     try {
       // Try to fetch from API first with category-specific call
       const response = await apiService.getListingsByCategory(categoryKey);
-      
+
       if (response.success && response.data) {
         // Filter listings by query if provided
-        let filteredListings = response.data.entities || response.data.listings || response.data;
-        
+        let filteredListings =
+          (response.data as any).entities ||
+          response.data.listings ||
+          response.data;
+
         // Ensure filteredListings is an array
         if (!Array.isArray(filteredListings)) {
-          console.warn('API response data is not an array:', filteredListings);
+          warnLog('API response data is not an array:', filteredListings);
           filteredListings = [];
         }
-        
+
         if (queryRef.current) {
           const query = queryRef.current.toLowerCase();
-          filteredListings = filteredListings.filter(listing => 
-            listing.title.toLowerCase().includes(query) || 
-            listing.description.toLowerCase().includes(query)
+          filteredListings = filteredListings.filter(
+            (listing: any) =>
+              listing.title.toLowerCase().includes(query) ||
+              listing.description.toLowerCase().includes(query),
           );
         }
 
         // Convert API listings to our CategoryItem format
-        const newData: CategoryItem[] = filteredListings.map((listing: Listing) => {
-          // Create a complete, safe data structure with all required fields
-          const safeItem: CategoryItem = {
-            id: String(listing.id || ''),
-            title: String(listing.title || 'Unknown'),
-            description: String(listing.description || 'No description available'),
-            imageUrl: String(getImageUrl(listing)),
-            category: String(listing.category_name || 'unknown'),
-            rating: Number(parseFloat(listing.rating) || 0),
-            zip_code: String(listing.zip_code || '00000'),
-            // Add coordinates directly to the item
-            latitude: listing.latitude ? Number(listing.latitude) : undefined,
-            longitude: listing.longitude ? Number(listing.longitude) : undefined,
-            // Provide all optional fields with safe defaults
-            price: '$$',
-            isOpen: true,
-            openWeekends: true,
-            kosherLevel: 'glatt',
-            hasParking: false,
-            hasWifi: false,
-            hasAccessibility: false,
-            hasDelivery: false,
-          };
-          
-          // Add coordinate only if valid
-          if (listing.latitude && listing.longitude) {
-            safeItem.coordinate = {
-              latitude: Number(listing.latitude),
-              longitude: Number(listing.longitude),
+        const newData: CategoryItem[] = filteredListings.map(
+          (listing: Listing) => {
+            // Create a complete, safe data structure with all required fields
+            const safeItem: CategoryItem = {
+              id: String(listing.id || ''),
+              title: String(listing.title || 'Unknown'),
+              description: String(
+                listing.description || 'No description available',
+              ),
+              imageUrl: String(getImageUrl(listing)),
+              category: String(listing.category_name || 'unknown'),
+              rating: Number(parseFloat(listing.rating) || 0),
+              zip_code: String(listing.zip_code || '00000'),
+              // Add coordinates directly to the item
+              latitude: listing.latitude ? Number(listing.latitude) : undefined,
+              longitude: listing.longitude
+                ? Number(listing.longitude)
+                : undefined,
+              // Provide all optional fields with safe defaults
+              price: '$$',
+              isOpen: true,
+              openWeekends: true,
+              kosherLevel: 'glatt',
+              hasParking: false,
+              hasWifi: false,
+              hasAccessibility: false,
+              hasDelivery: false,
             };
-          }
-          
-          return safeItem;
-        });
-        
+
+            // Add coordinate only if valid
+            if (listing.latitude && listing.longitude) {
+              safeItem.coordinate = {
+                latitude: Number(listing.latitude),
+                longitude: Number(listing.longitude),
+              };
+            }
+
+            return safeItem;
+          },
+        );
+
         if (newData.length === 0) {
           setData([]);
           setCurrentPage(1);
@@ -472,14 +523,14 @@ export const useCategoryData = ({
         }
       } else {
         // API failed during refresh - show error instead of mock data
-        console.warn('API failed during refresh:', response.error);
+        warnLog('API failed during refresh:', response.error);
         setError(response.error || 'Failed to refresh data');
         setData([]);
         setCurrentPage(1);
         setHasMore(false);
       }
     } catch (err) {
-      console.error('Failed to refresh data:', err);
+      errorLog('Failed to refresh data:', err);
       setError('Failed to refresh data');
     } finally {
       setRefreshing(false);

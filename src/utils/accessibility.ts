@@ -1,4 +1,5 @@
 import { AccessibilityInfo, Platform } from 'react-native';
+import { warnLog, debugLog } from './logger';
 
 /**
  * Accessibility utilities for enhanced screen reader support and WCAG compliance
@@ -9,8 +10,8 @@ export type AnnouncementType = 'polite' | 'assertive';
 
 // Screen reader announcement function
 export const announceForScreenReader = (
-  message: string, 
-  type: AnnouncementType = 'polite'
+  message: string,
+  type: AnnouncementType = 'polite',
 ): void => {
   if (Platform.OS === 'ios') {
     AccessibilityInfo.announceForAccessibility(message);
@@ -25,7 +26,7 @@ export const isScreenReaderEnabled = async (): Promise<boolean> => {
   try {
     return await AccessibilityInfo.isScreenReaderEnabled();
   } catch (error) {
-    console.warn('Failed to check screen reader status:', error);
+    warnLog('Failed to check screen reader status:', error);
     return false;
   }
 };
@@ -35,7 +36,7 @@ export const isReduceMotionEnabled = async (): Promise<boolean> => {
   try {
     return await AccessibilityInfo.isReduceMotionEnabled();
   } catch (error) {
-    console.warn('Failed to check reduce motion status:', error);
+    warnLog('Failed to check reduce motion status:', error);
     return false;
   }
 };
@@ -44,7 +45,7 @@ export const isReduceMotionEnabled = async (): Promise<boolean> => {
 export const generateTimePickerLabel = (
   label: string,
   value: string,
-  placeholder: string
+  placeholder: string,
 ): string => {
   const displayValue = value || placeholder;
   return `${label}: ${displayValue}. Double tap to change time.`;
@@ -53,7 +54,7 @@ export const generateTimePickerLabel = (
 // Generate accessibility hint for complex interactions
 export const generateAccessibilityHint = (
   action: string,
-  context?: string
+  context?: string,
 ): string => {
   const baseHint = `Double tap to ${action}`;
   return context ? `${baseHint}. ${context}` : baseHint;
@@ -63,14 +64,16 @@ export const generateAccessibilityHint = (
 export const generateValidationLabel = (
   fieldName: string,
   hasError: boolean,
-  errorMessage?: string
+  errorMessage?: string,
 ): string => {
-  const baseLabel = fieldName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-  
+  const baseLabel = fieldName
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, l => l.toUpperCase());
+
   if (hasError && errorMessage) {
     return `${baseLabel}. Error: ${errorMessage}`;
   }
-  
+
   return baseLabel;
 };
 
@@ -79,7 +82,7 @@ export const generateAccessibilityState = (
   isRequired: boolean = false,
   hasError: boolean = false,
   isDisabled: boolean = false,
-  isSelected: boolean = false
+  isSelected: boolean = false,
 ) => ({
   required: isRequired,
   invalid: hasError,
@@ -91,11 +94,11 @@ export const generateAccessibilityState = (
 export const generateProgressLabel = (
   current: number,
   total: number,
-  stepName?: string
+  stepName?: string,
 ): string => {
   const progress = Math.round((current / total) * 100);
   const baseLabel = `Step ${current} of ${total}, ${progress} percent complete`;
-  
+
   return stepName ? `${baseLabel}. Current step: ${stepName}` : baseLabel;
 };
 
@@ -105,12 +108,12 @@ export const generateBusinessHoursLabel = (
   isOpen: boolean,
   openTime?: string,
   closeTime?: string,
-  isNextDay?: boolean
+  isNextDay?: boolean,
 ): string => {
   if (!isOpen) {
     return `${day}: Closed`;
   }
-  
+
   const nextDayText = isNextDay ? ' until next day' : '';
   return `${day}: Open from ${openTime} to ${closeTime}${nextDayText}`;
 };
@@ -120,20 +123,20 @@ export const generateValidationSummaryLabel = (
   errors: number,
   warnings: number,
   completedSteps: number,
-  totalSteps: number
+  totalSteps: number,
 ): string => {
   const parts = [];
-  
+
   if (errors > 0) {
     parts.push(`${errors} error${errors !== 1 ? 's' : ''}`);
   }
-  
+
   if (warnings > 0) {
     parts.push(`${warnings} warning${warnings !== 1 ? 's' : ''}`);
   }
-  
+
   parts.push(`${completedSteps} of ${totalSteps} steps completed`);
-  
+
   return parts.join(', ');
 };
 
@@ -148,14 +151,19 @@ export const setAccessibilityFocus = (ref: React.RefObject<any>): void => {
 export const announceValidationChange = (
   fieldName: string,
   isValid: boolean,
-  errorMessage?: string
+  errorMessage?: string,
 ): void => {
-  const fieldLabel = fieldName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-  
+  const fieldLabel = fieldName
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, l => l.toUpperCase());
+
   if (isValid) {
     announceForScreenReader(`${fieldLabel} is now valid`, 'polite');
   } else if (errorMessage) {
-    announceForScreenReader(`${fieldLabel} error: ${errorMessage}`, 'assertive');
+    announceForScreenReader(
+      `${fieldLabel} error: ${errorMessage}`,
+      'assertive',
+    );
   }
 };
 
@@ -163,7 +171,7 @@ export const announceValidationChange = (
 export const announceStepChange = (
   stepNumber: number,
   stepName: string,
-  totalSteps: number
+  totalSteps: number,
 ): void => {
   const message = `Moved to step ${stepNumber} of ${totalSteps}: ${stepName}`;
   announceForScreenReader(message, 'polite');
@@ -180,15 +188,15 @@ export const generateAccessibilityTraits = (
   isButton: boolean = false,
   isSelected: boolean = false,
   isDisabled: boolean = false,
-  isHeader: boolean = false
+  isHeader: boolean = false,
 ): string[] => {
   const traits: string[] = [];
-  
+
   if (isButton) traits.push('button');
   if (isSelected) traits.push('selected');
   if (isDisabled) traits.push('notEnabled');
   if (isHeader) traits.push('header');
-  
+
   return traits;
 };
 
@@ -196,12 +204,12 @@ export const generateAccessibilityTraits = (
 export const validateColorContrast = (
   foreground: string,
   background: string,
-  isLargeText: boolean = false
+  isLargeText: boolean = false,
 ): boolean => {
   // This is a simplified implementation
   // In a real app, you'd use a proper color contrast calculation library
   const requiredRatio = isLargeText ? 3.0 : 4.5; // WCAG AA standards
-  
+
   // For now, return true - implement proper contrast calculation as needed
   return true;
 };
@@ -210,13 +218,17 @@ export const validateColorContrast = (
 export const generateSemanticDescription = (
   type: 'form' | 'section' | 'field' | 'button' | 'status',
   content: string,
-  context?: string
+  context?: string,
 ): string => {
   switch (type) {
     case 'form':
-      return `${content} form. ${context || 'Fill out all required fields to continue.'}`;
+      return `${content} form. ${
+        context || 'Fill out all required fields to continue.'
+      }`;
     case 'section':
-      return `${content} section. ${context || 'Contains related form fields.'}`;
+      return `${content} section. ${
+        context || 'Contains related form fields.'
+      }`;
     case 'field':
       return `${content} field. ${context || 'Enter your information.'}`;
     case 'button':
@@ -229,9 +241,12 @@ export const generateSemanticDescription = (
 };
 
 // Accessibility testing helpers
-export const logAccessibilityInfo = (componentName: string, props: any): void => {
+export const logAccessibilityInfo = (
+  componentName: string,
+  props: any,
+): void => {
   if (__DEV__) {
-    console.log(`[A11Y] ${componentName}:`, {
+    debugLog(`[A11Y] ${componentName}:`, {
       accessibilityLabel: props.accessibilityLabel,
       accessibilityHint: props.accessibilityHint,
       accessibilityRole: props.accessibilityRole,

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useLocation } from './useLocation';
 import { formatDistanceWithAccuracy } from '../utils/distanceUtils';
+import { debugLog, errorLog } from '../utils/logger';
 
 export interface LocationHookState {
   location: any;
@@ -20,16 +21,18 @@ export interface LocationHookState {
 }
 
 export const useLocationSimple = (): LocationHookState => {
-  const { 
-    location, 
-    loading, 
-    error, 
-    permissionGranted, 
-    requestLocationPermission, 
-    getCurrentLocation: getCurrentLocationOriginal 
+  const {
+    location,
+    loading,
+    error,
+    permissionGranted,
+    requestLocationPermission,
+    getCurrentLocation: getCurrentLocationOriginal,
   } = useLocation();
 
-  const [accuracyAuthorization] = useState<'full' | 'reduced' | 'unknown'>('full');
+  const [accuracyAuthorization] = useState<'full' | 'reduced' | 'unknown'>(
+    'full',
+  );
   const [timeToFirstFix] = useState<number | null>(null);
   const [lastKnownLocation] = useState<any>(null);
 
@@ -41,7 +44,7 @@ export const useLocationSimple = (): LocationHookState => {
     try {
       return await requestLocationPermission();
     } catch (error) {
-      console.error('Error requesting location permission:', error);
+      errorLog('Error requesting location permission:', error);
       return false;
     }
   }, [requestLocationPermission]);
@@ -51,25 +54,26 @@ export const useLocationSimple = (): LocationHookState => {
     try {
       return await getCurrentLocationOriginal();
     } catch (error) {
-      console.error('Error getting current location:', error);
+      errorLog('Error getting current location:', error);
       return null;
     }
-  }, [getCurrentLocationOriginal]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Don't add getCurrentLocationOriginal to avoid infinite loop
 
   // Start watching location
   const startWatching = useCallback((config?: any) => {
     // Use existing location watching if available
-    console.log('Location watching started');
+    debugLog('Location watching started');
   }, []);
 
   // Stop watching location
   const stopWatching = useCallback(() => {
-    console.log('Location watching stopped');
+    debugLog('Location watching stopped');
   }, []);
 
   // Handle reduced accuracy
   const handleReducedAccuracy = useCallback(async () => {
-    console.log('Handling reduced accuracy');
+    debugLog('Handling reduced accuracy');
   }, []);
 
   // Check if location services are enabled
@@ -79,7 +83,7 @@ export const useLocationSimple = (): LocationHookState => {
 
   // Handle app resume
   const handleAppResume = useCallback(async () => {
-    console.log('Handling app resume');
+    debugLog('Handling app resume');
   }, []);
 
   return {

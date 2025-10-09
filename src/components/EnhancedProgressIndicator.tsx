@@ -10,12 +10,24 @@ import {
   UIManager,
   ScrollView,
 } from 'react-native';
-import { Colors, Typography, Spacing, BorderRadius, TouchTargets } from '../styles/designSystem';
-import { useResponsiveDimensions, getResponsiveLayout } from '../utils/deviceAdaptation';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  TouchTargets,
+} from '../styles/designSystem';
+import {
+  useResponsiveDimensions,
+  getResponsiveLayout,
+} from '../utils/deviceAdaptation';
 import { hapticButtonPress } from '../utils/hapticFeedback';
 
 // Enable LayoutAnimation on Android
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+if (
+  Platform.OS === 'android' &&
+  UIManager.setLayoutAnimationEnabledExperimental
+) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
@@ -45,465 +57,543 @@ export interface EnhancedProgressIndicatorProps {
   containerStyle?: any;
 }
 
-const EnhancedProgressIndicator: React.FC<EnhancedProgressIndicatorProps> = memo(({
-  steps,
-  onStepPress,
-  allowStepJumping = true,
-  showCompletionPercentage = true,
-  compact = false,
-  showStepNumbers = true,
-  showStepIcons = false,
-  showStepDescriptions = false,
-  orientation = 'horizontal',
-  containerStyle,
-}) => {
-  const [expandedStep, setExpandedStep] = useState<number | null>(null);
-  
-  // Responsive design hooks
-  const dimensions = useResponsiveDimensions();
-  const responsiveLayout = getResponsiveLayout();
-  
-  // Animation values
-  const stepAnimations = useMemo(() => 
-    steps.reduce((acc, step) => {
-      acc[step.number] = {
-        scale: new Animated.Value(step.isCurrent ? 1.1 : 1),
-        opacity: new Animated.Value(step.isCompleted ? 1 : 0.7),
-        progress: new Animated.Value(step.completionPercentage / 100),
-      };
-      return acc;
-    }, {} as Record<number, { scale: Animated.Value; opacity: Animated.Value; progress: Animated.Value }>), [steps]
-  );
+const EnhancedProgressIndicator: React.FC<EnhancedProgressIndicatorProps> =
+  memo(
+    ({
+      steps,
+      onStepPress,
+      allowStepJumping = true,
+      showCompletionPercentage = true,
+      compact = false,
+      showStepNumbers = true,
+      showStepIcons = false,
+      showStepDescriptions = false,
+      orientation = 'horizontal',
+      containerStyle,
+    }) => {
+      const [expandedStep, setExpandedStep] = useState<number | null>(null);
 
-  // Calculate overall progress
-  const overallProgress = useMemo(() => {
-    const totalSteps = steps.length;
-    const completedSteps = steps.filter(step => step.isCompleted).length;
-    const currentStepProgress = steps.find(step => step.isCurrent)?.completionPercentage || 0;
-    
-    return ((completedSteps + (currentStepProgress / 100)) / totalSteps) * 100;
-  }, [steps]);
+      // Responsive design hooks
+      const dimensions = useResponsiveDimensions();
+      const responsiveLayout = getResponsiveLayout();
 
-  // Handle step press
-  const handleStepPress = useCallback((stepNumber: number) => {
-    if (!allowStepJumping) return;
+      // Animation values
+      const stepAnimations = useMemo(
+        () =>
+          steps.reduce((acc, step) => {
+            acc[step.number] = {
+              scale: new Animated.Value(step.isCurrent ? 1.1 : 1),
+              opacity: new Animated.Value(step.isCompleted ? 1 : 0.7),
+              progress: new Animated.Value(step.completionPercentage / 100),
+            };
+            return acc;
+          }, {} as Record<number, { scale: Animated.Value; opacity: Animated.Value; progress: Animated.Value }>),
+        [steps],
+      );
 
-    const step = steps.find(s => s.number === stepNumber);
-    if (!step || step.isCurrent) return;
+      // Calculate overall progress
+      const overallProgress = useMemo(() => {
+        const totalSteps = steps.length;
+        const completedSteps = steps.filter(step => step.isCompleted).length;
+        const currentStepProgress =
+          steps.find(step => step.isCurrent)?.completionPercentage || 0;
 
-    // Animate step selection
-    steps.forEach(s => {
-      const animation = stepAnimations[s.number];
-      if (animation) {
-        Animated.timing(animation.scale, {
-          toValue: s.number === stepNumber ? 1.1 : 1,
-          duration: 200,
-          useNativeDriver: false,
-        }).start();
-      }
-    });
+        return (
+          ((completedSteps + currentStepProgress / 100) / totalSteps) * 100
+        );
+      }, [steps]);
 
-    // Layout animation
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    
-    // Haptic feedback
-    hapticButtonPress();
-    
-    onStepPress?.(stepNumber);
-  }, [allowStepJumping, steps, stepAnimations, onStepPress]);
+      // Handle step press
+      const handleStepPress = useCallback(
+        (stepNumber: number) => {
+          if (!allowStepJumping) return;
 
-  // Handle step expand/collapse
-  const handleStepExpand = useCallback((stepNumber: number) => {
-    if (!showStepDescriptions) return;
+          const step = steps.find(s => s.number === stepNumber);
+          if (!step || step.isCurrent) return;
 
-    hapticButtonPress();
-    setExpandedStep(expandedStep === stepNumber ? null : stepNumber);
-  }, [expandedStep, showStepDescriptions]);
+          // Animate step selection
+          steps.forEach(s => {
+            const animation = stepAnimations[s.number];
+            if (animation) {
+              Animated.timing(animation.scale, {
+                toValue: s.number === stepNumber ? 1.1 : 1,
+                duration: 200,
+                useNativeDriver: false,
+              }).start();
+            }
+          });
 
-  // Get step styles
-  const getStepStyles = useCallback((step: FormStep) => {
-    const baseStyles = [
-      styles.step,
-      {
-        minHeight: compact ? TouchTargets.minimum : TouchTargets.comfortable,
-        padding: compact ? Spacing.sm : Spacing.md,
-      },
-    ];
+          // Layout animation
+          LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
 
-    if (step.isCurrent) {
-      return [...baseStyles, styles.stepCurrent];
-    }
-    if (step.isCompleted) {
-      return [...baseStyles, styles.stepCompleted];
-    }
-    if (step.hasErrors) {
-      return [...baseStyles, styles.stepError];
-    }
+          // Haptic feedback
+          hapticButtonPress();
 
-    return baseStyles;
-  }, [compact]);
+          onStepPress?.(stepNumber);
+        },
+        [allowStepJumping, steps, stepAnimations, onStepPress],
+      );
 
-  // Get step text styles
-  const getStepTextStyles = useCallback((step: FormStep) => {
-    const baseStyles = [
-      styles.stepTitle,
-      { fontSize: compact ? responsiveLayout.fontSize * 0.9 : responsiveLayout.fontSize },
-    ];
+      // Handle step expand/collapse
+      const handleStepExpand = useCallback(
+        (stepNumber: number) => {
+          if (!showStepDescriptions) return;
 
-    if (step.isCurrent) {
-      return [...baseStyles, styles.stepTitleCurrent];
-    }
-    if (step.isCompleted) {
-      return [...baseStyles, styles.stepTitleCompleted];
-    }
-    if (step.hasErrors) {
-      return [...baseStyles, styles.stepTitleError];
-    }
+          hapticButtonPress();
+          setExpandedStep(expandedStep === stepNumber ? null : stepNumber);
+        },
+        [expandedStep, showStepDescriptions],
+      );
 
-    return baseStyles;
-  }, [compact, responsiveLayout]);
+      // Get step styles
+      const getStepStyles = useCallback(
+        (step: FormStep) => {
+          const baseStyles = [
+            styles.step,
+            {
+              minHeight: compact
+                ? TouchTargets.minimum
+                : TouchTargets.comfortable,
+              padding: compact ? Spacing.sm : Spacing.md,
+            },
+          ];
 
-  // Get step subtitle styles
-  const getStepSubtitleStyles = useCallback((step: FormStep) => {
-    const baseStyles = [
-      styles.stepSubtitle,
-      { fontSize: compact ? responsiveLayout.fontSize * 0.8 : responsiveLayout.fontSize * 0.85 },
-    ];
+          if (step.isCurrent) {
+            return [...baseStyles, styles.stepCurrent];
+          }
+          if (step.isCompleted) {
+            return [...baseStyles, styles.stepCompleted];
+          }
+          if (step.hasErrors) {
+            return [...baseStyles, styles.stepError];
+          }
 
-    if (step.isCurrent) {
-      return [...baseStyles, styles.stepSubtitleCurrent];
-    }
-    if (step.isCompleted) {
-      return [...baseStyles, styles.stepSubtitleCompleted];
-    }
-    if (step.hasErrors) {
-      return [...baseStyles, styles.stepSubtitleError];
-    }
+          return baseStyles;
+        },
+        [compact],
+      );
 
-    return baseStyles;
-  }, [compact, responsiveLayout]);
+      // Get step text styles
+      const getStepTextStyles = useCallback(
+        (step: FormStep) => {
+          const baseStyles = [
+            styles.stepTitle,
+            {
+              fontSize: compact
+                ? Typography.fontSize.sm * 0.9
+                : Typography.fontSize.sm,
+            },
+          ];
 
-  // Get step number styles
-  const getStepNumberStyles = useCallback((step: FormStep) => {
-    const baseStyles = [
-      styles.stepNumber,
-      { fontSize: compact ? responsiveLayout.fontSize * 0.8 : responsiveLayout.fontSize * 0.9 },
-    ];
+          if (step.isCurrent) {
+            return [...baseStyles, styles.stepTitleCurrent];
+          }
+          if (step.isCompleted) {
+            return [...baseStyles, styles.stepTitleCompleted];
+          }
+          if (step.hasErrors) {
+            return [...baseStyles, styles.stepTitleError];
+          }
 
-    if (step.isCurrent) {
-      return [...baseStyles, styles.stepNumberCurrent];
-    }
-    if (step.isCompleted) {
-      return [...baseStyles, styles.stepNumberCompleted];
-    }
-    if (step.hasErrors) {
-      return [...baseStyles, styles.stepNumberError];
-    }
+          return baseStyles;
+        },
+        [compact, responsiveLayout],
+      );
 
-    return baseStyles;
-  }, [compact, responsiveLayout]);
+      // Get step subtitle styles
+      const getStepSubtitleStyles = useCallback(
+        (step: FormStep) => {
+          const baseStyles = [
+            styles.stepSubtitle,
+            {
+              fontSize: compact
+                ? Typography.fontSize.sm * 0.8
+                : Typography.fontSize.sm * 0.85,
+            },
+          ];
 
-  // Get step icon
-  const getStepIcon = useCallback((step: FormStep) => {
-    if (step.icon) return step.icon;
-    
-    if (step.isCompleted) return '✅';
-    if (step.hasErrors) return '❌';
-    if (step.isCurrent) return '🔄';
-    return '⭕';
-  }, []);
+          if (step.isCurrent) {
+            return [...baseStyles, styles.stepSubtitleCurrent];
+          }
+          if (step.isCompleted) {
+            return [...baseStyles, styles.stepSubtitleCompleted];
+          }
+          if (step.hasErrors) {
+            return [...baseStyles, styles.stepSubtitleError];
+          }
 
-  // Get step status color
-  const getStepStatusColor = useCallback((step: FormStep) => {
-    if (step.isCurrent) return Colors.primary.main;
-    if (step.isCompleted) return Colors.success;
-    if (step.hasErrors) return Colors.error;
-    return Colors.text.secondary;
-  }, []);
+          return baseStyles;
+        },
+        [compact, responsiveLayout],
+      );
 
-  // Render horizontal layout
-  const renderHorizontalLayout = () => (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.horizontalContainer}
-    >
-      {steps.map((step, index) => (
-        <View key={step.number} style={styles.horizontalStepContainer}>
-          <Animated.View
-            style={[
-              getStepStyles(step),
-              {
-                transform: [{
-                  scale: stepAnimations[step.number]?.scale || 1,
-                }],
-                opacity: stepAnimations[step.number]?.opacity || 1,
-              },
-            ]}
-          >
-            <TouchableOpacity
-              style={styles.stepTouchable}
-              onPress={() => handleStepPress(step.number)}
-              disabled={!allowStepJumping}
-              activeOpacity={0.8}
-              accessibilityRole="button"
-              accessibilityState={{ 
-                selected: step.isCurrent,
-                disabled: !allowStepJumping,
-              }}
-              accessibilityLabel={`Step ${step.number}: ${step.title}`}
-              accessibilityHint={step.isCurrent ? 'Current step' : step.isCompleted ? 'Completed step' : 'Incomplete step'}
-            >
-              {/* Step Number/Icon */}
-              <View style={styles.stepHeader}>
-                {showStepNumbers && (
-                  <Text style={getStepNumberStyles(step)}>
-                    {step.number}
-                  </Text>
-                )}
-                {showStepIcons && (
-                  <Text style={styles.stepIcon}>
-                    {getStepIcon(step)}
-                  </Text>
-                )}
-              </View>
+      // Get step number styles
+      const getStepNumberStyles = useCallback(
+        (step: FormStep) => {
+          const baseStyles = [
+            styles.stepNumber,
+            {
+              fontSize: compact
+                ? Typography.fontSize.sm * 0.8
+                : Typography.fontSize.sm * 0.9,
+            },
+          ];
 
-              {/* Step Title */}
-              <Text style={getStepTextStyles(step)}>
-                {step.title}
-              </Text>
+          if (step.isCurrent) {
+            return [...baseStyles, styles.stepNumberCurrent];
+          }
+          if (step.isCompleted) {
+            return [...baseStyles, styles.stepNumberCompleted];
+          }
+          if (step.hasErrors) {
+            return [...baseStyles, styles.stepNumberError];
+          }
 
-              {/* Step Subtitle */}
-              {step.subtitle && (
-                <Text style={getStepSubtitleStyles(step)}>
-                  {step.subtitle}
-                </Text>
-              )}
+          return baseStyles;
+        },
+        [compact, responsiveLayout],
+      );
 
-              {/* Progress Bar */}
-              <View style={styles.stepProgressContainer}>
-                <View style={styles.stepProgressBackground}>
-                  <Animated.View
-                    style={[
-                      styles.stepProgressFill,
+      // Get step icon
+      const getStepIcon = useCallback((step: FormStep) => {
+        if (step.icon) return step.icon;
+
+        if (step.isCompleted) return '✅';
+        if (step.hasErrors) return '❌';
+        if (step.isCurrent) return '🔄';
+        return '⭕';
+      }, []);
+
+      // Get step status color
+      const getStepStatusColor = useCallback((step: FormStep) => {
+        if (step.isCurrent) return Colors.primary.main;
+        if (step.isCompleted) return Colors.success;
+        if (step.hasErrors) return Colors.error;
+        return Colors.text.secondary;
+      }, []);
+
+      // Render horizontal layout
+      const renderHorizontalLayout = () => (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.horizontalContainer}
+        >
+          {steps.map((step, index) => (
+            <View key={step.number} style={styles.horizontalStepContainer}>
+              <Animated.View
+                style={[
+                  getStepStyles(step),
+                  {
+                    transform: [
                       {
-                        backgroundColor: getStepStatusColor(step),
-                        width: stepAnimations[step.number]?.progress?.interpolate({
-                          inputRange: [0, 1],
-                          outputRange: ['0%', '100%'],
-                        }) || '0%',
+                        scale: stepAnimations[step.number]?.scale || 1,
                       },
-                    ]}
-                  />
-                </View>
-                {showCompletionPercentage && (
-                  <Text style={styles.stepProgressText}>
-                    {step.completionPercentage}%
-                  </Text>
-                )}
-              </View>
-
-              {/* Step Description Toggle */}
-              {showStepDescriptions && step.description && (
+                    ],
+                    opacity: stepAnimations[step.number]?.opacity || 1,
+                  },
+                ]}
+              >
                 <TouchableOpacity
-                  style={styles.stepDescriptionToggle}
-                  onPress={() => handleStepExpand(step.number)}
-                  activeOpacity={0.7}
+                  style={styles.stepTouchable}
+                  onPress={() => handleStepPress(step.number)}
+                  disabled={!allowStepJumping}
+                  activeOpacity={0.8}
                   accessibilityRole="button"
-                  accessibilityLabel="Toggle step description"
+                  accessibilityState={{
+                    selected: step.isCurrent,
+                    disabled: !allowStepJumping,
+                  }}
+                  accessibilityLabel={`Step ${step.number}: ${step.title}`}
+                  accessibilityHint={
+                    step.isCurrent
+                      ? 'Current step'
+                      : step.isCompleted
+                      ? 'Completed step'
+                      : 'Incomplete step'
+                  }
                 >
-                  <Text style={styles.stepDescriptionToggleText}>
-                    {expandedStep === step.number ? 'Hide' : 'Show'} Details
-                  </Text>
-                  <Text style={styles.stepDescriptionToggleIcon}>
-                    {expandedStep === step.number ? '▲' : '▼'}
-                  </Text>
-                </TouchableOpacity>
-              )}
+                  {/* Step Number/Icon */}
+                  <View style={styles.stepHeader}>
+                    {showStepNumbers && (
+                      <Text style={getStepNumberStyles(step)}>
+                        {step.number}
+                      </Text>
+                    )}
+                    {showStepIcons && (
+                      <Text style={styles.stepIcon}>{getStepIcon(step)}</Text>
+                    )}
+                  </View>
 
-              {/* Step Description */}
-              {showStepDescriptions && step.description && expandedStep === step.number && (
-                <View style={styles.stepDescription}>
-                  <Text style={[
-                    styles.stepDescriptionText,
-                    { fontSize: responsiveLayout.fontSize * 0.8 },
-                  ]}>
-                    {step.description}
-                  </Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          </Animated.View>
+                  {/* Step Title */}
+                  <Text style={getStepTextStyles(step)}>{step.title}</Text>
 
-          {/* Connector Line */}
-          {index < steps.length - 1 && (
-            <View style={[
-              styles.connectorLine,
-              {
-                backgroundColor: step.isCompleted ? Colors.success : Colors.border.primary,
-              },
-            ]} />
-          )}
-        </View>
-      ))}
-    </ScrollView>
-  );
-
-  // Render vertical layout
-  const renderVerticalLayout = () => (
-    <View style={styles.verticalContainer}>
-      {steps.map((step, index) => (
-        <View key={step.number} style={styles.verticalStepContainer}>
-          <Animated.View
-            style={[
-              getStepStyles(step),
-              {
-                transform: [{
-                  scale: stepAnimations[step.number]?.scale || 1,
-                }],
-                opacity: stepAnimations[step.number]?.opacity || 1,
-              },
-            ]}
-          >
-            <TouchableOpacity
-              style={styles.stepTouchable}
-              onPress={() => handleStepPress(step.number)}
-              disabled={!allowStepJumping}
-              activeOpacity={0.8}
-              accessibilityRole="button"
-              accessibilityState={{ 
-                selected: step.isCurrent,
-                disabled: !allowStepJumping,
-              }}
-              accessibilityLabel={`Step ${step.number}: ${step.title}`}
-              accessibilityHint={step.isCurrent ? 'Current step' : step.isCompleted ? 'Completed step' : 'Incomplete step'}
-            >
-              <View style={styles.stepContent}>
-                {/* Step Number/Icon */}
-                <View style={styles.stepHeader}>
-                  {showStepNumbers && (
-                    <Text style={getStepNumberStyles(step)}>
-                      {step.number}
-                    </Text>
-                  )}
-                  {showStepIcons && (
-                    <Text style={styles.stepIcon}>
-                      {getStepIcon(step)}
-                    </Text>
-                  )}
-                </View>
-
-                {/* Step Info */}
-                <View style={styles.stepInfo}>
-                  <Text style={getStepTextStyles(step)}>
-                    {step.title}
-                  </Text>
+                  {/* Step Subtitle */}
                   {step.subtitle && (
                     <Text style={getStepSubtitleStyles(step)}>
                       {step.subtitle}
                     </Text>
                   )}
-                </View>
 
-                {/* Progress Bar */}
-                <View style={styles.stepProgressContainer}>
-                  <View style={styles.stepProgressBackground}>
-                    <Animated.View
-                      style={[
-                        styles.stepProgressFill,
-                        {
-                          backgroundColor: getStepStatusColor(step),
-                          width: stepAnimations[step.number]?.progress?.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: ['0%', '100%'],
-                          }) || '0%',
-                        },
-                      ]}
-                    />
+                  {/* Progress Bar */}
+                  <View style={styles.stepProgressContainer}>
+                    <View style={styles.stepProgressBackground}>
+                      <Animated.View
+                        style={[
+                          styles.stepProgressFill,
+                          {
+                            backgroundColor: getStepStatusColor(step),
+                            width:
+                              stepAnimations[
+                                step.number
+                              ]?.progress?.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: ['0%', '100%'],
+                              }) || '0%',
+                          },
+                        ]}
+                      />
+                    </View>
+                    {showCompletionPercentage && (
+                      <Text style={styles.stepProgressText}>
+                        {step.completionPercentage}%
+                      </Text>
+                    )}
                   </View>
-                  {showCompletionPercentage && (
-                    <Text style={styles.stepProgressText}>
-                      {step.completionPercentage}%
-                    </Text>
+
+                  {/* Step Description Toggle */}
+                  {showStepDescriptions && step.description && (
+                    <TouchableOpacity
+                      style={styles.stepDescriptionToggle}
+                      onPress={() => handleStepExpand(step.number)}
+                      activeOpacity={0.7}
+                      accessibilityRole="button"
+                      accessibilityLabel="Toggle step description"
+                    >
+                      <Text style={styles.stepDescriptionToggleText}>
+                        {expandedStep === step.number ? 'Hide' : 'Show'} Details
+                      </Text>
+                      <Text style={styles.stepDescriptionToggleIcon}>
+                        {expandedStep === step.number ? '▲' : '▼'}
+                      </Text>
+                    </TouchableOpacity>
                   )}
-                </View>
-              </View>
 
-              {/* Step Description Toggle */}
-              {showStepDescriptions && step.description && (
-                <TouchableOpacity
-                  style={styles.stepDescriptionToggle}
-                  onPress={() => handleStepExpand(step.number)}
-                  activeOpacity={0.7}
-                  accessibilityRole="button"
-                  accessibilityLabel="Toggle step description"
-                >
-                  <Text style={styles.stepDescriptionToggleText}>
-                    {expandedStep === step.number ? 'Hide' : 'Show'} Details
-                  </Text>
-                  <Text style={styles.stepDescriptionToggleIcon}>
-                    {expandedStep === step.number ? '▲' : '▼'}
-                  </Text>
+                  {/* Step Description */}
+                  {showStepDescriptions &&
+                    step.description &&
+                    expandedStep === step.number && (
+                      <View style={styles.stepDescription}>
+                        <Text
+                          style={[
+                            styles.stepDescriptionText,
+                            { fontSize: Typography.fontSize.sm * 0.8 },
+                          ]}
+                        >
+                          {step.description}
+                        </Text>
+                      </View>
+                    )}
                 </TouchableOpacity>
-              )}
+              </Animated.View>
 
-              {/* Step Description */}
-              {showStepDescriptions && step.description && expandedStep === step.number && (
-                <View style={styles.stepDescription}>
-                  <Text style={[
-                    styles.stepDescriptionText,
-                    { fontSize: responsiveLayout.fontSize * 0.8 },
-                  ]}>
-                    {step.description}
-                  </Text>
-                </View>
+              {/* Connector Line */}
+              {index < steps.length - 1 && (
+                <View
+                  style={[
+                    styles.connectorLine,
+                    {
+                      backgroundColor: step.isCompleted
+                        ? Colors.success
+                        : Colors.border.primary,
+                    },
+                  ]}
+                />
               )}
-            </TouchableOpacity>
-          </Animated.View>
+            </View>
+          ))}
+        </ScrollView>
+      );
 
-          {/* Connector Line */}
-          {index < steps.length - 1 && (
-            <View style={[
-              styles.connectorLineVertical,
-              {
-                backgroundColor: step.isCompleted ? Colors.success : Colors.border.primary,
-              },
-            ]} />
+      // Render vertical layout
+      const renderVerticalLayout = () => (
+        <View style={styles.verticalContainer}>
+          {steps.map((step, index) => (
+            <View key={step.number} style={styles.verticalStepContainer}>
+              <Animated.View
+                style={[
+                  getStepStyles(step),
+                  {
+                    transform: [
+                      {
+                        scale: stepAnimations[step.number]?.scale || 1,
+                      },
+                    ],
+                    opacity: stepAnimations[step.number]?.opacity || 1,
+                  },
+                ]}
+              >
+                <TouchableOpacity
+                  style={styles.stepTouchable}
+                  onPress={() => handleStepPress(step.number)}
+                  disabled={!allowStepJumping}
+                  activeOpacity={0.8}
+                  accessibilityRole="button"
+                  accessibilityState={{
+                    selected: step.isCurrent,
+                    disabled: !allowStepJumping,
+                  }}
+                  accessibilityLabel={`Step ${step.number}: ${step.title}`}
+                  accessibilityHint={
+                    step.isCurrent
+                      ? 'Current step'
+                      : step.isCompleted
+                      ? 'Completed step'
+                      : 'Incomplete step'
+                  }
+                >
+                  <View style={styles.stepContent}>
+                    {/* Step Number/Icon */}
+                    <View style={styles.stepHeader}>
+                      {showStepNumbers && (
+                        <Text style={getStepNumberStyles(step)}>
+                          {step.number}
+                        </Text>
+                      )}
+                      {showStepIcons && (
+                        <Text style={styles.stepIcon}>{getStepIcon(step)}</Text>
+                      )}
+                    </View>
+
+                    {/* Step Info */}
+                    <View style={styles.stepInfo}>
+                      <Text style={getStepTextStyles(step)}>{step.title}</Text>
+                      {step.subtitle && (
+                        <Text style={getStepSubtitleStyles(step)}>
+                          {step.subtitle}
+                        </Text>
+                      )}
+                    </View>
+
+                    {/* Progress Bar */}
+                    <View style={styles.stepProgressContainer}>
+                      <View style={styles.stepProgressBackground}>
+                        <Animated.View
+                          style={[
+                            styles.stepProgressFill,
+                            {
+                              backgroundColor: getStepStatusColor(step),
+                              width:
+                                stepAnimations[
+                                  step.number
+                                ]?.progress?.interpolate({
+                                  inputRange: [0, 1],
+                                  outputRange: ['0%', '100%'],
+                                }) || '0%',
+                            },
+                          ]}
+                        />
+                      </View>
+                      {showCompletionPercentage && (
+                        <Text style={styles.stepProgressText}>
+                          {step.completionPercentage}%
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+
+                  {/* Step Description Toggle */}
+                  {showStepDescriptions && step.description && (
+                    <TouchableOpacity
+                      style={styles.stepDescriptionToggle}
+                      onPress={() => handleStepExpand(step.number)}
+                      activeOpacity={0.7}
+                      accessibilityRole="button"
+                      accessibilityLabel="Toggle step description"
+                    >
+                      <Text style={styles.stepDescriptionToggleText}>
+                        {expandedStep === step.number ? 'Hide' : 'Show'} Details
+                      </Text>
+                      <Text style={styles.stepDescriptionToggleIcon}>
+                        {expandedStep === step.number ? '▲' : '▼'}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+
+                  {/* Step Description */}
+                  {showStepDescriptions &&
+                    step.description &&
+                    expandedStep === step.number && (
+                      <View style={styles.stepDescription}>
+                        <Text
+                          style={[
+                            styles.stepDescriptionText,
+                            { fontSize: Typography.fontSize.sm * 0.8 },
+                          ]}
+                        >
+                          {step.description}
+                        </Text>
+                      </View>
+                    )}
+                </TouchableOpacity>
+              </Animated.View>
+
+              {/* Connector Line */}
+              {index < steps.length - 1 && (
+                <View
+                  style={[
+                    styles.connectorLineVertical,
+                    {
+                      backgroundColor: step.isCompleted
+                        ? Colors.success
+                        : Colors.border.primary,
+                    },
+                  ]}
+                />
+              )}
+            </View>
+          ))}
+        </View>
+      );
+
+      return (
+        <View style={[styles.container, containerStyle]}>
+          {/* Overall Progress */}
+          {showCompletionPercentage && (
+            <View style={styles.overallProgressContainer}>
+              <Text
+                style={[
+                  styles.overallProgressLabel,
+                  {
+                    fontSize: compact
+                      ? Typography.fontSize.sm * 0.9
+                      : Typography.fontSize.sm,
+                  },
+                ]}
+              >
+                Overall Progress: {Math.round(overallProgress)}%
+              </Text>
+              <View style={styles.overallProgressBar}>
+                <Animated.View
+                  style={[
+                    styles.overallProgressFill,
+                    {
+                      width: `${overallProgress}%`,
+                    },
+                  ]}
+                />
+              </View>
+            </View>
           )}
-        </View>
-      ))}
-    </View>
-  );
 
-  return (
-    <View style={[styles.container, containerStyle]}>
-      {/* Overall Progress */}
-      {showCompletionPercentage && (
-        <View style={styles.overallProgressContainer}>
-          <Text style={[
-            styles.overallProgressLabel,
-            { fontSize: compact ? responsiveLayout.fontSize * 0.9 : responsiveLayout.fontSize },
-          ]}>
-            Overall Progress: {Math.round(overallProgress)}%
-          </Text>
-          <View style={styles.overallProgressBar}>
-            <Animated.View
-              style={[
-                styles.overallProgressFill,
-                {
-                  width: `${overallProgress}%`,
-                },
-              ]}
-            />
-          </View>
+          {/* Steps */}
+          {orientation === 'horizontal'
+            ? renderHorizontalLayout()
+            : renderVerticalLayout()}
         </View>
-      )}
-
-      {/* Steps */}
-      {orientation === 'horizontal' ? renderHorizontalLayout() : renderVerticalLayout()}
-    </View>
+      );
+    },
   );
-});
 
 const styles = StyleSheet.create({
   container: {

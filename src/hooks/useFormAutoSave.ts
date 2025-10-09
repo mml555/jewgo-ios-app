@@ -1,7 +1,12 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
-import { formPersistenceService, SaveStatus, FormMetadata } from '../services/FormPersistence';
+import {
+  formPersistenceService,
+  SaveStatus,
+  FormMetadata,
+} from '../services/FormPersistence';
 import { ListingFormData } from '../screens/AddCategoryScreen';
+import { errorLog } from '../utils/logger';
 
 interface UseFormAutoSaveOptions {
   enabled?: boolean;
@@ -19,7 +24,9 @@ interface UseFormAutoSaveReturn {
   saveNow: () => Promise<void>;
   loadSavedData: () => Promise<ListingFormData | null>;
   clearSavedData: () => Promise<void>;
-  getSaveHistory: () => Promise<Array<{ data: ListingFormData; metadata: FormMetadata }>>;
+  getSaveHistory: () => Promise<
+    Array<{ data: ListingFormData; metadata: FormMetadata }>
+  >;
   restoreFromHistory: (index: number) => Promise<ListingFormData | null>;
 }
 
@@ -27,7 +34,7 @@ export const useFormAutoSave = (
   formData: Partial<ListingFormData>,
   currentStep: number,
   isFormComplete: boolean = false,
-  options: UseFormAutoSaveOptions = {}
+  options: UseFormAutoSaveOptions = {},
 ): UseFormAutoSaveReturn => {
   const {
     enabled = true,
@@ -64,12 +71,13 @@ export const useFormAutoSave = (
         }
 
         // Calculate completion percentage
-        const percentage = await formPersistenceService.getFormCompletionPercentage();
+        const percentage =
+          await formPersistenceService.getFormCompletionPercentage();
         setCompletionPercentage(percentage);
 
         isInitializedRef.current = true;
       } catch (error) {
-        console.error('Error initializing form auto-save:', error);
+        errorLog('Error initializing form auto-save:', error);
       }
     };
 
@@ -78,7 +86,7 @@ export const useFormAutoSave = (
 
   // Subscribe to save status changes
   useEffect(() => {
-    const unsubscribe = formPersistenceService.onSaveStatusChange((status) => {
+    const unsubscribe = formPersistenceService.onSaveStatusChange(status => {
       setSaveStatus(status);
     });
 
@@ -90,23 +98,28 @@ export const useFormAutoSave = (
     if (!enabled || !isInitializedRef.current) return;
 
     try {
-      await formPersistenceService.saveFormData(formData, currentStep, isFormComplete);
-      
+      await formPersistenceService.saveFormData(
+        formData,
+        currentStep,
+        isFormComplete,
+      );
+
       // Update state
       setLastSaved(new Date());
       setHasSavedData(true);
-      
+
       // Update completion percentage
-      const percentage = await formPersistenceService.getFormCompletionPercentage();
+      const percentage =
+        await formPersistenceService.getFormCompletionPercentage();
       setCompletionPercentage(percentage);
-      
+
       // Update metadata
       const metadata = await formPersistenceService.getMetadata();
       if (metadata) {
         setSaveCount(metadata.saveCount);
       }
     } catch (error) {
-      console.error('Error in debounced save:', error);
+      errorLog('Error in debounced save:', error);
     }
   }, [formData, currentStep, isFormComplete, enabled]);
 
@@ -137,7 +150,11 @@ export const useFormAutoSave = (
 
   // Save when step changes
   useEffect(() => {
-    if (saveOnStepChange && currentStep !== lastStepRef.current && isInitializedRef.current) {
+    if (
+      saveOnStepChange &&
+      currentStep !== lastStepRef.current &&
+      isInitializedRef.current
+    ) {
       saveNow();
       lastStepRef.current = currentStep;
     }
@@ -153,8 +170,11 @@ export const useFormAutoSave = (
       }
     };
 
-    const subscription = AppState.addEventListener('change', handleAppStateChange);
-    
+    const subscription = AppState.addEventListener(
+      'change',
+      handleAppStateChange,
+    );
+
     return () => {
       subscription?.remove();
     };
@@ -166,7 +186,7 @@ export const useFormAutoSave = (
       formPersistenceService.startAutoSave(
         () => formData,
         () => currentStep,
-        () => isFormComplete
+        () => isFormComplete,
       );
     }
 
@@ -185,14 +205,15 @@ export const useFormAutoSave = (
   }, []);
 
   // Load saved data
-  const loadSavedData = useCallback(async (): Promise<ListingFormData | null> => {
-    try {
-      return await formPersistenceService.loadFormData();
-    } catch (error) {
-      console.error('Error loading saved data:', error);
-      return null;
-    }
-  }, []);
+  const loadSavedData =
+    useCallback(async (): Promise<ListingFormData | null> => {
+      try {
+        return await formPersistenceService.loadFormData();
+      } catch (error) {
+        errorLog('Error loading saved data:', error);
+        return null;
+      }
+    }, []);
 
   // Clear saved data
   const clearSavedData = useCallback(async (): Promise<void> => {
@@ -203,7 +224,7 @@ export const useFormAutoSave = (
       setSaveCount(0);
       setCompletionPercentage(0);
     } catch (error) {
-      console.error('Error clearing saved data:', error);
+      errorLog('Error clearing saved data:', error);
       throw error;
     }
   }, []);
@@ -213,29 +234,33 @@ export const useFormAutoSave = (
     try {
       return await formPersistenceService.getSaveHistory();
     } catch (error) {
-      console.error('Error getting save history:', error);
+      errorLog('Error getting save history:', error);
       return [];
     }
   }, []);
 
   // Restore from history
-  const restoreFromHistory = useCallback(async (index: number): Promise<ListingFormData | null> => {
-    try {
-      const restored = await formPersistenceService.restoreFromHistory(index);
-      if (restored) {
-        setHasSavedData(true);
-        setLastSaved(new Date());
-        
-        // Update completion percentage
-        const percentage = await formPersistenceService.getFormCompletionPercentage();
-        setCompletionPercentage(percentage);
+  const restoreFromHistory = useCallback(
+    async (index: number): Promise<ListingFormData | null> => {
+      try {
+        const restored = await formPersistenceService.restoreFromHistory(index);
+        if (restored) {
+          setHasSavedData(true);
+          setLastSaved(new Date());
+
+          // Update completion percentage
+          const percentage =
+            await formPersistenceService.getFormCompletionPercentage();
+          setCompletionPercentage(percentage);
+        }
+        return restored;
+      } catch (error) {
+        errorLog('Error restoring from history:', error);
+        return null;
       }
-      return restored;
-    } catch (error) {
-      console.error('Error restoring from history:', error);
-      return null;
-    }
-  }, []);
+    },
+    [],
+  );
 
   return {
     saveStatus,

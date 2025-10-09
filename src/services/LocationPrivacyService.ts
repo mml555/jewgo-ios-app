@@ -4,26 +4,27 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { errorLog, warnLog, debugLog } from '../utils/logger';
 
 export interface LocationPrivacyConfig {
   // Data retention
   maxLocationHistoryDays: number;
   maxCachedLocations: number;
-  
+
   // Privacy settings
   allowLocationLogging: boolean;
   allowPreciseLocation: boolean;
   allowBackgroundLocation: boolean;
-  
+
   // Security settings
   encryptLocationData: boolean;
   requireUserConsent: boolean;
   anonymizeLocationData: boolean;
-  
+
   // Rate limiting
   maxLocationRequestsPerMinute: number;
   maxLocationRequestsPerHour: number;
-  
+
   // Data sharing
   allowLocationSharing: boolean;
   allowAnalyticsSharing: boolean;
@@ -94,7 +95,7 @@ class LocationPrivacyService {
 
     await this.saveConsent(consent);
     this.consent = consent;
-    
+
     return consent;
   }
 
@@ -122,20 +123,25 @@ class LocationPrivacyService {
 
   private async loadConsent(): Promise<void> {
     try {
-      const consentData = await AsyncStorage.getItem('location_privacy_consent');
+      const consentData = await AsyncStorage.getItem(
+        'location_privacy_consent',
+      );
       if (consentData) {
         this.consent = JSON.parse(consentData);
       }
     } catch (error) {
-      console.error('Failed to load privacy consent:', error);
+      errorLog('Failed to load privacy consent:', error);
     }
   }
 
   private async saveConsent(consent: PrivacyConsent): Promise<void> {
     try {
-      await AsyncStorage.setItem('location_privacy_consent', JSON.stringify(consent));
+      await AsyncStorage.setItem(
+        'location_privacy_consent',
+        JSON.stringify(consent),
+      );
     } catch (error) {
-      console.error('Failed to save privacy consent:', error);
+      errorLog('Failed to save privacy consent:', error);
     }
   }
 
@@ -152,7 +158,7 @@ class LocationPrivacyService {
 
     // Check rate limits
     if (!this.checkRateLimit()) {
-      console.warn('Location request rate limit exceeded');
+      warnLog('Location request rate limit exceeded');
       return;
     }
 
@@ -232,7 +238,7 @@ class LocationPrivacyService {
         this.locationHistory = JSON.parse(historyData);
       }
     } catch (error) {
-      console.error('Failed to load location history:', error);
+      errorLog('Failed to load location history:', error);
     }
   }
 
@@ -240,23 +246,29 @@ class LocationPrivacyService {
     try {
       // Only save if user has consented
       if (this.consent?.locationLogging) {
-        await AsyncStorage.setItem('location_history', JSON.stringify(this.locationHistory));
+        await AsyncStorage.setItem(
+          'location_history',
+          JSON.stringify(this.locationHistory),
+        );
       }
     } catch (error) {
-      console.error('Failed to save location history:', error);
+      errorLog('Failed to save location history:', error);
     }
   }
 
   private cleanupOldData(): void {
-    const cutoff = Date.now() - (this.config.maxLocationHistoryDays * 24 * 60 * 60 * 1000);
-    
+    const cutoff =
+      Date.now() - this.config.maxLocationHistoryDays * 24 * 60 * 60 * 1000;
+
     this.locationHistory = this.locationHistory.filter(
-      point => point.timestamp > cutoff
+      point => point.timestamp > cutoff,
     );
 
     // Limit total number of cached locations
     if (this.locationHistory.length > this.config.maxCachedLocations) {
-      this.locationHistory = this.locationHistory.slice(-this.config.maxCachedLocations);
+      this.locationHistory = this.locationHistory.slice(
+        -this.config.maxCachedLocations,
+      );
     }
   }
 
@@ -289,20 +301,20 @@ class LocationPrivacyService {
 
     // Remove sensitive data
     const sanitizedData = this.sanitizeLogData(data);
-    
-    console.log(`📍 Location Event [${event}]:`, sanitizedData);
+
+    debugLog(`📍 Location Event [${event}]:`, sanitizedData);
   }
 
   private sanitizeLogData(data?: Record<string, any>): Record<string, any> {
     if (!data) return {};
 
     const sanitized = { ...data };
-    
+
     // Remove or anonymize sensitive fields
     if (sanitized.latitude) {
       sanitized.latitude = this.anonymizeCoordinate(sanitized.latitude);
     }
-    
+
     if (sanitized.longitude) {
       sanitized.longitude = this.anonymizeCoordinate(sanitized.longitude);
     }
@@ -329,7 +341,7 @@ class LocationPrivacyService {
     return (
       this.consent !== null &&
       this.consent.locationAccess &&
-      this.consent.timestamp > Date.now() - (365 * 24 * 60 * 60 * 1000) // 1 year
+      this.consent.timestamp > Date.now() - 365 * 24 * 60 * 60 * 1000 // 1 year
     );
   }
 
@@ -346,7 +358,10 @@ class LocationPrivacyService {
       recommendations.push('Request user consent for location data usage');
     }
 
-    if (this.consent && this.consent.timestamp < Date.now() - (365 * 24 * 60 * 60 * 1000)) {
+    if (
+      this.consent &&
+      this.consent.timestamp < Date.now() - 365 * 24 * 60 * 60 * 1000
+    ) {
       issues.push('Privacy consent is outdated');
       recommendations.push('Request updated consent from user');
     }
@@ -364,7 +379,9 @@ class LocationPrivacyService {
   }
 
   // GDPR compliance
-  async handleDataSubjectRequest(type: 'access' | 'portability' | 'erasure'): Promise<any> {
+  async handleDataSubjectRequest(
+    type: 'access' | 'portability' | 'erasure',
+  ): Promise<any> {
     switch (type) {
       case 'access':
         return {
@@ -372,18 +389,18 @@ class LocationPrivacyService {
           locationHistory: this.locationHistory,
           config: this.config,
         };
-      
+
       case 'portability':
         return {
           locationHistory: this.locationHistory,
           format: 'json',
           exportedAt: new Date().toISOString(),
         };
-      
+
       case 'erasure':
         await this.deleteLocationData();
         return { deleted: true, timestamp: Date.now() };
-      
+
       default:
         throw new Error('Invalid data subject request type');
     }

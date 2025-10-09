@@ -4,7 +4,7 @@ import { configService } from '../config/ConfigService';
 import { apiV5Service, EntityType, Entity, SearchParams } from './api-v5';
 import authService from './AuthService';
 import guestService from './GuestService';
-import { debugLog } from '../utils/logger';
+import { debugLog, errorLog, warnLog } from '../utils/logger';
 
 export interface ApiResponse<T> {
   success: boolean;
@@ -61,6 +61,47 @@ export interface Listing {
   share_count?: number;
 }
 
+export interface JobSeeker {
+  id: string;
+  full_name: string;
+  title: string;
+  summary: string;
+  email: string;
+  phone?: string;
+  linkedin_url?: string;
+  portfolio_url?: string;
+  resume_url?: string;
+  city: string;
+  state: string;
+  zip_code: string;
+  country: string;
+  is_remote_ok: boolean;
+  willing_to_relocate: boolean;
+  experience_years: number;
+  experience_level: 'entry' | 'mid' | 'senior' | 'executive';
+  skills: string[];
+  qualifications: string[];
+  languages: string[];
+  desired_job_types: string[];
+  desired_industries: string[];
+  desired_salary_min?: number;
+  desired_salary_max?: number;
+  availability: string;
+  kosher_environment_preferred: boolean;
+  shabbat_observant: boolean;
+  jewish_organization_preferred: boolean;
+  is_active: boolean;
+  is_featured: boolean;
+  is_verified: boolean;
+  profile_completion_percentage: number;
+  view_count: number;
+  contact_count: number;
+  created_at: string;
+  updated_at: string;
+  last_active_at: string;
+  application_count?: number;
+}
+
 export interface Review {
   id: string;
   listing_id: string;
@@ -103,7 +144,11 @@ export interface SpecialOffer {
   business_id: string;
   business_name: string;
   category: string;
-  discount_type: 'percentage' | 'fixed_amount' | 'free_item' | 'buy_one_get_one';
+  discount_type:
+    | 'percentage'
+    | 'fixed_amount'
+    | 'free_item'
+    | 'buy_one_get_one';
   discount_value: string;
   discount_display: string;
   valid_from: string;
@@ -136,15 +181,18 @@ class ApiService {
 
   private async request<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
   ): Promise<ApiResponse<T>> {
     try {
       const url = `${this.baseUrl}${endpoint}`;
-      debugLog('🌐 API Request:', url);
-      
+      // Only log API requests very occasionally to reduce console noise
+      if (__DEV__ && Math.random() < 0.01) {
+        debugLog('🌐 API Request:', url);
+      }
+
       // Get authentication headers
       let authHeaders: Record<string, string> = {};
-      
+
       if (authService.isAuthenticated()) {
         // User is authenticated - use user token
         authHeaders = await authService.getAuthHeaders();
@@ -152,9 +200,12 @@ class ApiService {
         // Guest is authenticated - use guest token
         authHeaders = await guestService.getAuthHeadersAsync();
       }
-      
-      debugLog('🔐 Auth headers:', authHeaders);
-      
+
+      // Only log auth headers very occasionally to reduce console noise
+      if (__DEV__ && Math.random() < 0.01) {
+        debugLog('🔐 Auth headers:', authHeaders);
+      }
+
       const response = await fetch(url, {
         headers: {
           'Content-Type': 'application/json',
@@ -167,10 +218,10 @@ class ApiService {
       // Handle rate limiting specifically
       if (response.status === 429) {
         const retryAfter = response.headers.get('Retry-After');
-        const errorMessage = retryAfter 
+        const errorMessage = retryAfter
           ? `Rate limit exceeded. Please try again in ${retryAfter} seconds.`
           : 'Rate limit exceeded. Please try again later.';
-        
+
         return {
           success: false,
           error: errorMessage,
@@ -185,7 +236,7 @@ class ApiService {
       } else {
         // If not JSON, get text response
         const text = await response.text();
-        console.warn('Non-JSON response received:', text);
+        warnLog('Non-JSON response received:', text);
         return {
           success: false,
           error: `Server returned non-JSON response: ${text.substring(0, 100)}`,
@@ -201,7 +252,7 @@ class ApiService {
 
       return data;
     } catch (error) {
-      console.error('API request failed:', error);
+      errorLog('API request failed:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Network error',
@@ -210,33 +261,35 @@ class ApiService {
   }
 
   // Health check
-  async healthCheck(): Promise<ApiResponse<{ status: string; timestamp: string }>> {
+  async healthCheck(): Promise<
+    ApiResponse<{ status: string; timestamp: string }>
+  > {
     try {
       const response = await fetch(`${this.baseUrl}/health`);
       const text = await response.text();
-      
+
       // Handle different response formats
       if (text.includes('healthy')) {
         return {
           success: true,
           data: {
             status: 'healthy',
-            timestamp: new Date().toISOString()
-          }
+            timestamp: new Date().toISOString(),
+          },
         };
       }
-      
+
       // Try to parse as JSON
       const data = JSON.parse(text);
       return {
         success: true,
-        data: data.data || data
+        data: data.data || data,
       };
     } catch (error) {
-      console.error('Health check failed:', error);
+      errorLog('Health check failed:', error);
       return {
         success: false,
-        error: 'Health check failed'
+        error: 'Health check failed',
       };
     }
   }
@@ -256,7 +309,7 @@ class ApiService {
               name: 'Restaurants',
               emoji: '🍽️',
               description: 'Kosher restaurants and eateries',
-              is_active: true
+              is_active: true,
             },
             {
               id: '2',
@@ -264,7 +317,7 @@ class ApiService {
               name: 'Synagogues',
               emoji: '🏛️',
               description: 'Synagogues and prayer halls',
-              is_active: true
+              is_active: true,
             },
             {
               id: '3',
@@ -272,7 +325,7 @@ class ApiService {
               name: 'Mikvahs',
               emoji: '💧',
               description: 'Mikvah facilities',
-              is_active: true
+              is_active: true,
             },
             {
               id: '4',
@@ -280,142 +333,338 @@ class ApiService {
               name: 'Stores',
               emoji: '🛒',
               description: 'Kosher stores and markets',
-              is_active: true
-            }
-          ]
-        }
+              is_active: true,
+            },
+          ],
+        },
       };
     }
     return this.request('/api/categories');
   }
 
-  // Get all listings
-  async getListings(limit: number = 100, offset: number = 0): Promise<ApiResponse<{ listings: Listing[] }>> {
+  // Get all listings with optimized concurrent requests
+  async getListings(
+    limit: number = 100,
+    offset: number = 0,
+  ): Promise<ApiResponse<{ listings: Listing[] }>> {
     if (this.isV5Api) {
       try {
-        // Try to get entities from V5 API
-        const restaurantsResult = await apiV5Service.getEntities('restaurants', { limit: Math.floor(limit * 0.4), page: Math.floor(offset / limit) + 1 });
-        const synagoguesResult = await apiV5Service.getEntities('synagogues', { limit: Math.floor(limit * 0.2), page: Math.floor(offset / limit) + 1 });
-        const mikvahsResult = await apiV5Service.getEntities('mikvahs', { limit: Math.floor(limit * 0.2), page: Math.floor(offset / limit) + 1 });
-        const storesResult = await apiV5Service.getEntities('stores', { limit: Math.floor(limit * 0.2), page: Math.floor(offset / limit) + 1 });
+        // Use Promise.allSettled for better error handling and performance
+        const [
+          restaurantsResult,
+          synagoguesResult,
+          mikvahsResult,
+          storesResult,
+        ] = await Promise.allSettled([
+          apiV5Service.getEntities('restaurants', {
+            limit: Math.floor(limit * 0.4),
+            page: Math.floor(offset / limit) + 1,
+          }),
+          apiV5Service.getEntities('synagogues', {
+            limit: Math.floor(limit * 0.2),
+            page: Math.floor(offset / limit) + 1,
+          }),
+          apiV5Service.getEntities('mikvahs', {
+            limit: Math.floor(limit * 0.2),
+            page: Math.floor(offset / limit) + 1,
+          }),
+          apiV5Service.getEntities('stores', {
+            limit: Math.floor(limit * 0.2),
+            page: Math.floor(offset / limit) + 1,
+          }),
+        ]);
 
-        // Combine and transform to legacy format
-        const allEntities = [
-          ...(restaurantsResult.data?.entities || []),
-          ...(synagoguesResult.data?.entities || []),
-          ...(mikvahsResult.data?.entities || []),
-          ...(storesResult.data?.entities || [])
-        ];
+        // Combine successful results only
+        const allEntities = [];
 
-        const listings = allEntities.map(entity => this.transformEntityToLegacyListing(entity));
-        
+        if (
+          restaurantsResult.status === 'fulfilled' &&
+          restaurantsResult.value.data?.entities
+        ) {
+          allEntities.push(...restaurantsResult.value.data.entities);
+        }
+        if (
+          synagoguesResult.status === 'fulfilled' &&
+          synagoguesResult.value.data?.entities
+        ) {
+          allEntities.push(...synagoguesResult.value.data.entities);
+        }
+        if (
+          mikvahsResult.status === 'fulfilled' &&
+          mikvahsResult.value.data?.entities
+        ) {
+          allEntities.push(...mikvahsResult.value.data.entities);
+        }
+        if (
+          storesResult.status === 'fulfilled' &&
+          storesResult.value.data?.entities
+        ) {
+          allEntities.push(...storesResult.value.data.entities);
+        }
+
+        const listings = allEntities.map(entity =>
+          this.transformEntityToLegacyListing(entity),
+        );
+
         return {
           success: true,
-          data: { listings }
+          data: { listings },
         };
       } catch (error) {
         debugLog('V5 API not available, falling back to local data');
         // Fall back to local mock data
         return this.getListings(limit, offset);
       }
+    } else {
+      return this.request(`/entities?limit=${limit}&offset=${offset}`);
     }
-    return this.request(`/entities?limit=${limit}&offset=${offset}`);
+  }
+
+  // Get job seekers with pagination and filtering
+  async getJobSeekers(
+    params: {
+      page?: number;
+      limit?: number;
+      search?: string;
+      city?: string;
+      state?: string;
+      experience_level?: string;
+      availability?: string;
+      skills?: string;
+      job_types?: string;
+      industries?: string;
+      sort_by?: string;
+      sort_order?: string;
+    } = {},
+  ): Promise<ApiResponse<{ job_seekers: JobSeeker[]; pagination: any }>> {
+    try {
+      debugLog('🔍 Fetching job seekers with params:', params);
+
+      const queryParams = new URLSearchParams();
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== '') {
+          queryParams.append(key, value.toString());
+        }
+      });
+
+      const response = await this.request<{
+        job_seekers: JobSeeker[];
+        pagination: any;
+      }>(`/api/v5/job-seekers?${queryParams.toString()}`);
+
+      if (response.success) {
+        debugLog('✅ Job seekers fetched successfully:', response.data);
+        return response;
+      } else {
+        warnLog('⚠️ Failed to fetch job seekers:', response.error);
+        return {
+          success: false,
+          error: response.error || 'Failed to fetch job seekers',
+        };
+      }
+    } catch (error) {
+      errorLog('❌ Error fetching job seekers:', error);
+      return { success: false, error: 'Failed to fetch job seekers' };
+    }
+  }
+
+  // Get a specific job seeker by ID
+  async getJobSeeker(id: string): Promise<ApiResponse<JobSeeker>> {
+    try {
+      debugLog('🔍 Fetching job seeker:', id);
+
+      const response = await this.request<JobSeeker>(
+        `/api/v5/job-seekers/${id}`,
+      );
+
+      if (response.success) {
+        debugLog('✅ Job seeker fetched successfully:', response.data);
+        return response;
+      } else {
+        warnLog('⚠️ Failed to fetch job seeker:', response.error);
+        return {
+          success: false,
+          error: response.error || 'Failed to fetch job seeker',
+        };
+      }
+    } catch (error) {
+      errorLog('❌ Error fetching job seeker:', error);
+      return { success: false, error: 'Failed to fetch job seeker' };
+    }
+  }
+
+  // Create a new job seeker profile
+  async createJobSeeker(
+    jobSeekerData: Partial<JobSeeker>,
+  ): Promise<ApiResponse<JobSeeker>> {
+    try {
+      debugLog('📝 Creating job seeker profile:', jobSeekerData);
+
+      const response = await this.request<JobSeeker>('/api/v5/job-seekers', {
+        method: 'POST',
+        body: JSON.stringify(jobSeekerData),
+      });
+
+      if (response.success) {
+        debugLog('✅ Job seeker profile created successfully:', response.data);
+        return response;
+      } else {
+        warnLog('⚠️ Failed to create job seeker profile:', response.error);
+        return {
+          success: false,
+          error: response.error || 'Failed to create job seeker profile',
+        };
+      }
+    } catch (error) {
+      errorLog('❌ Error creating job seeker profile:', error);
+      return { success: false, error: 'Failed to create job seeker profile' };
+    }
+  }
+
+  // Update a job seeker profile
+  async updateJobSeeker(
+    id: string,
+    jobSeekerData: Partial<JobSeeker>,
+  ): Promise<ApiResponse<JobSeeker>> {
+    try {
+      debugLog('📝 Updating job seeker profile:', id, jobSeekerData);
+
+      const response = await this.request<JobSeeker>(
+        `/api/v5/job-seekers/${id}`,
+        {
+          method: 'PUT',
+          body: JSON.stringify(jobSeekerData),
+        },
+      );
+
+      if (response.success) {
+        debugLog('✅ Job seeker profile updated successfully:', response.data);
+        return response;
+      } else {
+        warnLog('⚠️ Failed to update job seeker profile:', response.error);
+        return {
+          success: false,
+          error: response.error || 'Failed to update job seeker profile',
+        };
+      }
+    } catch (error) {
+      errorLog('❌ Error updating job seeker profile:', error);
+      return { success: false, error: 'Failed to update job seeker profile' };
+    }
   }
 
   // Get listings by category
-  async getListingsByCategory(categoryKey: string, limit: number = 100, offset: number = 0): Promise<ApiResponse<{ listings: Listing[] }>> {
+  async getListingsByCategory(
+    categoryKey: string,
+    limit: number = 100,
+    offset: number = 0,
+  ): Promise<ApiResponse<{ listings: Listing[] }>> {
     // Special handling for jobs category - use dedicated jobs endpoint
     if (categoryKey === 'jobs') {
-      debugLog('🔍 Fetching jobs from dedicated endpoint');
+      // debugLog('🔍 Fetching jobs from dedicated endpoint');
       try {
-        const response = await this.request(`/jobs?limit=${limit}&offset=${offset}&isActive=true`);
-        
+        const response = await this.request(
+          `/jobs?limit=${limit}&offset=${offset}&isActive=true`,
+        );
+
         if (response.success && response.data) {
           const dataArray = response.data as any[];
-          debugLog('🔍 Raw jobs data sample:', dataArray[0]);
+          // debugLog('🔍 Raw jobs data sample:', dataArray[0]);
           // Transform jobs data to match listing format
-          const transformedListings = dataArray.map((job: any) => this.transformJobToListing(job));
-          debugLog('🔍 Transformed job sample:', transformedListings[0]);
+          const transformedListings = dataArray.map((job: any) =>
+            this.transformJobToListing(job),
+          );
+          // debugLog('🔍 Transformed job sample:', transformedListings[0]);
           return {
             success: true,
-            data: { listings: transformedListings }
+            data: { listings: transformedListings },
           };
         }
       } catch (error) {
-        console.error('Failed to fetch jobs:', error);
+        errorLog('Failed to fetch jobs:', error);
       }
     }
-    
+
     // Map category keys to entity types (available for both V5 and fallback)
     const categoryToEntityType: Record<string, string> = {
-      'mikvah': 'mikvah',
-      'eatery': 'restaurant',
-      'shul': 'synagogue',
-      'stores': 'store',
-      'shuk': 'store',
-      'shtetl': 'synagogue', // Shtetl (community centers) map to synagogue entity type
-      'events': 'synagogue', // Events map to synagogue entity type
-      'restaurant': 'restaurant',
-      'synagogue': 'synagogue',
-      'store': 'store'
+      mikvah: 'mikvah',
+      eatery: 'restaurant',
+      shul: 'synagogue',
+      stores: 'store',
+      shtetl: 'synagogue', // Shtetl (community centers) map to synagogue entity type
+      events: 'synagogue', // Events map to synagogue entity type
+      restaurant: 'restaurant',
+      synagogue: 'synagogue',
+      store: 'store',
     };
 
     const entityType = categoryToEntityType[categoryKey] || categoryKey;
-    debugLog('🔍 Entity type mapping:', `categoryKey: ${categoryKey}, entityType: ${entityType}`);
+    // debugLog('🔍 Entity type mapping:', `categoryKey: ${categoryKey}, entityType: ${entityType}`);
 
     if (this.isV5Api) {
       try {
-        const response = await apiV5Service.getEntities(entityType as EntityType, { 
-          limit, 
-          page: Math.floor(offset / limit) + 1 
-        });
-        
+        const response = await apiV5Service.getEntities(
+          entityType as EntityType,
+          {
+            limit,
+            page: Math.floor(offset / limit) + 1,
+          },
+        );
+
         if (response.success && response.data) {
           debugLog('🔍 Raw backend data sample:', response.data.entities[0]);
-          const transformedListings = response.data.entities.map(entity => this.transformEntityToLegacyListing(entity));
+          const transformedListings = response.data.entities.map(entity =>
+            this.transformEntityToLegacyListing(entity),
+          );
           debugLog('🔍 Transformed data sample:', transformedListings[0]);
           return {
             success: true,
-            data: { listings: transformedListings }
+            data: { listings: transformedListings },
           };
         }
       } catch (error) {
         debugLog('V5 API not available, falling back to local data');
       }
     }
-    
+
     // Use mapped entity type for fallback request
-    debugLog('🔍 Making fallback request with entityType:', entityType);
-    const fallbackResponse = await this.request(`/entities?entityType=${entityType}&limit=${limit}&offset=${offset}`);
-    debugLog('🔍 Fallback response:', fallbackResponse);
-    
+    // debugLog('🔍 Making fallback request with entityType:', entityType);
+    const fallbackResponse = await this.request(
+      `/entities?entityType=${entityType}&limit=${limit}&offset=${offset}`,
+    );
+    // debugLog('🔍 Fallback response:', fallbackResponse);
+
     if (fallbackResponse.success && fallbackResponse.data) {
       const data = fallbackResponse.data as any;
       if (data.entities) {
-        debugLog('🔍 Raw entity sample from fallback:', data.entities[0]);
-        
+        // debugLog('🔍 Raw entity sample from fallback:', data.entities[0]);
+
         // Transform the fallback data to match the expected format
-        const transformedListings = data.entities.map((entity: any) => this.transformEntityToLegacyListing(entity));
-      debugLog('🔍 Transformed fallback sample:', transformedListings[0]);
-      
+        const transformedListings = data.entities.map((entity: any) =>
+          this.transformEntityToLegacyListing(entity),
+        );
+        // debugLog('🔍 Transformed fallback sample:', transformedListings[0]);
+
         return {
           success: true,
-          data: { listings: transformedListings }
+          data: { listings: transformedListings },
         };
       }
     }
-    
+
     return {
       success: false,
       data: { listings: [] },
-      error: 'No data available'
+      error: 'No data available',
     };
   }
 
   // Get single listing with details
-  async getListing(id: string): Promise<ApiResponse<{ listing: DetailedListing }>> {
+  async getListing(
+    id: string,
+  ): Promise<ApiResponse<{ listing: DetailedListing }>> {
     debugLog('🔍 DEBUG: getListing called with id:', id);
-    
+
     if (this.isV5Api) {
       // Try to get from entities endpoint first (legacy)
       try {
@@ -425,15 +674,19 @@ class ApiService {
           // Transform the entity data to match expected format
           const data = response.data as any;
           const entity = data.entity || data;
-          const transformedListing = this.transformEntityToLegacyListing(entity);
-          
+          const transformedListing =
+            this.transformEntityToLegacyListing(entity);
+
           return {
             success: true,
-            data: { listing: transformedListing }
+            data: { listing: transformedListing },
           };
         }
       } catch (error) {
-        debugLog('Legacy entities endpoint failed, trying category-specific endpoints', error);
+        debugLog(
+          'Legacy entities endpoint failed, trying category-specific endpoints',
+          error,
+        );
       }
 
       // If entities endpoint fails, try category-specific endpoints
@@ -447,10 +700,12 @@ class ApiService {
             if (response.success && response.data) {
               // Transform the response to match the expected format
               const data = response.data as any;
-              const transformedListing = this.transformEntityToLegacyListing(data.entity || data);
+              const transformedListing = this.transformEntityToLegacyListing(
+                data.entity || data,
+              );
               return {
                 success: true,
-                data: { listing: transformedListing }
+                data: { listing: transformedListing },
               };
             }
           } catch (error) {
@@ -458,15 +713,15 @@ class ApiService {
             continue;
           }
         }
-        
+
         return {
           success: false,
-          error: 'Listing not found in any category'
+          error: 'Listing not found in any category',
         };
       } catch (error) {
         return {
           success: false,
-          error: 'Failed to retrieve listing'
+          error: 'Failed to retrieve listing',
         };
       }
     }
@@ -474,7 +729,9 @@ class ApiService {
   }
 
   // Get reviews for a listing
-  async getReviews(listingId: string): Promise<ApiResponse<{ reviews: Review[] }>> {
+  async getReviews(
+    listingId: string,
+  ): Promise<ApiResponse<{ reviews: Review[] }>> {
     if (this.isV5Api) {
       return this.request(`/reviews/entity/${listingId}`);
     }
@@ -484,8 +741,18 @@ class ApiService {
   // Write a review
   async writeReview(
     listingId: string,
-    reviewData: WriteReviewRequest
-  ): Promise<ApiResponse<{ review: Review; listing: { id: string; title: string; rating: string; review_count: number } }>> {
+    reviewData: WriteReviewRequest,
+  ): Promise<
+    ApiResponse<{
+      review: Review;
+      listing: {
+        id: string;
+        title: string;
+        rating: string;
+        review_count: number;
+      };
+    }>
+  > {
     if (this.isV5Api) {
       return this.request(`/reviews/entity/${listingId}`, {
         method: 'POST',
@@ -499,7 +766,9 @@ class ApiService {
   }
 
   // Search listings
-  async searchListings(query: string): Promise<ApiResponse<{ listings: Listing[] }>> {
+  async searchListings(
+    query: string,
+  ): Promise<ApiResponse<{ listings: Listing[] }>> {
     return this.request(`/search?q=${encodeURIComponent(query)}`);
   }
 
@@ -511,23 +780,31 @@ class ApiService {
   // Transform V5 entity to legacy listing format
   private transformEntityToLegacyListing(entity: any): DetailedListing {
     // Transform business hours from backend format to frontend format
-    const business_hours = entity.business_hours ? entity.business_hours.map((hour: any) => ({
-      day_of_week: this.getDayOfWeekNumber(hour.day_of_week),
-      open_time: hour.open_time,
-      close_time: hour.close_time,
-      is_closed: hour.is_closed
-    })) : [];
+    const business_hours = entity.business_hours
+      ? entity.business_hours.map((hour: any) => ({
+          day_of_week: this.getDayOfWeekNumber(hour.day_of_week),
+          open_time: hour.open_time,
+          close_time: hour.close_time,
+          is_closed: hour.is_closed,
+        }))
+      : [];
 
     // Transform images from backend format to frontend format
-    const images = entity.images ? entity.images.map((img: any) => img.url) : [];
+    const images = entity.images
+      ? entity.images.map((img: any) => img.url)
+      : [];
 
     // Transform kosher certifications
-    const kosher_certifications = entity.kosher_level ? [{
-      level: entity.kosher_level,
-      certifying_body: entity.kosher_certification || 'Unknown',
-      certificate_number: entity.kosher_certificate_number || '',
-      expires_at: entity.kosher_expires_at
-    }] : [];
+    const kosher_certifications = entity.kosher_level
+      ? [
+          {
+            level: entity.kosher_level,
+            certifying_body: entity.kosher_certification || 'Unknown',
+            certificate_number: entity.kosher_certificate_number || '',
+            expires_at: entity.kosher_expires_at,
+          },
+        ]
+      : [];
 
     return {
       id: entity.id,
@@ -565,7 +842,7 @@ class ApiService {
       // Engagement metrics
       view_count: entity.view_count || 0,
       like_count: entity.like_count || 0,
-      share_count: entity.share_count || 0
+      share_count: entity.share_count || 0,
     };
   }
 
@@ -578,7 +855,7 @@ class ApiService {
     } else if (job.location_type === 'hybrid' && job.city) {
       locationDisplay = `Hybrid - ${job.city}`;
     }
-    
+
     return {
       id: job.id,
       title: job.title,
@@ -610,7 +887,10 @@ class ApiService {
       // Job-specific fields stored for JobCard component
       job_type: job.job_type,
       location_type: job.location_type,
-      compensation: job.compensation_display || job.compensation_min ? `$${job.compensation_min}` : undefined,
+      compensation:
+        job.compensation_display || job.compensation_min
+          ? `$${job.compensation_min}`
+          : undefined,
       tags: job.tags || [],
       is_remote: job.is_remote,
       is_urgent: job.is_urgent,
@@ -621,20 +901,20 @@ class ApiService {
       kosher_certifications: [],
       view_count: job.view_count || 0,
       like_count: 0,
-      share_count: 0
+      share_count: 0,
     } as any; // Use 'as any' since we're adding custom fields
   }
 
   // Helper function to convert day name to number
   private getDayOfWeekNumber(dayName: string): number {
     const days: Record<string, number> = {
-      'sunday': 0,
-      'monday': 1,
-      'tuesday': 2,
-      'wednesday': 3,
-      'thursday': 4,
-      'friday': 5,
-      'saturday': 6
+      sunday: 0,
+      monday: 1,
+      tuesday: 2,
+      wednesday: 3,
+      thursday: 4,
+      friday: 5,
+      saturday: 6,
     };
     return days[dayName.toLowerCase()] ?? 0;
   }
@@ -642,28 +922,32 @@ class ApiService {
   // Get category emoji for entity type
   private getCategoryEmoji(entityType: string): string {
     const emojis: Record<string, string> = {
-      'restaurant': '🍽️',
-      'synagogue': '🕍',
-      'mikvah': '🛁',
-      'store': '🏪',
-      'eatery': '🍽️',
-      'shul': '🕍'
+      restaurant: '🍽️',
+      synagogue: '🕍',
+      mikvah: '🛁',
+      store: '🏪',
+      eatery: '🍽️',
+      shul: '🕍',
     };
     return emojis[entityType] || '📍';
   }
 
   // Get special offers
-  async getSpecials(limit: number = 20, offset: number = 0): Promise<ApiResponse<{ specials: SpecialOffer[] }>> {
+  async getSpecials(
+    limit: number = 20,
+    offset: number = 0,
+  ): Promise<ApiResponse<{ specials: SpecialOffer[] }>> {
     if (this.isV5Api) {
       return this.request(`/specials?limit=${limit}&offset=${offset}`);
     }
-    
+
     // Fallback to mock data for now
     const mockSpecials: SpecialOffer[] = [
       {
         id: '1',
         title: '20% Off Kosher Deli',
-        description: 'Get 20% off your next meal at Kosher Deli & Market. Valid until end of month.',
+        description:
+          'Get 20% off your next meal at Kosher Deli & Market. Valid until end of month.',
         business_id: 'business-1',
         business_name: 'Kosher Deli & Market',
         category: 'Restaurant',
@@ -703,7 +987,8 @@ class ApiService {
       {
         id: '3',
         title: 'School Registration Special',
-        description: 'Early bird discount for Jewish Day School registration. Save $200!',
+        description:
+          'Early bird discount for Jewish Day School registration. Save $200!',
         business_id: 'business-3',
         business_name: 'Jewish Day School',
         category: 'Education',
@@ -722,7 +1007,8 @@ class ApiService {
       {
         id: '4',
         title: 'Community Event Pass',
-        description: 'Get access to all community events this month for just $25.',
+        description:
+          'Get access to all community events this month for just $25.',
         business_id: 'business-4',
         business_name: 'Chabad House',
         category: 'Community',
@@ -786,27 +1072,31 @@ class ApiService {
       .map(special => {
         const validUntilDate = new Date(special.valid_until);
         const now = new Date();
-        const threeDaysFromNow = new Date(now.getTime() + (3 * 24 * 60 * 60 * 1000));
-        
+        const threeDaysFromNow = new Date(
+          now.getTime() + 3 * 24 * 60 * 60 * 1000,
+        );
+
         return {
           ...special,
-          is_expiring: validUntilDate <= threeDaysFromNow
+          is_expiring: validUntilDate <= threeDaysFromNow,
         };
       })
       .slice(offset, offset + limit);
 
     return {
       success: true,
-      data: { specials: activeSpecials }
+      data: { specials: activeSpecials },
     };
   }
 
   // Get a specific special offer
-  async getSpecial(id: string): Promise<ApiResponse<{ special: SpecialOffer }>> {
+  async getSpecial(
+    id: string,
+  ): Promise<ApiResponse<{ special: SpecialOffer }>> {
     if (this.isV5Api) {
       return this.request(`/specials/${id}`);
     }
-    
+
     // Get from mock data for now
     const specialsResponse = await this.getSpecials(100, 0);
     if (specialsResponse.success && specialsResponse.data) {
@@ -814,17 +1104,17 @@ class ApiService {
       if (special) {
         // Add some delay to simulate network request
         await new Promise<void>(resolve => setTimeout(resolve, 500));
-        
+
         return {
           success: true,
-          data: { special }
+          data: { special },
         };
       }
     }
-    
+
     return {
       success: false,
-      error: 'Special offer not found'
+      error: 'Special offer not found',
     };
   }
 
@@ -832,14 +1122,14 @@ class ApiService {
   async claimSpecial(id: string): Promise<ApiResponse<{ message: string }>> {
     if (this.isV5Api) {
       return this.request(`/specials/${id}/claim`, {
-        method: 'POST'
+        method: 'POST',
       });
     }
-    
+
     // Mock success for now
     return {
       success: true,
-      data: { message: 'Special offer claimed successfully!' }
+      data: { message: 'Special offer claimed successfully!' },
     };
   }
 }

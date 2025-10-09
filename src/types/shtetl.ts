@@ -23,8 +23,23 @@ export interface ShtetlStore {
   createdAt: string;
   updatedAt: string;
   // Store-specific fields
-  storeType: 'general' | 'food' | 'clothing' | 'books' | 'jewelry' | 'art' | 'services';
-  category: 'shtetl' | 'shuk' | 'eatery' | 'shul' | 'mikvah' | 'services' | 'housing' | 'events' | 'jobs'; // Category determines if store should have product dashboard
+  storeType:
+    | 'general'
+    | 'food'
+    | 'clothing'
+    | 'books'
+    | 'jewelry'
+    | 'art'
+    | 'services';
+  category:
+    | 'shtetl'
+    | 'eatery'
+    | 'shul'
+    | 'mikvah'
+    | 'services'
+    | 'housing'
+    | 'events'
+    | 'jobs'; // Category determines if store should have product dashboard
   kosherLevel?: 'glatt' | 'chalav-yisrael' | 'pas-yisrael';
   deliveryAvailable: boolean;
   pickupAvailable: boolean;
@@ -58,7 +73,13 @@ export interface Product {
 }
 
 export interface SocialLink {
-  platform: 'facebook' | 'instagram' | 'twitter' | 'tiktok' | 'youtube' | 'linkedin';
+  platform:
+    | 'facebook'
+    | 'instagram'
+    | 'twitter'
+    | 'tiktok'
+    | 'youtube'
+    | 'linkedin';
   url: string;
   isVerified: boolean;
 }
@@ -143,4 +164,3 @@ export interface CreateProductForm {
   weight?: number;
   tags: string[];
 }
-

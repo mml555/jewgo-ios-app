@@ -1,7 +1,17 @@
-const crypto = require('crypto');
+const logger = require('../utils/logger');
 
 class AuthController {
-  constructor(authService, rbacService, captchaService, mfaService, emailService, oidcService, keyRotationService, googleOAuthProvider, magicLinkProvider) {
+  constructor(
+    authService,
+    rbacService,
+    captchaService,
+    mfaService,
+    emailService,
+    oidcService,
+    keyRotationService,
+    googleOAuthProvider,
+    magicLinkProvider,
+  ) {
     this.authService = authService;
     this.rbacService = rbacService;
     this.captchaService = captchaService;
@@ -19,7 +29,8 @@ class AuthController {
 
   async register(req, res) {
     try {
-      const { email, password, firstName, lastName, captchaToken, deviceInfo } = req.body;
+      const { email, password, firstName, lastName, captchaToken, deviceInfo } =
+        req.body;
       const ipAddress = req.ip;
       const userAgent = req.headers['user-agent'];
 
@@ -27,26 +38,27 @@ class AuthController {
       if (!email || !password) {
         return res.status(400).json({
           error: 'Email and password are required',
-          code: 'MISSING_FIELDS'
+          code: 'MISSING_FIELDS',
         });
       }
 
       // Verify CAPTCHA if provided
       if (captchaToken) {
-        const captchaResult = await this.captchaService.verifyWithRiskAssessment(
-          'signup',
-          captchaToken,
-          'recaptcha_v2',
-          null,
-          ipAddress,
-          userAgent
-        );
+        const captchaResult =
+          await this.captchaService.verifyWithRiskAssessment(
+            'signup',
+            captchaToken,
+            'recaptcha_v2',
+            null,
+            ipAddress,
+            userAgent,
+          );
 
         if (!captchaResult.success) {
           return res.status(400).json({
             error: 'CAPTCHA verification failed',
             code: 'CAPTCHA_FAILED',
-            details: captchaResult
+            details: captchaResult,
           });
         }
       }
@@ -56,7 +68,7 @@ class AuthController {
       if (existingUser) {
         return res.status(409).json({
           error: 'User already exists',
-          code: 'USER_EXISTS'
+          code: 'USER_EXISTS',
         });
       }
 
@@ -71,8 +83,8 @@ class AuthController {
           model: deviceInfo?.model,
           osVersion: deviceInfo?.osVersion,
           appVersion: deviceInfo?.appVersion,
-          ...deviceInfo
-        }
+          ...deviceInfo,
+        },
       };
 
       const result = await this.authService.createUser(userData);
@@ -84,25 +96,25 @@ class AuthController {
       try {
         await this.emailService.sendVerificationEmail(result.user.id, email);
       } catch (emailError) {
-        console.error('Failed to send verification email:', emailError);
+        logger.error('Failed to send verification email:', emailError);
         // Don't fail registration if email fails
       }
 
       res.status(201).json({
         success: true,
-        message: 'User created successfully. Please check your email for verification.',
+        message:
+          'User created successfully. Please check your email for verification.',
         user: {
           id: result.user.id,
           email: result.user.email,
-          status: result.user.status
-        }
+          status: result.user.status,
+        },
       });
-
     } catch (error) {
-      console.error('Registration error:', error);
+      logger.error('Registration error:', error);
       res.status(500).json({
         error: 'Registration failed',
-        code: 'REGISTRATION_ERROR'
+        code: 'REGISTRATION_ERROR',
       });
     }
   }
@@ -121,24 +133,25 @@ class AuthController {
       if (!email || !password) {
         return res.status(400).json({
           error: 'Email and password are required',
-          code: 'MISSING_FIELDS'
+          code: 'MISSING_FIELDS',
         });
       }
 
       // Check if CAPTCHA is needed based on risk assessment
-      const shouldTriggerCaptcha = await this.captchaService.shouldTriggerCaptcha(
-        'login',
-        null, // userId not available yet
-        ipAddress,
-        userAgent
-      );
+      const shouldTriggerCaptcha =
+        await this.captchaService.shouldTriggerCaptcha(
+          'login',
+          null, // userId not available yet
+          ipAddress,
+          userAgent,
+        );
 
       if (shouldTriggerCaptcha) {
         if (!captchaToken) {
           return res.status(400).json({
             error: 'CAPTCHA verification required',
             code: 'CAPTCHA_REQUIRED',
-            captchaRequired: true
+            captchaRequired: true,
           });
         }
 
@@ -147,14 +160,14 @@ class AuthController {
           captchaToken,
           'login',
           ipAddress,
-          userAgent
+          userAgent,
         );
 
         if (!captchaResult.success) {
           return res.status(400).json({
             error: 'CAPTCHA verification failed',
             code: 'CAPTCHA_FAILED',
-            details: captchaResult
+            details: captchaResult,
           });
         }
       }
@@ -165,11 +178,13 @@ class AuthController {
         password,
         deviceInfo,
         ipAddress,
-        userAgent
+        userAgent,
       );
 
       // Get user permissions for response
-      const permissions = await this.rbacService.getUserPermissions(authResult.user.id);
+      const permissions = await this.rbacService.getUserPermissions(
+        authResult.user.id,
+      );
       const roles = await this.rbacService.getUserRoles(authResult.user.id);
 
       res.json({
@@ -177,25 +192,27 @@ class AuthController {
         user: {
           ...authResult.user,
           roles: roles.map(r => r.name),
-          permissions: permissions.map(p => p.name)
+          permissions: permissions.map(p => p.name),
         },
         tokens: authResult.tokens,
-        session: authResult.session
+        session: authResult.session,
       });
-
     } catch (error) {
-      console.error('Login error:', error);
-      
-      if (error.message === 'Invalid credentials' || error.message === 'Account is not active') {
+      logger.error('Login error:', error);
+
+      if (
+        error.message === 'Invalid credentials' ||
+        error.message === 'Account is not active'
+      ) {
         return res.status(401).json({
           error: error.message,
-          code: 'AUTH_FAILED'
+          code: 'AUTH_FAILED',
         });
       }
 
       res.status(500).json({
         error: 'Login failed',
-        code: 'LOGIN_ERROR'
+        code: 'LOGIN_ERROR',
       });
     }
   }
@@ -213,18 +230,20 @@ class AuthController {
       if (!refreshToken) {
         return res.status(400).json({
           error: 'Refresh token is required',
-          code: 'MISSING_REFRESH_TOKEN'
+          code: 'MISSING_REFRESH_TOKEN',
         });
       }
 
       const authResult = await this.authService.refreshTokens(
         refreshToken,
         ipAddress,
-        userAgent
+        userAgent,
       );
 
       // Get updated permissions
-      const permissions = await this.rbacService.getUserPermissions(authResult.user.id);
+      const permissions = await this.rbacService.getUserPermissions(
+        authResult.user.id,
+      );
       const roles = await this.rbacService.getUserRoles(authResult.user.id);
 
       res.json({
@@ -232,25 +251,27 @@ class AuthController {
         user: {
           ...authResult.user,
           roles: roles.map(r => r.name),
-          permissions: permissions.map(p => p.name)
+          permissions: permissions.map(p => p.name),
         },
         tokens: authResult.tokens,
-        session: authResult.session
+        session: authResult.session,
       });
-
     } catch (error) {
-      console.error('Token refresh error:', error);
-      
-      if (error.message === 'Invalid refresh token' || error.message === 'Token reuse detected') {
+      logger.error('Token refresh error:', error);
+
+      if (
+        error.message === 'Invalid refresh token' ||
+        error.message === 'Token reuse detected'
+      ) {
         return res.status(401).json({
           error: error.message,
-          code: 'REFRESH_FAILED'
+          code: 'REFRESH_FAILED',
         });
       }
 
       res.status(500).json({
         error: 'Token refresh failed',
-        code: 'REFRESH_ERROR'
+        code: 'REFRESH_ERROR',
       });
     }
   }
@@ -266,18 +287,18 @@ class AuthController {
 
       if (sessionId) {
         await this.authService.revokeSession(sessionId, 'user_logout');
+        logger.info(`👋 User logged out: ${userId || 'unknown'}`);
       }
 
       res.json({
         success: true,
-        message: 'Logged out successfully'
+        message: 'Logged out successfully',
       });
-
     } catch (error) {
-      console.error('Logout error:', error);
+      logger.error('Logout error:', error);
       res.status(500).json({
         error: 'Logout failed',
-        code: 'LOGOUT_ERROR'
+        code: 'LOGOUT_ERROR',
       });
     }
   }
@@ -295,7 +316,7 @@ class AuthController {
       if (!user) {
         return res.status(404).json({
           error: 'User not found',
-          code: 'USER_NOT_FOUND'
+          code: 'USER_NOT_FOUND',
         });
       }
 
@@ -317,11 +338,11 @@ class AuthController {
             name: r.name,
             description: r.description,
             scope: r.scope,
-            expiresAt: r.expires_at
+            expiresAt: r.expires_at,
           })),
           permissions: permissions.map(p => ({
             name: p.name,
-            resource: p.resource
+            resource: p.resource,
           })),
           sessions: sessions.map(s => ({
             id: s.id,
@@ -329,16 +350,15 @@ class AuthController {
             deviceHandle: s.device_handle,
             lastUsedAt: s.last_used_at,
             createdAt: s.created_at,
-            current: s.id === req.session.id
-          }))
-        }
+            current: s.id === req.session.id,
+          })),
+        },
       });
-
     } catch (error) {
-      console.error('Get profile error:', error);
+      logger.error('Get profile error:', error);
       res.status(500).json({
         error: 'Failed to get profile',
-        code: 'PROFILE_ERROR'
+        code: 'PROFILE_ERROR',
       });
     }
   }
@@ -363,15 +383,14 @@ class AuthController {
           lastUsedAt: s.last_used_at,
           createdAt: s.created_at,
           expiresAt: s.expires_at,
-          current: s.id === req.session.id
-        }))
+          current: s.id === req.session.id,
+        })),
       });
-
     } catch (error) {
-      console.error('Get sessions error:', error);
+      logger.error('Get sessions error:', error);
       res.status(500).json({
         error: 'Failed to get sessions',
-        code: 'SESSIONS_ERROR'
+        code: 'SESSIONS_ERROR',
       });
     }
   }
@@ -388,7 +407,7 @@ class AuthController {
       if (!session) {
         return res.status(404).json({
           error: 'Session not found',
-          code: 'SESSION_NOT_FOUND'
+          code: 'SESSION_NOT_FOUND',
         });
       }
 
@@ -396,14 +415,13 @@ class AuthController {
 
       res.json({
         success: true,
-        message: 'Session revoked successfully'
+        message: 'Session revoked successfully',
       });
-
     } catch (error) {
-      console.error('Revoke session error:', error);
+      logger.error('Revoke session error:', error);
       res.status(500).json({
         error: 'Failed to revoke session',
-        code: 'REVOKE_SESSION_ERROR'
+        code: 'REVOKE_SESSION_ERROR',
       });
     }
   }
@@ -421,7 +439,7 @@ class AuthController {
       if (!email) {
         return res.status(400).json({
           error: 'Email is required',
-          code: 'MISSING_EMAIL'
+          code: 'MISSING_EMAIL',
         });
       }
 
@@ -432,13 +450,13 @@ class AuthController {
           captchaToken,
           'password_reset',
           ipAddress,
-          userAgent
+          userAgent,
         );
 
         if (!captchaResult.success) {
           return res.status(400).json({
             error: 'CAPTCHA verification failed',
-            code: 'CAPTCHA_FAILED'
+            code: 'CAPTCHA_FAILED',
           });
         }
       }
@@ -450,7 +468,7 @@ class AuthController {
         try {
           await this.emailService.sendPasswordResetEmail(user.id, email);
         } catch (emailError) {
-          console.error('Failed to send password reset email:', emailError);
+          logger.error('Failed to send password reset email:', emailError);
           // Don't reveal that email sending failed
         }
       }
@@ -458,14 +476,13 @@ class AuthController {
       // Always return success to prevent email enumeration
       res.json({
         success: true,
-        message: 'If the email exists, a password reset link has been sent'
+        message: 'If the email exists, a password reset link has been sent',
       });
-
     } catch (error) {
-      console.error('Password reset request error:', error);
+      logger.error('Password reset request error:', error);
       res.status(500).json({
         error: 'Password reset request failed',
-        code: 'PASSWORD_RESET_ERROR'
+        code: 'PASSWORD_RESET_ERROR',
       });
     }
   }
@@ -484,15 +501,14 @@ class AuthController {
         data: {
           secret: result.secret,
           qrCodeUrl: result.qrCodeUrl,
-          manualEntryKey: result.manualEntryKey
-        }
+          manualEntryKey: result.manualEntryKey,
+        },
       });
-
     } catch (error) {
-      console.error('TOTP setup error:', error);
+      logger.error('TOTP setup error:', error);
       res.status(500).json({
         error: 'Failed to setup TOTP',
-        code: 'TOTP_SETUP_ERROR'
+        code: 'TOTP_SETUP_ERROR',
       });
     }
   }
@@ -505,7 +521,7 @@ class AuthController {
       if (!token) {
         return res.status(400).json({
           error: 'TOTP token is required',
-          code: 'MISSING_TOTP_TOKEN'
+          code: 'MISSING_TOTP_TOKEN',
         });
       }
 
@@ -514,20 +530,19 @@ class AuthController {
       if (isValid) {
         res.json({
           success: true,
-          message: 'TOTP verified successfully'
+          message: 'TOTP verified successfully',
         });
       } else {
         res.status(400).json({
           error: 'Invalid TOTP token',
-          code: 'INVALID_TOTP_TOKEN'
+          code: 'INVALID_TOTP_TOKEN',
         });
       }
-
     } catch (error) {
-      console.error('TOTP verification error:', error);
+      logger.error('TOTP verification error:', error);
       res.status(500).json({
         error: 'TOTP verification failed',
-        code: 'TOTP_VERIFY_ERROR'
+        code: 'TOTP_VERIFY_ERROR',
       });
     }
   }
@@ -540,20 +555,19 @@ class AuthController {
       if (success) {
         res.json({
           success: true,
-          message: 'TOTP disabled successfully'
+          message: 'TOTP disabled successfully',
         });
       } else {
         res.status(404).json({
           error: 'TOTP not found',
-          code: 'TOTP_NOT_FOUND'
+          code: 'TOTP_NOT_FOUND',
         });
       }
-
     } catch (error) {
-      console.error('TOTP disable error:', error);
+      logger.error('TOTP disable error:', error);
       res.status(500).json({
         error: 'Failed to disable TOTP',
-        code: 'TOTP_DISABLE_ERROR'
+        code: 'TOTP_DISABLE_ERROR',
       });
     }
   }
@@ -565,14 +579,13 @@ class AuthController {
 
       res.json({
         success: true,
-        data: status
+        data: status,
       });
-
     } catch (error) {
-      console.error('Get MFA status error:', error);
+      logger.error('Get MFA status error:', error);
       res.status(500).json({
         error: 'Failed to get MFA status',
-        code: 'MFA_STATUS_ERROR'
+        code: 'MFA_STATUS_ERROR',
       });
     }
   }
@@ -582,21 +595,23 @@ class AuthController {
       const userId = req.user.id;
       const { operation = 'registration' } = req.body;
 
-      const challenge = await this.mfaService.generateWebAuthnChallenge(userId, operation);
+      const challenge = await this.mfaService.generateWebAuthnChallenge(
+        userId,
+        operation,
+      );
 
       res.json({
         success: true,
         data: {
           challenge,
-          operation
-        }
+          operation,
+        },
       });
-
     } catch (error) {
-      console.error('WebAuthn challenge generation error:', error);
+      logger.error('WebAuthn challenge generation error:', error);
       res.status(500).json({
         error: 'Failed to generate WebAuthn challenge',
-        code: 'WEBAUTHN_CHALLENGE_ERROR'
+        code: 'WEBAUTHN_CHALLENGE_ERROR',
       });
     }
   }
@@ -609,26 +624,29 @@ class AuthController {
       if (!challenge || !credentialData) {
         return res.status(400).json({
           error: 'Challenge and credential data are required',
-          code: 'MISSING_WEBAUTHN_DATA'
+          code: 'MISSING_WEBAUTHN_DATA',
         });
       }
 
       // Verify challenge
-      await this.mfaService.verifyWebAuthnChallenge(userId, challenge, 'registration');
+      await this.mfaService.verifyWebAuthnChallenge(
+        userId,
+        challenge,
+        'registration',
+      );
 
       // Register credential
       await this.mfaService.registerWebAuthnCredential(userId, credentialData);
 
       res.json({
         success: true,
-        message: 'WebAuthn credential registered successfully'
+        message: 'WebAuthn credential registered successfully',
       });
-
     } catch (error) {
-      console.error('WebAuthn registration error:', error);
+      logger.error('WebAuthn registration error:', error);
       res.status(500).json({
         error: 'WebAuthn registration failed',
-        code: 'WEBAUTHN_REGISTER_ERROR'
+        code: 'WEBAUTHN_REGISTER_ERROR',
       });
     }
   }
@@ -641,33 +659,39 @@ class AuthController {
       if (!challenge || !credentialData) {
         return res.status(400).json({
           error: 'Challenge and credential data are required',
-          code: 'MISSING_WEBAUTHN_DATA'
+          code: 'MISSING_WEBAUTHN_DATA',
         });
       }
 
       // Verify challenge
-      await this.mfaService.verifyWebAuthnChallenge(userId, challenge, 'authentication');
+      await this.mfaService.verifyWebAuthnChallenge(
+        userId,
+        challenge,
+        'authentication',
+      );
 
       // Authenticate credential
-      const isValid = await this.mfaService.authenticateWebAuthn(userId, credentialData);
+      const isValid = await this.mfaService.authenticateWebAuthn(
+        userId,
+        credentialData,
+      );
 
       if (isValid) {
         res.json({
           success: true,
-          message: 'WebAuthn authentication successful'
+          message: 'WebAuthn authentication successful',
         });
       } else {
         res.status(400).json({
           error: 'WebAuthn authentication failed',
-          code: 'WEBAUTHN_AUTH_FAILED'
+          code: 'WEBAUTHN_AUTH_FAILED',
         });
       }
-
     } catch (error) {
-      console.error('WebAuthn authentication error:', error);
+      logger.error('WebAuthn authentication error:', error);
       res.status(500).json({
         error: 'WebAuthn authentication failed',
-        code: 'WEBAUTHN_AUTH_ERROR'
+        code: 'WEBAUTHN_AUTH_ERROR',
       });
     }
   }
@@ -680,15 +704,14 @@ class AuthController {
       res.json({
         success: true,
         data: {
-          credentials
-        }
+          credentials,
+        },
       });
-
     } catch (error) {
-      console.error('Get WebAuthn credentials error:', error);
+      logger.error('Get WebAuthn credentials error:', error);
       res.status(500).json({
         error: 'Failed to get WebAuthn credentials',
-        code: 'WEBAUTHN_GET_CREDENTIALS_ERROR'
+        code: 'WEBAUTHN_GET_CREDENTIALS_ERROR',
       });
     }
   }
@@ -698,25 +721,27 @@ class AuthController {
       const userId = req.user.id;
       const { credentialId } = req.params;
 
-      const success = await this.mfaService.removeWebAuthnCredential(userId, credentialId);
+      const success = await this.mfaService.removeWebAuthnCredential(
+        userId,
+        credentialId,
+      );
 
       if (success) {
         res.json({
           success: true,
-          message: 'WebAuthn credential removed successfully'
+          message: 'WebAuthn credential removed successfully',
         });
       } else {
         res.status(404).json({
           error: 'WebAuthn credential not found',
-          code: 'WEBAUTHN_CREDENTIAL_NOT_FOUND'
+          code: 'WEBAUTHN_CREDENTIAL_NOT_FOUND',
         });
       }
-
     } catch (error) {
-      console.error('Remove WebAuthn credential error:', error);
+      logger.error('Remove WebAuthn credential error:', error);
       res.status(500).json({
         error: 'Failed to remove WebAuthn credential',
-        code: 'WEBAUTHN_REMOVE_ERROR'
+        code: 'WEBAUTHN_REMOVE_ERROR',
       });
     }
   }
@@ -729,15 +754,14 @@ class AuthController {
       res.json({
         success: true,
         data: {
-          recoveryCodes: codes
-        }
+          recoveryCodes: codes,
+        },
       });
-
     } catch (error) {
-      console.error('Generate recovery codes error:', error);
+      logger.error('Generate recovery codes error:', error);
       res.status(500).json({
         error: 'Failed to generate recovery codes',
-        code: 'RECOVERY_CODES_ERROR'
+        code: 'RECOVERY_CODES_ERROR',
       });
     }
   }
@@ -750,7 +774,7 @@ class AuthController {
       if (!code) {
         return res.status(400).json({
           error: 'Recovery code is required',
-          code: 'MISSING_RECOVERY_CODE'
+          code: 'MISSING_RECOVERY_CODE',
         });
       }
 
@@ -759,20 +783,19 @@ class AuthController {
       if (isValid) {
         res.json({
           success: true,
-          message: 'Recovery code verified successfully'
+          message: 'Recovery code verified successfully',
         });
       } else {
         res.status(400).json({
           error: 'Invalid recovery code',
-          code: 'INVALID_RECOVERY_CODE'
+          code: 'INVALID_RECOVERY_CODE',
         });
       }
-
     } catch (error) {
-      console.error('Recovery code verification error:', error);
+      logger.error('Recovery code verification error:', error);
       res.status(500).json({
         error: 'Recovery code verification failed',
-        code: 'RECOVERY_CODE_VERIFY_ERROR'
+        code: 'RECOVERY_CODE_VERIFY_ERROR',
       });
     }
   }
@@ -788,7 +811,7 @@ class AuthController {
       if (!token) {
         return res.status(400).json({
           error: 'Verification token is required',
-          code: 'MISSING_VERIFICATION_TOKEN'
+          code: 'MISSING_VERIFICATION_TOKEN',
         });
       }
 
@@ -799,23 +822,22 @@ class AuthController {
         message: 'Email verified successfully',
         user: {
           id: result.userId,
-          email: result.email
-        }
+          email: result.email,
+        },
       });
-
     } catch (error) {
-      console.error('Email verification error:', error);
-      
+      logger.error('Email verification error:', error);
+
       if (error.message === 'Invalid or expired verification token') {
         return res.status(400).json({
           error: error.message,
-          code: 'INVALID_VERIFICATION_TOKEN'
+          code: 'INVALID_VERIFICATION_TOKEN',
         });
       }
 
       res.status(500).json({
         error: 'Email verification failed',
-        code: 'EMAIL_VERIFICATION_ERROR'
+        code: 'EMAIL_VERIFICATION_ERROR',
       });
     }
   }
@@ -827,7 +849,7 @@ class AuthController {
       if (!email) {
         return res.status(400).json({
           error: 'Email is required',
-          code: 'MISSING_EMAIL'
+          code: 'MISSING_EMAIL',
         });
       }
 
@@ -837,14 +859,15 @@ class AuthController {
         // Don't reveal if user doesn't exist
         return res.json({
           success: true,
-          message: 'If the email exists and is not verified, a verification email has been sent'
+          message:
+            'If the email exists and is not verified, a verification email has been sent',
         });
       }
 
       if (user.status === 'active') {
         return res.status(400).json({
           error: 'Email is already verified',
-          code: 'EMAIL_ALREADY_VERIFIED'
+          code: 'EMAIL_ALREADY_VERIFIED',
         });
       }
 
@@ -852,20 +875,20 @@ class AuthController {
       try {
         await this.emailService.sendVerificationEmail(user.id, email);
       } catch (emailError) {
-        console.error('Failed to send verification email:', emailError);
+        logger.error('Failed to send verification email:', emailError);
         // Don't reveal that email sending failed
       }
 
       res.json({
         success: true,
-        message: 'If the email exists and is not verified, a verification email has been sent'
+        message:
+          'If the email exists and is not verified, a verification email has been sent',
       });
-
     } catch (error) {
-      console.error('Resend verification email error:', error);
+      logger.error('Resend verification email error:', error);
       res.status(500).json({
         error: 'Failed to resend verification email',
-        code: 'RESEND_VERIFICATION_ERROR'
+        code: 'RESEND_VERIFICATION_ERROR',
       });
     }
   }
@@ -877,25 +900,30 @@ class AuthController {
       if (!token || !newPassword) {
         return res.status(400).json({
           error: 'Token and new password are required',
-          code: 'MISSING_RESET_DATA'
+          code: 'MISSING_RESET_DATA',
         });
       }
 
       // Verify reset token
-      const tokenResult = await this.emailService.verifyPasswordResetToken(token);
+      const tokenResult = await this.emailService.verifyPasswordResetToken(
+        token,
+      );
 
       // Update password
       const bcrypt = require('bcryptjs');
       const passwordHash = await bcrypt.hash(newPassword, 12);
 
-      await this.authService.db.query(`
+      await this.authService.db.query(
+        `
         UPDATE credentials 
         SET cred_hash = $1, updated_at = NOW()
         WHERE identity_id IN (
           SELECT i.id FROM identities i 
           WHERE i.user_id = $2 AND i.type = 'password'
         ) AND cred_type = 'password_hash'
-      `, [passwordHash, tokenResult.userId]);
+      `,
+        [passwordHash, tokenResult.userId],
+      );
 
       // Mark token as used
       await this.emailService.markPasswordResetTokenUsed(token);
@@ -905,22 +933,21 @@ class AuthController {
 
       res.json({
         success: true,
-        message: 'Password reset successfully'
+        message: 'Password reset successfully',
       });
-
     } catch (error) {
-      console.error('Password reset error:', error);
-      
+      logger.error('Password reset error:', error);
+
       if (error.message === 'Invalid or expired password reset token') {
         return res.status(400).json({
           error: error.message,
-          code: 'INVALID_RESET_TOKEN'
+          code: 'INVALID_RESET_TOKEN',
         });
       }
 
       res.status(500).json({
         error: 'Password reset failed',
-        code: 'PASSWORD_RESET_ERROR'
+        code: 'PASSWORD_RESET_ERROR',
       });
     }
   }
@@ -934,10 +961,10 @@ class AuthController {
       const config = this.oidcService.getConfiguration();
       res.json(config);
     } catch (error) {
-      console.error('OIDC configuration error:', error);
+      logger.error('OIDC configuration error:', error);
       res.status(500).json({
         error: 'Failed to get OIDC configuration',
-        code: 'OIDC_CONFIG_ERROR'
+        code: 'OIDC_CONFIG_ERROR',
       });
     }
   }
@@ -951,21 +978,21 @@ class AuthController {
         scope,
         state,
         code_challenge,
-        code_challenge_method
+        code_challenge_method,
       } = req.query;
 
       // Validate required parameters
       if (response_type !== 'code') {
         return res.status(400).json({
           error: 'unsupported_response_type',
-          error_description: 'Only authorization code flow is supported'
+          error_description: 'Only authorization code flow is supported',
         });
       }
 
       if (!client_id || !redirect_uri || !scope) {
         return res.status(400).json({
           error: 'invalid_request',
-          error_description: 'Missing required parameters'
+          error_description: 'Missing required parameters',
         });
       }
 
@@ -973,14 +1000,14 @@ class AuthController {
       if (!code_challenge || !code_challenge_method) {
         return res.status(400).json({
           error: 'invalid_request',
-          error_description: 'PKCE parameters are required'
+          error_description: 'PKCE parameters are required',
         });
       }
 
       if (code_challenge_method !== 'S256') {
         return res.status(400).json({
           error: 'invalid_request',
-          error_description: 'Only S256 code challenge method is supported'
+          error_description: 'Only S256 code challenge method is supported',
         });
       }
 
@@ -993,9 +1020,9 @@ class AuthController {
           scope,
           state,
           code_challenge,
-          code_challenge_method
+          code_challenge_method,
         }).toString()}`;
-        
+
         return res.redirect(loginUrl);
       }
 
@@ -1004,7 +1031,7 @@ class AuthController {
       if (!this.oidcService.validateScopes(scope, allowedScopes)) {
         return res.status(400).json({
           error: 'invalid_scope',
-          error_description: 'Invalid scope requested'
+          error_description: 'Invalid scope requested',
         });
       }
 
@@ -1015,7 +1042,7 @@ class AuthController {
         redirect_uri,
         scope.split(' '),
         code_challenge,
-        code_challenge_method
+        code_challenge_method,
       );
 
       // Redirect back to client with authorization code
@@ -1026,12 +1053,11 @@ class AuthController {
       }
 
       res.redirect(redirectUrl.toString());
-
     } catch (error) {
-      console.error('Authorization error:', error);
+      logger.error('Authorization error:', error);
       res.status(500).json({
         error: 'server_error',
-        error_description: 'Internal server error'
+        error_description: 'Internal server error',
       });
     }
   }
@@ -1041,17 +1067,12 @@ class AuthController {
       const { grant_type } = req.body;
 
       if (grant_type === 'authorization_code') {
-        const {
-          code,
-          client_id,
-          redirect_uri,
-          code_verifier
-        } = req.body;
+        const { code, client_id, redirect_uri, code_verifier } = req.body;
 
         if (!code || !client_id || !redirect_uri || !code_verifier) {
           return res.status(400).json({
             error: 'invalid_request',
-            error_description: 'Missing required parameters'
+            error_description: 'Missing required parameters',
           });
         }
 
@@ -1059,46 +1080,50 @@ class AuthController {
           code,
           client_id,
           redirect_uri,
-          code_verifier
+          code_verifier,
         );
 
         res.json(tokens);
-
       } else if (grant_type === 'refresh_token') {
         const { refresh_token, scope } = req.body;
 
         if (!refresh_token) {
           return res.status(400).json({
             error: 'invalid_request',
-            error_description: 'Missing refresh token'
+            error_description: 'Missing refresh token',
           });
         }
 
         const scopes = scope ? scope.split(' ') : ['openid'];
-        const tokens = await this.oidcService.refreshAccessToken(refresh_token, scopes);
+        const tokens = await this.oidcService.refreshAccessToken(
+          refresh_token,
+          scopes,
+        );
 
         res.json(tokens);
-
       } else {
         res.status(400).json({
           error: 'unsupported_grant_type',
-          error_description: 'Only authorization_code and refresh_token are supported'
+          error_description:
+            'Only authorization_code and refresh_token are supported',
         });
       }
-
     } catch (error) {
-      console.error('Token endpoint error:', error);
-      
-      if (error.message.includes('Invalid') || error.message.includes('expired')) {
+      logger.error('Token endpoint error:', error);
+
+      if (
+        error.message.includes('Invalid') ||
+        error.message.includes('expired')
+      ) {
         return res.status(400).json({
           error: 'invalid_grant',
-          error_description: error.message
+          error_description: error.message,
         });
       }
 
       res.status(500).json({
         error: 'server_error',
-        error_description: 'Internal server error'
+        error_description: 'Internal server error',
       });
     }
   }
@@ -1109,7 +1134,7 @@ class AuthController {
       if (!authHeader || !authHeader.startsWith('Bearer ')) {
         return res.status(401).json({
           error: 'invalid_token',
-          error_description: 'Bearer token required'
+          error_description: 'Bearer token required',
         });
       }
 
@@ -1117,20 +1142,22 @@ class AuthController {
       const userInfo = await this.oidcService.getUserInfo(accessToken);
 
       res.json(userInfo);
-
     } catch (error) {
-      console.error('UserInfo endpoint error:', error);
-      
-      if (error.message.includes('expired') || error.message.includes('Invalid')) {
+      logger.error('UserInfo endpoint error:', error);
+
+      if (
+        error.message.includes('expired') ||
+        error.message.includes('Invalid')
+      ) {
         return res.status(401).json({
           error: 'invalid_token',
-          error_description: error.message
+          error_description: error.message,
         });
       }
 
       res.status(500).json({
         error: 'server_error',
-        error_description: 'Internal server error'
+        error_description: 'Internal server error',
       });
     }
   }
@@ -1140,10 +1167,10 @@ class AuthController {
       const jwks = this.oidcService.getJWKS();
       res.json(jwks);
     } catch (error) {
-      console.error('JWKS endpoint error:', error);
+      logger.error('JWKS endpoint error:', error);
       res.status(500).json({
         error: 'server_error',
-        error_description: 'Internal server error'
+        error_description: 'Internal server error',
       });
     }
   }
@@ -1155,18 +1182,17 @@ class AuthController {
       if (!token) {
         return res.status(400).json({
           error: 'invalid_request',
-          error_description: 'Token parameter is required'
+          error_description: 'Token parameter is required',
         });
       }
 
       const introspection = await this.oidcService.introspectToken(token);
       res.json(introspection);
-
     } catch (error) {
-      console.error('Token introspection error:', error);
+      logger.error('Token introspection error:', error);
       res.status(500).json({
         error: 'server_error',
-        error_description: 'Internal server error'
+        error_description: 'Internal server error',
       });
     }
   }
@@ -1178,18 +1204,17 @@ class AuthController {
       if (!token) {
         return res.status(400).json({
           error: 'invalid_request',
-          error_description: 'Token parameter is required'
+          error_description: 'Token parameter is required',
         });
       }
 
       const result = await this.oidcService.revokeToken(token);
       res.json(result);
-
     } catch (error) {
-      console.error('Token revocation error:', error);
+      logger.error('Token revocation error:', error);
       res.status(500).json({
         error: 'server_error',
-        error_description: 'Internal server error'
+        error_description: 'Internal server error',
       });
     }
   }
@@ -1203,7 +1228,7 @@ class AuthController {
       if (!this.keyRotationService) {
         return res.status(501).json({
           error: 'Key rotation service not available',
-          code: 'KEY_ROTATION_NOT_AVAILABLE'
+          code: 'KEY_ROTATION_NOT_AVAILABLE',
         });
       }
 
@@ -1214,15 +1239,14 @@ class AuthController {
         success: true,
         data: {
           status,
-          keys: allKeys
-        }
+          keys: allKeys,
+        },
       });
-
     } catch (error) {
-      console.error('Get key rotation status error:', error);
+      logger.error('Get key rotation status error:', error);
       res.status(500).json({
         error: 'Failed to get key rotation status',
-        code: 'KEY_ROTATION_STATUS_ERROR'
+        code: 'KEY_ROTATION_STATUS_ERROR',
       });
     }
   }
@@ -1232,7 +1256,7 @@ class AuthController {
       if (!this.keyRotationService) {
         return res.status(501).json({
           error: 'Key rotation service not available',
-          code: 'KEY_ROTATION_NOT_AVAILABLE'
+          code: 'KEY_ROTATION_NOT_AVAILABLE',
         });
       }
 
@@ -1242,15 +1266,14 @@ class AuthController {
         success: true,
         message: 'Key rotation completed successfully',
         data: {
-          newKeyId
-        }
+          newKeyId,
+        },
       });
-
     } catch (error) {
-      console.error('Force key rotation error:', error);
+      logger.error('Force key rotation error:', error);
       res.status(500).json({
         error: 'Failed to rotate keys',
-        code: 'KEY_ROTATION_ERROR'
+        code: 'KEY_ROTATION_ERROR',
       });
     }
   }
@@ -1266,10 +1289,10 @@ class AuthController {
         res.json(jwks);
       }
     } catch (error) {
-      console.error('JWKS endpoint error:', error);
+      logger.error('JWKS endpoint error:', error);
       res.status(500).json({
         error: 'server_error',
-        error_description: 'Internal server error'
+        error_description: 'Internal server error',
       });
     }
   }
@@ -1287,33 +1310,41 @@ class AuthController {
       if (!idToken) {
         return res.status(400).json({
           error: 'Google ID token is required',
-          code: 'MISSING_ID_TOKEN'
+          code: 'MISSING_ID_TOKEN',
         });
       }
 
-      console.log('🔐 Google OAuth authentication attempt from:', ipAddress);
+      logger.info('🔐 Google OAuth authentication attempt', {
+        ipAddress,
+        userAgent: userAgent?.substring(0, 50),
+      });
 
       // Verify Google ID token
-      const verificationResult = await this.googleOAuthProvider.verifyIdToken(idToken);
-      
+      const verificationResult = await this.googleOAuthProvider.verifyIdToken(
+        idToken,
+      );
+
       if (!verificationResult.success) {
         return res.status(400).json({
           error: 'Invalid Google ID token',
           code: 'INVALID_ID_TOKEN',
-          details: verificationResult.error
+          details: verificationResult.error,
         });
       }
 
       const { userInfo } = verificationResult;
-      console.log('✅ Google OAuth verification successful for:', userInfo.email);
+      logger.info(
+        '✅ Google OAuth verification successful for:',
+        userInfo.email,
+      );
 
       // Check if user exists
       let user = await this.authService.findUserByEmail(userInfo.email);
-      
+
       if (!user) {
         // Create new user from Google OAuth data
-        console.log('👤 Creating new user from Google OAuth:', userInfo.email);
-        
+        logger.info('👤 Creating new user from Google OAuth:', userInfo.email);
+
         user = await this.authService.createUser({
           email: userInfo.email,
           firstName: userInfo.firstName || '',
@@ -1326,9 +1357,9 @@ class AuthController {
         });
 
         // Log registration event
-        await this.authService.logAuthEvent(user.id, 'register', true, { 
+        await this.authService.logAuthEvent(user.id, 'register', true, {
           method: 'google_oauth',
-          device_id: deviceInfo?.deviceId 
+          device_id: deviceInfo?.deviceId,
         });
       } else {
         // Update existing user with Google OAuth info if needed
@@ -1341,15 +1372,15 @@ class AuthController {
         }
 
         // Log login event
-        await this.authService.logAuthEvent(user.id, 'login', true, { 
+        await this.authService.logAuthEvent(user.id, 'login', true, {
           method: 'google_oauth',
-          device_id: deviceInfo?.deviceId 
+          device_id: deviceInfo?.deviceId,
         });
       }
 
       // Generate tokens
       const tokens = await this.authService.generateTokens(user.id, deviceInfo);
-      
+
       // Get user with roles and permissions
       const userWithRoles = await this.rbacService.getUserWithRoles(user.id);
 
@@ -1370,16 +1401,15 @@ class AuthController {
           accessToken: tokens.accessToken,
           refreshToken: tokens.refreshToken,
           expiresIn: tokens.expiresIn,
-          tokenType: 'Bearer'
-        }
+          tokenType: 'Bearer',
+        },
       });
-
     } catch (error) {
-      console.error('Google OAuth authentication error:', error);
+      logger.error('Google OAuth authentication error:', error);
       res.status(500).json({
         success: false,
         error: 'Google OAuth authentication failed',
-        message: error.message
+        message: error.message,
       });
     }
   }
@@ -1396,27 +1426,32 @@ class AuthController {
       if (!email) {
         return res.status(400).json({
           error: 'Email is required',
-          code: 'MISSING_EMAIL'
+          code: 'MISSING_EMAIL',
         });
       }
 
-      console.log(`📧 Sending magic link to: ${email} for purpose: ${purpose}`);
+      logger.info(
+        `📧 Sending magic link to: ${email} for purpose: ${purpose} from IP: ${ipAddress}`,
+      );
 
       // Generate magic link
-      const magicLinkResult = this.magicLinkProvider.generateMobileMagicLinkUrl(email, purpose);
-      
+      const magicLinkResult = this.magicLinkProvider.generateMobileMagicLinkUrl(
+        email,
+        purpose,
+      );
+
       if (!magicLinkResult.success) {
         return res.status(500).json({
           error: 'Failed to generate magic link',
-          code: 'MAGIC_LINK_GENERATION_FAILED'
+          code: 'MAGIC_LINK_GENERATION_FAILED',
         });
       }
 
       // Create email template
       const emailTemplate = this.magicLinkProvider.createMagicLinkEmail(
-        email, 
-        magicLinkResult.url, 
-        purpose
+        email,
+        magicLinkResult.url,
+        purpose,
       );
 
       // Send email
@@ -1427,20 +1462,19 @@ class AuthController {
         text: emailTemplate.text,
       });
 
-      console.log(`✅ Magic link sent successfully to: ${email}`);
+      logger.info(`✅ Magic link sent successfully to: ${email}`);
 
       res.json({
         success: true,
         message: 'Magic link sent successfully',
-        expiresAt: magicLinkResult.expiresAt
+        expiresAt: magicLinkResult.expiresAt,
       });
-
     } catch (error) {
-      console.error('Magic link sending error:', error);
+      logger.error('Magic link sending error:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to send magic link',
-        message: error.message
+        message: error.message,
       });
     }
   }
@@ -1453,32 +1487,32 @@ class AuthController {
       if (!token) {
         return res.status(400).json({
           error: 'Magic link token is required',
-          code: 'MISSING_TOKEN'
+          code: 'MISSING_TOKEN',
         });
       }
 
-      console.log('🔗 Verifying magic link from:', ipAddress);
+      logger.info('🔗 Verifying magic link from:', ipAddress);
 
       // Verify magic link token
       const verificationResult = this.magicLinkProvider.verifyMagicLink(token);
-      
+
       if (!verificationResult.success) {
         return res.status(400).json({
           error: verificationResult.error,
-          code: verificationResult.code
+          code: verificationResult.code,
         });
       }
 
       const { email, purpose } = verificationResult;
-      console.log('✅ Magic link verification successful for:', email);
+      logger.info('✅ Magic link verification successful for:', email);
 
       // Check if user exists
       let user = await this.authService.findUserByEmail(email);
-      
+
       if (purpose === 'register' && !user) {
         // Create new user for registration
-        console.log('👤 Creating new user from magic link:', email);
-        
+        logger.info('👤 Creating new user from magic link:', email);
+
         user = await this.authService.createUser({
           email: email,
           firstName: '',
@@ -1489,26 +1523,26 @@ class AuthController {
         });
 
         // Log registration event
-        await this.authService.logAuthEvent(user.id, 'register', true, { 
+        await this.authService.logAuthEvent(user.id, 'register', true, {
           method: 'magic_link',
-          device_id: deviceInfo?.deviceId 
+          device_id: deviceInfo?.deviceId,
         });
       } else if (purpose === 'login' && user) {
         // Log login event for existing user
-        await this.authService.logAuthEvent(user.id, 'login', true, { 
+        await this.authService.logAuthEvent(user.id, 'login', true, {
           method: 'magic_link',
-          device_id: deviceInfo?.deviceId 
+          device_id: deviceInfo?.deviceId,
         });
       } else if (!user) {
         return res.status(404).json({
           error: 'User not found. Please register first.',
-          code: 'USER_NOT_FOUND'
+          code: 'USER_NOT_FOUND',
         });
       }
 
       // Generate tokens
       const tokens = await this.authService.generateTokens(user.id, deviceInfo);
-      
+
       // Get user with roles and permissions
       const userWithRoles = await this.rbacService.getUserWithRoles(user.id);
 
@@ -1529,16 +1563,15 @@ class AuthController {
           accessToken: tokens.accessToken,
           refreshToken: tokens.refreshToken,
           expiresIn: tokens.expiresIn,
-          tokenType: 'Bearer'
-        }
+          tokenType: 'Bearer',
+        },
       });
-
     } catch (error) {
-      console.error('Magic link verification error:', error);
+      logger.error('Magic link verification error:', error);
       res.status(500).json({
         success: false,
         error: 'Magic link verification failed',
-        message: error.message
+        message: error.message,
       });
     }
   }
@@ -1549,14 +1582,15 @@ class AuthController {
 
   async healthCheck(req, res) {
     try {
-      const dbStatus = await this.authService.db.query('SELECT 1');
-      
+      await this.authService.db.query('SELECT 1');
+
       let keyRotationStatus = 'operational';
       if (this.keyRotationService) {
         const status = this.keyRotationService.getHealthStatus();
-        keyRotationStatus = status.status === 'healthy' ? 'operational' : status.status;
+        keyRotationStatus =
+          status.status === 'healthy' ? 'operational' : status.status;
       }
-      
+
       res.json({
         success: true,
         status: 'healthy',
@@ -1569,16 +1603,15 @@ class AuthController {
           mfa: 'operational',
           email: 'operational',
           oidc: 'operational',
-          keyRotation: keyRotationStatus
-        }
+          keyRotation: keyRotationStatus,
+        },
       });
-
     } catch (error) {
-      console.error('Health check error:', error);
+      logger.error('Health check error:', error);
       res.status(500).json({
         success: false,
         status: 'unhealthy',
-        error: error.message
+        error: error.message,
       });
     }
   }

@@ -1,5 +1,7 @@
+/* global Buffer */
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
+const logger = require('../utils/logger');
 
 class KeyRotationService {
   constructor(dbPool) {
@@ -8,7 +10,8 @@ class KeyRotationService {
     this.currentKeyId = null;
     this.rotationInterval = 24 * 60 * 60 * 1000; // 24 hours
     this.keyLifetime = 7 * 24 * 60 * 60 * 1000; // 7 days
-    
+    this.rotationTimer = null; // Track timer for cleanup
+
     this.initializeKeys();
     this.startRotationTimer();
   }
@@ -38,7 +41,7 @@ class KeyRotationService {
             secret: row.key_data,
             createdAt: new Date(row.created_at),
             expiresAt: new Date(row.expires_at),
-            isActive: row.is_active
+            isActive: row.is_active,
           });
 
           if (row.is_active) {
@@ -47,7 +50,7 @@ class KeyRotationService {
         }
       }
     } catch (error) {
-      console.error('Failed to initialize JWT keys:', error);
+      logger.error('Failed to initialize JWT keys:', error);
       // Fallback to environment variable
       await this.initializeFallbackKey();
     }
@@ -65,7 +68,7 @@ class KeyRotationService {
       secret: fallbackSecret,
       createdAt: new Date(),
       expiresAt: new Date(Date.now() + this.keyLifetime),
-      isActive: true
+      isActive: true,
     });
     this.currentKeyId = keyId;
   }
@@ -82,18 +85,24 @@ class KeyRotationService {
 
     try {
       // Store key in database
-      await this.db.query(`
+      await this.db.query(
+        `
         INSERT INTO jwt_keys (key_id, key_data, created_at, expires_at, is_active)
         VALUES ($1, $2, $3, $4, $5)
-      `, [keyId, secret, now, expiresAt, true]);
+      `,
+        [keyId, secret, now, expiresAt, true],
+      );
 
       // Deactivate old keys
       if (this.currentKeyId) {
-        await this.db.query(`
+        await this.db.query(
+          `
           UPDATE jwt_keys 
           SET is_active = false 
           WHERE key_id = $1
-        `, [this.currentKeyId]);
+        `,
+          [this.currentKeyId],
+        );
       }
 
       // Update in-memory keys
@@ -102,16 +111,15 @@ class KeyRotationService {
         secret: secret,
         createdAt: now,
         expiresAt: expiresAt,
-        isActive: true
+        isActive: true,
       });
 
       this.currentKeyId = keyId;
 
-      console.log(`Generated new JWT key: ${keyId}`);
+      logger.info(`Generated new JWT key: ${keyId}`);
       return keyId;
-
     } catch (error) {
-      console.error('Failed to generate new JWT key:', error);
+      logger.error('Failed to generate new JWT key:', error);
       throw error;
     }
   }
@@ -129,14 +137,34 @@ class KeyRotationService {
   // ==============================================
 
   startRotationTimer() {
+    // Clear any existing timer
+    if (this.rotationTimer) {
+      clearInterval(this.rotationTimer);
+    }
+
     // Check for rotation every hour
-    setInterval(async () => {
+    this.rotationTimer = setInterval(async () => {
       try {
         await this.checkAndRotateKeys();
       } catch (error) {
-        console.error('Key rotation check failed:', error);
+        logger.error('Key rotation check failed:', error);
       }
     }, 60 * 60 * 1000); // 1 hour
+  }
+
+  // Stop rotation timer (for graceful shutdown)
+  stopRotationTimer() {
+    if (this.rotationTimer) {
+      clearInterval(this.rotationTimer);
+      this.rotationTimer = null;
+      logger.info('Key rotation timer stopped');
+    }
+  }
+
+  // Cleanup method for graceful shutdown
+  async shutdown() {
+    this.stopRotationTimer();
+    logger.info('KeyRotationService shut down gracefully');
   }
 
   async checkAndRotateKeys() {
@@ -144,7 +172,7 @@ class KeyRotationService {
     const currentKey = this.keys.get(this.currentKeyId);
 
     if (!currentKey) {
-      console.log('No current key found, generating new one');
+      logger.info('No current key found, generating new one');
       await this.generateNewKey();
       return;
     }
@@ -154,7 +182,7 @@ class KeyRotationService {
     const rotationThreshold = this.rotationInterval;
 
     if (timeUntilExpiry <= rotationThreshold) {
-      console.log('Current key approaching expiry, generating new key');
+      logger.info('Current key approaching expiry, generating new key');
       await this.generateNewKey();
     }
 
@@ -171,15 +199,15 @@ class KeyRotationService {
       `);
 
       if (result.rows.length > 0) {
-        console.log(`Cleaned up ${result.rows.length} expired JWT keys`);
-        
+        logger.info(`Cleaned up ${result.rows.length} expired JWT keys`);
+
         // Remove from in-memory cache
         for (const row of result.rows) {
           this.keys.delete(row.key_id);
         }
       }
     } catch (error) {
-      console.error('Failed to cleanup expired keys:', error);
+      logger.error('Failed to cleanup expired keys:', error);
     }
   }
 
@@ -199,7 +227,7 @@ class KeyRotationService {
       expiresIn: options.expiresIn || '1h',
       issuer: options.issuer || process.env.JWT_ISSUER,
       audience: options.audience || process.env.JWT_AUDIENCE,
-      ...options
+      ...options,
     };
 
     return jwt.sign(payload, key.secret, signOptions);
@@ -210,7 +238,7 @@ class KeyRotationService {
       algorithms: ['HS256'],
       issuer: options.issuer || process.env.JWT_ISSUER,
       audience: options.audience || process.env.JWT_AUDIENCE,
-      ...options
+      ...options,
     };
 
     // Try to decode the token to get the key ID
@@ -239,7 +267,7 @@ class KeyRotationService {
 
   getJWKS() {
     const keys = [];
-    
+
     for (const [keyId, key] of this.keys) {
       if (key.expiresAt > new Date()) {
         keys.push({
@@ -249,13 +277,13 @@ class KeyRotationService {
           alg: 'HS256',
           k: Buffer.from(key.secret).toString('base64url'),
           created_at: Math.floor(key.createdAt.getTime() / 1000),
-          expires_at: Math.floor(key.expiresAt.getTime() / 1000)
+          expires_at: Math.floor(key.expiresAt.getTime() / 1000),
         });
       }
     }
 
     return {
-      keys: keys
+      keys: keys,
     };
   }
 
@@ -274,20 +302,20 @@ class KeyRotationService {
       createdAt: key.createdAt,
       expiresAt: key.expiresAt,
       isActive: key.isActive,
-      isExpired: key.expiresAt < new Date()
+      isExpired: key.expiresAt < new Date(),
     };
   }
 
   async getAllKeys() {
     const keyInfos = [];
-    
-    for (const [keyId, key] of this.keys) {
+
+    for (const [, key] of this.keys) {
       keyInfos.push({
         id: key.id,
         createdAt: key.createdAt,
         expiresAt: key.expiresAt,
         isActive: key.isActive,
-        isExpired: key.expiresAt < new Date()
+        isExpired: key.expiresAt < new Date(),
       });
     }
 
@@ -295,7 +323,7 @@ class KeyRotationService {
   }
 
   async forceRotation() {
-    console.log('Forcing JWT key rotation');
+    logger.info('Forcing JWT key rotation');
     return await this.generateNewKey();
   }
 
@@ -310,7 +338,7 @@ class KeyRotationService {
     if (!currentKey) {
       return {
         status: 'unhealthy',
-        error: 'No active JWT key available'
+        error: 'No active JWT key available',
       };
     }
 
@@ -329,7 +357,7 @@ class KeyRotationService {
       currentKeyId: this.currentKeyId,
       hoursUntilExpiry: Math.round(hoursUntilExpiry * 100) / 100,
       totalKeys: this.keys.size,
-      nextRotation: new Date(now.getTime() + this.rotationInterval)
+      nextRotation: new Date(now.getTime() + this.rotationInterval),
     };
   }
 
@@ -348,7 +376,7 @@ class KeyRotationService {
       SELECT COUNT(*) as count FROM jwt_keys
     `);
 
-    if (parseInt(result.rows[0].count) > 0) {
+    if (parseInt(result.rows[0].count, 10) > 0) {
       return false; // Already migrated
     }
 
@@ -357,22 +385,25 @@ class KeyRotationService {
     const now = new Date();
     const expiresAt = new Date(now.getTime() + this.keyLifetime);
 
-    await this.db.query(`
+    await this.db.query(
+      `
       INSERT INTO jwt_keys (key_id, key_data, created_at, expires_at, is_active)
       VALUES ($1, $2, $3, $4, $5)
-    `, [keyId, envSecret, now, expiresAt, true]);
+    `,
+      [keyId, envSecret, now, expiresAt, true],
+    );
 
     this.keys.set(keyId, {
       id: keyId,
       secret: envSecret,
       createdAt: now,
       expiresAt: expiresAt,
-      isActive: true
+      isActive: true,
     });
 
     this.currentKeyId = keyId;
 
-    console.log('Migrated JWT secret from environment to key rotation system');
+    logger.info('Migrated JWT secret from environment to key rotation system');
     return true;
   }
 }

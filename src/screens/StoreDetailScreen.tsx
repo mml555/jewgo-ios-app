@@ -12,11 +12,18 @@ import {
   Dimensions,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
+import { errorLog } from '../utils/logger';
 import { ShtetlStore, Product } from '../types/shtetl';
 import HeartIcon from '../components/HeartIcon';
 import ShtetlStoreGrid from '../components/ShtetlStoreGrid';
 import ProductCard from '../components/ProductCard';
-import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../styles/designSystem';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  Shadows,
+} from '../styles/designSystem';
 
 interface StoreDetailParams {
   storeId: string;
@@ -28,28 +35,31 @@ const StoreDetailScreen: React.FC = () => {
   const route = useRoute();
   const navigation = useNavigation();
   const { storeId } = route.params as StoreDetailParams;
-  
+
   const [store, setStore] = useState<ShtetlStore | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'products' | 'about' | 'reviews'>('products');
+  const [activeTab, setActiveTab] = useState<'products' | 'about' | 'reviews'>(
+    'products',
+  );
 
   const loadStoreData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       // TODO: Replace with actual API calls
       // const storeResponse = await shtetlService.getStore(storeId);
       // const productsResponse = await shtetlService.getStoreProducts(storeId);
-      
+
       // Mock data for now
       const mockStore: ShtetlStore = {
         id: storeId,
-        name: 'Goldberg\'s Kosher Deli',
-        description: 'Family-owned kosher deli serving the community for over 30 years',
+        name: "Goldberg's Kosher Deli",
+        description:
+          'Family-owned kosher deli serving the community for over 30 years',
         ownerId: 'owner1',
         ownerName: 'Sarah Goldberg',
         address: '123 Main Street',
@@ -59,6 +69,7 @@ const StoreDetailScreen: React.FC = () => {
         phone: '(718) 555-0101',
         email: 'info@goldbergsdeli.com',
         website: 'https://goldbergsdeli.com',
+        category: 'eatery',
         isActive: true,
         isVerified: true,
         rating: 4.5,
@@ -116,7 +127,7 @@ const StoreDetailScreen: React.FC = () => {
       setProducts(mockProducts);
     } catch (err) {
       setError('Failed to load store data');
-      console.error('Error loading store:', err);
+      errorLog('Error loading store:', err);
     } finally {
       setLoading(false);
     }
@@ -128,24 +139,38 @@ const StoreDetailScreen: React.FC = () => {
     setRefreshing(false);
   }, [loadStoreData]);
 
-  const handleProductPress = useCallback((product: Product) => {
-    // Navigate to product detail page
-    navigation.navigate('ProductDetail', { productId: product.id, storeId: storeId });
-  }, [navigation, storeId]);
+  const handleProductPress = useCallback(
+    (product: Product) => {
+      // Navigate to product detail page
+      (navigation as any).navigate('ProductDetail', {
+        productId: product.id,
+        storeId: storeId,
+      });
+    },
+    [navigation, storeId],
+  );
 
   const handleContactStore = useCallback(() => {
     if (!store) return;
-    
-    Alert.alert(
-      'Contact Store',
-      `Choose how to contact ${store.name}`,
-      [
-        { text: 'Call', onPress: () => store.phone && Alert.alert('Call', `Calling ${store.phone}`) },
-        { text: 'Email', onPress: () => store.email && Alert.alert('Email', `Emailing ${store.email}`) },
-        { text: 'Website', onPress: () => store.website && Alert.alert('Website', `Opening ${store.website}`) },
-        { text: 'Cancel', style: 'cancel' },
-      ]
-    );
+
+    Alert.alert('Contact Store', `Choose how to contact ${store.name}`, [
+      {
+        text: 'Call',
+        onPress: () =>
+          store.phone && Alert.alert('Call', `Calling ${store.phone}`),
+      },
+      {
+        text: 'Email',
+        onPress: () =>
+          store.email && Alert.alert('Email', `Emailing ${store.email}`),
+      },
+      {
+        text: 'Website',
+        onPress: () =>
+          store.website && Alert.alert('Website', `Opening ${store.website}`),
+      },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
   }, [store]);
 
   useEffect(() => {
@@ -175,13 +200,17 @@ const StoreDetailScreen: React.FC = () => {
         <View style={styles.storeInfo}>
           <Text style={styles.storeName}>{store.name}</Text>
           <Text style={styles.storeDescription}>{store.description}</Text>
-          
+
           <View style={styles.storeMeta}>
             <View style={styles.ratingContainer}>
-              <Text style={styles.ratingText}>⭐ {store.rating.toFixed(1)}</Text>
-              <Text style={styles.reviewCount}>({store.reviewCount} reviews)</Text>
+              <Text style={styles.ratingText}>
+                ⭐ {store.rating.toFixed(1)}
+              </Text>
+              <Text style={styles.reviewCount}>
+                ({store.reviewCount} reviews)
+              </Text>
             </View>
-            
+
             <View style={styles.locationContainer}>
               <Text style={styles.locationText}>
                 📍 {store.city}, {store.state}
@@ -190,10 +219,13 @@ const StoreDetailScreen: React.FC = () => {
           </View>
 
           <View style={styles.contactButtons}>
-            <TouchableOpacity style={styles.contactButton} onPress={handleContactStore}>
+            <TouchableOpacity
+              style={styles.contactButton}
+              onPress={handleContactStore}
+            >
               <Text style={styles.contactButtonText}>Contact Store</Text>
             </TouchableOpacity>
-            
+
             <TouchableOpacity style={styles.favoriteButton}>
               <HeartIcon size={20} color={Colors.white} filled={true} />
             </TouchableOpacity>
@@ -210,25 +242,40 @@ const StoreDetailScreen: React.FC = () => {
           style={[styles.tab, activeTab === 'products' && styles.activeTab]}
           onPress={() => setActiveTab('products')}
         >
-          <Text style={[styles.tabText, activeTab === 'products' && styles.activeTabText]}>
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === 'products' && styles.activeTabText,
+            ]}
+          >
             Products ({products.length})
           </Text>
         </TouchableOpacity>
-        
+
         <TouchableOpacity
           style={[styles.tab, activeTab === 'about' && styles.activeTab]}
           onPress={() => setActiveTab('about')}
         >
-          <Text style={[styles.tabText, activeTab === 'about' && styles.activeTabText]}>
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === 'about' && styles.activeTabText,
+            ]}
+          >
             About
           </Text>
         </TouchableOpacity>
-        
+
         <TouchableOpacity
           style={[styles.tab, activeTab === 'reviews' && styles.activeTab]}
           onPress={() => setActiveTab('reviews')}
         >
-          <Text style={[styles.tabText, activeTab === 'reviews' && styles.activeTabText]}>
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === 'reviews' && styles.activeTabText,
+            ]}
+          >
             Reviews ({store?.reviewCount || 0})
           </Text>
         </TouchableOpacity>
@@ -251,7 +298,7 @@ const StoreDetailScreen: React.FC = () => {
 
     return (
       <View style={styles.productsGrid}>
-        {products.map((product) => (
+        {products.map(product => (
           <ProductCard
             key={product.id}
             product={product}
@@ -275,7 +322,8 @@ const StoreDetailScreen: React.FC = () => {
         <View style={styles.aboutSection}>
           <Text style={styles.sectionTitle}>Location</Text>
           <Text style={styles.aboutText}>
-            {store.address}{'\n'}
+            {store.address}
+            {'\n'}
             {store.city}, {store.state} {store.zipCode}
           </Text>
         </View>
@@ -391,7 +439,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
   },
   loadingText: {
-    ...Typography.body1,
+    ...Typography.styles.body1,
     color: Colors.gray600,
     marginTop: Spacing.md,
   },
@@ -413,7 +461,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   errorDescription: {
-    ...Typography.body1,
+    ...Typography.styles.body1,
     color: Colors.gray600,
     textAlign: 'center',
     marginBottom: Spacing.lg,
@@ -461,7 +509,7 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
   },
   verifiedText: {
-    ...Typography.caption,
+    ...Typography.styles.caption,
     color: Colors.white,
     fontWeight: '600',
   },
@@ -474,7 +522,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   storeDescription: {
-    ...Typography.body1,
+    ...Typography.styles.body1,
     color: Colors.gray700,
     marginBottom: Spacing.md,
   },
@@ -487,12 +535,12 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   ratingText: {
-    ...Typography.body1,
+    ...Typography.styles.body1,
     color: Colors.gray700,
     fontWeight: '600',
   },
   reviewCount: {
-    ...Typography.body2,
+    ...Typography.styles.body2,
     color: Colors.gray500,
     marginLeft: Spacing.sm,
   },
@@ -500,7 +548,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   locationText: {
-    ...Typography.body2,
+    ...Typography.styles.body2,
     color: Colors.gray600,
   },
   contactButtons: {
@@ -547,7 +595,7 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.primary.main,
   },
   tabText: {
-    ...Typography.body1,
+    ...Typography.styles.body1,
     color: Colors.gray600,
   },
   activeTabText: {
@@ -577,7 +625,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   emptyDescription: {
-    ...Typography.body1,
+    ...Typography.styles.body1,
     color: Colors.gray600,
     textAlign: 'center',
     paddingHorizontal: Spacing.lg,
@@ -589,17 +637,17 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
   },
   sectionTitle: {
-    ...Typography.h3,
+    ...Typography.styles.h3,
     color: Colors.gray900,
     marginBottom: Spacing.sm,
   },
   aboutText: {
-    ...Typography.body1,
+    ...Typography.styles.body1,
     color: Colors.gray700,
     lineHeight: 24,
   },
   contactText: {
-    ...Typography.body1,
+    ...Typography.styles.body1,
     color: Colors.gray700,
     marginBottom: Spacing.xs,
   },
@@ -607,7 +655,7 @@ const styles = StyleSheet.create({
     marginTop: Spacing.sm,
   },
   serviceText: {
-    ...Typography.body1,
+    ...Typography.styles.body1,
     color: Colors.gray700,
     marginBottom: Spacing.xs,
   },
@@ -615,7 +663,7 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
   },
   comingSoonText: {
-    ...Typography.body1,
+    ...Typography.styles.body1,
     color: Colors.gray600,
     textAlign: 'center',
     fontStyle: 'italic',
@@ -623,4 +671,3 @@ const styles = StyleSheet.create({
 });
 
 export default StoreDetailScreen;
-

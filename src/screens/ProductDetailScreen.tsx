@@ -12,7 +12,14 @@ import {
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { Product } from '../types/shtetl';
-import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../styles/designSystem';
+import { errorLog } from '../utils/logger';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  Shadows,
+} from '../styles/designSystem';
 
 interface ProductDetailParams {
   productId: string;
@@ -25,7 +32,7 @@ const ProductDetailScreen: React.FC = () => {
   const route = useRoute();
   const navigation = useNavigation();
   const { productId, storeId } = route.params as ProductDetailParams;
-  
+
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -34,16 +41,17 @@ const ProductDetailScreen: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       // TODO: Replace with actual API call
       // const response = await shtetlService.getProduct(productId);
-      
+
       // Mock data for now
       const mockProduct: Product = {
         id: productId,
         storeId: storeId,
         name: 'Pastrami Sandwich',
-        description: 'Traditional pastrami on rye with mustard. Made with premium kosher pastrami and fresh rye bread.',
+        description:
+          'Traditional pastrami on rye with mustard. Made with premium kosher pastrami and fresh rye bread.',
         price: 12.99,
         currency: 'USD',
         category: 'sandwiches',
@@ -72,30 +80,30 @@ const ProductDetailScreen: React.FC = () => {
       setProduct(mockProduct);
     } catch (err) {
       setError('Failed to load product');
-      console.error('Error loading product:', err);
+      errorLog('Error loading product:', err);
     } finally {
       setLoading(false);
     }
   }, [productId, storeId]);
 
   const handleContactStore = useCallback(() => {
-    Alert.alert(
-      'Contact Store',
-      'Choose how to contact the store',
-      [
-        { text: 'Call Store', onPress: () => Alert.alert('Call', 'Calling store...') },
-        { text: 'Message Store', onPress: () => Alert.alert('Message', 'Opening messages...') },
-        { text: 'Cancel', style: 'cancel' },
-      ]
-    );
+    Alert.alert('Contact Store', 'Choose how to contact the store', [
+      {
+        text: 'Call Store',
+        onPress: () => Alert.alert('Call', 'Calling store...'),
+      },
+      {
+        text: 'Message Store',
+        onPress: () => Alert.alert('Message', 'Opening messages...'),
+      },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
   }, []);
 
   const handleAddToCart = useCallback(() => {
-    Alert.alert(
-      'Add to Cart',
-      'This feature will be available soon!',
-      [{ text: 'OK' }]
-    );
+    Alert.alert('Add to Cart', 'This feature will be available soon!', [
+      { text: 'OK' },
+    ]);
   }, []);
 
   useEffect(() => {
@@ -123,7 +131,9 @@ const ProductDetailScreen: React.FC = () => {
       <View style={styles.errorContainer}>
         <Text style={styles.errorEmoji}>⚠️</Text>
         <Text style={styles.errorTitle}>Something went wrong</Text>
-        <Text style={styles.errorDescription}>{error || 'Product not found'}</Text>
+        <Text style={styles.errorDescription}>
+          {error || 'Product not found'}
+        </Text>
         <TouchableOpacity style={styles.retryButton} onPress={loadProduct}>
           <Text style={styles.retryButtonText}>Try Again</Text>
         </TouchableOpacity>
@@ -133,11 +143,17 @@ const ProductDetailScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Product Images */}
         <View style={styles.imageContainer}>
           {product.images.length > 0 ? (
-            <Image source={{ uri: product.images[0] }} style={styles.productImage} />
+            <Image
+              source={{ uri: product.images[0] }}
+              style={styles.productImage}
+            />
           ) : (
             <View style={styles.placeholderImage}>
               <Text style={styles.placeholderText}>📦</Text>
@@ -153,8 +169,10 @@ const ProductDetailScreen: React.FC = () => {
         {/* Product Info */}
         <View style={styles.content}>
           <Text style={styles.productName}>{product.name}</Text>
-          <Text style={styles.price}>{formatPrice(product.price, product.currency)}</Text>
-          
+          <Text style={styles.price}>
+            {formatPrice(product.price, product.currency)}
+          </Text>
+
           {product.description && (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Description</Text>
@@ -186,7 +204,8 @@ const ProductDetailScreen: React.FC = () => {
                 <View style={styles.detailRow}>
                   <Text style={styles.detailLabel}>Dimensions:</Text>
                   <Text style={styles.detailValue}>
-                    {product.dimensions.length}" × {product.dimensions.width}" × {product.dimensions.height}"
+                    {product.dimensions.length}" × {product.dimensions.width}" ×{' '}
+                    {product.dimensions.height}"
                   </Text>
                 </View>
               )}
@@ -246,9 +265,12 @@ const ProductDetailScreen: React.FC = () => {
         >
           <Text style={styles.contactButtonText}>Contact Store</Text>
         </TouchableOpacity>
-        
+
         <TouchableOpacity
-          style={[styles.addToCartButton, product.stockQuantity === 0 && styles.disabledButton]}
+          style={[
+            styles.addToCartButton,
+            product.stockQuantity === 0 && styles.disabledButton,
+          ]}
           onPress={handleAddToCart}
           disabled={product.stockQuantity === 0}
         >
@@ -276,7 +298,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
   },
   loadingText: {
-    ...Typography.body1,
+    ...Typography.styles.body1,
     color: Colors.gray600,
     marginTop: Spacing.md,
   },
@@ -298,7 +320,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   errorDescription: {
-    ...Typography.body1,
+    ...Typography.styles.body1,
     color: Colors.gray600,
     textAlign: 'center',
     marginBottom: Spacing.lg,
@@ -367,12 +389,12 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xl,
   },
   sectionTitle: {
-    ...Typography.h3,
+    ...Typography.styles.h3,
     color: Colors.gray900,
     marginBottom: Spacing.sm,
   },
   description: {
-    ...Typography.body1,
+    ...Typography.styles.body1,
     color: Colors.gray700,
     lineHeight: 24,
   },
@@ -387,12 +409,12 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   detailLabel: {
-    ...Typography.body2,
+    ...Typography.styles.body2,
     color: Colors.gray600,
     fontWeight: '600',
   },
   detailValue: {
-    ...Typography.body2,
+    ...Typography.styles.body2,
     color: Colors.gray900,
   },
   kosherInfo: {
@@ -401,13 +423,13 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
   },
   kosherLabel: {
-    ...Typography.body1,
+    ...Typography.styles.body1,
     color: Colors.success,
     fontWeight: '600',
     marginBottom: Spacing.xs,
   },
   kosherCert: {
-    ...Typography.caption,
+    ...Typography.styles.caption,
     color: Colors.gray600,
   },
   tagsContainer: {
@@ -423,7 +445,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   tagText: {
-    ...Typography.caption,
+    ...Typography.styles.caption,
     color: Colors.gray700,
   },
   stockContainer: {
@@ -432,12 +454,12 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
   },
   inStockText: {
-    ...Typography.body1,
+    ...Typography.styles.body1,
     color: Colors.success,
     fontWeight: '600',
   },
   outOfStockText: {
-    ...Typography.body1,
+    ...Typography.styles.body1,
     color: Colors.error,
     fontWeight: '600',
   },

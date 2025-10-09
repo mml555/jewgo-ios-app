@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { configService } from '../config/ConfigService';
+import { errorLog } from '../utils/logger';
 
 export interface User {
   id: string;
@@ -89,7 +90,7 @@ class AuthService {
       if (storedTokens) {
         this.accessToken = storedTokens.accessToken;
         this.refreshToken = storedTokens.refreshToken;
-        
+
         // Verify token is still valid
         const isValid = await this.verifyToken();
         if (!isValid) {
@@ -99,7 +100,7 @@ class AuthService {
         }
       }
     } catch (error) {
-      console.error('Auth service initialization error:', error);
+      errorLog('Auth service initialization error:', error);
       await this.clearStoredTokens();
     }
   }
@@ -122,7 +123,7 @@ class AuthService {
 
       throw new Error(response.error || 'Login failed');
     } catch (error) {
-      console.error('Login error:', error);
+      errorLog('Login error:', error);
       throw error;
     }
   }
@@ -141,7 +142,7 @@ class AuthService {
 
       throw new Error(response.error || 'Registration failed');
     } catch (error) {
-      console.error('Registration error:', error);
+      errorLog('Registration error:', error);
       throw error;
     }
   }
@@ -152,12 +153,12 @@ class AuthService {
         await this.makeRequest('/auth/logout', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${this.accessToken}`,
+            Authorization: `Bearer ${this.accessToken}`,
           },
         });
       }
     } catch (error) {
-      console.error('Logout error:', error);
+      errorLog('Logout error:', error);
     } finally {
       await this.clearStoredTokens();
       this.accessToken = null;
@@ -179,14 +180,20 @@ class AuthService {
 
       throw new Error(response.error || 'Google OAuth failed');
     } catch (error) {
-      console.error('Google OAuth error:', error);
+      errorLog('Google OAuth error:', error);
       throw error;
     }
   }
 
-  async sendMagicLink(data: MagicLinkData): Promise<{ success: boolean; message: string; expiresAt: string }> {
+  async sendMagicLink(
+    data: MagicLinkData,
+  ): Promise<{ success: boolean; message: string; expiresAt: string }> {
     try {
-      const response = await this.makeRequest<{ success: boolean; message: string; expiresAt: string }>('/auth/magic-link/send', {
+      const response = await this.makeRequest<{
+        success: boolean;
+        message: string;
+        expiresAt: string;
+      }>('/auth/magic-link/send', {
         method: 'POST',
         body: JSON.stringify(data),
       });
@@ -197,17 +204,20 @@ class AuthService {
 
       throw new Error(response.error || 'Failed to send magic link');
     } catch (error) {
-      console.error('Magic link sending error:', error);
+      errorLog('Magic link sending error:', error);
       throw error;
     }
   }
 
   async verifyMagicLink(token: string): Promise<AuthResponse> {
     try {
-      const response = await this.makeRequest<AuthResponse>('/auth/magic-link/verify', {
-        method: 'POST',
-        body: JSON.stringify({ token }),
-      });
+      const response = await this.makeRequest<AuthResponse>(
+        '/auth/magic-link/verify',
+        {
+          method: 'POST',
+          body: JSON.stringify({ token }),
+        },
+      );
 
       if (response.success && response.data) {
         await this.setTokens(response.data.tokens);
@@ -216,7 +226,7 @@ class AuthService {
 
       throw new Error(response.error || 'Magic link verification failed');
     } catch (error) {
-      console.error('Magic link verification error:', error);
+      errorLog('Magic link verification error:', error);
       throw error;
     }
   }
@@ -268,8 +278,10 @@ class AuthService {
   // ==============================================
 
   async getProfile(): Promise<User> {
-    const response = await this.authenticatedRequest<{ user: User }>('/auth/me');
-    
+    const response = await this.authenticatedRequest<{ user: User }>(
+      '/auth/me',
+    );
+
     if (response.success && response.data) {
       return response.data.user;
     }
@@ -278,8 +290,10 @@ class AuthService {
   }
 
   async getActiveSessions(): Promise<any[]> {
-    const response = await this.authenticatedRequest<{ sessions: any[] }>('/auth/sessions');
-    
+    const response = await this.authenticatedRequest<{ sessions: any[] }>(
+      '/auth/sessions',
+    );
+
     if (response.success && response.data) {
       return response.data.sessions;
     }
@@ -288,9 +302,12 @@ class AuthService {
   }
 
   async revokeSession(sessionId: string): Promise<void> {
-    const response = await this.authenticatedRequest(`/auth/sessions/${sessionId}`, {
-      method: 'DELETE',
-    });
+    const response = await this.authenticatedRequest(
+      `/auth/sessions/${sessionId}`,
+      {
+        method: 'DELETE',
+      },
+    );
 
     if (!response.success) {
       throw new Error(response.error || 'Failed to revoke session');
@@ -301,7 +318,10 @@ class AuthService {
   // PASSWORD MANAGEMENT
   // ==============================================
 
-  async requestPasswordReset(email: string, captchaToken?: string): Promise<void> {
+  async requestPasswordReset(
+    email: string,
+    captchaToken?: string,
+  ): Promise<void> {
     const response = await this.makeRequest('/auth/password/forgot', {
       method: 'POST',
       body: JSON.stringify({ email, captchaToken }),
@@ -329,7 +349,7 @@ class AuthService {
       const stored = await AsyncStorage.getItem('auth_tokens');
       return stored ? JSON.parse(stored) : null;
     } catch (error) {
-      console.error('Error retrieving stored tokens:', error);
+      errorLog('Error retrieving stored tokens:', error);
       return null;
     }
   }
@@ -338,9 +358,9 @@ class AuthService {
     if (!this.accessToken) {
       return {};
     }
-    
+
     return {
-      'Authorization': `Bearer ${this.accessToken}`,
+      Authorization: `Bearer ${this.accessToken}`,
       'Content-Type': 'application/json',
     };
   }
@@ -349,7 +369,7 @@ class AuthService {
     try {
       await AsyncStorage.removeItem('auth_tokens');
     } catch (error) {
-      console.error('Error clearing stored tokens:', error);
+      errorLog('Error clearing stored tokens:', error);
     }
   }
 
@@ -362,7 +382,7 @@ class AuthService {
       const response = await this.makeRequest('/auth/me', {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${this.accessToken}`,
+          Authorization: `Bearer ${this.accessToken}`,
         },
       });
 
@@ -394,13 +414,13 @@ class AuthService {
 
   private async makeRequest<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
   ): Promise<ApiResponse<T>> {
     const url = `${this.baseUrl}/api/v5${endpoint}`;
-    
+
     const defaultHeaders = {
       'Content-Type': 'application/json',
-      'Accept': 'application/json',
+      Accept: 'application/json',
     };
 
     const config: RequestInit = {
@@ -428,7 +448,7 @@ class AuthService {
         data: data.data || data,
       };
     } catch (error) {
-      console.error(`Request failed for ${endpoint}:`, error);
+      errorLog(`Request failed for ${endpoint}:`, error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Network error',
@@ -438,7 +458,7 @@ class AuthService {
 
   private async authenticatedRequest<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
   ): Promise<ApiResponse<T>> {
     if (!this.accessToken) {
       throw new Error('No access token available');
@@ -449,7 +469,7 @@ class AuthService {
       ...options,
       headers: {
         ...options.headers,
-        'Authorization': `Bearer ${this.accessToken}`,
+        Authorization: `Bearer ${this.accessToken}`,
       },
     });
 
@@ -457,13 +477,13 @@ class AuthService {
     if (!response.success && response.code === 'AUTH_FAILED') {
       try {
         await this.refreshTokens();
-        
+
         // Retry with new token
         response = await this.makeRequest<T>(endpoint, {
           ...options,
           headers: {
             ...options.headers,
-            'Authorization': `Bearer ${this.accessToken}`,
+            Authorization: `Bearer ${this.accessToken}`,
           },
         });
       } catch (refreshError) {
@@ -485,7 +505,7 @@ class AuthService {
   getDeviceInfo(): DeviceInfo {
     const { Platform } = require('react-native');
     const { getVersion } = require('react-native-device-info');
-    
+
     return {
       platform: Platform.OS,
       osVersion: Platform.Version.toString(),

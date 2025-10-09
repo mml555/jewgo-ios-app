@@ -1,10 +1,17 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Alert, Linking } from 'react-native';
-import locationService, { LocationData, LocationState, LocationConfig } from '../services/LocationService';
+import locationService, {
+  LocationData,
+  LocationState,
+  LocationConfig,
+} from '../services/LocationService';
+import { errorLog } from '../utils/logger';
 
 export interface LocationHookState extends LocationState {
   requestPermission: () => Promise<boolean>;
-  getCurrentLocation: (config?: Partial<LocationConfig>) => Promise<LocationData | null>;
+  getCurrentLocation: (
+    config?: Partial<LocationConfig>,
+  ) => Promise<LocationData | null>;
   startWatching: (config?: Partial<LocationConfig>) => void;
   stopWatching: () => void;
   handleReducedAccuracy: () => Promise<void>;
@@ -25,7 +32,7 @@ export const useLocationHardened = (): LocationHookState => {
   // Handle reduced accuracy alert (show once)
   useEffect(() => {
     if (
-      state.accuracyAuthorization === 'reduced' && 
+      state.accuracyAuthorization === 'reduced' &&
       !hasShownReducedAccuracyAlert.current &&
       state.permissionStatus === 'granted'
     ) {
@@ -38,7 +45,7 @@ export const useLocationHardened = (): LocationHookState => {
   const requestPermission = useCallback(async (): Promise<boolean> => {
     try {
       const granted = await locationService.requestPermission();
-      
+
       if (!granted) {
         // Show settings deep-link for denied permissions
         Alert.alert(
@@ -46,47 +53,50 @@ export const useLocationHardened = (): LocationHookState => {
           'To show distances to nearby businesses, please enable location access in Settings.',
           [
             { text: 'Cancel', style: 'cancel' },
-            { 
-              text: 'Settings', 
-              onPress: () => Linking.openSettings() 
-            }
-          ]
+            {
+              text: 'Settings',
+              onPress: () => Linking.openSettings(),
+            },
+          ],
         );
       }
-      
+
       return granted;
     } catch (error) {
-      console.error('Error requesting location permission:', error);
+      errorLog('Error requesting location permission:', error);
       return false;
     }
   }, []);
 
   // Get current location with fallback handling
-  const getCurrentLocation = useCallback(async (config?: Partial<LocationConfig>): Promise<LocationData | null> => {
-    try {
-      const location = await locationService.getCurrentLocation(config);
-      
-      if (!location) {
-        // Show fallback message
-        Alert.alert(
-          'Location Unavailable',
-          'Using approximate location based on your area. Enable precise location for accurate distances.',
-          [
-            { text: 'OK' },
-            { 
-              text: 'Settings', 
-              onPress: () => Linking.openSettings() 
-            }
-          ]
-        );
+  const getCurrentLocation = useCallback(
+    async (config?: Partial<LocationConfig>): Promise<LocationData | null> => {
+      try {
+        const location = await locationService.getCurrentLocation(config);
+
+        if (!location) {
+          // Show fallback message
+          Alert.alert(
+            'Location Unavailable',
+            'Using approximate location based on your area. Enable precise location for accurate distances.',
+            [
+              { text: 'OK' },
+              {
+                text: 'Settings',
+                onPress: () => Linking.openSettings(),
+              },
+            ],
+          );
+        }
+
+        return location;
+      } catch (error) {
+        errorLog('Error getting current location:', error);
+        return null;
       }
-      
-      return location;
-    } catch (error) {
-      console.error('Error getting current location:', error);
-      return null;
-    }
-  }, []);
+    },
+    [],
+  );
 
   // Start watching location
   const startWatching = useCallback((config?: Partial<LocationConfig>) => {

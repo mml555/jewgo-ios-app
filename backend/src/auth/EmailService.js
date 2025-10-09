@@ -18,8 +18,8 @@ class EmailService {
         secure: process.env.SMTP_SECURE === 'true',
         auth: {
           user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS
-        }
+          pass: process.env.SMTP_PASS,
+        },
       });
     } else {
       // Development - use Ethereal Email for testing
@@ -28,8 +28,8 @@ class EmailService {
         port: 587,
         auth: {
           user: 'ethereal.user@ethereal.email',
-          pass: 'ethereal.pass'
-        }
+          pass: 'ethereal.pass',
+        },
       });
     }
   }
@@ -49,10 +49,13 @@ class EmailService {
       const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
       // Store verification token
-      await client.query(`
+      await client.query(
+        `
         INSERT INTO verification_tokens (user_id, token_hash, purpose, expires_at)
         VALUES ($1, $2, 'email_verification', $3)
-      `, [userId, tokenHash, expiresAt]);
+      `,
+        [userId, tokenHash, expiresAt],
+      );
 
       // Create verification URL
       const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
@@ -64,7 +67,7 @@ class EmailService {
         to: email,
         subject: 'Verify your Jewgo account',
         html: this.getVerificationEmailTemplate(verificationUrl),
-        text: this.getVerificationEmailText(verificationUrl)
+        text: this.getVerificationEmailText(verificationUrl),
       };
 
       const result = await this.transporter.sendMail(mailOptions);
@@ -74,24 +77,25 @@ class EmailService {
       // Log email sent event
       await this.logEmailEvent(userId, 'verification_email_sent', true, {
         email,
-        messageId: result.messageId
+        messageId: result.messageId,
       });
 
       return {
         success: true,
         messageId: result.messageId,
-        previewUrl: result.getTestMessageUrl ? result.getTestMessageUrl() : null
+        previewUrl: result.getTestMessageUrl
+          ? result.getTestMessageUrl()
+          : null,
       };
-
     } catch (error) {
       await client.query('ROLLBACK');
-      
+
       // Log email failure
       await this.logEmailEvent(userId, 'verification_email_failed', false, {
         email,
-        error: error.message
+        error: error.message,
       });
-      
+
       throw error;
     } finally {
       client.release();
@@ -100,13 +104,14 @@ class EmailService {
 
   async verifyEmailToken(token) {
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
-    
+
     const client = await this.db.connect();
     try {
       await client.query('BEGIN');
 
       // Find and validate token
-      const result = await client.query(`
+      const result = await client.query(
+        `
         SELECT vt.user_id, vt.expires_at, u.primary_email, u.status
         FROM verification_tokens vt
         JOIN users u ON vt.user_id = u.id
@@ -114,41 +119,48 @@ class EmailService {
           AND vt.purpose = 'email_verification'
           AND vt.expires_at > NOW() 
           AND vt.used_at IS NULL
-      `, [tokenHash]);
+      `,
+        [tokenHash],
+      );
 
       if (result.rows.length === 0) {
         throw new Error('Invalid or expired verification token');
       }
 
-      const { user_id, primary_email, status } = result.rows[0];
+      const { user_id, primary_email } = result.rows[0];
 
       // Mark token as used
-      await client.query(`
+      await client.query(
+        `
         UPDATE verification_tokens 
         SET used_at = NOW() 
         WHERE token_hash = $1
-      `, [tokenHash]);
+      `,
+        [tokenHash],
+      );
 
       // Update user status to active
-      await client.query(`
+      await client.query(
+        `
         UPDATE users 
         SET status = 'active', updated_at = NOW()
         WHERE id = $1
-      `, [user_id]);
+      `,
+        [user_id],
+      );
 
       await client.query('COMMIT');
 
       // Log verification event
       await this.logEmailEvent(user_id, 'email_verified', true, {
-        email: primary_email
+        email: primary_email,
       });
 
       return {
         success: true,
         userId: user_id,
-        email: primary_email
+        email: primary_email,
       };
-
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;
@@ -172,10 +184,13 @@ class EmailService {
       const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
       // Store reset token
-      await client.query(`
+      await client.query(
+        `
         INSERT INTO verification_tokens (user_id, token_hash, purpose, expires_at)
         VALUES ($1, $2, 'password_reset', $3)
-      `, [userId, tokenHash, expiresAt]);
+      `,
+        [userId, tokenHash, expiresAt],
+      );
 
       // Create reset URL
       const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
@@ -187,7 +202,7 @@ class EmailService {
         to: email,
         subject: 'Reset your Jewgo password',
         html: this.getPasswordResetEmailTemplate(resetUrl),
-        text: this.getPasswordResetEmailText(resetUrl)
+        text: this.getPasswordResetEmailText(resetUrl),
       };
 
       const result = await this.transporter.sendMail(mailOptions);
@@ -197,24 +212,25 @@ class EmailService {
       // Log email sent event
       await this.logEmailEvent(userId, 'password_reset_email_sent', true, {
         email,
-        messageId: result.messageId
+        messageId: result.messageId,
       });
 
       return {
         success: true,
         messageId: result.messageId,
-        previewUrl: result.getTestMessageUrl ? result.getTestMessageUrl() : null
+        previewUrl: result.getTestMessageUrl
+          ? result.getTestMessageUrl()
+          : null,
       };
-
     } catch (error) {
       await client.query('ROLLBACK');
-      
+
       // Log email failure
       await this.logEmailEvent(userId, 'password_reset_email_failed', false, {
         email,
-        error: error.message
+        error: error.message,
       });
-      
+
       throw error;
     } finally {
       client.release();
@@ -223,8 +239,9 @@ class EmailService {
 
   async verifyPasswordResetToken(token) {
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
-    
-    const result = await this.db.query(`
+
+    const result = await this.db.query(
+      `
       SELECT vt.user_id, vt.expires_at, u.primary_email
       FROM verification_tokens vt
       JOIN users u ON vt.user_id = u.id
@@ -232,7 +249,9 @@ class EmailService {
         AND vt.purpose = 'password_reset'
         AND vt.expires_at > NOW() 
         AND vt.used_at IS NULL
-    `, [tokenHash]);
+    `,
+      [tokenHash],
+    );
 
     if (result.rows.length === 0) {
       throw new Error('Invalid or expired password reset token');
@@ -241,18 +260,21 @@ class EmailService {
     return {
       success: true,
       userId: result.rows[0].user_id,
-      email: result.rows[0].primary_email
+      email: result.rows[0].primary_email,
     };
   }
 
   async markPasswordResetTokenUsed(token) {
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
-    
-    await this.db.query(`
+
+    await this.db.query(
+      `
       UPDATE verification_tokens 
       SET used_at = NOW() 
       WHERE token_hash = $1 AND purpose = 'password_reset'
-    `, [tokenHash]);
+    `,
+      [tokenHash],
+    );
   }
 
   // ==============================================
@@ -393,10 +415,13 @@ If you didn't request a password reset, you can safely ignore this email. Your p
 
   async logEmailEvent(userId, event, success, details = {}) {
     try {
-      await this.db.query(`
+      await this.db.query(
+        `
         INSERT INTO auth_events (user_id, event, success, details)
         VALUES ($1, $2, $3, $4)
-      `, [userId, event, success, JSON.stringify(details)]);
+      `,
+        [userId, event, success, JSON.stringify(details)],
+      );
     } catch (error) {
       console.error('Failed to log email event:', error);
     }
@@ -408,7 +433,7 @@ If you didn't request a password reset, you can safely ignore this email. Your p
       WHERE expires_at < NOW() AND used_at IS NULL
       RETURNING COUNT(*) as deleted_count
     `);
-    
+
     return result.rows[0]?.deleted_count || 0;
   }
 
@@ -425,7 +450,7 @@ If you didn't request a password reset, you can safely ignore this email. Your p
       GROUP BY event
       ORDER BY total_emails DESC
     `);
-    
+
     return result.rows;
   }
 }

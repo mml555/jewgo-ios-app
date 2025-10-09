@@ -1,17 +1,22 @@
 const { OAuth2Client } = require('google-auth-library');
 const axios = require('axios');
+const logger = require('../../utils/logger');
 
 class GoogleOAuthProvider {
   constructor(config) {
     this.clientId = config.clientId;
     this.clientSecret = config.clientSecret;
     this.redirectUri = config.redirectUri;
-    
+
     if (!this.clientId || !this.clientSecret) {
       throw new Error('Google OAuth client ID and secret are required');
     }
 
-    this.client = new OAuth2Client(this.clientId, this.clientSecret, this.redirectUri);
+    this.client = new OAuth2Client(
+      this.clientId,
+      this.clientSecret,
+      this.redirectUri,
+    );
   }
 
   /**
@@ -25,7 +30,7 @@ class GoogleOAuthProvider {
       });
 
       const payload = ticket.getPayload();
-      
+
       if (!payload) {
         throw new Error('Invalid Google ID token');
       }
@@ -48,7 +53,7 @@ class GoogleOAuthProvider {
         userInfo,
       };
     } catch (error) {
-      console.error('Google OAuth verification error:', error);
+      logger.error('Google OAuth verification error:', error);
       return {
         success: false,
         error: error.message,
@@ -83,7 +88,7 @@ class GoogleOAuthProvider {
         tokens,
       };
     } catch (error) {
-      console.error('Error exchanging code for tokens:', error);
+      logger.error('Error exchanging code for tokens:', error);
       return {
         success: false,
         error: error.message,
@@ -96,18 +101,21 @@ class GoogleOAuthProvider {
    */
   async getUserInfo(accessToken) {
     try {
-      const response = await axios.get('https://www.googleapis.com/oauth2/v2/userinfo', {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
+      const response = await axios.get(
+        'https://www.googleapis.com/oauth2/v2/userinfo',
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
         },
-      });
+      );
 
       return {
         success: true,
         userInfo: response.data,
       };
     } catch (error) {
-      console.error('Error getting user info from Google:', error);
+      logger.error('Error getting user info from Google:', error);
       return {
         success: false,
         error: error.message,
@@ -120,15 +128,15 @@ class GoogleOAuthProvider {
    */
   validateConfig() {
     const errors = [];
-    
+
     if (!this.clientId) {
       errors.push('Google OAuth client ID is required');
     }
-    
+
     if (!this.clientSecret) {
       errors.push('Google OAuth client secret is required');
     }
-    
+
     if (!this.redirectUri) {
       errors.push('Google OAuth redirect URI is required');
     }

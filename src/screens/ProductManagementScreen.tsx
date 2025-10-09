@@ -14,10 +14,17 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { errorLog } from '../utils/logger';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { Product, CreateProductForm } from '../types/shtetl';
 import ProductCard from '../components/ProductCard';
-import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../styles/designSystem';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  Shadows,
+} from '../styles/designSystem';
 import shtetlService from '../services/ShtetlService';
 
 interface ProductManagementParams {
@@ -28,7 +35,7 @@ const ProductManagementScreen: React.FC = () => {
   const route = useRoute();
   const navigation = useNavigation();
   const { storeId } = route.params as ProductManagementParams;
-  
+
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -54,13 +61,13 @@ const ProductManagementScreen: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       const response = await shtetlService.getStoreProducts(storeId, {
         limit: 100,
         sortBy: 'created_at',
         sortOrder: 'DESC',
       });
-      
+
       if (response.success && response.data?.products) {
         setProducts(response.data.products);
       } else {
@@ -68,7 +75,7 @@ const ProductManagementScreen: React.FC = () => {
         setProducts([]);
       }
     } catch (error) {
-      console.error('Error loading products:', error);
+      errorLog('Error loading products:', error);
       setError('Unable to load products for this store.');
       setProducts([]);
     } finally {
@@ -118,12 +125,15 @@ const ProductManagementScreen: React.FC = () => {
     setShowCreateModal(true);
   }, []);
 
-  const handleInputChange = useCallback((field: keyof CreateProductForm, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value,
-    }));
-  }, []);
+  const handleInputChange = useCallback(
+    (field: keyof CreateProductForm, value: any) => {
+      setFormData(prev => ({
+        ...prev,
+        [field]: value,
+      }));
+    },
+    [],
+  );
 
   const validateForm = useCallback(() => {
     if (!formData.name.trim()) {
@@ -155,7 +165,10 @@ const ProductManagementScreen: React.FC = () => {
       let response;
       if (editingProduct) {
         // Update existing product
-        response = await shtetlService.updateProduct(editingProduct.id, formData);
+        response = await shtetlService.updateProduct(
+          editingProduct.id,
+          formData,
+        );
       } else {
         // Create new product
         response = await shtetlService.createProduct(storeId, formData);
@@ -164,24 +177,33 @@ const ProductManagementScreen: React.FC = () => {
       if (response.success) {
         Alert.alert(
           'Success',
-          editingProduct ? 'Product updated successfully!' : 'Product created successfully!',
-          [{ text: 'OK', onPress: () => {
-            setShowCreateModal(false);
-            setEditingProduct(null);
-            loadProducts(); // Refresh the product list
-          }}]
+          editingProduct
+            ? 'Product updated successfully!'
+            : 'Product created successfully!',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                setShowCreateModal(false);
+                setEditingProduct(null);
+                loadProducts(); // Refresh the product list
+              },
+            },
+          ],
         );
       } else {
-        Alert.alert('Error', response.error || 'Failed to save product. Please try again.');
+        Alert.alert(
+          'Error',
+          response.error || 'Failed to save product. Please try again.',
+        );
       }
     } catch (error) {
-      console.error('Error saving product:', error);
+      errorLog('Error saving product:', error);
       Alert.alert('Error', 'Failed to save product. Please try again.');
     } finally {
       setSaving(false);
     }
   }, [formData, editingProduct, storeId, validateForm, loadProducts]);
-
 
   const handleDeleteProduct = useCallback((product: Product) => {
     Alert.alert(
@@ -195,51 +217,77 @@ const ProductManagementScreen: React.FC = () => {
           onPress: async () => {
             try {
               const response = await shtetlService.deleteProduct(product.id);
-              
+
               if (response.success) {
                 setProducts(prev => prev.filter(p => p.id !== product.id));
                 Alert.alert('Success', 'Product deleted successfully');
               } else {
-                Alert.alert('Error', response.error || 'Failed to delete product');
+                Alert.alert(
+                  'Error',
+                  response.error || 'Failed to delete product',
+                );
               }
             } catch (error) {
               Alert.alert('Error', 'Failed to delete product');
-              console.error('Error deleting product:', error);
+              errorLog('Error deleting product:', error);
             }
           },
         },
-      ]
+      ],
     );
   }, []);
 
   const handleToggleProductStatus = useCallback(async (product: Product) => {
     try {
-      const response = await shtetlService.updateProduct(product.id, { 
-        isActive: !product.isActive 
-      });
-      
+      const response = await shtetlService.updateProduct(product.id, {
+        name: product.name,
+        description: product.description,
+        price: product.price,
+        category: product.category,
+        images: product.images,
+        isKosher: product.isKosher,
+        kosherCertification: product.kosherCertification,
+        stockQuantity: product.stockQuantity,
+        sku: product.sku,
+        weight: product.weight,
+        tags: product.tags,
+      } as any);
+
       if (response.success) {
-        setProducts(prev => prev.map(p => 
-          p.id === product.id ? { ...p, isActive: !p.isActive } : p
-        ));
-        
+        setProducts(prev =>
+          prev.map(p =>
+            p.id === product.id ? { ...p, isActive: !p.isActive } : p,
+          ),
+        );
+
         Alert.alert(
           'Success',
-          `Product ${!product.isActive ? 'activated' : 'deactivated'} successfully`
+          `Product ${
+            !product.isActive ? 'activated' : 'deactivated'
+          } successfully`,
         );
       } else {
-        Alert.alert('Error', response.error || 'Failed to update product status');
+        Alert.alert(
+          'Error',
+          response.error || 'Failed to update product status',
+        );
       }
     } catch (error) {
       Alert.alert('Error', 'Failed to update product status');
-      console.error('Error updating product:', error);
+      errorLog('Error updating product:', error);
     }
   }, []);
 
-  const handleProductPress = useCallback((product: Product) => {
-    // Navigate to product detail/edit page
-    navigation.navigate('ProductDetail', { productId: product.id, storeId: storeId });
-  }, [navigation, storeId]);
+  const handleProductPress = useCallback(
+    (product: Product) => {
+      // Navigate to product detail/edit page
+      (navigation as any).navigate('ProductDetail', {
+        productId: product.id,
+        storeId: storeId,
+      });
+    },
+    [navigation, storeId],
+  );
 
   useEffect(() => {
     loadProducts();
@@ -248,17 +296,20 @@ const ProductManagementScreen: React.FC = () => {
   const renderHeader = () => {
     return (
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
           <Text style={styles.backButtonText}>← Back</Text>
         </TouchableOpacity>
-        
+
         <View style={styles.headerContent}>
           <Text style={styles.title}>Product Management</Text>
           <Text style={styles.subtitle}>
             Manage your store's products and inventory
           </Text>
         </View>
-        
+
         <TouchableOpacity
           style={styles.createButton}
           onPress={handleCreateProduct}
@@ -280,12 +331,12 @@ const ProductManagementScreen: React.FC = () => {
           <Text style={styles.statNumber}>{totalProducts}</Text>
           <Text style={styles.statLabel}>Total Products</Text>
         </View>
-        
+
         <View style={styles.statCard}>
           <Text style={styles.statNumber}>{activeProducts}</Text>
           <Text style={styles.statLabel}>Active</Text>
         </View>
-        
+
         <View style={styles.statCard}>
           <Text style={styles.statNumber}>{outOfStock}</Text>
           <Text style={styles.statLabel}>Out of Stock</Text>
@@ -297,11 +348,8 @@ const ProductManagementScreen: React.FC = () => {
   const renderProductCard = (product: Product) => {
     return (
       <View key={product.id} style={styles.productCard}>
-        <ProductCard
-          product={product}
-          onPress={handleProductPress}
-        />
-        
+        <ProductCard product={product} onPress={handleProductPress} />
+
         <View style={styles.productActions}>
           <TouchableOpacity
             style={[styles.actionButton, styles.editButton]}
@@ -309,11 +357,13 @@ const ProductManagementScreen: React.FC = () => {
           >
             <Text style={styles.actionButtonText}>Edit</Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity
             style={[
               styles.actionButton,
-              product.isActive ? styles.deactivateButton : styles.activateButton,
+              product.isActive
+                ? styles.deactivateButton
+                : styles.activateButton,
             ]}
             onPress={() => handleToggleProductStatus(product)}
           >
@@ -321,7 +371,7 @@ const ProductManagementScreen: React.FC = () => {
               {product.isActive ? 'Deactivate' : 'Activate'}
             </Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity
             style={[styles.actionButton, styles.deleteButton]}
             onPress={() => handleDeleteProduct(product)}
@@ -375,21 +425,36 @@ const ProductManagementScreen: React.FC = () => {
       { key: 'general', label: '📦 General', emoji: '📦' },
     ];
 
-    const renderTextInput = (label: string, field: keyof CreateProductForm, options: any = {}) => (
+    const renderTextInput = (
+      label: string,
+      field: keyof CreateProductForm,
+      options: any = {},
+    ) => (
       <View style={styles.inputGroup}>
-        <Text style={styles.inputLabel}>{label} {options.required ? '*' : ''}</Text>
+        <Text style={styles.inputLabel}>
+          {label} {options.required ? '*' : ''}
+        </Text>
         <TextInput
           style={[styles.textInput, options.multiline && styles.textArea]}
-          value={options.isTags ? (Array.isArray(formData[field]) ? formData[field].join(', ') : '') : (formData[field]?.toString() || '')}
-          onChangeText={(text) => {
+          value={
+            options.isTags
+              ? Array.isArray(formData[field])
+                ? formData[field].join(', ')
+                : ''
+              : formData[field]?.toString() || ''
+          }
+          onChangeText={text => {
             let value: any = text;
             if (field === 'price' || field === 'weight') {
               value = parseFloat(text) || 0;
             } else if (field === 'stockQuantity') {
-              value = parseInt(text) || 0;
+              value = parseInt(text, 10) || 0;
             } else if (options.isTags) {
               // Convert comma-separated string to array
-              value = text.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+              value = text
+                .split(',')
+                .map(tag => tag.trim())
+                .filter(tag => tag.length > 0);
             }
             handleInputChange(field, value);
           }}
@@ -402,16 +467,22 @@ const ProductManagementScreen: React.FC = () => {
       </View>
     );
 
-    const renderCheckbox = (label: string, field: keyof CreateProductForm, description?: string) => (
+    const renderCheckbox = (
+      label: string,
+      field: keyof CreateProductForm,
+      description?: string,
+    ) => (
       <View style={styles.checkboxRow}>
         <View style={styles.checkboxLabelContainer}>
           <Text style={styles.checkboxLabel}>{label}</Text>
-          {description && <Text style={styles.checkboxDescription}>{description}</Text>}
+          {description && (
+            <Text style={styles.checkboxDescription}>{description}</Text>
+          )}
         </View>
         <TouchableOpacity
           style={[
             styles.checkbox,
-            formData[field] && styles.checkboxChecked
+            Boolean(formData[field]) && styles.checkboxChecked,
           ]}
           onPress={() => handleInputChange(field, !formData[field])}
           activeOpacity={0.7}
@@ -419,9 +490,7 @@ const ProductManagementScreen: React.FC = () => {
           accessibilityState={{ checked: !!formData[field] }}
           accessibilityLabel={`Toggle ${label}`}
         >
-          {formData[field] && (
-            <Text style={styles.checkmark}>✓</Text>
-          )}
+          {formData[field] && <Text style={styles.checkmark}>✓</Text>}
         </TouchableOpacity>
       </View>
     );
@@ -432,7 +501,7 @@ const ProductManagementScreen: React.FC = () => {
         animationType="slide"
         presentationStyle="pageSheet"
       >
-        <KeyboardAvoidingView 
+        <KeyboardAvoidingView
           style={styles.modalContainer}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
@@ -461,37 +530,40 @@ const ProductManagementScreen: React.FC = () => {
               )}
             </TouchableOpacity>
           </View>
-          
-          <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+
+          <ScrollView
+            style={styles.modalContent}
+            showsVerticalScrollIndicator={false}
+          >
             {/* Basic Information */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Basic Information</Text>
-              {renderTextInput('Product Name *', 'name', { 
+              {renderTextInput('Product Name *', 'name', {
                 placeholder: 'Enter product name',
-                required: true 
+                required: true,
               })}
-              {renderTextInput('Description *', 'description', { 
+              {renderTextInput('Description *', 'description', {
                 placeholder: 'Describe your product...',
                 multiline: true,
                 numberOfLines: 4,
-                required: true 
+                required: true,
               })}
-              {renderTextInput('SKU', 'sku', { 
-                placeholder: 'Product SKU (optional)' 
+              {renderTextInput('SKU', 'sku', {
+                placeholder: 'Product SKU (optional)',
               })}
             </View>
 
             {/* Pricing */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Pricing & Inventory</Text>
-              {renderTextInput('Price *', 'price', { 
+              {renderTextInput('Price *', 'price', {
                 placeholder: '0.00',
                 keyboardType: 'numeric',
-                required: true 
+                required: true,
               })}
-              {renderTextInput('Stock Quantity', 'stockQuantity', { 
+              {renderTextInput('Stock Quantity', 'stockQuantity', {
                 placeholder: '0',
-                keyboardType: 'numeric' 
+                keyboardType: 'numeric',
               })}
             </View>
 
@@ -504,15 +576,19 @@ const ProductManagementScreen: React.FC = () => {
                     key={category.key}
                     style={[
                       styles.categoryOption,
-                      formData.category === category.key && styles.categoryOptionSelected,
+                      formData.category === category.key &&
+                        styles.categoryOptionSelected,
                     ]}
                     onPress={() => handleInputChange('category', category.key)}
                   >
                     <Text style={styles.categoryEmoji}>{category.emoji}</Text>
-                    <Text style={[
-                      styles.categoryLabel,
-                      formData.category === category.key && styles.categoryLabelSelected,
-                    ]}>
+                    <Text
+                      style={[
+                        styles.categoryLabel,
+                        formData.category === category.key &&
+                          styles.categoryLabelSelected,
+                      ]}
+                    >
                       {category.label.replace(`${category.emoji} `, '')}
                     </Text>
                   </TouchableOpacity>
@@ -523,9 +599,9 @@ const ProductManagementScreen: React.FC = () => {
             {/* Physical Properties */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Physical Properties</Text>
-              {renderTextInput('Weight (lbs)', 'weight', { 
+              {renderTextInput('Weight (lbs)', 'weight', {
                 placeholder: '0.0',
-                keyboardType: 'numeric' 
+                keyboardType: 'numeric',
               })}
             </View>
 
@@ -535,11 +611,12 @@ const ProductManagementScreen: React.FC = () => {
               {renderCheckbox(
                 'Kosher Product',
                 'isKosher',
-                'Check if this product is kosher certified'
+                'Check if this product is kosher certified',
               )}
-              {formData.isKosher && renderTextInput('Kosher Certification', 'kosherCertification', { 
-                placeholder: 'e.g., OU, OK, Star-K' 
-              })}
+              {formData.isKosher &&
+                renderTextInput('Kosher Certification', 'kosherCertification', {
+                  placeholder: 'e.g., OU, OK, Star-K',
+                })}
             </View>
 
             {/* Tags */}
@@ -548,11 +625,11 @@ const ProductManagementScreen: React.FC = () => {
               <Text style={styles.tagsDescription}>
                 Add tags to help customers find your product (comma-separated)
               </Text>
-              {renderTextInput('Tags', 'tags', { 
+              {renderTextInput('Tags', 'tags', {
                 placeholder: 'e.g., organic, handmade, gift',
                 multiline: true,
                 numberOfLines: 2,
-                isTags: true
+                isTags: true,
               })}
             </View>
           </ScrollView>
@@ -600,7 +677,7 @@ const ProductManagementScreen: React.FC = () => {
         {renderStats()}
         {renderProducts()}
       </ScrollView>
-      
+
       {renderCreateModal()}
     </View>
   );
@@ -621,7 +698,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
   },
   loadingText: {
-    ...Typography.body1,
+    ...Typography.styles.body1,
     color: Colors.gray600,
     marginTop: Spacing.md,
   },
@@ -643,7 +720,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   errorDescription: {
-    ...Typography.body1,
+    ...Typography.styles.body1,
     color: Colors.gray600,
     textAlign: 'center',
     marginBottom: Spacing.lg,
@@ -673,7 +750,7 @@ const styles = StyleSheet.create({
     marginRight: Spacing.sm,
   },
   backButtonText: {
-    ...Typography.body1,
+    ...Typography.styles.body1,
     color: Colors.primary.main,
     fontWeight: '600',
   },
@@ -686,7 +763,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xs,
   },
   subtitle: {
-    ...Typography.body1,
+    ...Typography.styles.body1,
     color: Colors.gray600,
   },
   createButton: {
@@ -717,7 +794,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   statLabel: {
-    ...Typography.caption,
+    ...Typography.styles.caption,
     color: Colors.gray600,
     marginTop: Spacing.xs,
   },
@@ -754,7 +831,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.error,
   },
   actionButtonText: {
-    ...Typography.caption,
+    ...Typography.styles.caption,
     color: Colors.white,
     fontWeight: '600',
   },
@@ -776,7 +853,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   emptyDescription: {
-    ...Typography.body1,
+    ...Typography.styles.body1,
     color: Colors.gray600,
     textAlign: 'center',
     marginBottom: Spacing.lg,
@@ -816,7 +893,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   closeButtonText: {
-    ...Typography.body1,
+    ...Typography.styles.body1,
     color: Colors.gray600,
   },
   modalContent: {
@@ -824,13 +901,13 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
   },
   comingSoonText: {
-    ...Typography.h3,
+    ...Typography.styles.h3,
     color: Colors.gray900,
     textAlign: 'center',
     marginBottom: Spacing.md,
   },
   comingSoonDescription: {
-    ...Typography.body1,
+    ...Typography.styles.body1,
     color: Colors.gray600,
     textAlign: 'center',
     lineHeight: 24,
@@ -841,7 +918,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
   },
   cancelButtonText: {
-    ...Typography.body1,
+    ...Typography.styles.body1,
     color: Colors.gray600,
   },
   saveButton: {
@@ -856,7 +933,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.gray300,
   },
   saveButtonText: {
-    ...Typography.body1,
+    ...Typography.styles.body1,
     color: Colors.white,
     fontWeight: '600',
   },
@@ -864,7 +941,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xl,
   },
   sectionTitle: {
-    ...Typography.h3,
+    ...Typography.styles.h3,
     color: Colors.gray900,
     marginBottom: Spacing.md,
   },
@@ -872,7 +949,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   inputLabel: {
-    ...Typography.body2,
+    ...Typography.styles.body2,
     color: Colors.gray700,
     marginBottom: Spacing.xs,
     fontWeight: '500',
@@ -883,7 +960,7 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
-    ...Typography.body1,
+    ...Typography.styles.body1,
     color: Colors.gray900,
     backgroundColor: Colors.white,
   },
@@ -917,7 +994,7 @@ const styles = StyleSheet.create({
     marginRight: Spacing.xs,
   },
   categoryLabel: {
-    ...Typography.body2,
+    ...Typography.styles.body2,
     color: Colors.gray700,
     flex: 1,
   },
@@ -936,12 +1013,12 @@ const styles = StyleSheet.create({
     marginRight: Spacing.md,
   },
   checkboxLabel: {
-    ...Typography.body1,
+    ...Typography.styles.body1,
     color: Colors.gray900,
     fontWeight: '500',
   },
   checkboxDescription: {
-    ...Typography.body2,
+    ...Typography.styles.body2,
     color: Colors.gray600,
     marginTop: Spacing.xs,
   },
@@ -965,7 +1042,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   tagsDescription: {
-    ...Typography.body2,
+    ...Typography.styles.body2,
     color: Colors.gray600,
     marginBottom: Spacing.sm,
     fontStyle: 'italic',
@@ -973,4 +1050,3 @@ const styles = StyleSheet.create({
 });
 
 export default ProductManagementScreen;
-

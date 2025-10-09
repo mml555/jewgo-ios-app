@@ -7,7 +7,13 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Colors, Typography, Spacing, BorderRadius, TouchTargets } from '../../styles/designSystem';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  TouchTargets,
+} from '../../styles/designSystem';
 import { hapticButtonPress } from '../../utils/hapticFeedback';
 
 export interface SynagogueFormData {
@@ -21,7 +27,7 @@ export interface SynagogueFormData {
   has_youth_programs: boolean;
   has_adult_education: boolean;
   has_social_events: boolean;
-  
+
   // Services
   daily_minyan: boolean;
   shabbat_services: boolean;
@@ -38,12 +44,13 @@ const AmenitiesServicesPage: React.FC<AmenitiesServicesPageProps> = ({
   formData,
   onFormDataChange,
 }) => {
-  const [errors, setErrors] = useState<{ [key: string]: string }>({});
-
-  const handleToggle = useCallback((field: keyof SynagogueFormData) => {
-    hapticButtonPress();
-    onFormDataChange({ [field]: !formData[field] });
-  }, [formData, onFormDataChange]);
+  const handleToggle = useCallback(
+    (field: keyof SynagogueFormData) => {
+      hapticButtonPress();
+      onFormDataChange({ [field]: !formData[field] });
+    },
+    [formData, onFormDataChange],
+  );
 
   const amenities = [
     {
@@ -144,14 +151,16 @@ const AmenitiesServicesPage: React.FC<AmenitiesServicesPageProps> = ({
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
         <View style={styles.header}>
           <Text style={styles.title}>Amenities & Services</Text>
-          <Text style={styles.subtitle}>Tell us about your synagogue's facilities and services</Text>
+          <Text style={styles.subtitle}>
+            Tell us about your synagogue's facilities and services
+          </Text>
         </View>
 
         <View style={styles.form}>
@@ -161,39 +170,45 @@ const AmenitiesServicesPage: React.FC<AmenitiesServicesPageProps> = ({
             <Text style={styles.sectionDescription}>
               Select all amenities available at your synagogue
             </Text>
-            
+
             <View style={styles.amenitiesGrid}>
-              {amenities.map((amenity) => (
+              {amenities.map(amenity => (
                 <TouchableOpacity
                   key={amenity.key}
                   style={[
                     styles.amenityCard,
-                    amenity.enabled && styles.amenityCardSelected
+                    amenity.enabled && styles.amenityCardSelected,
                   ]}
                   onPress={() => handleToggle(amenity.key)}
                   activeOpacity={0.7}
                 >
                   <View style={styles.amenityHeader}>
                     <Text style={styles.amenityIcon}>{amenity.icon}</Text>
-                    <View style={[
-                      styles.checkbox,
-                      amenity.enabled && styles.checkboxChecked
-                    ]}>
+                    <View
+                      style={[
+                        styles.checkbox,
+                        amenity.enabled && styles.checkboxChecked,
+                      ]}
+                    >
                       {amenity.enabled && (
                         <Text style={styles.checkmark}>✓</Text>
                       )}
                     </View>
                   </View>
-                  <Text style={[
-                    styles.amenityTitle,
-                    amenity.enabled && styles.amenityTitleSelected
-                  ]}>
+                  <Text
+                    style={[
+                      styles.amenityTitle,
+                      amenity.enabled && styles.amenityTitleSelected,
+                    ]}
+                  >
                     {amenity.title}
                   </Text>
-                  <Text style={[
-                    styles.amenityDescription,
-                    amenity.enabled && styles.amenityDescriptionSelected
-                  ]}>
+                  <Text
+                    style={[
+                      styles.amenityDescription,
+                      amenity.enabled && styles.amenityDescriptionSelected,
+                    ]}
+                  >
                     {amenity.description}
                   </Text>
                 </TouchableOpacity>
@@ -207,39 +222,45 @@ const AmenitiesServicesPage: React.FC<AmenitiesServicesPageProps> = ({
             <Text style={styles.sectionDescription}>
               Select all religious services offered by your synagogue
             </Text>
-            
+
             <View style={styles.servicesGrid}>
-              {services.map((service) => (
+              {services.map(service => (
                 <TouchableOpacity
                   key={service.key}
                   style={[
                     styles.serviceCard,
-                    service.enabled && styles.serviceCardSelected
+                    service.enabled && styles.serviceCardSelected,
                   ]}
                   onPress={() => handleToggle(service.key)}
                   activeOpacity={0.7}
                 >
                   <View style={styles.serviceHeader}>
                     <Text style={styles.serviceIcon}>{service.icon}</Text>
-                    <View style={[
-                      styles.checkbox,
-                      service.enabled && styles.checkboxChecked
-                    ]}>
+                    <View
+                      style={[
+                        styles.checkbox,
+                        service.enabled && styles.checkboxChecked,
+                      ]}
+                    >
                       {service.enabled && (
                         <Text style={styles.checkmark}>✓</Text>
                       )}
                     </View>
                   </View>
-                  <Text style={[
-                    styles.serviceTitle,
-                    service.enabled && styles.serviceTitleSelected
-                  ]}>
+                  <Text
+                    style={[
+                      styles.serviceTitle,
+                      service.enabled && styles.serviceTitleSelected,
+                    ]}
+                  >
                     {service.title}
                   </Text>
-                  <Text style={[
-                    styles.serviceDescription,
-                    service.enabled && styles.serviceDescriptionSelected
-                  ]}>
+                  <Text
+                    style={[
+                      styles.serviceDescription,
+                      service.enabled && styles.serviceDescriptionSelected,
+                    ]}
+                  >
                     {service.description}
                   </Text>
                 </TouchableOpacity>
@@ -269,7 +290,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: Typography.sizes.xxl,
-    fontWeight: Typography.weights.bold,
+    fontWeight: '700' as const,
     color: Colors.text.primary,
     marginBottom: Spacing.xs,
   },
@@ -285,7 +306,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: Typography.sizes.xl,
-    fontWeight: Typography.weights.bold,
+    fontWeight: '700' as const,
     color: Colors.text.primary,
   },
   sectionDescription: {
@@ -318,7 +339,7 @@ const styles = StyleSheet.create({
   },
   amenityTitle: {
     fontSize: Typography.sizes.md,
-    fontWeight: Typography.weights.semibold,
+    fontWeight: '600' as const,
     color: Colors.text.primary,
     marginBottom: Spacing.xs,
   },
@@ -357,7 +378,7 @@ const styles = StyleSheet.create({
   },
   serviceTitle: {
     fontSize: Typography.sizes.md,
-    fontWeight: Typography.weights.semibold,
+    fontWeight: '600' as const,
     color: Colors.text.primary,
     marginBottom: Spacing.xs,
   },
@@ -372,8 +393,8 @@ const styles = StyleSheet.create({
     color: Colors.primary.dark,
   },
   checkbox: {
-    width: 20,
-    height: 20,
+    width: TouchTargets.minimum,
+    height: TouchTargets.minimum,
     borderRadius: 4,
     borderWidth: 2,
     borderColor: Colors.border.primary,

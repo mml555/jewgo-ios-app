@@ -8,8 +8,12 @@ import {
   Dimensions,
   Alert,
 } from 'react-native';
+import { errorLog } from '../utils/logger';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import FormAnalyticsService, { FormMetrics, FormSession } from '../services/FormAnalytics';
+import FormAnalyticsService, {
+  FormMetrics,
+  FormSession,
+} from '../services/FormAnalytics';
 import CrashReportingService from '../services/CrashReporting';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -28,14 +32,22 @@ interface DashboardData {
     reportsByType: Record<string, number>;
     reportsBySeverity: Record<string, number>;
     recentReports: any[];
-    topErrors: Array<{ message: string; count: number; lastOccurrence: number }>;
+    topErrors: Array<{
+      message: string;
+      count: number;
+      lastOccurrence: number;
+    }>;
   };
 }
 
 const FormAnalyticsDashboard: React.FC = () => {
-  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
-  const [selectedTab, setSelectedTab] = useState<'overview' | 'sessions' | 'errors'>('overview');
+  const [selectedTab, setSelectedTab] = useState<
+    'overview' | 'sessions' | 'errors'
+  >('overview');
   const [refreshing, setRefreshing] = useState(false);
 
   const analyticsService = FormAnalyticsService.getInstance();
@@ -48,7 +60,7 @@ const FormAnalyticsDashboard: React.FC = () => {
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      
+
       const [dashData, crashStats] = await Promise.all([
         analyticsService.getDashboardData(),
         crashService.getCrashStatistics(),
@@ -59,7 +71,7 @@ const FormAnalyticsDashboard: React.FC = () => {
         crashStats,
       });
     } catch (error) {
-      console.error('Error loading dashboard data:', error);
+      errorLog('Error loading dashboard data:', error);
       Alert.alert('Error', 'Failed to load dashboard data');
     } finally {
       setLoading(false);
@@ -82,7 +94,12 @@ const FormAnalyticsDashboard: React.FC = () => {
     return new Date(timestamp).toLocaleDateString();
   };
 
-  const renderMetricCard = (title: string, value: string | number, subtitle?: string, color?: string) => (
+  const renderMetricCard = (
+    title: string,
+    value: string | number,
+    subtitle?: string,
+    color?: string,
+  ) => (
     <View style={[styles.metricCard, color && { borderLeftColor: color }]}>
       <Text style={styles.metricTitle}>{title}</Text>
       <Text style={[styles.metricValue, color && { color }]}>{value}</Text>
@@ -96,21 +113,64 @@ const FormAnalyticsDashboard: React.FC = () => {
     const { overview, realTimeMetrics } = dashboardData;
 
     return (
-      <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.tabContent}
+        showsVerticalScrollIndicator={false}
+      >
         <Text style={styles.sectionTitle}>Real-Time Metrics</Text>
         <View style={styles.metricsGrid}>
-          {renderMetricCard('Active Sessions', realTimeMetrics.activeSessions, 'Currently in progress', '#007AFF')}
-          {renderMetricCard('Today Completions', realTimeMetrics.todayCompletions, 'Forms submitted today', '#34C759')}
-          {renderMetricCard('Today Abandonments', realTimeMetrics.todayAbandonments, 'Forms abandoned today', '#FF3B30')}
-          {renderMetricCard('Avg Session Time', formatTime(realTimeMetrics.averageSessionTime), 'For completed forms', '#FF9500')}
+          {renderMetricCard(
+            'Active Sessions',
+            realTimeMetrics.activeSessions,
+            'Currently in progress',
+            '#007AFF',
+          )}
+          {renderMetricCard(
+            'Today Completions',
+            realTimeMetrics.todayCompletions,
+            'Forms submitted today',
+            '#34C759',
+          )}
+          {renderMetricCard(
+            'Today Abandonments',
+            realTimeMetrics.todayAbandonments,
+            'Forms abandoned today',
+            '#FF3B30',
+          )}
+          {renderMetricCard(
+            'Avg Session Time',
+            formatTime(realTimeMetrics.averageSessionTime),
+            'For completed forms',
+            '#FF9500',
+          )}
         </View>
 
         <Text style={styles.sectionTitle}>Overall Performance</Text>
         <View style={styles.metricsGrid}>
-          {renderMetricCard('Total Sessions', overview.totalSessions, 'All time', '#8E8E93')}
-          {renderMetricCard('Completion Rate', `${overview.completionRate.toFixed(1)}%`, `${overview.completedSessions}/${overview.totalSessions}`, '#34C759')}
-          {renderMetricCard('Avg Completion Time', formatTime(overview.averageCompletionTime), 'For successful submissions', '#007AFF')}
-          {renderMetricCard('Recovery Rate', `${overview.recoverySuccessRate.toFixed(1)}%`, 'Error recovery success', '#FF9500')}
+          {renderMetricCard(
+            'Total Sessions',
+            overview.totalSessions,
+            'All time',
+            '#8E8E93',
+          )}
+          {renderMetricCard(
+            'Completion Rate',
+            `${overview.completionRate.toFixed(1)}%`,
+            `${overview.completedSessions}/${overview.totalSessions}`,
+            '#34C759',
+          )}
+          {renderMetricCard(
+            'Avg Completion Time',
+            formatTime(overview.averageCompletionTime),
+            'For successful submissions',
+            '#007AFF',
+          )}
+          {renderMetricCard(
+            'Recovery Rate',
+            `${overview.recoverySuccessRate.toFixed(1)}%`,
+            'Error recovery success',
+            '#FF9500',
+          )}
         </View>
 
         <Text style={styles.sectionTitle}>Step Performance</Text>
@@ -127,12 +187,16 @@ const FormAnalyticsDashboard: React.FC = () => {
         <View style={styles.issuesList}>
           {overview.commonAbandonmentPoints.slice(0, 3).map((point, index) => (
             <View key={index} style={styles.issueItem}>
-              <Text style={styles.issueTitle}>Step {point.step} Abandonment</Text>
-              <Text style={styles.issueValue}>{point.percentage.toFixed(1)}%</Text>
+              <Text style={styles.issueTitle}>
+                Step {point.step} Abandonment
+              </Text>
+              <Text style={styles.issueValue}>
+                {point.percentage.toFixed(1)}%
+              </Text>
               <Text style={styles.issueSubtitle}>{point.count} users</Text>
             </View>
           ))}
-          
+
           {overview.commonValidationErrors.slice(0, 3).map((error, index) => (
             <View key={index} style={styles.issueItem}>
               <Text style={styles.issueTitle}>{error.field} Validation</Text>
@@ -149,40 +213,65 @@ const FormAnalyticsDashboard: React.FC = () => {
     if (!dashboardData) return null;
 
     return (
-      <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.tabContent}
+        showsVerticalScrollIndicator={false}
+      >
         <Text style={styles.sectionTitle}>Recent Sessions</Text>
         {dashboardData.recentSessions.map((session, index) => (
           <View key={session.sessionId} style={styles.sessionCard}>
             <View style={styles.sessionHeader}>
               <Text style={styles.sessionId}>Session {index + 1}</Text>
-              <View style={[
-                styles.sessionStatus,
-                { backgroundColor: session.completionStatus === 'completed' ? '#34C759' : 
-                  session.completionStatus === 'abandoned' ? '#FF3B30' : '#FF9500' }
-              ]}>
-                <Text style={styles.sessionStatusText}>{session.completionStatus}</Text>
+              <View
+                style={[
+                  styles.sessionStatus,
+                  {
+                    backgroundColor:
+                      session.completionStatus === 'completed'
+                        ? '#34C759'
+                        : session.completionStatus === 'abandoned'
+                        ? '#FF3B30'
+                        : '#FF9500',
+                  },
+                ]}
+              >
+                <Text style={styles.sessionStatusText}>
+                  {session.completionStatus}
+                </Text>
               </View>
             </View>
-            
+
             <View style={styles.sessionDetails}>
               <Text style={styles.sessionDetail}>Form: {session.formType}</Text>
-              <Text style={styles.sessionDetail}>Step: {session.currentStep}/{session.maxStepReached}</Text>
-              <Text style={styles.sessionDetail}>Duration: {formatTime(session.totalTimeSpent)}</Text>
-              <Text style={styles.sessionDetail}>Started: {formatDate(session.startTime)}</Text>
+              <Text style={styles.sessionDetail}>
+                Step: {session.currentStep}/{session.maxStepReached}
+              </Text>
+              <Text style={styles.sessionDetail}>
+                Duration: {formatTime(session.totalTimeSpent)}
+              </Text>
+              <Text style={styles.sessionDetail}>
+                Started: {formatDate(session.startTime)}
+              </Text>
             </View>
 
             <View style={styles.sessionMetrics}>
               <View style={styles.sessionMetric}>
                 <Text style={styles.sessionMetricLabel}>Errors</Text>
-                <Text style={styles.sessionMetricValue}>{session.validationErrors}</Text>
+                <Text style={styles.sessionMetricValue}>
+                  {session.validationErrors}
+                </Text>
               </View>
               <View style={styles.sessionMetric}>
                 <Text style={styles.sessionMetricLabel}>Recoveries</Text>
-                <Text style={styles.sessionMetricValue}>{session.recoveryActions}</Text>
+                <Text style={styles.sessionMetricValue}>
+                  {session.recoveryActions}
+                </Text>
               </View>
               <View style={styles.sessionMetric}>
                 <Text style={styles.sessionMetricLabel}>Auto-saves</Text>
-                <Text style={styles.sessionMetricValue}>{session.autoSaves}</Text>
+                <Text style={styles.sessionMetricValue}>
+                  {session.autoSaves}
+                </Text>
               </View>
             </View>
           </View>
@@ -197,20 +286,45 @@ const FormAnalyticsDashboard: React.FC = () => {
     const { crashStats } = dashboardData;
 
     return (
-      <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.tabContent}
+        showsVerticalScrollIndicator={false}
+      >
         <Text style={styles.sectionTitle}>Error Overview</Text>
         <View style={styles.metricsGrid}>
-          {renderMetricCard('Total Reports', crashStats.totalReports, 'All time', '#FF3B30')}
-          {renderMetricCard('Critical Errors', crashStats.reportsBySeverity.critical || 0, 'Requires immediate attention', '#FF3B30')}
-          {renderMetricCard('Form Errors', crashStats.reportsByType.form_validation_error || 0, 'Validation issues', '#FF9500')}
-          {renderMetricCard('Network Errors', crashStats.reportsByType.network_error || 0, 'Connection issues', '#007AFF')}
+          {renderMetricCard(
+            'Total Reports',
+            crashStats.totalReports,
+            'All time',
+            '#FF3B30',
+          )}
+          {renderMetricCard(
+            'Critical Errors',
+            crashStats.reportsBySeverity.critical || 0,
+            'Requires immediate attention',
+            '#FF3B30',
+          )}
+          {renderMetricCard(
+            'Form Errors',
+            crashStats.reportsByType.form_validation_error || 0,
+            'Validation issues',
+            '#FF9500',
+          )}
+          {renderMetricCard(
+            'Network Errors',
+            crashStats.reportsByType.network_error || 0,
+            'Connection issues',
+            '#007AFF',
+          )}
         </View>
 
         <Text style={styles.sectionTitle}>Error Types</Text>
         <View style={styles.errorTypesList}>
           {Object.entries(crashStats.reportsByType).map(([type, count]) => (
             <View key={type} style={styles.errorTypeItem}>
-              <Text style={styles.errorTypeName}>{type.replace(/_/g, ' ')}</Text>
+              <Text style={styles.errorTypeName}>
+                {type.replace(/_/g, ' ')}
+              </Text>
               <Text style={styles.errorTypeCount}>{count}</Text>
             </View>
           ))}
@@ -241,7 +355,12 @@ const FormAnalyticsDashboard: React.FC = () => {
       style={[styles.tabButton, selectedTab === tab && styles.tabButtonActive]}
       onPress={() => setSelectedTab(tab)}
     >
-      <Text style={[styles.tabButtonText, selectedTab === tab && styles.tabButtonTextActive]}>
+      <Text
+        style={[
+          styles.tabButtonText,
+          selectedTab === tab && styles.tabButtonTextActive,
+        ]}
+      >
         {title}
       </Text>
     </TouchableOpacity>

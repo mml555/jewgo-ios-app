@@ -3,7 +3,8 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const compression = require('compression');
-const rateLimit = require('express-rate-limit');
+const logger = require('./utils/logger');
+const { rateLimiters, getStats } = require('./middleware/rateLimiter');
 require('dotenv').config();
 
 // Import database connection
@@ -25,8 +26,11 @@ const favoritesRoutes = require('./routes/favorites');
 const shtetlStoresRoutes = require('./routes/shtetlStores');
 const shtetlProductsRoutes = require('./routes/shtetlProducts');
 const jobsRoutes = require('./routes/jobs');
-const statsRoutes = require('./routes/stats');
+const jobSeekersRoutes = require('./routes/jobSeekers');
 const nearbyRoutes = require('./routes/nearby');
+const eventsRoutes = require('./routes/events');
+const claimsRoutes = require('./routes/claims');
+const adminRoutes = require('./routes/admin');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -47,31 +51,29 @@ const dbPool = new Pool({
 // Initialize auth system
 const authSystem = new AuthSystem(dbPool);
 
+// Trust proxy if behind reverse proxy (nginx, Cloudflare, etc.)
+// This is important for accurate IP detection in rate limiting
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+
 // Security middleware
 app.use(helmet());
 
 // CORS configuration
-app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? ['https://jewgo.app', 'https://www.jewgo.app']
-    : ['http://localhost:3000', 'http://localhost:8081'],
-  credentials: true
-}));
+app.use(
+  cors({
+    origin:
+      process.env.NODE_ENV === 'production'
+        ? ['https://jewgo.app', 'https://www.jewgo.app']
+        : ['http://localhost:3000', 'http://localhost:8081'],
+    credentials: true,
+  }),
+);
 
-// Rate limiting - more lenient for development
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 1000, // limit each IP to 1000 requests per windowMs (increased for development)
-  message: {
-    success: false,
-    error: 'Too many requests from this IP, please try again later.'
-  },
-  skip: (req) => {
-    // Skip rate limiting for health checks and development
-    return req.path === '/health' || process.env.NODE_ENV === 'development';
-  }
-});
-app.use(limiter);
+// Apply general rate limiting to all API routes
+// This provides baseline protection against abuse
+app.use('/api/', rateLimiters.general);
 
 // Compression middleware
 app.use(compression());
@@ -87,20 +89,20 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.get('/health', async (req, res) => {
   try {
     const authHealth = await authSystem.healthCheck();
-    
+
     res.json({
       success: true,
       status: authHealth.status,
       timestamp: new Date().toISOString(),
       version: '2.0.0',
       services: authHealth.services,
-      error: authHealth.error
+      error: authHealth.error,
     });
   } catch (error) {
     res.status(500).json({
       success: false,
       status: 'unhealthy',
-      error: error.message
+      error: error.message,
     });
   }
 });
@@ -110,37 +112,132 @@ const createAuthRoutes = require('./routes/auth');
 const createRBACRoutes = require('./routes/rbac');
 const createGuestRoutes = require('./routes/guest');
 
-// Auth routes
-app.use('/api/v5/auth', createAuthRoutes(authSystem.getAuthController(), authSystem.getAuthMiddleware()));
-app.use('/api/v5/rbac', createRBACRoutes(authSystem.getRBACService(), authSystem.getAuthMiddleware()));
-app.use('/api/v5/guest', createGuestRoutes(authSystem.getGuestController(), authSystem.getAuthMiddleware()));
+// Auth routes - apply stricter rate limiting for security
+app.use(
+  '/api/v5/auth',
+  rateLimiters.auth,
+  createAuthRoutes(
+    authSystem.getAuthController(),
+    authSystem.getAuthMiddleware(),
+  ),
+);
+app.use(
+  '/api/v5/rbac',
+  rateLimiters.auth,
+  createRBACRoutes(authSystem.getRBACService(), authSystem.getAuthMiddleware()),
+);
+app.use(
+  '/api/v5/guest',
+  rateLimiters.general,
+  createGuestRoutes(
+    authSystem.getGuestController(),
+    authSystem.getAuthMiddleware(),
+  ),
+);
 
 // API routes (with authentication middleware)
-app.use('/api/v5/entities', authSystem.getAuthMiddleware().requireAuthOrGuest(), entitiesRoutes);
-app.use('/api/v5/restaurants', authSystem.getAuthMiddleware().requireAuthOrGuest(), restaurantsRoutes);
-app.use('/api/v5/synagogues', authSystem.getAuthMiddleware().requireAuthOrGuest(), synagoguesRoutes);
-app.use('/api/v5/mikvahs', authSystem.getAuthMiddleware().requireAuthOrGuest(), mikvahsRoutes);
-app.use('/api/v5/stores', authSystem.getAuthMiddleware().requireAuthOrGuest(), storesRoutes);
-app.use('/api/v5/reviews', authSystem.getAuthMiddleware().requireAuthOrGuest(), reviewsRoutes);
-app.use('/api/v5/interactions', authSystem.getAuthMiddleware().requireAuthOrGuest(), interactionsRoutes);
-app.use('/api/v5/specials', authSystem.getAuthMiddleware().requireAuthOrGuest(), specialsRoutes);
-app.use('/api/v5/favorites', authSystem.getAuthMiddleware().requireAuthOrGuest(), favoritesRoutes);
-app.use('/api/v5/shtetl-stores', authSystem.getAuthMiddleware().requireAuthOrGuest(), shtetlStoresRoutes);
-app.use('/api/v5/shtetl-products', authSystem.getAuthMiddleware().requireAuthOrGuest(), shtetlProductsRoutes);
-app.use('/api/v5/jobs', authSystem.getAuthMiddleware().requireAuthOrGuest(), jobsRoutes);
+// Read-only endpoints use general rate limiting
+app.use(
+  '/api/v5/entities',
+  authSystem.getAuthMiddleware().requireAuthOrGuest(),
+  entitiesRoutes,
+);
+app.use(
+  '/api/v5/restaurants',
+  authSystem.getAuthMiddleware().requireAuthOrGuest(),
+  restaurantsRoutes,
+);
+app.use(
+  '/api/v5/synagogues',
+  authSystem.getAuthMiddleware().requireAuthOrGuest(),
+  synagoguesRoutes,
+);
+app.use(
+  '/api/v5/mikvahs',
+  authSystem.getAuthMiddleware().requireAuthOrGuest(),
+  mikvahsRoutes,
+);
+app.use(
+  '/api/v5/stores',
+  authSystem.getAuthMiddleware().requireAuthOrGuest(),
+  storesRoutes,
+);
+
+// Write operations get more restrictive rate limiting
+app.use(
+  '/api/v5/reviews',
+  rateLimiters.write,
+  authSystem.getAuthMiddleware().requireAuthOrGuest(),
+  reviewsRoutes,
+);
+app.use(
+  '/api/v5/interactions',
+  rateLimiters.write,
+  authSystem.getAuthMiddleware().requireAuthOrGuest(),
+  interactionsRoutes,
+);
+app.use(
+  '/api/v5/favorites',
+  rateLimiters.write,
+  authSystem.getAuthMiddleware().requireAuthOrGuest(),
+  favoritesRoutes,
+);
+app.use(
+  '/api/v5/claims',
+  rateLimiters.write,
+  authSystem.getAuthMiddleware().requireAuthOrGuest(),
+  claimsRoutes,
+);
+
+// General endpoints
+app.use(
+  '/api/v5/specials',
+  authSystem.getAuthMiddleware().requireAuthOrGuest(),
+  specialsRoutes,
+);
+app.use(
+  '/api/v5/shtetl-stores',
+  authSystem.getAuthMiddleware().requireAuthOrGuest(),
+  shtetlStoresRoutes,
+);
+app.use(
+  '/api/v5/shtetl-products',
+  authSystem.getAuthMiddleware().requireAuthOrGuest(),
+  shtetlProductsRoutes,
+);
+app.use(
+  '/api/v5/jobs',
+  authSystem.getAuthMiddleware().requireAuthOrGuest(),
+  jobsRoutes,
+);
+app.use(
+  '/api/v5/job-seekers',
+  authSystem.getAuthMiddleware().requireAuthOrGuest(),
+  jobSeekersRoutes,
+);
+app.use(
+  '/api/v5/events',
+  authSystem.getAuthMiddleware().requireAuthOrGuest(),
+  eventsRoutes,
+);
+app.use(
+  '/api/v5/admin',
+  authSystem.getAuthMiddleware().requireAuthOrGuest(),
+  adminRoutes,
+);
 app.use('/api/v1', nearbyRoutes); // New optimized nearby API
 // Public dashboard endpoints (no authentication required)
 app.get('/api/v5/dashboard/entities/stats', async (req, res) => {
   try {
-    console.log('📊 Fetching database statistics...');
-    
+    logger.debug('📊 Fetching database statistics...');
+
     // Get total entities count
     const totalEntitiesQuery = `
       SELECT COUNT(*) as total_entities 
       FROM entities 
       WHERE is_active = true
     `;
-    
+
     // Get entities by type
     const entitiesByTypeQuery = `
       SELECT 
@@ -150,7 +247,7 @@ app.get('/api/v5/dashboard/entities/stats', async (req, res) => {
       WHERE is_active = true
       GROUP BY entity_type
     `;
-    
+
     // Get verified and active counts
     const statusQuery = `
       SELECT 
@@ -160,51 +257,51 @@ app.get('/api/v5/dashboard/entities/stats', async (req, res) => {
         SUM(review_count) as total_reviews
       FROM entities
     `;
-    
+
     // Execute all queries
     const [totalResult, typeResult, statusResult] = await Promise.all([
       dbPool.query(totalEntitiesQuery),
       dbPool.query(entitiesByTypeQuery),
-      dbPool.query(statusQuery)
+      dbPool.query(statusQuery),
     ]);
-    
-    const totalEntities = parseInt(totalResult.rows[0].total_entities);
+
+    const totalEntities = parseInt(totalResult.rows[0].total_entities, 10);
     const typeCounts = typeResult.rows.reduce((acc, row) => {
-      acc[row.entity_type] = parseInt(row.count);
+      acc[row.entity_type] = parseInt(row.count, 10);
       return acc;
     }, {});
-    
+
     const status = statusResult.rows[0];
-    
+
     const stats = {
       total_entities: totalEntities,
       restaurants: typeCounts.restaurant || 0,
       synagogues: typeCounts.synagogue || 0,
       mikvahs: typeCounts.mikvah || 0,
       stores: typeCounts.store || 0,
-      verified_count: parseInt(status.verified_count) || 0,
-      active_count: parseInt(status.active_count) || 0,
-      total_reviews: parseInt(status.total_reviews) || 0,
-      average_rating: parseFloat(status.average_rating) || 0.0
+      verified_count: parseInt(status.verified_count, 10) || 0,
+      active_count: parseInt(status.active_count, 10) || 0,
+      total_reviews: parseInt(status.total_reviews, 10) || 0,
+      average_rating: parseFloat(status.average_rating) || 0.0,
     };
-    
-    console.log('📊 Database statistics:', stats);
-    
+
+    logger.info('📊 Database statistics:', stats);
+
     res.json(stats);
   } catch (error) {
-    console.error('❌ Error fetching database statistics:', error);
+    logger.error('❌ Error fetching database statistics:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch database statistics',
-      message: error.message
+      message: error.message,
     });
   }
 });
 
 app.get('/api/v5/dashboard/entities/recent', async (req, res) => {
   try {
-    const limit = parseInt(req.query.limit) || 10;
-    
+    const limit = parseInt(req.query.limit, 10) || 10;
+
     const query = `
       SELECT 
         e.*,
@@ -218,20 +315,20 @@ app.get('/api/v5/dashboard/entities/recent', async (req, res) => {
       ORDER BY e.created_at DESC
       LIMIT $1
     `;
-    
+
     const result = await dbPool.query(query, [limit]);
-    
+
     res.json({
       success: true,
       data: result.rows,
-      count: result.rows.length
+      count: result.rows.length,
     });
   } catch (error) {
-    console.error('❌ Error fetching recent entities:', error);
+    logger.error('❌ Error fetching recent entities:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch recent entities',
-      message: error.message
+      message: error.message,
     });
   }
 });
@@ -248,7 +345,7 @@ app.get('/api/v5/dashboard/entities/analytics', async (req, res) => {
       GROUP BY DATE(created_at)
       ORDER BY date DESC
     `;
-    
+
     // Get top cities by entity count
     const topCitiesQuery = `
       SELECT 
@@ -261,7 +358,7 @@ app.get('/api/v5/dashboard/entities/analytics', async (req, res) => {
       ORDER BY entity_count DESC
       LIMIT 10
     `;
-    
+
     // Get rating distribution
     const ratingDistributionQuery = `
       SELECT 
@@ -282,116 +379,145 @@ app.get('/api/v5/dashboard/entities/analytics', async (req, res) => {
       GROUP BY rating_range
       ORDER BY rating_range
     `;
-    
+
     const [recentResult, citiesResult, ratingResult] = await Promise.all([
       dbPool.query(recentEntitiesQuery),
       dbPool.query(topCitiesQuery),
-      dbPool.query(ratingDistributionQuery)
+      dbPool.query(ratingDistributionQuery),
     ]);
-    
+
     res.json({
       success: true,
       data: {
         recent_entities: recentResult.rows,
         top_cities: citiesResult.rows,
-        rating_distribution: ratingResult.rows
-      }
+        rating_distribution: ratingResult.rows,
+      },
     });
   } catch (error) {
-    console.error('❌ Error fetching analytics:', error);
+    logger.error('❌ Error fetching analytics:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch analytics',
-      message: error.message
+      message: error.message,
     });
   }
 });
 
-// Search endpoint (requires authentication)
-app.get('/api/v5/search', 
+// Search endpoint (requires authentication) - apply search-specific rate limit
+app.get(
+  '/api/v5/search',
+  rateLimiters.search,
   authSystem.getAuthMiddleware().requireAuthOrGuest(),
-  authSystem.getAuthMiddleware().requireGuestPermission('search:public', 'search'),
+  authSystem
+    .getAuthMiddleware()
+    .requireGuestPermission('search:public', 'search'),
   async (req, res) => {
-  try {
-    const { q, ...params } = req.query;
-    
-    if (!q || q.trim().length === 0) {
-      return res.status(400).json({
+    try {
+      const { q, ...params } = req.query;
+
+      if (!q || q.trim().length === 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'Search query is required',
+        });
+      }
+
+      // Import Entity model here to avoid circular dependencies
+      const Entity = require('./models/Entity');
+      const result = await Entity.search(`%${q}%`, params);
+
+      res.json({
+        success: true,
+        data: {
+          entities: result.rows,
+          query: q,
+          pagination: {
+            limit: parseInt(params.limit, 10) || 50,
+            offset: parseInt(params.offset, 10) || 0,
+            total: result.rowCount,
+          },
+        },
+      });
+    } catch (error) {
+      logger.error('Error in search endpoint:', error);
+      res.status(500).json({
         success: false,
-        error: 'Search query is required'
+        error: 'Failed to search entities',
+        message: error.message,
       });
     }
+  },
+);
 
-    // Import Entity model here to avoid circular dependencies
-    const Entity = require('./models/Entity');
-    const result = await Entity.search(`%${q}%`, params);
-    
-    res.json({
-      success: true,
-      data: {
-        entities: result.rows,
-        query: q,
-        pagination: {
-          limit: parseInt(params.limit) || 50,
-          offset: parseInt(params.offset) || 0,
-          total: result.rowCount
-        }
-      }
-    });
-  } catch (error) {
-    console.error('Error in search endpoint:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to search entities',
-      message: error.message
-    });
-  }
-});
+// Rate limiting statistics endpoint (for monitoring)
+app.get(
+  '/api/v5/admin/rate-limit-stats',
+  authSystem.getAuthMiddleware().authenticate(),
+  authSystem.getAuthMiddleware().requirePermission('admin:view'),
+  (req, res) => {
+    try {
+      const stats = getStats();
+      res.json({
+        success: true,
+        data: stats,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      logger.error('Error fetching rate limit stats:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to fetch rate limit statistics',
+      });
+    }
+  },
+);
 
 // 404 handler
 app.use('*', (req, res) => {
   res.status(404).json({
     success: false,
     error: 'Endpoint not found',
-    path: req.originalUrl
+    path: req.originalUrl,
   });
 });
 
 // Error handling middleware
 app.use((error, req, res, next) => {
-  console.error('Unhandled error:', error);
-  
+  logger.error('Unhandled error:', error);
+
   res.status(error.status || 500).json({
     success: false,
-    error: process.env.NODE_ENV === 'production' 
-      ? 'Internal server error' 
-      : error.message,
-    ...(process.env.NODE_ENV !== 'production' && { stack: error.stack })
+    error:
+      process.env.NODE_ENV === 'production'
+        ? 'Internal server error'
+        : error.message,
+    ...(process.env.NODE_ENV !== 'production' && { stack: error.stack }),
   });
 });
 
 // Graceful shutdown
 process.on('SIGINT', async () => {
-  console.log('\n🛑 Received SIGINT. Graceful shutdown...');
+  logger.shutdown('Received SIGINT. Graceful shutdown...');
   await authSystem.cleanup();
   process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
-  console.log('\n🛑 Received SIGTERM. Graceful shutdown...');
+  logger.shutdown('Received SIGTERM. Graceful shutdown...');
   await authSystem.cleanup();
   process.exit(0);
 });
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`🚀 Jewgo API server running on port ${PORT}`);
-  console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔐 Auth system: ${authSystem.healthCheck().status}`);
-  console.log(`🔗 Health check: http://localhost:${PORT}/health`);
-  console.log(`🔑 Auth endpoints: http://localhost:${PORT}/api/v5/auth`);
-  console.log(`👥 RBAC endpoints: http://localhost:${PORT}/api/v5/rbac`);
-  console.log(`📖 API docs: http://localhost:${PORT}/api/v5`);
+  logger.startup(`Jewgo API server running on port ${PORT}`);
+  logger.info(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+  logger.info(`🔐 Auth system: ${authSystem.healthCheck().status}`);
+  logger.info(`🔗 Health check: http://localhost:${PORT}/health`);
+  logger.info(`🔑 Auth endpoints: http://localhost:${PORT}/api/v5/auth`);
+  logger.info(`👥 RBAC endpoints: http://localhost:${PORT}/api/v5/rbac`);
+  logger.info(`📖 API docs: http://localhost:${PORT}/api/v5`);
 });
 
 module.exports = app;

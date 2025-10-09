@@ -1,13 +1,12 @@
-const crypto = require('crypto');
-
 class ReCaptchaProvider {
   constructor(config) {
     this.secretKey = config.secretKey;
     this.siteKey = config.siteKey;
     this.version = config.version || 'v2';
     this.threshold = config.threshold || 0.5;
-    this.baseUrl = config.baseUrl || 'https://www.google.com/recaptcha/api/siteverify';
-    
+    this.baseUrl =
+      config.baseUrl || 'https://www.google.com/recaptcha/api/siteverify';
+
     if (!this.secretKey) {
       throw new Error('reCAPTCHA secret key is required');
     }
@@ -19,14 +18,14 @@ class ReCaptchaProvider {
         success: false,
         score: 0,
         error: 'Missing token',
-        details: { error_codes: ['missing-input-response'] }
+        details: { error_codes: ['missing-input-response'] },
       };
     }
 
     try {
       const response = await this.makeVerificationRequest(token, remoteIp);
       const result = await response.json();
-      
+
       return this.processVerificationResult(result);
     } catch (error) {
       console.error('reCAPTCHA verification request failed:', error);
@@ -34,7 +33,7 @@ class ReCaptchaProvider {
         success: false,
         score: 0,
         error: error.message,
-        details: { error_codes: ['network-error'] }
+        details: { error_codes: ['network-error'] },
       };
     }
   }
@@ -56,21 +55,16 @@ class ReCaptchaProvider {
     });
 
     if (!response.ok) {
-      throw new Error(`reCAPTCHA API returned ${response.status}: ${response.statusText}`);
+      throw new Error(
+        `reCAPTCHA API returned ${response.status}: ${response.statusText}`,
+      );
     }
 
     return response;
   }
 
   processVerificationResult(result) {
-    const {
-      success,
-      score,
-      action,
-      challenge_ts,
-      hostname,
-      error_codes = []
-    } = result;
+    const { success, challenge_ts, hostname, error_codes = [] } = result;
 
     // Basic success check
     if (!success) {
@@ -81,8 +75,8 @@ class ReCaptchaProvider {
         details: {
           error_codes,
           challenge_ts,
-          hostname
-        }
+          hostname,
+        },
       };
     }
 
@@ -96,10 +90,10 @@ class ReCaptchaProvider {
 
   processV3Result(result) {
     const { score, action, hostname, challenge_ts } = result;
-    
+
     // Check score threshold
     const meetsThreshold = score >= this.threshold;
-    
+
     return {
       success: meetsThreshold,
       score: score,
@@ -108,14 +102,14 @@ class ReCaptchaProvider {
         hostname,
         challenge_ts,
         threshold: this.threshold,
-        meets_threshold: meetsThreshold
-      }
+        meets_threshold: meetsThreshold,
+      },
     };
   }
 
   processV2Result(result) {
     const { hostname, challenge_ts } = result;
-    
+
     // v2 doesn't have score, just success/failure
     return {
       success: true,
@@ -123,8 +117,8 @@ class ReCaptchaProvider {
       details: {
         hostname,
         challenge_ts,
-        version: 'v2'
-      }
+        version: 'v2',
+      },
     };
   }
 
@@ -138,7 +132,7 @@ class ReCaptchaProvider {
     return {
       siteKey: this.siteKey,
       version: this.version,
-      threshold: this.threshold
+      threshold: this.threshold,
     };
   }
 }

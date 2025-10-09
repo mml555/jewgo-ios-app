@@ -16,8 +16,18 @@ export interface ApiResponse<T> {
 }
 
 // Discount types
-export type DiscountKind = 'percentage' | 'fixed_amount' | 'bogo' | 'free_item' | 'other';
-export type ClaimStatus = 'claimed' | 'redeemed' | 'expired' | 'cancelled' | 'revoked';
+export type DiscountKind =
+  | 'percentage'
+  | 'fixed_amount'
+  | 'bogo'
+  | 'free_item'
+  | 'other';
+export type ClaimStatus =
+  | 'claimed'
+  | 'redeemed'
+  | 'expired'
+  | 'cancelled'
+  | 'revoked';
 
 // Main special interface
 export interface Special {
@@ -47,37 +57,38 @@ export interface Special {
   title: string;
   subtitle?: string;
   description?: string;
-  
+
   // Discount Information
   discountType: DiscountKind;
   discountValue?: number;
   discountLabel: string;
-  
+
   // Validity Period
   validFrom: string;
   validUntil: string;
   validity?: string; // tstzrange representation
-  
+
   // Status and Limits
   isEnabled: boolean;
   maxClaimsTotal?: number;
   maxClaimsPerUser: number;
   claimsTotal: number; // counter cache for performance
   priority: number; // for "top special" selection
-  
+
   // Terms and Conditions
   requiresCode: boolean;
   codeHint?: string;
   terms?: string;
-  
+
   // Media
   heroImageUrl?: string;
-  
+  image_url?: string; // API response field
+
   // Metadata
   createdBy?: string;
   createdAt: string;
   updatedAt: string;
-  
+
   // Additional fields from API response
   business_name?: string;
   business_address?: string;
@@ -264,6 +275,9 @@ export interface ActiveSpecial {
     type: 'Point';
     coordinates: [number, number];
   };
+  // Enhanced deal type information
+  discountType?: DiscountKind;
+  discountValue?: number;
 }
 
 // API request/response types

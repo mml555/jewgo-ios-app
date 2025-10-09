@@ -1,10 +1,16 @@
 import React, { useCallback } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Text, View, StyleSheet, Platform } from 'react-native';
+import { TabParamList } from '../types/navigation';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Vibration } from 'react-native';
 import { Keyboard } from 'react-native';
-import { Colors, Typography, Spacing, TouchTargets } from '../styles/designSystem';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  TouchTargets,
+} from '../styles/designSystem';
 import SpecialsIcon from '../components/SpecialsIcon';
 import HeartIcon from '../components/HeartIcon';
 
@@ -15,7 +21,7 @@ import SpecialsScreen from '../screens/SpecialsScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 
-const Tab = createBottomTabNavigator();
+const Tab = createBottomTabNavigator<TabParamList>();
 
 // Tab icon component with haptic feedback
 const TabIcon: React.FC<{
@@ -31,13 +37,13 @@ const TabIcon: React.FC<{
     } else {
       Vibration.vibrate(50); // Short vibration for Android
     }
-    
+
     // Dismiss keyboard when switching tabs
     Keyboard.dismiss();
   }, []);
 
   return (
-    <View 
+    <View
       style={styles.tabIconContainer}
       onTouchStart={handlePress}
       accessible={true}
@@ -46,7 +52,10 @@ const TabIcon: React.FC<{
       accessibilityHint={`Navigate to ${label} tab`}
     >
       {iconComponent ? (
-        React.createElement(iconComponent, { size: 24, color: focused ? Colors.primary.main : Colors.textSecondary })
+        React.createElement(iconComponent, {
+          size: 24,
+          color: focused ? Colors.primary.main : Colors.textSecondary,
+        })
       ) : (
         <Text style={[styles.tabIcon, focused && styles.tabIconFocused]}>
           {icon}
@@ -62,10 +71,15 @@ function RootTabs() {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
+        // Note: tabBarIcon and tabBarLabel are React Navigation's API design
+        // They expect functions that return elements - this is the correct usage
+        /* eslint-disable react/no-unstable-nested-components */
         tabBarIcon: ({ focused }) => {
           let icon: string;
           let label: string;
-          let iconComponent: React.ComponentType<{ size?: number; color?: string }> | undefined;
+          let iconComponent:
+            | React.ComponentType<{ size?: number; color?: string }>
+            | undefined;
 
           switch (route.name) {
             case 'Home':
@@ -95,13 +109,21 @@ function RootTabs() {
               label = 'Unknown';
           }
 
-          return <TabIcon icon={icon} focused={focused} label={label} iconComponent={iconComponent} />;
+          return (
+            <TabIcon
+              icon={icon}
+              focused={focused}
+              label={label}
+              iconComponent={iconComponent}
+            />
+          );
         },
         tabBarLabel: ({ focused }) => (
           <Text style={[styles.tabLabel, focused && styles.tabLabelFocused]}>
             {route.name}
           </Text>
         ),
+        /* eslint-enable react/no-unstable-nested-components */
         tabBarStyle: {
           ...styles.tabBar,
           paddingBottom: Math.max(insets.bottom, 8),
@@ -113,36 +135,36 @@ function RootTabs() {
         tabBarHideOnKeyboard: true,
       })}
     >
-      <Tab.Screen 
-        name="Home" 
+      <Tab.Screen
+        name="Home"
         component={HomeScreen}
         options={{
           tabBarAccessibilityLabel: 'Home tab',
         }}
       />
-      <Tab.Screen 
-        name="Favorites" 
+      <Tab.Screen
+        name="Favorites"
         component={FavoritesScreen}
         options={{
           tabBarAccessibilityLabel: 'Favorites tab',
         }}
       />
-      <Tab.Screen 
-        name="Specials" 
+      <Tab.Screen
+        name="Specials"
         component={SpecialsScreen}
         options={{
           tabBarAccessibilityLabel: 'Specials tab',
         }}
       />
-      <Tab.Screen 
-        name="Notifications" 
+      <Tab.Screen
+        name="Notifications"
         component={NotificationsScreen}
         options={{
           tabBarAccessibilityLabel: 'Notifications tab',
         }}
       />
-      <Tab.Screen 
-        name="Profile" 
+      <Tab.Screen
+        name="Profile"
         component={ProfileScreen}
         options={{
           tabBarAccessibilityLabel: 'Profile tab',
@@ -154,7 +176,7 @@ function RootTabs() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.background.primary,
     borderTopWidth: 0,
     paddingTop: Spacing.sm,
     elevation: 0,

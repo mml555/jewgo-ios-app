@@ -1,7 +1,13 @@
 import Geolocation from 'react-native-geolocation-service';
-import { request, PERMISSIONS, RESULTS, Permission } from 'react-native-permissions';
+import {
+  request,
+  PERMISSIONS,
+  RESULTS,
+  Permission,
+} from 'react-native-permissions';
 import { Platform, Alert, Linking } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { debugLog, warnLog } from '../utils/logger';
 
 // Types
 export interface LocationData {
@@ -9,7 +15,7 @@ export interface LocationData {
   longitude: number;
   accuracy: number;
   timestamp: number;
-  accuracyAuthorization?: 'full' | 'reduced';
+  accuracyAuthorization?: 'full' | 'reduced' | 'unknown';
 }
 
 export interface LocationState {
@@ -86,13 +92,13 @@ class LocationService {
       if (cached) {
         const locationData: LocationData = JSON.parse(cached);
         const age = Date.now() - locationData.timestamp;
-        
+
         if (age <= LOCATION_CACHE_TTL) {
           this.updateState({ lastKnownLocation: locationData });
         }
       }
     } catch (error) {
-      console.warn('Failed to load cached location:', error);
+      warnLog('Failed to load cached location:', error);
     }
   }
 
@@ -102,7 +108,7 @@ class LocationService {
       await AsyncStorage.setItem(LOCATION_CACHE_KEY, JSON.stringify(location));
       this.updateState({ lastKnownLocation: location });
     } catch (error) {
-      console.warn('Failed to cache location:', error);
+      warnLog('Failed to cache location:', error);
     }
   }
 
@@ -134,16 +140,16 @@ class LocationService {
           permissionStatus = 'undetermined';
       }
 
-      this.updateState({ 
-        permissionStatus, 
-        loading: false 
+      this.updateState({
+        permissionStatus,
+        loading: false,
       });
 
       return result === RESULTS.GRANTED;
     } catch (error) {
-      this.updateState({ 
+      this.updateState({
         error: 'Failed to request location permission',
-        loading: false 
+        loading: false,
       });
       return false;
     }
@@ -162,9 +168,11 @@ class LocationService {
   }
 
   // Get current location with proper error handling
-  async getCurrentLocation(config: Partial<LocationConfig> = {}): Promise<LocationData | null> {
+  async getCurrentLocation(
+    config: Partial<LocationConfig> = {},
+  ): Promise<LocationData | null> {
     const finalConfig = { ...DEFAULT_CONFIG, ...config };
-    
+
     // Check permission first
     if (this.state.permissionStatus !== 'granted') {
       const granted = await this.requestPermission();
@@ -176,7 +184,7 @@ class LocationService {
     this.updateState({ loading: true, error: null });
     this.startTime = Date.now();
 
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       const options = {
         enableHighAccuracy: finalConfig.desiredAccuracy === 'high',
         timeout: finalConfig.timeout,
@@ -185,7 +193,7 @@ class LocationService {
       };
 
       Geolocation.getCurrentPosition(
-        (position) => {
+        (position: any) => {
           const timeToFirstFix = Date.now() - this.startTime;
           const accuracyAuthorization = this.checkAccuracyAuthorization();
 
@@ -218,7 +226,7 @@ class LocationService {
 
           resolve(locationData);
         },
-        (error) => {
+        (error: any) => {
           const timeToFirstFix = Date.now() - this.startTime;
           let errorMessage = 'Failed to get location';
           let errorClass = 'unknown';
@@ -256,7 +264,7 @@ class LocationService {
           const fallbackLocation = this.getFallbackLocation();
           resolve(fallbackLocation);
         },
-        options
+        options,
       );
     });
   }
@@ -297,7 +305,7 @@ class LocationService {
     };
 
     this.watchId = Geolocation.watchPosition(
-      (position) => {
+      (position: any) => {
         const accuracyAuthorization = this.checkAccuracyAuthorization();
         const locationData: LocationData = {
           latitude: position.coords.latitude,
@@ -313,13 +321,13 @@ class LocationService {
           accuracyAuthorization,
         });
       },
-      (error) => {
-        console.warn('Location watch error:', error);
+      (error: any) => {
+        warnLog('Location watch error:', error);
         this.updateState({
           error: 'Location watch failed',
         });
       },
-      options
+      options,
     );
   }
 
@@ -343,11 +351,11 @@ class LocationService {
       'For more accurate distances to nearby businesses, you can enable precise location in Settings.',
       [
         { text: 'Not Now', style: 'cancel' },
-        { 
-          text: 'Settings', 
-          onPress: () => Linking.openSettings() 
-        }
-      ]
+        {
+          text: 'Settings',
+          onPress: () => Linking.openSettings(),
+        },
+      ],
     );
   }
 
@@ -366,8 +374,8 @@ class LocationService {
       longitude: undefined,
     };
 
-    console.log(`📍 Location Telemetry [${event}]:`, sanitizedData);
-    
+    debugLog(`📍 Location Telemetry [${event}]:`, sanitizedData);
+
     // In production, send to analytics service
     // analytics.track(event, sanitizedData);
   }
@@ -389,11 +397,13 @@ class LocationService {
   // Check if location services are enabled
   async isLocationServicesEnabled(): Promise<boolean> {
     try {
-      return await Geolocation.getCurrentPosition(
-        () => true,
-        () => false,
-        { timeout: 1000, maximumAge: 0 }
-      ) !== null;
+      return (
+        (await Geolocation.getCurrentPosition(
+          () => true,
+          () => false,
+          { timeout: 1000, maximumAge: 0 },
+        )) !== null
+      );
     } catch {
       return false;
     }
@@ -407,7 +417,7 @@ class LocationService {
 
     const currentTime = Date.now();
     const timeSinceLastUpdate = currentTime - this.state.location.timestamp;
-    
+
     // If it's been more than 5 minutes, invalidate cache
     if (timeSinceLastUpdate > 5 * 60 * 1000) {
       this.updateState({ lastKnownLocation: null });

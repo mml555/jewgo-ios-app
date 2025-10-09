@@ -1,5 +1,3 @@
-const { Pool } = require('pg');
-
 class RBACService {
   constructor(dbPool) {
     this.db = dbPool;
@@ -17,31 +15,34 @@ class RBACService {
        JOIN permissions p ON rp.permission_id = p.id
        WHERE urb.user_id = $1
          AND (urb.expires_at IS NULL OR urb.expires_at > NOW())`,
-      [userId]
+      [userId],
     );
-    
+
     return result.rows;
   }
 
   async userHasPermission(userId, permission, resource = null) {
     const result = await this.db.query(
       `SELECT user_has_permission($1, $2, $3) as has_permission`,
-      [userId, permission, resource]
+      [userId, permission, resource],
     );
-    
+
     return result.rows[0].has_permission;
   }
 
   async getUserRoles(userId) {
-    const result = await this.db.query(`
+    const result = await this.db.query(
+      `
       SELECT r.name, r.description, urb.scope, urb.expires_at
       FROM user_role_bindings urb
       JOIN roles r ON urb.role_id = r.id
       WHERE urb.user_id = $1
         AND (urb.expires_at IS NULL OR urb.expires_at > NOW())
       ORDER BY r.name
-    `, [userId]);
-    
+    `,
+      [userId],
+    );
+
     return result.rows;
   }
 
@@ -51,30 +52,33 @@ class RBACService {
 
   async createRole(roleData) {
     const { name, description, permissions = [] } = roleData;
-    
+
     const client = await this.db.connect();
     try {
       await client.query('BEGIN');
-      
+
       // Create role
-      const roleResult = await client.query(`
+      const roleResult = await client.query(
+        `
         INSERT INTO roles (name, description)
         VALUES ($1, $2)
         RETURNING id, name, description, created_at
-      `, [name, description]);
-      
+      `,
+        [name, description],
+      );
+
       const role = roleResult.rows[0];
-      
+
       // Assign permissions if provided
       if (permissions.length > 0) {
         await this.assignPermissionsToRole(role.id, permissions, client);
       }
-      
+
       await client.query('COMMIT');
-      
+
       return {
         ...role,
-        permissions
+        permissions,
       };
     } catch (error) {
       await client.query('ROLLBACK');
@@ -86,37 +90,44 @@ class RBACService {
 
   async updateRole(roleId, roleData) {
     const { name, description } = roleData;
-    
-    const result = await this.db.query(`
+
+    const result = await this.db.query(
+      `
       UPDATE roles 
       SET name = $1, description = $2, updated_at = NOW(), version = version + 1
       WHERE id = $3 AND is_system = FALSE
       RETURNING id, name, description, updated_at, version
-    `, [name, description, roleId]);
-    
+    `,
+      [name, description, roleId],
+    );
+
     if (result.rows.length === 0) {
       throw new Error('Role not found or is a system role');
     }
-    
+
     return result.rows[0];
   }
 
   async deleteRole(roleId) {
-    const result = await this.db.query(`
+    const result = await this.db.query(
+      `
       DELETE FROM roles 
       WHERE id = $1 AND is_system = FALSE
       RETURNING id, name
-    `, [roleId]);
-    
+    `,
+      [roleId],
+    );
+
     if (result.rows.length === 0) {
       throw new Error('Role not found or is a system role');
     }
-    
+
     return result.rows[0];
   }
 
   async getRole(roleId) {
-    const result = await this.db.query(`
+    const result = await this.db.query(
+      `
       SELECT r.id, r.name, r.description, r.is_system, r.created_at, r.updated_at,
              COALESCE(array_agg(p.name ORDER BY p.name), '{}') as permissions
       FROM roles r
@@ -124,8 +135,10 @@ class RBACService {
       LEFT JOIN permissions p ON rp.permission_id = p.id
       WHERE r.id = $1
       GROUP BY r.id, r.name, r.description, r.is_system, r.created_at, r.updated_at
-    `, [roleId]);
-    
+    `,
+      [roleId],
+    );
+
     return result.rows[0] || null;
   }
 
@@ -139,7 +152,7 @@ class RBACService {
       GROUP BY r.id, r.name, r.description, r.is_system, r.created_at, r.updated_at
       ORDER BY r.name
     `);
-    
+
     return result.rows;
   }
 
@@ -149,13 +162,16 @@ class RBACService {
 
   async createPermission(permissionData) {
     const { name, description, resource } = permissionData;
-    
-    const result = await this.db.query(`
+
+    const result = await this.db.query(
+      `
       INSERT INTO permissions (name, description, resource)
       VALUES ($1, $2, $3)
       RETURNING id, name, description, resource, created_at
-    `, [name, description, resource]);
-    
+    `,
+      [name, description, resource],
+    );
+
     return result.rows[0];
   }
 
@@ -165,35 +181,41 @@ class RBACService {
       FROM permissions
       ORDER BY name
     `);
-    
+
     return result.rows;
   }
 
   async assignPermissionsToRole(roleId, permissionNames, client = null) {
-    const dbClient = client || await this.db.connect();
-    
+    const dbClient = client || (await this.db.connect());
+
     try {
       // Get permission IDs
-      const permissionResult = await dbClient.query(`
+      const permissionResult = await dbClient.query(
+        `
         SELECT id FROM permissions WHERE name = ANY($1)
-      `, [permissionNames]);
-      
+      `,
+        [permissionNames],
+      );
+
       const permissionIds = permissionResult.rows.map(row => row.id);
-      
+
       if (permissionIds.length !== permissionNames.length) {
         const foundNames = permissionResult.rows.map(row => row.name);
-        const missing = permissionNames.filter(name => !foundNames.includes(name));
+        const missing = permissionNames.filter(
+          name => !foundNames.includes(name),
+        );
         throw new Error(`Permissions not found: ${missing.join(', ')}`);
       }
-      
+
       // Insert role-permission mappings
-      const values = permissionIds.map(pid => `('${roleId}', '${pid}')`).join(',');
+      const values = permissionIds
+        .map(pid => `('${roleId}', '${pid}')`)
+        .join(',');
       await dbClient.query(`
         INSERT INTO role_permissions (role_id, permission_id)
         VALUES ${values}
         ON CONFLICT (role_id, permission_id) DO NOTHING
       `);
-      
     } finally {
       if (!client) {
         dbClient.release();
@@ -202,16 +224,19 @@ class RBACService {
   }
 
   async removePermissionsFromRole(roleId, permissionNames, client = null) {
-    const dbClient = client || await this.db.connect();
-    
+    const dbClient = client || (await this.db.connect());
+
     try {
-      await dbClient.query(`
+      await dbClient.query(
+        `
         DELETE FROM role_permissions 
         WHERE role_id = $1 
           AND permission_id IN (
             SELECT id FROM permissions WHERE name = ANY($2)
           )
-      `, [roleId, permissionNames]);
+      `,
+        [roleId, permissionNames],
+      );
     } finally {
       if (!client) {
         dbClient.release();
@@ -223,43 +248,55 @@ class RBACService {
   // USER ROLE ASSIGNMENTS
   // ==============================================
 
-  async assignRoleToUser(userId, roleName, scope = null, expiresAt = null, assignedBy = null) {
+  async assignRoleToUser(
+    userId,
+    roleName,
+    scope = null,
+    expiresAt = null,
+    assignedBy = null,
+  ) {
     const client = await this.db.connect();
     try {
       await client.query('BEGIN');
-      
+
       // Get role ID
       const roleResult = await client.query(
         'SELECT id FROM roles WHERE name = $1',
-        [roleName]
+        [roleName],
       );
-      
+
       if (roleResult.rows.length === 0) {
         throw new Error(`Role not found: ${roleName}`);
       }
-      
+
       const roleId = roleResult.rows[0].id;
-      
+
       // Check if assignment already exists
-      const existingResult = await client.query(`
+      const existingResult = await client.query(
+        `
         SELECT id FROM user_role_bindings 
         WHERE user_id = $1 AND role_id = $2 AND scope = $3
           AND (expires_at IS NULL OR expires_at > NOW())
-      `, [userId, roleId, scope]);
-      
+      `,
+        [userId, roleId, scope],
+      );
+
       if (existingResult.rows.length > 0) {
         throw new Error('User already has this role assignment');
       }
-      
+
       // Create assignment
-      const result = await client.query(`
+      const result = await client.query(
+        `
         INSERT INTO user_role_bindings (user_id, role_id, scope, expires_at, created_by)
         VALUES ($1, $2, $3, $4, $5)
         RETURNING id, role_id, scope, expires_at, created_at
-      `, [userId, roleId, scope, expiresAt, assignedBy]);
-      
+      `,
+        [userId, roleId, scope, expiresAt, assignedBy],
+      );
+
       await client.query('COMMIT');
-      
+
       return result.rows[0];
     } catch (error) {
       await client.query('ROLLBACK');
@@ -270,19 +307,23 @@ class RBACService {
   }
 
   async removeRoleFromUser(userId, roleName, scope = null) {
-    const result = await this.db.query(`
+    const result = await this.db.query(
+      `
       DELETE FROM user_role_bindings 
       WHERE user_id = $1 
         AND role_id = (SELECT id FROM roles WHERE name = $2)
         AND scope = $3
       RETURNING id, role_id, scope
-    `, [userId, roleName, scope]);
-    
+    `,
+      [userId, roleName, scope],
+    );
+
     return result.rows[0] || null;
   }
 
   async getUserRoleAssignments(userId) {
-    const result = await this.db.query(`
+    const result = await this.db.query(
+      `
       SELECT urb.id, r.name as role_name, r.description, urb.scope, 
              urb.expires_at, urb.created_at, urb.created_by,
              u.primary_email as assigned_by_email
@@ -291,8 +332,10 @@ class RBACService {
       LEFT JOIN users u ON urb.created_by = u.id
       WHERE urb.user_id = $1
       ORDER BY r.name, urb.created_at DESC
-    `, [userId]);
-    
+    `,
+      [userId],
+    );
+
     return result.rows;
   }
 
@@ -301,23 +344,30 @@ class RBACService {
   // ==============================================
 
   async checkEntityPermission(userId, permission, entityId = null) {
-    const hasGlobalPermission = await this.userHasPermission(userId, permission);
-    
+    const hasGlobalPermission = await this.userHasPermission(
+      userId,
+      permission,
+    );
+
     if (hasGlobalPermission) {
       return true;
     }
-    
+
     // Check resource-specific permissions
     if (entityId) {
-      const hasResourcePermission = await this.userHasPermission(userId, permission, 'entity');
+      const hasResourcePermission = await this.userHasPermission(
+        userId,
+        permission,
+        'entity',
+      );
       if (hasResourcePermission) {
         // Additional check: is user the owner of the entity?
         if (permission.includes('own')) {
           const entityResult = await this.db.query(
             'SELECT owner_id FROM entities WHERE id = $1',
-            [entityId]
+            [entityId],
           );
-          
+
           if (entityResult.rows.length > 0) {
             return entityResult.rows[0].owner_id === userId;
           }
@@ -325,28 +375,35 @@ class RBACService {
         return true;
       }
     }
-    
+
     return false;
   }
 
   async checkReviewPermission(userId, permission, reviewId = null) {
-    const hasGlobalPermission = await this.userHasPermission(userId, permission);
-    
+    const hasGlobalPermission = await this.userHasPermission(
+      userId,
+      permission,
+    );
+
     if (hasGlobalPermission) {
       return true;
     }
-    
+
     // Check resource-specific permissions
     if (reviewId) {
-      const hasResourcePermission = await this.userHasPermission(userId, permission, 'review');
+      const hasResourcePermission = await this.userHasPermission(
+        userId,
+        permission,
+        'review',
+      );
       if (hasResourcePermission) {
         // Additional check: is user the owner of the review?
         if (permission.includes('own')) {
           const reviewResult = await this.db.query(
             'SELECT user_id FROM reviews WHERE id = $1',
-            [reviewId]
+            [reviewId],
           );
-          
+
           if (reviewResult.rows.length > 0) {
             return reviewResult.rows[0].user_id === userId;
           }
@@ -354,7 +411,7 @@ class RBACService {
         return true;
       }
     }
-    
+
     return false;
   }
 
@@ -375,7 +432,7 @@ class RBACService {
       GROUP BY r.id, r.name, r.description
       ORDER BY r.name
     `);
-    
+
     return result.rows;
   }
 
@@ -389,7 +446,7 @@ class RBACService {
       GROUP BY p.id, p.name, p.resource
       ORDER BY user_count DESC, p.name
     `);
-    
+
     return result.rows;
   }
 

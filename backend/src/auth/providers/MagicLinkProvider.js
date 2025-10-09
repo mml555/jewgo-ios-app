@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
+const logger = require('../../utils/logger');
 
 class MagicLinkProvider {
   constructor(config) {
@@ -7,7 +8,7 @@ class MagicLinkProvider {
     this.expirationTime = config.expirationTime || 15 * 60 * 1000; // 15 minutes default
     this.baseUrl = config.baseUrl;
     this.frontendUrl = config.frontendUrl;
-    
+
     if (!this.secretKey) {
       throw new Error('Magic link secret key is required');
     }
@@ -27,14 +28,14 @@ class MagicLinkProvider {
       };
 
       const token = jwt.sign(payload, this.secretKey, { algorithm: 'HS256' });
-      
+
       return {
         success: true,
         token,
         expiresAt: new Date(Date.now() + this.expirationTime),
       };
     } catch (error) {
-      console.error('Error generating magic link:', error);
+      logger.error('Error generating magic link:', error);
       return {
         success: false,
         error: error.message,
@@ -47,8 +48,10 @@ class MagicLinkProvider {
    */
   verifyMagicLink(token) {
     try {
-      const payload = jwt.verify(token, this.secretKey, { algorithms: ['HS256'] });
-      
+      const payload = jwt.verify(token, this.secretKey, {
+        algorithms: ['HS256'],
+      });
+
       // Check if token is expired (additional check)
       if (payload.exp < Math.floor(Date.now() / 1000)) {
         return {
@@ -67,8 +70,8 @@ class MagicLinkProvider {
         expiresAt: new Date(payload.exp * 1000),
       };
     } catch (error) {
-      console.error('Error verifying magic link:', error);
-      
+      logger.error('Error verifying magic link:', error);
+
       if (error.name === 'TokenExpiredError') {
         return {
           success: false,
@@ -76,7 +79,7 @@ class MagicLinkProvider {
           code: 'TOKEN_EXPIRED',
         };
       }
-      
+
       if (error.name === 'JsonWebTokenError') {
         return {
           success: false,
@@ -98,13 +101,13 @@ class MagicLinkProvider {
    */
   generateMagicLinkUrl(email, purpose = 'login') {
     const result = this.generateMagicLink(email, purpose);
-    
+
     if (!result.success) {
       return result;
     }
 
     const url = `${this.baseUrl}/auth/magic-link/verify?token=${result.token}`;
-    
+
     return {
       success: true,
       url,
@@ -118,13 +121,13 @@ class MagicLinkProvider {
    */
   generateMobileMagicLinkUrl(email, purpose = 'login') {
     const result = this.generateMagicLink(email, purpose);
-    
+
     if (!result.success) {
       return result;
     }
 
     const url = `${this.frontendUrl}/auth/magic-link?token=${result.token}`;
-    
+
     return {
       success: true,
       url,
@@ -137,11 +140,12 @@ class MagicLinkProvider {
    * Create magic link email template
    */
   createMagicLinkEmail(email, magicLinkUrl, purpose = 'login') {
-    const subject = purpose === 'login' 
-      ? 'Sign in to Jewgo' 
-      : purpose === 'register'
-      ? 'Complete your Jewgo registration'
-      : 'Access your Jewgo account';
+    const subject =
+      purpose === 'login'
+        ? 'Sign in to Jewgo'
+        : purpose === 'register'
+        ? 'Complete your Jewgo registration'
+        : 'Access your Jewgo account';
 
     const html = `
       <!DOCTYPE html>
@@ -168,9 +172,21 @@ class MagicLinkProvider {
           <div class="content">
             <h2>${subject}</h2>
             <p>Hello!</p>
-            <p>Click the button below to ${purpose === 'login' ? 'sign in to' : purpose === 'register' ? 'complete your registration for' : 'access'} your Jewgo account:</p>
+            <p>Click the button below to ${
+              purpose === 'login'
+                ? 'sign in to'
+                : purpose === 'register'
+                ? 'complete your registration for'
+                : 'access'
+            } your Jewgo account:</p>
             <p style="text-align: center;">
-              <a href="${magicLinkUrl}" class="button">${purpose === 'login' ? 'Sign In' : purpose === 'register' ? 'Complete Registration' : 'Access Account'}</a>
+              <a href="${magicLinkUrl}" class="button">${
+      purpose === 'login'
+        ? 'Sign In'
+        : purpose === 'register'
+        ? 'Complete Registration'
+        : 'Access Account'
+    }</a>
             </p>
             <p>Or copy and paste this link into your browser:</p>
             <p style="word-break: break-all; background: #f8f9fa; padding: 10px; border-radius: 4px;">${magicLinkUrl}</p>
@@ -192,7 +208,13 @@ class MagicLinkProvider {
       
       Hello!
       
-      Click the link below to ${purpose === 'login' ? 'sign in to' : purpose === 'register' ? 'complete your registration for' : 'access'} your Jewgo account:
+      Click the link below to ${
+        purpose === 'login'
+          ? 'sign in to'
+          : purpose === 'register'
+          ? 'complete your registration for'
+          : 'access'
+      } your Jewgo account:
       
       ${magicLinkUrl}
       
@@ -214,15 +236,15 @@ class MagicLinkProvider {
    */
   validateConfig() {
     const errors = [];
-    
+
     if (!this.secretKey) {
       errors.push('Magic link secret key is required');
     }
-    
+
     if (!this.baseUrl) {
       errors.push('Magic link base URL is required');
     }
-    
+
     if (!this.frontendUrl) {
       errors.push('Frontend URL is required');
     }

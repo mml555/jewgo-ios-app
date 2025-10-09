@@ -6,12 +6,22 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Switch,
 } from 'react-native';
 import { ListingFormData } from '../../screens/AddCategoryScreen';
-import { Colors, Typography, Spacing, BorderRadius, Shadows, TouchTargets } from '../../styles/designSystem';
-import BusinessHoursSelector, { BusinessHoursData, DayHours } from '../BusinessHoursSelector';
-import { useResponsiveDimensions, getResponsiveLayout } from '../../utils/deviceAdaptation';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  TouchTargets,
+} from '../../styles/designSystem';
+import BusinessHoursSelector, {
+  BusinessHoursData,
+} from '../BusinessHoursSelector';
+import {
+  useResponsiveDimensions,
+  getResponsiveLayout,
+} from '../../utils/deviceAdaptation';
 import { KeyboardManager } from '../../utils/keyboardManager';
 import { hapticButtonPress } from '../../utils/hapticFeedback';
 import EnhancedFormInput from '../EnhancedFormInput';
@@ -23,501 +33,590 @@ interface HoursServicesPageProps {
   category: string;
 }
 
-const HoursServicesPage: React.FC<HoursServicesPageProps> = memo(({
-  formData,
-  onFormDataChange,
-  category,
-}) => {
-  const [errors, setErrors] = useState<{ [key: string]: string }>({});
-  
-  // Responsive design hooks
-  const dimensions = useResponsiveDimensions();
-  const responsiveLayout = getResponsiveLayout();
+const HoursServicesPage: React.FC<HoursServicesPageProps> = memo(
+  ({ formData, onFormDataChange }) => {
+    const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
-  const handleInputChange = useCallback((field: keyof ListingFormData, value: string | boolean | number) => {
-    onFormDataChange({ [field]: value });
-    
-    // Clear error when user starts typing
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
-    }
-  }, [onFormDataChange, errors]);
+    // Responsive design hooks
+    const dimensions = useResponsiveDimensions();
+    const responsiveLayout = getResponsiveLayout();
 
-  const handleInputFocus = useCallback(() => {
-    // Dismiss keyboard when switching between inputs for better UX
-    if (dimensions.isSmallScreen) {
-      KeyboardManager.dismiss();
-    }
-  }, [dimensions.isSmallScreen]);
+    const handleInputChange = useCallback(
+      (field: keyof ListingFormData, value: string | boolean | number) => {
+        onFormDataChange({ [field]: value });
 
-  // Convert legacy business_hours array to BusinessHoursData format
-  const convertToBusinessHoursData = useCallback((businessHours: Array<{
-    day: string;
-    openTime: string;
-    closeTime: string;
-    isClosed: boolean;
-  }>): BusinessHoursData => {
-    const hoursData: BusinessHoursData = {};
-    
-    businessHours.forEach(dayHour => {
-      // Convert 12-hour format to 24-hour format for internal use
-      const convertTo24Hour = (time12h: string): string => {
-        if (!time12h) return '';
-        
-        const [time, period] = time12h.split(' ');
-        const [hours, minutes] = time.split(':');
-        let hour24 = parseInt(hours);
-        
-        if (period === 'PM' && hour24 !== 12) {
-          hour24 += 12;
-        } else if (period === 'AM' && hour24 === 12) {
-          hour24 = 0;
+        // Clear error when user starts typing
+        if (errors[field]) {
+          setErrors(prev => ({ ...prev, [field]: '' }));
         }
-        
-        return `${hour24.toString().padStart(2, '0')}:${minutes}`;
-      };
-      
-      hoursData[dayHour.day] = {
-        day: dayHour.day,
-        isOpen: !dayHour.isClosed,
-        openTime: convertTo24Hour(dayHour.openTime),
-        closeTime: convertTo24Hour(dayHour.closeTime),
-        isNextDay: false, // Default to false, can be enhanced later
-      };
-    });
-    
-    return hoursData;
-  }, []);
-
-  // Convert BusinessHoursData back to legacy format
-  const convertFromBusinessHoursData = useCallback((hoursData: BusinessHoursData): Array<{
-    day: string;
-    openTime: string;
-    closeTime: string;
-    isClosed: boolean;
-  }> => {
-    const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-    
-    return dayNames.map(day => {
-      const dayHours = hoursData[day];
-      
-      // Convert 24-hour format to 12-hour format for legacy compatibility
-      const convertTo12Hour = (time24h: string): string => {
-        if (!time24h) return '';
-        
-        const [hours, minutes] = time24h.split(':');
-        let hour12 = parseInt(hours);
-        const period = hour12 >= 12 ? 'PM' : 'AM';
-        
-        if (hour12 === 0) {
-          hour12 = 12;
-        } else if (hour12 > 12) {
-          hour12 -= 12;
-        }
-        
-        return `${hour12}:${minutes} ${period}`;
-      };
-      
-      return {
-        day,
-        openTime: dayHours?.isOpen ? convertTo12Hour(dayHours.openTime) : '',
-        closeTime: dayHours?.isOpen ? convertTo12Hour(dayHours.closeTime) : '',
-        isClosed: !dayHours?.isOpen,
-      };
-    });
-  }, []);
-
-  // Get current business hours in new format
-  const currentBusinessHours = useMemo(() => {
-    return convertToBusinessHoursData(formData.business_hours);
-  }, [formData.business_hours, convertToBusinessHoursData]);
-
-  const handleHoursChange = useCallback((hoursData: BusinessHoursData) => {
-    const legacyHours = convertFromBusinessHoursData(hoursData);
-    onFormDataChange({ business_hours: legacyHours });
-    
-    // Clear error when user changes hours
-    if (errors.hours_of_operation) {
-      setErrors(prev => ({ ...prev, hours_of_operation: '' }));
-    }
-  }, [onFormDataChange, errors, convertFromBusinessHoursData]);
-
-  const validateForm = useCallback(() => {
-    const newErrors: { [key: string]: string } = {};
-
-    // Required fields validation
-    if (!formData.short_description.trim()) {
-      newErrors.short_description = 'Short description is required';
-    } else if (formData.short_description.trim().length > 80) {
-      newErrors.short_description = 'Short description must be 80 characters or less';
-    }
-
-    // Check if at least one day has hours set
-    const hasValidHours = formData.business_hours.some(day => 
-      !day.isClosed && day.openTime && day.closeTime
+      },
+      [onFormDataChange, errors],
     );
-    
-    if (!hasValidHours) {
-      newErrors.hours_of_operation = 'Please set business hours for at least one day';
-    }
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  }, [formData]);
+    const handleInputFocus = useCallback(() => {
+      // Dismiss keyboard when switching between inputs for better UX
+      if (dimensions.isSmallScreen) {
+        KeyboardManager.dismiss();
+      }
+    }, [dimensions.isSmallScreen]);
 
-  const handleNext = useCallback(() => {
-    if (validateForm()) {
-      return true;
-    }
-    return false;
-  }, [validateForm]);
+    // Convert legacy business_hours array to BusinessHoursData format
+    const convertToBusinessHoursData = useCallback(
+      (
+        businessHours: Array<{
+          day: string;
+          openTime: string;
+          closeTime: string;
+          isClosed: boolean;
+        }>,
+      ): BusinessHoursData => {
+        const hoursData: BusinessHoursData = {};
 
-  // Expose validation function to parent
-  React.useEffect(() => {
-    (handleNext as any).validate = validateForm;
-  }, [validateForm, handleNext]);
+        businessHours.forEach(dayHour => {
+          // Convert 12-hour format to 24-hour format for internal use
+          const convertTo24Hour = (time12h: string): string => {
+            if (!time12h) return '';
 
-  return (
-    <ScrollView 
-      style={styles.container} 
-      showsVerticalScrollIndicator={false}
-      keyboardShouldPersistTaps="handled"
-      keyboardDismissMode="interactive"
-    >
-      <View style={[
-        styles.content,
-        { 
-          paddingHorizontal: responsiveLayout.containerPadding,
-          paddingVertical: responsiveLayout.formSpacing,
+            const [time, period] = time12h.split(' ');
+            const [hours, minutes] = time.split(':');
+            let hour24 = parseInt(hours, 10);
+
+            if (period === 'PM' && hour24 !== 12) {
+              hour24 += 12;
+            } else if (period === 'AM' && hour24 === 12) {
+              hour24 = 0;
+            }
+
+            return `${hour24.toString().padStart(2, '0')}:${minutes}`;
+          };
+
+          hoursData[dayHour.day] = {
+            day: dayHour.day,
+            isOpen: !dayHour.isClosed,
+            openTime: convertTo24Hour(dayHour.openTime),
+            closeTime: convertTo24Hour(dayHour.closeTime),
+            isNextDay: false, // Default to false, can be enhanced later
+          };
+        });
+
+        return hoursData;
+      },
+      [],
+    );
+
+    // Convert BusinessHoursData back to legacy format
+    const convertFromBusinessHoursData = useCallback(
+      (
+        hoursData: BusinessHoursData,
+      ): Array<{
+        day: string;
+        openTime: string;
+        closeTime: string;
+        isClosed: boolean;
+      }> => {
+        const dayNames = [
+          'Monday',
+          'Tuesday',
+          'Wednesday',
+          'Thursday',
+          'Friday',
+          'Saturday',
+          'Sunday',
+        ];
+
+        return dayNames.map(day => {
+          const dayHours = hoursData[day];
+
+          // Convert 24-hour format to 12-hour format for legacy compatibility
+          const convertTo12Hour = (time24h: string): string => {
+            if (!time24h) return '';
+
+            const [hours, minutes] = time24h.split(':');
+            let hour12 = parseInt(hours, 10);
+            const period = hour12 >= 12 ? 'PM' : 'AM';
+
+            if (hour12 === 0) {
+              hour12 = 12;
+            } else if (hour12 > 12) {
+              hour12 -= 12;
+            }
+
+            return `${hour12}:${minutes} ${period}`;
+          };
+
+          return {
+            day,
+            openTime: dayHours?.isOpen
+              ? convertTo12Hour(dayHours.openTime)
+              : '',
+            closeTime: dayHours?.isOpen
+              ? convertTo12Hour(dayHours.closeTime)
+              : '',
+            isClosed: !dayHours?.isOpen,
+          };
+        });
+      },
+      [],
+    );
+
+    // Get current business hours in new format
+    const currentBusinessHours = useMemo(() => {
+      return convertToBusinessHoursData(formData.business_hours);
+    }, [formData.business_hours, convertToBusinessHoursData]);
+
+    const handleHoursChange = useCallback(
+      (hoursData: BusinessHoursData) => {
+        const legacyHours = convertFromBusinessHoursData(hoursData);
+        onFormDataChange({ business_hours: legacyHours });
+
+        // Clear error when user changes hours
+        if (errors.hours_of_operation) {
+          setErrors(prev => ({ ...prev, hours_of_operation: '' }));
         }
-      ]}>
-        {/* Business Descriptions */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Business Descriptions</Text>
-          
-          {/* Short Description */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Short Description * (max 80 characters)</Text>
-            <TextInput
-              style={[
-                styles.input, 
-                styles.textArea, 
-                errors.short_description && styles.inputError,
-                { minHeight: responsiveLayout.inputHeight * 2 }
-              ]}
-              value={formData.short_description}
-              onChangeText={(value) => handleInputChange('short_description', value)}
-              onFocus={handleInputFocus}
-              placeholder="Brief description of your business"
-              placeholderTextColor={Colors.gray400}
-              multiline
-              maxLength={80}
-              returnKeyType="done"
-              blurOnSubmit={true}
-            />
-            <Text style={styles.characterCount}>
-              {formData.short_description.length}/80 characters
-            </Text>
-            {errors.short_description && <Text style={styles.errorText}>{errors.short_description}</Text>}
-          </View>
+      },
+      [onFormDataChange, errors, convertFromBusinessHoursData],
+    );
 
-          {/* Detailed Description */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Detailed Description (max 2000 characters)</Text>
-            <TextInput
-              style={[
-                styles.input, 
-                styles.textArea,
-                { minHeight: responsiveLayout.inputHeight * 3 }
-              ]}
-              value={formData.description}
-              onChangeText={(value) => handleInputChange('description', value)}
-              onFocus={handleInputFocus}
-              placeholder="Detailed description of your business, menu, specialties, etc."
-              placeholderTextColor={Colors.gray400}
-              multiline
-              maxLength={2000}
-              returnKeyType="done"
-              blurOnSubmit={true}
-            />
-            <Text style={styles.characterCount}>
-              {formData.description.length}/2000 characters
-            </Text>
-          </View>
-        </View>
+    const validateForm = useCallback(() => {
+      const newErrors: { [key: string]: string } = {};
 
-        {/* Business Hours */}
-        <View style={[styles.section, styles.hoursSection]}>
-          <BusinessHoursSelector
-            hours={currentBusinessHours}
-            onHoursChange={handleHoursChange}
-            errors={errors.hours_of_operation ? { general: errors.hours_of_operation } : {}}
-            enableRealTimeValidation={true}
-          />
-        </View>
+      // Required fields validation
+      if (!formData.short_description.trim()) {
+        newErrors.short_description = 'Short description is required';
+      } else if (formData.short_description.trim().length > 80) {
+        newErrors.short_description =
+          'Short description must be 80 characters or less';
+      }
 
-        {/* Business Details */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Business Details</Text>
-          
-          {/* Seating Capacity */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Seating Capacity</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.seating_capacity ? formData.seating_capacity.toString() : ''}
-              onChangeText={(value) => handleInputChange('seating_capacity', parseInt(value) || 0)}
-              placeholder="Number of seats"
-              placeholderTextColor={Colors.gray400}
-              keyboardType="numeric"
-            />
-          </View>
+      // Check if at least one day has hours set
+      const hasValidHours = formData.business_hours.some(
+        day => !day.isClosed && day.openTime && day.closeTime,
+      );
 
-          {/* Years in Business */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Years in Business</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.years_in_business ? formData.years_in_business.toString() : ''}
-              onChangeText={(value) => handleInputChange('years_in_business', parseInt(value) || 0)}
-              placeholder="Number of years operating"
-              placeholderTextColor={Colors.gray400}
-              keyboardType="numeric"
-            />
-          </View>
+      if (!hasValidHours) {
+        newErrors.hours_of_operation =
+          'Please set business hours for at least one day';
+      }
 
-          {/* Business License */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Business License Number</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.business_license}
-              onChangeText={(value) => handleInputChange('business_license', value)}
-              placeholder="Business license number"
-              placeholderTextColor={Colors.gray400}
-            />
-          </View>
+      setErrors(newErrors);
+      return Object.keys(newErrors).length === 0;
+    }, [formData]);
 
-          {/* Tax ID */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Tax ID Number</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.tax_id}
-              onChangeText={(value) => handleInputChange('tax_id', value)}
-              placeholder="Tax ID number"
-              placeholderTextColor={Colors.gray400}
-            />
-          </View>
-        </View>
+    const handleNext = useCallback(() => {
+      if (validateForm()) {
+        return true;
+      }
+      return false;
+    }, [validateForm]);
 
-        {/* Service Options */}
-        <EnhancedServiceSelection
-          services={{
-            delivery: formData.delivery_available,
-            takeout: formData.takeout_available,
-            catering: formData.catering_available,
-            dineIn: true, // Assume dine-in is always available
-            outdoorSeating: false,
-            parking: false,
-            wheelchairAccessible: false,
-            wifi: false,
-          }}
-          onServicesChange={(services) => {
-            handleInputChange('delivery_available', services.delivery);
-            handleInputChange('takeout_available', services.takeout);
-            handleInputChange('catering_available', services.catering);
-          }}
-          title="Service Options"
-          subtitle="Select the services your business offers"
-          compact={dimensions.isSmallScreen}
-          containerStyle={[
-            styles.enhancedServiceContainer,
-            { marginBottom: responsiveLayout.formSpacing }
+    // Expose validation function to parent
+    React.useEffect(() => {
+      (handleNext as any).validate = validateForm;
+    }, [validateForm, handleNext]);
+
+    return (
+      <ScrollView
+        style={styles.container}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
+      >
+        <View
+          style={[
+            styles.content,
+            {
+              paddingHorizontal: responsiveLayout.containerPadding,
+              paddingVertical: responsiveLayout.formSpacing,
+            },
           ]}
-        />
+        >
+          {/* Business Descriptions */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Business Descriptions</Text>
 
-        {/* Social Media Links */}
-        <View style={styles.section}>
-          <Text style={[
-            styles.sectionTitle,
-            { fontSize: responsiveLayout.fontSize * 1.1, marginBottom: responsiveLayout.formSpacing }
-          ]}>
-            Social Media Links
-          </Text>
-          
-          <EnhancedFormInput
-            label="Google Maps/Google My Business URL"
-            value={formData.google_listing_url}
-            onChangeText={(value) => handleInputChange('google_listing_url', value)}
-            placeholder="https://maps.google.com/..."
-            leftIcon="🗺️"
-            keyboardType="url"
-            autoCapitalize="none"
-            validation={(text) => {
-              if (!text.trim()) return { isValid: true };
-              const urlRegex = /^https?:\/\/.+/;
-              return {
-                isValid: urlRegex.test(text),
-                message: urlRegex.test(text) ? undefined : 'Please enter a valid URL'
-              };
-            }}
-            containerStyle={[
-              styles.enhancedInputContainer,
-              { marginBottom: responsiveLayout.formSpacing }
-            ]}
-          />
+            {/* Short Description */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>
+                Short Description * (max 80 characters)
+              </Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  styles.textArea,
+                  errors.short_description && styles.inputError,
+                  { minHeight: responsiveLayout.inputHeight * 2 },
+                ]}
+                value={formData.short_description}
+                onChangeText={value =>
+                  handleInputChange('short_description', value)
+                }
+                onFocus={handleInputFocus}
+                placeholder="Brief description of your business"
+                placeholderTextColor={Colors.gray400}
+                multiline
+                maxLength={80}
+                returnKeyType="done"
+                blurOnSubmit={true}
+              />
+              <Text style={styles.characterCount}>
+                {formData.short_description.length}/80 characters
+              </Text>
+              {errors.short_description && (
+                <Text style={styles.errorText}>{errors.short_description}</Text>
+              )}
+            </View>
 
-          <EnhancedFormInput
-            label="Instagram Profile URL"
-            value={formData.instagram_link}
-            onChangeText={(value) => handleInputChange('instagram_link', value)}
-            placeholder="https://instagram.com/..."
-            leftIcon="📸"
-            keyboardType="url"
-            autoCapitalize="none"
-            validation={(text) => {
-              if (!text.trim()) return { isValid: true };
-              const urlRegex = /^https?:\/\/.+/;
-              return {
-                isValid: urlRegex.test(text),
-                message: urlRegex.test(text) ? undefined : 'Please enter a valid URL'
-              };
-            }}
-            containerStyle={[
-              styles.enhancedInputContainer,
-              { marginBottom: responsiveLayout.formSpacing }
-            ]}
-          />
-
-          <EnhancedFormInput
-            label="Facebook Page URL"
-            value={formData.facebook_link}
-            onChangeText={(value) => handleInputChange('facebook_link', value)}
-            placeholder="https://facebook.com/..."
-            leftIcon="📘"
-            keyboardType="url"
-            autoCapitalize="none"
-            validation={(text) => {
-              if (!text.trim()) return { isValid: true };
-              const urlRegex = /^https?:\/\/.+/;
-              return {
-                isValid: urlRegex.test(text),
-                message: urlRegex.test(text) ? undefined : 'Please enter a valid URL'
-              };
-            }}
-            containerStyle={[
-              styles.enhancedInputContainer,
-              { marginBottom: responsiveLayout.formSpacing }
-            ]}
-          />
-
-          <EnhancedFormInput
-            label="TikTok Profile URL"
-            value={formData.tiktok_link}
-            onChangeText={(value) => handleInputChange('tiktok_link', value)}
-            placeholder="https://tiktok.com/@..."
-            leftIcon="🎵"
-            keyboardType="url"
-            autoCapitalize="none"
-            validation={(text) => {
-              if (!text.trim()) return { isValid: true };
-              const urlRegex = /^https?:\/\/.+/;
-              return {
-                isValid: urlRegex.test(text),
-                message: urlRegex.test(text) ? undefined : 'Please enter a valid URL'
-              };
-            }}
-            containerStyle={styles.enhancedInputContainer}
-          />
-        </View>
-
-        {/* Contact Preferences */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Contact Preferences (Optional)</Text>
-          
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Preferred Contact Method</Text>
-            <View style={styles.optionContainer}>
-              {['Email', 'Phone', 'Text', 'Any'].map((method) => (
-                <TouchableOpacity
-                  key={method}
-                  style={[
-                    styles.optionButton,
-                    formData.preferred_contact_method === method && styles.optionButtonSelected,
-                    { minHeight: TouchTargets.minimum }
-                  ]}
-                  onPress={() => {
-                    hapticButtonPress();
-                    handleInputChange('preferred_contact_method', method);
-                  }}
-                  activeOpacity={0.7}
-                  accessibilityRole="radio"
-                  accessibilityState={{ selected: formData.preferred_contact_method === method }}
-                  accessibilityLabel={`Preferred contact method: ${method}`}
-                >
-                  <Text
-                    style={[
-                      styles.optionText,
-                      formData.preferred_contact_method === method && styles.optionTextSelected,
-                    ]}
-                  >
-                    {method}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+            {/* Detailed Description */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>
+                Detailed Description (max 2000 characters)
+              </Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  styles.textArea,
+                  { minHeight: responsiveLayout.inputHeight * 3 },
+                ]}
+                value={formData.description}
+                onChangeText={value => handleInputChange('description', value)}
+                onFocus={handleInputFocus}
+                placeholder="Detailed description of your business, menu, specialties, etc."
+                placeholderTextColor={Colors.gray400}
+                multiline
+                maxLength={2000}
+                returnKeyType="done"
+                blurOnSubmit={true}
+              />
+              <Text style={styles.characterCount}>
+                {formData.description.length}/2000 characters
+              </Text>
             </View>
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Preferred Contact Time</Text>
-            <View style={styles.optionContainer}>
-              {['Morning', 'Afternoon', 'Evening'].map((time) => (
-                <TouchableOpacity
-                  key={time}
-                  style={[
-                    styles.optionButton,
-                    formData.preferred_contact_time === time && styles.optionButtonSelected,
-                    { minHeight: TouchTargets.minimum }
-                  ]}
-                  onPress={() => {
-                    hapticButtonPress();
-                    handleInputChange('preferred_contact_time', time);
-                  }}
-                  activeOpacity={0.7}
-                  accessibilityRole="radio"
-                  accessibilityState={{ selected: formData.preferred_contact_time === time }}
-                  accessibilityLabel={`Preferred contact time: ${time}`}
-                >
-                  <Text
-                    style={[
-                      styles.optionText,
-                      formData.preferred_contact_time === time && styles.optionTextSelected,
-                    ]}
-                  >
-                    {time}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Additional Contact Notes</Text>
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              value={formData.contact_notes}
-              onChangeText={(value) => handleInputChange('contact_notes', value)}
-              placeholder="Any additional contact information or preferences"
-              placeholderTextColor={Colors.gray400}
-              multiline
+          {/* Business Hours */}
+          <View style={[styles.section, styles.hoursSection]}>
+            <BusinessHoursSelector
+              hours={currentBusinessHours}
+              onHoursChange={handleHoursChange}
+              errors={
+                errors.hours_of_operation
+                  ? { general: errors.hours_of_operation }
+                  : {}
+              }
+              enableRealTimeValidation={true}
             />
           </View>
+
+          {/* Business Details */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Business Details</Text>
+
+            {/* Seating Capacity */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Seating Capacity</Text>
+              <TextInput
+                style={styles.input}
+                value={
+                  formData.seating_capacity
+                    ? formData.seating_capacity.toString()
+                    : ''
+                }
+                onChangeText={value =>
+                  handleInputChange(
+                    'seating_capacity',
+                    parseInt(value, 10) || 0,
+                  )
+                }
+                placeholder="Number of seats"
+                placeholderTextColor={Colors.gray400}
+                keyboardType="numeric"
+              />
+            </View>
+
+            {/* Years in Business */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Years in Business</Text>
+              <TextInput
+                style={styles.input}
+                value={
+                  formData.years_in_business
+                    ? formData.years_in_business.toString()
+                    : ''
+                }
+                onChangeText={value =>
+                  handleInputChange(
+                    'years_in_business',
+                    parseInt(value, 10) || 0,
+                  )
+                }
+                placeholder="Number of years operating"
+                placeholderTextColor={Colors.gray400}
+                keyboardType="numeric"
+              />
+            </View>
+
+            {/* Business License */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Business License Number</Text>
+              <TextInput
+                style={styles.input}
+                value={formData.business_license}
+                onChangeText={value =>
+                  handleInputChange('business_license', value)
+                }
+                placeholder="Business license number"
+                placeholderTextColor={Colors.gray400}
+              />
+            </View>
+
+            {/* Tax ID */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Tax ID Number</Text>
+              <TextInput
+                style={styles.input}
+                value={formData.tax_id}
+                onChangeText={value => handleInputChange('tax_id', value)}
+                placeholder="Tax ID number"
+                placeholderTextColor={Colors.gray400}
+              />
+            </View>
+          </View>
+
+          {/* Service Options */}
+          <EnhancedServiceSelection
+            services={{
+              delivery: formData.delivery_available,
+              takeout: formData.takeout_available,
+              catering: formData.catering_available,
+              dineIn: true, // Assume dine-in is always available
+              outdoorSeating: false,
+              parking: false,
+              wheelchairAccessible: false,
+              wifi: false,
+            }}
+            onServicesChange={services => {
+              handleInputChange('delivery_available', services.delivery);
+              handleInputChange('takeout_available', services.takeout);
+              handleInputChange('catering_available', services.catering);
+            }}
+            title="Service Options"
+            subtitle="Select the services your business offers"
+            compact={dimensions.isSmallScreen}
+            containerStyle={[
+              styles.enhancedServiceContainer,
+              { marginBottom: responsiveLayout.formSpacing },
+            ]}
+          />
+
+          {/* Social Media Links */}
+          <View style={styles.section}>
+            <Text
+              style={[
+                styles.sectionTitle,
+                {
+                  fontSize: Typography.fontSize.sm * 1.1,
+                  marginBottom: responsiveLayout.formSpacing,
+                },
+              ]}
+            >
+              Social Media Links
+            </Text>
+
+            <EnhancedFormInput
+              label="Google Maps/Google My Business URL"
+              value={formData.google_listing_url}
+              onChangeText={value =>
+                handleInputChange('google_listing_url', value)
+              }
+              placeholder="https://maps.google.com/..."
+              leftIcon="🗺️"
+              keyboardType="url"
+              autoCapitalize="none"
+              validation={text => {
+                if (!text.trim()) return { isValid: true };
+                const urlRegex = /^https?:\/\/.+/;
+                return {
+                  isValid: urlRegex.test(text),
+                  message: urlRegex.test(text)
+                    ? undefined
+                    : 'Please enter a valid URL',
+                };
+              }}
+              containerStyle={[
+                styles.enhancedInputContainer,
+                { marginBottom: responsiveLayout.formSpacing },
+              ]}
+            />
+
+            <EnhancedFormInput
+              label="Instagram Profile URL"
+              value={formData.instagram_link}
+              onChangeText={value => handleInputChange('instagram_link', value)}
+              placeholder="https://instagram.com/..."
+              leftIcon="📸"
+              keyboardType="url"
+              autoCapitalize="none"
+              validation={text => {
+                if (!text.trim()) return { isValid: true };
+                const urlRegex = /^https?:\/\/.+/;
+                return {
+                  isValid: urlRegex.test(text),
+                  message: urlRegex.test(text)
+                    ? undefined
+                    : 'Please enter a valid URL',
+                };
+              }}
+              containerStyle={[
+                styles.enhancedInputContainer,
+                { marginBottom: responsiveLayout.formSpacing },
+              ]}
+            />
+
+            <EnhancedFormInput
+              label="Facebook Page URL"
+              value={formData.facebook_link}
+              onChangeText={value => handleInputChange('facebook_link', value)}
+              placeholder="https://facebook.com/..."
+              leftIcon="📘"
+              keyboardType="url"
+              autoCapitalize="none"
+              validation={text => {
+                if (!text.trim()) return { isValid: true };
+                const urlRegex = /^https?:\/\/.+/;
+                return {
+                  isValid: urlRegex.test(text),
+                  message: urlRegex.test(text)
+                    ? undefined
+                    : 'Please enter a valid URL',
+                };
+              }}
+              containerStyle={[
+                styles.enhancedInputContainer,
+                { marginBottom: responsiveLayout.formSpacing },
+              ]}
+            />
+
+            <EnhancedFormInput
+              label="TikTok Profile URL"
+              value={formData.tiktok_link}
+              onChangeText={value => handleInputChange('tiktok_link', value)}
+              placeholder="https://tiktok.com/@..."
+              leftIcon="🎵"
+              keyboardType="url"
+              autoCapitalize="none"
+              validation={text => {
+                if (!text.trim()) return { isValid: true };
+                const urlRegex = /^https?:\/\/.+/;
+                return {
+                  isValid: urlRegex.test(text),
+                  message: urlRegex.test(text)
+                    ? undefined
+                    : 'Please enter a valid URL',
+                };
+              }}
+              containerStyle={styles.enhancedInputContainer}
+            />
+          </View>
+
+          {/* Contact Preferences */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>
+              Contact Preferences (Optional)
+            </Text>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Preferred Contact Method</Text>
+              <View style={styles.optionContainer}>
+                {['Email', 'Phone', 'Text', 'Any'].map(method => (
+                  <TouchableOpacity
+                    key={method}
+                    style={[
+                      styles.optionButton,
+                      formData.preferred_contact_method === method &&
+                        styles.optionButtonSelected,
+                      { minHeight: TouchTargets.minimum },
+                    ]}
+                    onPress={() => {
+                      hapticButtonPress();
+                      handleInputChange('preferred_contact_method', method);
+                    }}
+                    activeOpacity={0.7}
+                    accessibilityRole="radio"
+                    accessibilityState={{
+                      selected: formData.preferred_contact_method === method,
+                    }}
+                    accessibilityLabel={`Preferred contact method: ${method}`}
+                  >
+                    <Text
+                      style={[
+                        styles.optionText,
+                        formData.preferred_contact_method === method &&
+                          styles.optionTextSelected,
+                      ]}
+                    >
+                      {method}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Preferred Contact Time</Text>
+              <View style={styles.optionContainer}>
+                {['Morning', 'Afternoon', 'Evening'].map(time => (
+                  <TouchableOpacity
+                    key={time}
+                    style={[
+                      styles.optionButton,
+                      formData.preferred_contact_time === time &&
+                        styles.optionButtonSelected,
+                      { minHeight: TouchTargets.minimum },
+                    ]}
+                    onPress={() => {
+                      hapticButtonPress();
+                      handleInputChange('preferred_contact_time', time);
+                    }}
+                    activeOpacity={0.7}
+                    accessibilityRole="radio"
+                    accessibilityState={{
+                      selected: formData.preferred_contact_time === time,
+                    }}
+                    accessibilityLabel={`Preferred contact time: ${time}`}
+                  >
+                    <Text
+                      style={[
+                        styles.optionText,
+                        formData.preferred_contact_time === time &&
+                          styles.optionTextSelected,
+                      ]}
+                    >
+                      {time}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Additional Contact Notes</Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                value={formData.contact_notes}
+                onChangeText={value =>
+                  handleInputChange('contact_notes', value)
+                }
+                placeholder="Any additional contact information or preferences"
+                placeholderTextColor={Colors.gray400}
+                multiline
+              />
+            </View>
+          </View>
         </View>
-      </View>
-    </ScrollView>
-  );
-});
+      </ScrollView>
+    );
+  },
+);
 
 const styles = StyleSheet.create({
   container: {
@@ -570,7 +669,7 @@ const styles = StyleSheet.create({
   input: {
     ...Typography.styles.body,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: Colors.border.primary,
     borderRadius: BorderRadius.sm,
     paddingHorizontal: Spacing.xs,
     paddingVertical: Spacing.xs,
@@ -643,11 +742,11 @@ const styles = StyleSheet.create({
     maxWidth: '100%',
   },
   checkbox: {
-    width: 24,
-    height: 24,
+    width: TouchTargets.minimum,
+    height: TouchTargets.minimum,
     borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: BorderRadius.xs,
+    borderColor: Colors.border.primary,
+    borderRadius: BorderRadius.sm,
     backgroundColor: Colors.white,
     justifyContent: 'center',
     alignItems: 'center',
@@ -680,7 +779,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.xs,
     borderRadius: BorderRadius.sm,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: Colors.border.primary,
     backgroundColor: Colors.white,
     minWidth: 60,
     minHeight: 36,

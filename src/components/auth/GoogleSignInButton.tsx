@@ -8,6 +8,7 @@ import {
   Alert,
 } from 'react-native';
 import { GoogleSigninButton } from '@react-native-google-signin/google-signin';
+import { debugLog, errorLog, warnLog } from '../../utils/logger';
 import { googleOAuthService } from '../../services/GoogleOAuthService';
 import { authService } from '../../services/AuthService';
 import DeviceInfo from 'react-native-device-info';
@@ -40,7 +41,9 @@ const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
 
       // Check if Google Sign-In is configured
       if (!googleOAuthService.isGoogleSignInConfigured()) {
-        throw new Error('Google Sign-In is not configured. Please contact support.');
+        throw new Error(
+          'Google Sign-In is not configured. Please contact support.',
+        );
       }
 
       // Get device info
@@ -54,7 +57,7 @@ const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
 
       // Sign in with Google
       const googleUser = await googleOAuthService.signIn();
-      
+
       if (!googleUser) {
         // User cancelled the sign-in
         return;
@@ -66,26 +69,28 @@ const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
         deviceInfo,
       });
 
-      console.log('✅ Google OAuth successful:', authResult.user.email);
-      
+      debugLog('✅ Google OAuth successful:', authResult.user.email);
+
       if (onSuccess) {
         onSuccess(authResult.user);
       }
-
     } catch (error: any) {
-      console.error('❌ Google Sign-In error:', error);
-      
+      errorLog('❌ Google Sign-In error:', error);
+
       let errorMessage = 'Google Sign-In failed. Please try again.';
-      
+
       if (error.message?.includes('Play Services')) {
-        errorMessage = 'Google Play Services is required for Google Sign-In. Please update Google Play Services.';
+        errorMessage =
+          'Google Play Services is required for Google Sign-In. Please update Google Play Services.';
       } else if (error.message?.includes('cancelled')) {
         // User cancelled - don't show error
         return;
       } else if (error.message?.includes('network')) {
-        errorMessage = 'Network error. Please check your internet connection and try again.';
+        errorMessage =
+          'Network error. Please check your internet connection and try again.';
       } else if (error.message?.includes('configured')) {
-        errorMessage = 'Google Sign-In is not available. Please use email and password instead.';
+        errorMessage =
+          'Google Sign-In is not available. Please use email and password instead.';
       }
 
       if (onError) {
@@ -137,8 +142,18 @@ const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
             size === 'icon' && styles.iconButton,
             (isLoading || disabled) && styles.disabledButton,
           ]}
-          size={size}
-          color={colorScheme === 'light' ? GoogleSigninButton.Color.Light : GoogleSigninButton.Color.Dark}
+          size={
+            size === 'wide'
+              ? GoogleSigninButton.Size.Wide
+              : size === 'icon'
+              ? GoogleSigninButton.Size.Icon
+              : GoogleSigninButton.Size.Standard
+          }
+          color={
+            colorScheme === 'light'
+              ? GoogleSigninButton.Color.Light
+              : GoogleSigninButton.Color.Dark
+          }
           onPress={handleGoogleSignIn}
           disabled={isLoading || disabled}
         />
@@ -146,7 +161,7 @@ const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
     );
   } catch (error) {
     // Fallback to custom button if GoogleSigninButton fails
-    console.warn('GoogleSigninButton not available, using custom button');
+    warnLog('GoogleSigninButton not available, using custom button');
     return <CustomGoogleButton />;
   }
 };
@@ -194,7 +209,6 @@ const styles = StyleSheet.create({
     color: Colors.textInverse,
     marginRight: 8,
     backgroundColor: Colors.surface,
-    color: Colors.link,
     width: 20,
     height: 20,
     borderRadius: 10,

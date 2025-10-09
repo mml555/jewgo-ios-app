@@ -1,7 +1,5 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
-const AuthController = require('../auth/AuthController');
-const AuthMiddleware = require('../auth/AuthMiddleware');
 
 function createAuthRoutes(authController, authMiddleware) {
   const router = express.Router();
@@ -16,14 +14,14 @@ function createAuthRoutes(authController, authMiddleware) {
     message: {
       error: 'Too many authentication attempts',
       code: 'RATE_LIMIT_EXCEEDED',
-      retryAfter: '15 minutes'
+      retryAfter: '15 minutes',
     },
     standardHeaders: true,
     legacyHeaders: false,
-    skip: (req) => {
+    skip: req => {
       // Skip rate limiting for health checks
       return req.path === '/health';
-    }
+    },
   });
 
   const signupLimiter = rateLimit({
@@ -32,26 +30,26 @@ function createAuthRoutes(authController, authMiddleware) {
     message: {
       error: 'Too many signup attempts',
       code: 'SIGNUP_RATE_LIMIT_EXCEEDED',
-      retryAfter: '1 hour'
+      retryAfter: '1 hour',
     },
     standardHeaders: true,
-    legacyHeaders: false
+    legacyHeaders: false,
   });
 
   const passwordResetLimiter = rateLimit({
     windowMs: 60 * 60 * 1000, // 1 hour
     max: 3, // 3 password reset attempts per hour per email
-    keyGenerator: (req) => {
+    keyGenerator: req => {
       // Rate limit by email if provided, otherwise by IP
       return req.body?.email || req.ip;
     },
     message: {
       error: 'Too many password reset attempts',
       code: 'PASSWORD_RESET_RATE_LIMIT_EXCEEDED',
-      retryAfter: '1 hour'
+      retryAfter: '1 hour',
     },
     standardHeaders: true,
-    legacyHeaders: false
+    legacyHeaders: false,
   });
 
   // ==============================================
@@ -62,44 +60,47 @@ function createAuthRoutes(authController, authMiddleware) {
   router.get('/health', authController.healthCheck.bind(authController));
 
   // Registration
-  router.post('/register', 
+  router.post(
+    '/register',
     signupLimiter,
-    authController.register.bind(authController)
+    authController.register.bind(authController),
   );
 
   // Login
-  router.post('/login',
-    authLimiter,
-    authController.login.bind(authController)
-  );
+  router.post('/login', authLimiter, authController.login.bind(authController));
 
   // Google OAuth authentication
-  router.post('/google',
+  router.post(
+    '/google',
     authLimiter,
-    authController.googleOAuth.bind(authController)
+    authController.googleOAuth.bind(authController),
   );
 
   // Magic link authentication
-  router.post('/magic-link/send',
+  router.post(
+    '/magic-link/send',
     passwordResetLimiter,
-    authController.sendMagicLink.bind(authController)
+    authController.sendMagicLink.bind(authController),
   );
 
-  router.post('/magic-link/verify',
+  router.post(
+    '/magic-link/verify',
     authLimiter,
-    authController.verifyMagicLink.bind(authController)
+    authController.verifyMagicLink.bind(authController),
   );
 
   // Token refresh
-  router.post('/refresh',
+  router.post(
+    '/refresh',
     authLimiter,
-    authController.refreshToken.bind(authController)
+    authController.refreshToken.bind(authController),
   );
 
   // Logout (requires authentication)
-  router.post('/logout',
+  router.post(
+    '/logout',
     authMiddleware.authenticate(),
-    authController.logout.bind(authController)
+    authController.logout.bind(authController),
   );
 
   // ==============================================
@@ -107,9 +108,10 @@ function createAuthRoutes(authController, authMiddleware) {
   // ==============================================
 
   // Get user profile
-  router.get('/me',
+  router.get(
+    '/me',
     authMiddleware.authenticate(),
-    authController.getProfile.bind(authController)
+    authController.getProfile.bind(authController),
   );
 
   // ==============================================
@@ -117,15 +119,17 @@ function createAuthRoutes(authController, authMiddleware) {
   // ==============================================
 
   // Get active sessions
-  router.get('/sessions',
+  router.get(
+    '/sessions',
     authMiddleware.authenticate(),
-    authController.getSessions.bind(authController)
+    authController.getSessions.bind(authController),
   );
 
   // Revoke specific session
-  router.delete('/sessions/:sessionId',
+  router.delete(
+    '/sessions/:sessionId',
     authMiddleware.authenticate(),
-    authController.revokeSession.bind(authController)
+    authController.revokeSession.bind(authController),
   );
 
   // ==============================================
@@ -133,14 +137,16 @@ function createAuthRoutes(authController, authMiddleware) {
   // ==============================================
 
   // Request password reset
-  router.post('/password/forgot',
+  router.post(
+    '/password/forgot',
     passwordResetLimiter,
-    authController.requestPasswordReset.bind(authController)
+    authController.requestPasswordReset.bind(authController),
   );
 
   // Reset password
-  router.post('/password/reset',
-    authController.resetPassword.bind(authController)
+  router.post(
+    '/password/reset',
+    authController.resetPassword.bind(authController),
   );
 
   // ==============================================
@@ -148,13 +154,12 @@ function createAuthRoutes(authController, authMiddleware) {
   // ==============================================
 
   // Verify email
-  router.post('/verify-email',
-    authController.verifyEmail.bind(authController)
-  );
+  router.post('/verify-email', authController.verifyEmail.bind(authController));
 
   // Resend verification email
-  router.post('/resend-verification',
-    authController.resendVerificationEmail.bind(authController)
+  router.post(
+    '/resend-verification',
+    authController.resendVerificationEmail.bind(authController),
   );
 
   // ==============================================
@@ -162,27 +167,31 @@ function createAuthRoutes(authController, authMiddleware) {
   // ==============================================
 
   // Get MFA status
-  router.get('/mfa/status',
+  router.get(
+    '/mfa/status',
     authMiddleware.authenticate(),
-    authController.getMFAStatus.bind(authController)
+    authController.getMFAStatus.bind(authController),
   );
 
   // Setup TOTP
-  router.post('/mfa/totp/setup',
+  router.post(
+    '/mfa/totp/setup',
     authMiddleware.authenticate(),
-    authController.setupTOTP.bind(authController)
+    authController.setupTOTP.bind(authController),
   );
 
   // Verify TOTP
-  router.post('/mfa/totp/verify',
+  router.post(
+    '/mfa/totp/verify',
     authMiddleware.authenticate(),
-    authController.verifyTOTP.bind(authController)
+    authController.verifyTOTP.bind(authController),
   );
 
   // Disable TOTP
-  router.delete('/mfa/totp',
+  router.delete(
+    '/mfa/totp',
     authMiddleware.authenticate(),
-    authController.disableTOTP.bind(authController)
+    authController.disableTOTP.bind(authController),
   );
 
   // ==============================================
@@ -190,33 +199,38 @@ function createAuthRoutes(authController, authMiddleware) {
   // ==============================================
 
   // Generate WebAuthn challenge
-  router.post('/webauthn/challenge',
+  router.post(
+    '/webauthn/challenge',
     authMiddleware.authenticate(),
-    authController.generateWebAuthnChallenge.bind(authController)
+    authController.generateWebAuthnChallenge.bind(authController),
   );
 
   // WebAuthn registration
-  router.post('/webauthn/register',
+  router.post(
+    '/webauthn/register',
     authMiddleware.authenticate(),
-    authController.registerWebAuthnCredential.bind(authController)
+    authController.registerWebAuthnCredential.bind(authController),
   );
 
   // WebAuthn authentication
-  router.post('/webauthn/authenticate',
+  router.post(
+    '/webauthn/authenticate',
     authMiddleware.authenticate(),
-    authController.authenticateWebAuthn.bind(authController)
+    authController.authenticateWebAuthn.bind(authController),
   );
 
   // Get WebAuthn credentials
-  router.get('/webauthn/credentials',
+  router.get(
+    '/webauthn/credentials',
     authMiddleware.authenticate(),
-    authController.getWebAuthnCredentials.bind(authController)
+    authController.getWebAuthnCredentials.bind(authController),
   );
 
   // Remove WebAuthn credential
-  router.delete('/webauthn/credentials/:credentialId',
+  router.delete(
+    '/webauthn/credentials/:credentialId',
     authMiddleware.authenticate(),
-    authController.removeWebAuthnCredential.bind(authController)
+    authController.removeWebAuthnCredential.bind(authController),
   );
 
   // ==============================================
@@ -224,14 +238,16 @@ function createAuthRoutes(authController, authMiddleware) {
   // ==============================================
 
   // Generate recovery codes
-  router.post('/mfa/recovery-codes',
+  router.post(
+    '/mfa/recovery-codes',
     authMiddleware.authenticate(),
-    authController.generateRecoveryCodes.bind(authController)
+    authController.generateRecoveryCodes.bind(authController),
   );
 
   // Verify recovery code
-  router.post('/mfa/recovery-codes/verify',
-    authController.verifyRecoveryCode.bind(authController)
+  router.post(
+    '/mfa/recovery-codes/verify',
+    authController.verifyRecoveryCode.bind(authController),
   );
 
   // ==============================================
@@ -239,57 +255,51 @@ function createAuthRoutes(authController, authMiddleware) {
   // ==============================================
 
   // OIDC Configuration
-  router.get('/.well-known/openid-configuration',
-    authController.getOIDCConfiguration.bind(authController)
+  router.get(
+    '/.well-known/openid-configuration',
+    authController.getOIDCConfiguration.bind(authController),
   );
 
   // Authorization endpoint
-  router.get('/authorize',
+  router.get(
+    '/authorize',
     authMiddleware.optionalAuth(),
-    authController.authorize.bind(authController)
+    authController.authorize.bind(authController),
   );
 
   // Token endpoint
-  router.post('/token',
-    authController.token.bind(authController)
-  );
+  router.post('/token', authController.token.bind(authController));
 
   // UserInfo endpoint
-  router.get('/userinfo',
-    authController.userinfo.bind(authController)
-  );
+  router.get('/userinfo', authController.userinfo.bind(authController));
 
   // JWKS endpoint
-  router.get('/jwks.json',
-    authController.getJWKS.bind(authController)
-  );
+  router.get('/jwks.json', authController.getJWKS.bind(authController));
 
   // Token introspection endpoint
-  router.post('/introspect',
-    authController.introspect.bind(authController)
-  );
+  router.post('/introspect', authController.introspect.bind(authController));
 
   // Token revocation endpoint
-  router.post('/revoke',
-    authController.revoke.bind(authController)
-  );
+  router.post('/revoke', authController.revoke.bind(authController));
 
   // ==============================================
   // KEY ROTATION ENDPOINTS
   // ==============================================
 
   // Get key rotation status
-  router.get('/keys/status',
+  router.get(
+    '/keys/status',
     authMiddleware.authenticate(),
     authMiddleware.requireRole('admin'),
-    authController.getKeyRotationStatus.bind(authController)
+    authController.getKeyRotationStatus.bind(authController),
   );
 
   // Force key rotation
-  router.post('/keys/rotate',
+  router.post(
+    '/keys/rotate',
     authMiddleware.authenticate(),
     authMiddleware.requireRole('admin'),
-    authController.forceKeyRotation.bind(authController)
+    authController.forceKeyRotation.bind(authController),
   );
 
   // ==============================================
@@ -301,33 +311,33 @@ function createAuthRoutes(authController, authMiddleware) {
     res.status(404).json({
       error: 'Authentication endpoint not found',
       code: 'ENDPOINT_NOT_FOUND',
-      path: req.originalUrl
+      path: req.originalUrl,
     });
   });
 
   // Error handler
   router.use((error, req, res, next) => {
     console.error('Auth route error:', error);
-    
+
     // Handle specific error types
     if (error.type === 'entity.parse.failed') {
       return res.status(400).json({
         error: 'Invalid JSON in request body',
-        code: 'INVALID_JSON'
+        code: 'INVALID_JSON',
       });
     }
 
     if (error.type === 'entity.too.large') {
       return res.status(413).json({
         error: 'Request body too large',
-        code: 'REQUEST_TOO_LARGE'
+        code: 'REQUEST_TOO_LARGE',
       });
     }
 
     // Generic error response
     res.status(500).json({
       error: 'Internal server error',
-      code: 'INTERNAL_ERROR'
+      code: 'INTERNAL_ERROR',
     });
   });
 

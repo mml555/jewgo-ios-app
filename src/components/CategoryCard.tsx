@@ -1,22 +1,38 @@
-import React, { memo, useState, useMemo, useEffect } from 'react';
+import React, {
+  memo,
+  useState,
+  useMemo,
+  useEffect,
+  useCallback,
+  useRef,
+} from 'react';
 import {
   View,
   Text,
   Image,
   StyleSheet,
   TouchableOpacity,
+  Pressable,
   Dimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { CategoryItem } from '../hooks/useCategoryData';
 import { useLocation, calculateDistance } from '../hooks/useLocation';
 import { useFavorites } from '../hooks/useFavorites';
-import { Colors, Typography, Spacing, BorderRadius, Shadows, TouchTargets } from '../styles/designSystem';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  Shadows,
+  TouchTargets,
+} from '../styles/designSystem';
 import { favoritesEventService } from '../services/FavoritesEventService';
 import HeartIcon from './HeartIcon';
-import { debugLog } from '../utils/logger';
+import { debugLog, errorLog, warnLog } from '../utils/logger';
 import { DistanceDisplay } from './DistanceDisplay';
 import { useLocationSimple } from '../hooks/useLocationSimple';
+import { useStableCallback } from '../utils/performanceOptimization';
 
 interface CategoryCardProps {
   item: CategoryItem;
@@ -31,77 +47,110 @@ const CARD_SPACING = 8; // Space between cards in a row
 const CARD_WIDTH = (screenWidth - ROW_PADDING - CARD_SPACING) / 2;
 const IMAGE_HEIGHT = (CARD_WIDTH * 3) / 4; // 4:3 aspect ratio
 
-const CategoryCard: React.FC<CategoryCardProps> = ({ item, categoryKey, onFavoriteToggle, isInitiallyFavorited }) => {
-  debugLog('🔄 CategoryCard render - props:', { 
-    title: item.title, 
-    hasOnFavoriteToggle: !!onFavoriteToggle, 
-    isInitiallyFavorited,
-    componentType: 'CategoryCard'
-  });
-  
+const CategoryCard: React.FC<CategoryCardProps> = ({
+  item,
+  categoryKey,
+  onFavoriteToggle,
+  isInitiallyFavorited,
+}) => {
+  // Only log in development and reduce frequency
+  if (__DEV__ && Math.random() < 0.1) {
+    // debugLog('🔄 CategoryCard render - props:', {
+    //   title: item.title,
+    //   hasOnFavoriteToggle: !!onFavoriteToggle,
+    //   isInitiallyFavorited,
+    //   componentType: 'CategoryCard'
+    // });
+  }
+
   const navigation = useNavigation();
   const { location } = useLocation();
   const { accuracyAuthorization } = useLocationSimple();
-  const { isFavorited: isFavoritedHook, toggleFavorite, checkFavoriteStatus } = useFavorites();
+  const {
+    isFavorited: isFavoritedHook,
+    toggleFavorite,
+    checkFavoriteStatus,
+  } = useFavorites();
   const [isFavorited, setIsFavorited] = useState(isInitiallyFavorited || false);
   const [imageError, setImageError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
+
+  // Use refs to prevent unnecessary re-renders
+  const imageErrorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (imageErrorTimeoutRef.current) {
+        clearTimeout(imageErrorTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Check favorite status on mount (only if not initially favorited)
   useEffect(() => {
     if (isInitiallyFavorited === undefined) {
       const checkStatus = async () => {
         const status = await checkFavoriteStatus(item.id);
-        debugLog('🔄 CategoryCard checking favorite status for', item.title, ':', status);
+        if (__DEV__) {
+          // debugLog('🔄 CategoryCard checking favorite status for', item.title, ':', status);
+        }
         setIsFavorited(status);
       };
       checkStatus();
-    } else {
-      debugLog('🔄 CategoryCard using initial favorite status for', item.title, ':', isInitiallyFavorited);
+    } else if (__DEV__) {
+      // debugLog('🔄 CategoryCard using initial favorite status for', item.title, ':', isInitiallyFavorited);
     }
   }, [item.id, checkFavoriteStatus, isInitiallyFavorited]);
 
-  // Calculate real distance if user location is available (in meters)
+  // Calculate real distance if user location is available (in meters) - optimized
   const realDistanceMeters = useMemo(() => {
-    if (location && item.latitude && item.longitude) {
-      debugLog('📍 CALCULATING DISTANCE:', `userLocation: ${location.latitude}, ${location.longitude}, businessLocation: ${item.latitude}, ${item.longitude}, businessName: ${item.title}`);
-      
+    if (!location || !item.latitude || !item.longitude) {
+      return null;
+    }
+
+    try {
       const distanceMiles = calculateDistance(
         location.latitude,
         location.longitude,
         Number(item.latitude),
-        Number(item.longitude)
+        Number(item.longitude),
       );
-      
+
       // Convert miles to meters
       const distanceMeters = distanceMiles * 1609.34;
-      
-      debugLog('📍 DISTANCE RESULT:', `distance: ${distanceMeters.toFixed(0)} meters (${distanceMiles.toFixed(1)} miles), businessName: ${item.title}`);
-      
+
       // For testing: allow larger distances since iOS simulator gives SF location
       // In production, this should be much smaller (like 50-100 miles = 80-160km)
-      if (distanceMeters > 16093400) { // 10,000 miles in meters - more reasonable threshold
-        debugLog('📍 Distance too large, likely incorrect coordinates');
+      if (distanceMeters > 16093400) {
+        // 10,000 miles in meters - more reasonable threshold
         return null;
       }
-      
-      return distanceMeters;
-    }
-    debugLog('📍 No location or coordinates available for card:', `hasLocation: ${!!location}, hasItemLat: ${!!item.latitude}, hasItemLng: ${!!item.longitude}, hasZipCode: ${!!item.zip_code}, zipCode: ${item.zip_code}, hasPrice: ${!!item.price}, price: ${item.price}`);
-    return null; // Return null to trigger zipcode fallback, not mock distance
-  }, [location, item.latitude, item.longitude]);
 
-  const handlePress = () => {
+      return distanceMeters;
+    } catch (error) {
+      if (__DEV__) {
+        warnLog('Distance calculation error:', error);
+      }
+      return null;
+    }
+  }, [location?.latitude, location?.longitude, item.latitude, item.longitude]);
+
+  // Memoized press handler to prevent unnecessary re-renders
+  const handlePress = useCallback(() => {
     (navigation as any).navigate('ListingDetail', {
       itemId: item.id,
       categoryKey: categoryKey,
     });
-  };
+  }, [navigation, item.id, categoryKey]);
 
-  const handleHeartPress = async () => {
+  // Memoized heart press handler to prevent unnecessary re-renders
+  const handleHeartPress = useCallback(async () => {
     try {
-      debugLog('🔄 CategoryCard heart pressed for', item.title, 'current isFavorited:', isFavorited);
-      
+      if (__DEV__) {
+        // debugLog('🔄 CategoryCard heart pressed for', item.title, 'current isFavorited:', isFavorited);
+      }
+
       // Prepare entity data for the favorites service
       const entityData = {
         entity_name: item.title,
@@ -117,34 +166,46 @@ const CategoryCard: React.FC<CategoryCardProps> = ({ item, categoryKey, onFavori
       };
 
       const success = await toggleFavorite(item.id, entityData);
-      
+
       if (success) {
         // Update local state optimistically
         const newFavorited = !isFavorited;
         setIsFavorited(newFavorited);
-        debugLog(`✅ ${isFavorited ? 'Removed from' : 'Added to'} favorites: ${item.title}`);
-        
+
+        if (__DEV__) {
+          debugLog(
+            `✅ ${isFavorited ? 'Removed from' : 'Added to'} favorites: ${
+              item.title
+            }`,
+          );
+        }
+
         // Notify parent component about the toggle
         if (onFavoriteToggle) {
-          debugLog('🔄 CategoryCard calling onFavoriteToggle with:', { id: item.id, isFavorited: newFavorited });
+          if (__DEV__) {
+            // debugLog('🔄 CategoryCard calling onFavoriteToggle with:', { id: item.id, isFavorited: newFavorited });
+          }
           onFavoriteToggle(item.id, newFavorited);
-        } else {
-          debugLog('🔄 CategoryCard: onFavoriteToggle callback not provided');
         }
-        
+
         // Notify global favorites system of the update
         favoritesEventService.notifyFavoritesUpdated();
       } else {
-        console.error('❌ Failed to toggle favorite for:', item.title);
+        errorLog('❌ Failed to toggle favorite for:', item.title);
       }
     } catch (error) {
-      console.error('Error toggling favorite:', error);
+      errorLog('Error toggling favorite:', error);
     }
-  };
+  }, [item, categoryKey, isFavorited, toggleFavorite, onFavoriteToggle]);
 
   return (
     <TouchableOpacity
-      style={styles.container}
+      style={[
+        styles.container,
+        categoryKey === 'jobs'
+          ? styles.containerWithBackground
+          : styles.containerTransparent,
+      ]}
       onPress={handlePress}
       activeOpacity={0.8}
       accessible={true}
@@ -161,11 +222,24 @@ const CategoryCard: React.FC<CategoryCardProps> = ({ item, categoryKey, onFavori
             resizeMode="cover"
             accessible={true}
             accessibilityLabel={`Image for ${item.title}`}
-            onError={(error) => {
-              debugLog('🖼️ Image load error for', item.title, ':', error.nativeEvent.error);
+            onError={error => {
+              if (__DEV__) {
+                debugLog(
+                  '🖼️ Image load error for',
+                  item.title,
+                  ':',
+                  error.nativeEvent.error,
+                );
+              }
+
+              // Clear any existing timeout
+              if (imageErrorTimeoutRef.current) {
+                clearTimeout(imageErrorTimeoutRef.current);
+              }
+
               if (retryCount < 2) {
                 // Retry loading the image up to 2 times
-                setTimeout(() => {
+                imageErrorTimeoutRef.current = setTimeout(() => {
                   setRetryCount(prev => prev + 1);
                   setImageError(false);
                 }, 1000 * (retryCount + 1)); // Exponential backoff
@@ -174,52 +248,73 @@ const CategoryCard: React.FC<CategoryCardProps> = ({ item, categoryKey, onFavori
               }
             }}
             onLoad={() => {
-              debugLog('🖼️ Image loaded successfully for', item.title);
+              if (__DEV__) {
+                // debugLog('🖼️ Image loaded successfully for', item.title);
+              }
               setImageError(false);
             }}
           />
         ) : (
           <View style={styles.placeholderContainer}>
             <Text style={styles.placeholderIcon}>
-              {categoryKey === 'restaurant' ? '🍽️' : 
-               categoryKey === 'synagogue' ? '🕍' : 
-               categoryKey === 'store' ? '🏪' : 
-               categoryKey === 'mikvah' ? '💧' : 
-               categoryKey === 'jobs' ? '💼' : '🏢'}
+              {categoryKey === 'restaurant'
+                ? '🍽️'
+                : categoryKey === 'synagogue'
+                ? '🕍'
+                : categoryKey === 'store'
+                ? '🏪'
+                : categoryKey === 'mikvah'
+                ? '💧'
+                : categoryKey === 'jobs'
+                ? '💼'
+                : '🏢'}
             </Text>
             <Text style={styles.placeholderText}>
-              {categoryKey === 'restaurant' ? 'Restaurant' : 
-               categoryKey === 'synagogue' ? 'Synagogue' : 
-               categoryKey === 'store' ? 'Store' : 
-               categoryKey === 'mikvah' ? 'Mikvah' : 
-               categoryKey === 'jobs' ? 'Job' : 'Business'}
+              {categoryKey === 'restaurant'
+                ? 'Restaurant'
+                : categoryKey === 'synagogue'
+                ? 'Synagogue'
+                : categoryKey === 'store'
+                ? 'Store'
+                : categoryKey === 'mikvah'
+                ? 'Mikvah'
+                : categoryKey === 'jobs'
+                ? 'Job'
+                : 'Business'}
             </Text>
           </View>
         )}
-        
+
         {/* Tag on top left */}
         <View style={styles.tagContainer}>
-          <Text style={styles.tagText}>{String(item.category || 'Unknown')}</Text>
+          <Text style={styles.tagText}>
+            {String(item.category || 'Unknown')}
+          </Text>
         </View>
-        
+
         {/* Heart button on top right */}
-        <TouchableOpacity
-          style={styles.heartButton}
+        <Pressable
+          style={({ pressed }) => [
+            styles.heartButton,
+            pressed && { opacity: 0.7 },
+          ]}
           onPress={handleHeartPress}
           accessible={true}
           accessibilityRole="button"
-          accessibilityLabel={isFavorited ? "Remove from favorites" : "Add to favorites"}
+          accessibilityLabel={
+            isFavorited ? 'Remove from favorites' : 'Add to favorites'
+          }
           accessibilityHint="Tap to toggle favorite status"
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <HeartIcon 
-            size={20} 
-            color={isFavorited ? Colors.error : Colors.textSecondary} 
-            filled={isFavorited} 
+          <HeartIcon
+            size={20}
+            color={isFavorited ? Colors.error : Colors.textSecondary}
+            filled={isFavorited}
           />
-        </TouchableOpacity>
+        </Pressable>
       </View>
-      
+
       <View style={styles.contentContainer}>
         {/* Title and Rating - matches details page layout */}
         <View style={styles.titleSection}>
@@ -229,11 +324,13 @@ const CategoryCard: React.FC<CategoryCardProps> = ({ item, categoryKey, onFavori
           {item.rating !== undefined && item.rating > 0 && (
             <View style={styles.ratingContainer}>
               <Text style={styles.ratingStar}>★</Text>
-              <Text style={styles.ratingText}>{Number(item.rating).toFixed(1)}</Text>
+              <Text style={styles.ratingText}>
+                {Number(item.rating).toFixed(1)}
+              </Text>
             </View>
           )}
         </View>
-        
+
         {/* Price and Distance - matches details page layout */}
         <View style={styles.infoRow}>
           <Text style={styles.priceText}>{String(item.price || '$$')}</Text>
@@ -242,7 +339,7 @@ const CategoryCard: React.FC<CategoryCardProps> = ({ item, categoryKey, onFavori
               distanceMeters={realDistanceMeters}
               accuracyContext={{
                 accuracyAuthorization,
-                isApproximate: false
+                isApproximate: false,
               }}
               style={styles.distanceContainer}
               textStyle={styles.distanceText}
@@ -261,13 +358,20 @@ const CategoryCard: React.FC<CategoryCardProps> = ({ item, categoryKey, onFavori
 
 CategoryCard.displayName = 'CategoryCard';
 
+export default memo(CategoryCard);
+
 const styles = StyleSheet.create({
   container: {
     width: CARD_WIDTH,
-    backgroundColor: Colors.background.secondary, // Add solid background for shadow calculation
     borderRadius: BorderRadius.lg,
     padding: 0, // Remove padding to align with image edges
     ...Shadows.sm, // Add subtle shadow for depth
+  },
+  containerWithBackground: {
+    backgroundColor: Colors.background.secondary, // White background for jobs
+  },
+  containerTransparent: {
+    backgroundColor: 'transparent', // Transparent for all other categories
   },
   imageContainer: {
     position: 'relative',
@@ -325,8 +429,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: Spacing.sm - 6, // Move up 6px total for better visual alignment
     right: Spacing.sm,
-    width: 40,
-    height: 40, // Keep same height for touch target
+    width: TouchTargets.minimum,
+    height: TouchTargets.minimum,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -404,41 +508,60 @@ const styles = StyleSheet.create({
   },
 });
 
-export default CategoryCard;
-
 // Custom comparison function for memo to ensure proper re-rendering
-const areEqual = (prevProps: CategoryCardProps, nextProps: CategoryCardProps) => {
-  const callbackChanged = prevProps.onFavoriteToggle !== nextProps.onFavoriteToggle;
-  const initialStatusChanged = prevProps.isInitiallyFavorited !== nextProps.isInitiallyFavorited;
-  const itemChanged = prevProps.item.id !== nextProps.item.id || 
-                      prevProps.item.title !== nextProps.item.title ||
-                      prevProps.categoryKey !== nextProps.categoryKey;
-  
+const areEqual = (
+  prevProps: CategoryCardProps,
+  nextProps: CategoryCardProps,
+) => {
+  const callbackChanged =
+    prevProps.onFavoriteToggle !== nextProps.onFavoriteToggle;
+  const initialStatusChanged =
+    prevProps.isInitiallyFavorited !== nextProps.isInitiallyFavorited;
+  const itemChanged =
+    prevProps.item.id !== nextProps.item.id ||
+    prevProps.item.title !== nextProps.item.title ||
+    prevProps.categoryKey !== nextProps.categoryKey;
+
   const shouldReRender = callbackChanged || initialStatusChanged || itemChanged;
-  
-  debugLog('🔄 CategoryCardWithMemo memo comparison:', {
-    title: nextProps.item.title,
-    callbackChanged,
-    initialStatusChanged,
-    itemChanged,
-    shouldReRender,
-    prevCallback: !!prevProps.onFavoriteToggle,
-    nextCallback: !!nextProps.onFavoriteToggle
-  });
-  
+
+  // debugLog('🔄 CategoryCardWithMemo memo comparison:', {
+  //   title: nextProps.item.title,
+  //   callbackChanged,
+  //   initialStatusChanged,
+  //   itemChanged,
+  //   shouldReRender,
+  //   prevCallback: !!prevProps.onFavoriteToggle,
+  //   nextCallback: !!nextProps.onFavoriteToggle
+  // });
+
   return !shouldReRender;
 };
 
-export const CategoryCardWithMemo = memo(({ item, categoryKey, onFavoriteToggle, isInitiallyFavorited }: CategoryCardProps) => {
-  debugLog('🔄 CategoryCardWithMemo render - props:', { 
-    title: item.title, 
-    hasOnFavoriteToggle: !!onFavoriteToggle, 
+export const CategoryCardWithMemo = memo(
+  ({
+    item,
+    categoryKey,
+    onFavoriteToggle,
     isInitiallyFavorited,
-    componentType: 'CategoryCardWithMemo'
-  });
-  
-  return <CategoryCard item={item} categoryKey={categoryKey} onFavoriteToggle={onFavoriteToggle} isInitiallyFavorited={isInitiallyFavorited} />;
-}, areEqual);
+  }: CategoryCardProps) => {
+    // debugLog('🔄 CategoryCardWithMemo render - props:', {
+    //   title: item.title,
+    //   hasOnFavoriteToggle: !!onFavoriteToggle,
+    //   isInitiallyFavorited,
+    //   componentType: 'CategoryCardWithMemo'
+    // });
+
+    return (
+      <CategoryCard
+        item={item}
+        categoryKey={categoryKey}
+        onFavoriteToggle={onFavoriteToggle}
+        isInitiallyFavorited={isInitiallyFavorited}
+      />
+    );
+  },
+  areEqual,
+);
 
 // Also export the regular CategoryCard with memo for other uses
 export const CategoryCardMemo = memo(CategoryCard);

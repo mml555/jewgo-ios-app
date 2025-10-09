@@ -1,15 +1,21 @@
 const jwt = require('jsonwebtoken');
-const { Pool } = require('pg');
+const logger = require('../utils/logger');
 
 class AuthMiddleware {
-  constructor(authService, rbacService, mfaService, keyRotationService, guestService = null) {
+  constructor(
+    authService,
+    rbacService,
+    mfaService,
+    keyRotationService,
+    guestService = null,
+  ) {
     this.authService = authService;
     this.rbacService = rbacService;
     this.mfaService = mfaService;
     this.keyRotationService = keyRotationService;
     this.guestService = guestService;
     this.jwtSecret = process.env.JWT_SECRET; // Fallback for backward compatibility
-    
+
     if (!this.keyRotationService && !this.jwtSecret) {
       throw new Error('JWT secret or key rotation service must be configured');
     }
@@ -22,18 +28,18 @@ class AuthMiddleware {
   async verifyToken(token) {
     try {
       let decoded;
-      
+
       if (this.keyRotationService) {
         // Use key rotation service for token verification
         decoded = await this.keyRotationService.verifyToken(token, {
           issuer: process.env.JWT_ISSUER || 'jewgo-auth',
-          audience: process.env.JWT_AUDIENCE || 'jewgo-api'
+          audience: process.env.JWT_AUDIENCE || 'jewgo-api',
         });
       } else {
         // Fallback to static JWT secret
         decoded = jwt.verify(token, this.jwtSecret, {
           issuer: process.env.JWT_ISSUER || 'jewgo-auth',
-          audience: process.env.JWT_AUDIENCE || 'jewgo-api'
+          audience: process.env.JWT_AUDIENCE || 'jewgo-api',
         });
       }
 
@@ -56,13 +62,16 @@ class AuthMiddleware {
   }
 
   async checkSessionValidity(sessionId) {
-    const result = await this.authService.db.query(`
+    const result = await this.authService.db.query(
+      `
       SELECT id FROM sessions 
       WHERE id = $1 
         AND revoked_at IS NULL 
         AND expires_at > NOW()
-    `, [sessionId]);
-    
+    `,
+      [sessionId],
+    );
+
     return result.rows.length > 0;
   }
 
@@ -77,19 +86,19 @@ class AuthMiddleware {
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
           return res.status(401).json({
             error: 'Authentication required',
-            code: 'MISSING_TOKEN'
+            code: 'MISSING_TOKEN',
           });
         }
 
         const token = authHeader.substring(7); // Remove 'Bearer ' prefix
         const decoded = await this.verifyToken(token);
-        
+
         // Get user information
         const user = await this.authService.getUserById(decoded.sub);
         if (!user || user.status !== 'active') {
           return res.status(401).json({
             error: 'Invalid user',
-            code: 'INVALID_USER'
+            code: 'INVALID_USER',
           });
         }
 
@@ -97,18 +106,18 @@ class AuthMiddleware {
         req.user = {
           id: user.id,
           email: user.primary_email,
-          status: user.status
+          status: user.status,
         };
         req.session = {
-          id: decoded.sid
+          id: decoded.sid,
         };
 
         next();
       } catch (error) {
-        console.error('Authentication middleware error:', error);
+        logger.error('Authentication middleware error:', error);
         return res.status(401).json({
           error: error.message,
-          code: 'AUTH_FAILED'
+          code: 'AUTH_FAILED',
         });
       }
     };
@@ -116,78 +125,82 @@ class AuthMiddleware {
 
   requireRole(roles) {
     const roleArray = Array.isArray(roles) ? roles : [roles];
-    
+
     return async (req, res, next) => {
       try {
         if (!req.user) {
           return res.status(401).json({
             error: 'Authentication required',
-            code: 'MISSING_AUTH'
+            code: 'MISSING_AUTH',
           });
         }
 
         const userRoles = await this.rbacService.getUserRoles(req.user.id);
         const userRoleNames = userRoles.map(r => r.name);
-        
-        const hasRequiredRole = roleArray.some(role => userRoleNames.includes(role));
-        
+
+        const hasRequiredRole = roleArray.some(role =>
+          userRoleNames.includes(role),
+        );
+
         if (!hasRequiredRole) {
           return res.status(403).json({
             error: 'Insufficient permissions',
             code: 'INSUFFICIENT_ROLE',
             required: roleArray,
-            current: userRoleNames
+            current: userRoleNames,
           });
         }
 
         req.userRoles = userRoles;
         next();
       } catch (error) {
-        console.error('Role middleware error:', error);
+        logger.error('Role middleware error:', error);
         return res.status(500).json({
           error: 'Role check failed',
-          code: 'ROLE_CHECK_ERROR'
+          code: 'ROLE_CHECK_ERROR',
         });
       }
     };
   }
 
   requirePermission(permissions, resource = null) {
-    const permissionArray = Array.isArray(permissions) ? permissions : [permissions];
-    
+    const permissionArray = Array.isArray(permissions)
+      ? permissions
+      : [permissions];
+
     return async (req, res, next) => {
       try {
         if (!req.user) {
           return res.status(401).json({
             error: 'Authentication required',
-            code: 'MISSING_AUTH'
+            code: 'MISSING_AUTH',
           });
         }
 
         // Check each required permission
         for (const permission of permissionArray) {
           const hasPermission = await this.rbacService.userHasPermission(
-            req.user.id, 
-            permission, 
-            resource
+            req.user.id,
+            permission,
+            resource,
           );
-          
+
           if (!hasPermission) {
             return res.status(403).json({
               error: 'Insufficient permissions',
               code: 'INSUFFICIENT_PERMISSION',
               required: permission,
-              resource: resource
+              resource: resource,
             });
           }
         }
 
         next();
       } catch (error) {
-        console.error('Permission middleware error:', error);
+        logger.error('Permission middleware error:', error);
         return res.status(500).json({
           error: 'Permission check failed',
-          code: 'PERMISSION_CHECK_ERROR'
+          code: 'PERMISSION_CHECK_ERROR',
         });
       }
     };
@@ -203,15 +216,15 @@ class AuthMiddleware {
         if (!req.user) {
           return res.status(401).json({
             error: 'Authentication required',
-            code: 'MISSING_AUTH'
+            code: 'MISSING_AUTH',
           });
         }
 
         const entityId = req.params.entityId || req.body.entityId;
         const hasPermission = await this.rbacService.checkEntityPermission(
-          req.user.id, 
-          permission, 
-          entityId
+          req.user.id,
+          permission,
+          entityId,
         );
 
         if (!hasPermission) {
@@ -219,16 +232,16 @@ class AuthMiddleware {
             error: 'Insufficient permissions for entity',
             code: 'ENTITY_PERMISSION_DENIED',
             entityId: entityId,
-            permission: permission
+            permission: permission,
           });
         }
 
         next();
       } catch (error) {
-        console.error('Entity permission middleware error:', error);
+        logger.error('Entity permission middleware error:', error);
         return res.status(500).json({
           error: 'Entity permission check failed',
-          code: 'ENTITY_PERMISSION_CHECK_ERROR'
+          code: 'ENTITY_PERMISSION_CHECK_ERROR',
         });
       }
     };
@@ -240,15 +253,15 @@ class AuthMiddleware {
         if (!req.user) {
           return res.status(401).json({
             error: 'Authentication required',
-            code: 'MISSING_AUTH'
+            code: 'MISSING_AUTH',
           });
         }
 
         const reviewId = req.params.reviewId || req.body.reviewId;
         const hasPermission = await this.rbacService.checkReviewPermission(
-          req.user.id, 
-          permission, 
-          reviewId
+          req.user.id,
+          permission,
+          reviewId,
         );
 
         if (!hasPermission) {
@@ -256,16 +269,16 @@ class AuthMiddleware {
             error: 'Insufficient permissions for review',
             code: 'REVIEW_PERMISSION_DENIED',
             reviewId: reviewId,
-            permission: permission
+            permission: permission,
           });
         }
 
         next();
       } catch (error) {
-        console.error('Review permission middleware error:', error);
+        logger.error('Review permission middleware error:', error);
         return res.status(500).json({
           error: 'Review permission check failed',
-          code: 'REVIEW_PERMISSION_CHECK_ERROR'
+          code: 'REVIEW_PERMISSION_CHECK_ERROR',
         });
       }
     };
@@ -286,76 +299,80 @@ class AuthMiddleware {
           try {
             const token = authHeader.substring(7);
             const decoded = await this.verifyToken(token);
-            
+
             const user = await this.authService.getUserById(decoded.sub);
             if (user && user.status === 'active') {
               req.user = {
                 id: user.id,
                 email: user.primary_email,
                 status: user.status,
-                type: 'user'
+                type: 'user',
               };
               req.session = {
-                id: decoded.sid
+                id: decoded.sid,
               };
               return next();
             }
           } catch (error) {
             // Continue to guest authentication
-            console.warn('User auth failed, trying guest auth:', error.message);
+            logger.warn('User auth failed, trying guest auth:', error.message);
           }
         }
 
         // Try guest authentication
         if (this.guestService && guestToken) {
           try {
-            const guestSession = await this.guestService.validateGuestSession(guestToken);
+            const guestSession = await this.guestService.validateGuestSession(
+              guestToken,
+            );
             if (guestSession && guestSession.isValid) {
               req.user = {
                 id: guestSession.guestUser.id,
                 type: 'guest',
-                sessionId: guestSession.sessionId
+                sessionId: guestSession.sessionId,
               };
               req.session = {
                 id: guestSession.sessionId,
-                type: 'guest'
+                type: 'guest',
               };
               return next();
             }
           } catch (error) {
-            console.warn('Guest auth failed:', error.message);
+            logger.warn('Guest auth failed:', error.message);
           }
         }
 
         // Neither authentication method worked
         return res.status(401).json({
-          error: 'Authentication required - please login or create a guest session',
+          error:
+            'Authentication required - please login or create a guest session',
           code: 'AUTH_REQUIRED',
           options: {
             login: '/api/v5/auth/login',
-            guest: '/api/v5/auth/guest/create'
-          }
+            guest: '/api/v5/auth/guest/create',
+          },
         });
-
       } catch (error) {
-        console.error('Authentication middleware error:', error);
+        logger.error('Authentication middleware error:', error);
         return res.status(401).json({
           error: 'Authentication failed',
-          code: 'AUTH_FAILED'
+          code: 'AUTH_FAILED',
         });
       }
     };
   }
 
   requireGuestPermission(permissions, resource = null) {
-    const permissionArray = Array.isArray(permissions) ? permissions : [permissions];
-    
+    const permissionArray = Array.isArray(permissions)
+      ? permissions
+      : [permissions];
+
     return async (req, res, next) => {
       try {
         if (!req.user) {
           return res.status(401).json({
             error: 'Authentication required',
-            code: 'MISSING_AUTH'
+            code: 'MISSING_AUTH',
           });
         }
 
@@ -363,49 +380,52 @@ class AuthMiddleware {
         if (req.user.type === 'user') {
           for (const permission of permissionArray) {
             const hasPermission = await this.rbacService.userHasPermission(
-              req.user.id, 
-              permission, 
-              resource
+              req.user.id,
+              permission,
+              resource,
             );
-            
+
             if (!hasPermission) {
               return res.status(403).json({
                 error: 'Insufficient permissions',
                 code: 'INSUFFICIENT_PERMISSION',
                 required: permission,
-                resource: resource
+                resource: resource,
               });
             }
           }
-        } 
+        }
         // For guest users, check guest permissions
         else if (req.user.type === 'guest' && this.guestService) {
           for (const permission of permissionArray) {
-            const hasPermission = await this.guestService.hasGuestPermission(permission, resource);
-            
+            const hasPermission = await this.guestService.hasGuestPermission(
+              permission,
+              resource,
+            );
+
             if (!hasPermission) {
               return res.status(403).json({
                 error: 'Insufficient permissions for guest user',
                 code: 'INSUFFICIENT_GUEST_PERMISSION',
                 required: permission,
                 resource: resource,
-                upgrade: 'Consider creating an account for full access'
+                upgrade: 'Consider creating an account for full access',
               });
             }
           }
         } else {
           return res.status(403).json({
             error: 'Invalid user type',
-            code: 'INVALID_USER_TYPE'
+            code: 'INVALID_USER_TYPE',
           });
         }
 
         next();
       } catch (error) {
-        console.error('Permission middleware error:', error);
+        logger.error('Permission middleware error:', error);
         return res.status(500).json({
           error: 'Permission check failed',
-          code: 'PERMISSION_CHECK_ERROR'
+          code: 'PERMISSION_CHECK_ERROR',
         });
       }
     };
@@ -426,23 +446,23 @@ class AuthMiddleware {
 
         const token = authHeader.substring(7);
         const decoded = await this.verifyToken(token);
-        
+
         const user = await this.authService.getUserById(decoded.sub);
         if (user && user.status === 'active') {
           req.user = {
             id: user.id,
             email: user.primary_email,
-            status: user.status
+            status: user.status,
           };
           req.session = {
-            id: decoded.sid
+            id: decoded.sid,
           };
         }
 
         next();
       } catch (error) {
         // Authentication failed, but continue without user
-        console.warn('Optional auth failed:', error.message);
+        logger.warn('Optional auth failed:', error.message);
         next();
       }
     };
@@ -457,14 +477,15 @@ class AuthMiddleware {
     if (req.user && req.user.id) {
       return `user:${req.user.id}`;
     }
-    
+
     // Get IP address (considering proxies)
-    const ip = req.ip || 
-               req.connection.remoteAddress || 
-               req.socket.remoteAddress ||
-               (req.connection.socket ? req.connection.socket.remoteAddress : null) ||
-               req.headers['x-forwarded-for']?.split(',')[0]?.trim();
-    
+    const ip =
+      req.ip ||
+      req.connection.remoteAddress ||
+      req.socket.remoteAddress ||
+      (req.connection.socket ? req.connection.socket.remoteAddress : null) ||
+      req.headers['x-forwarded-for']?.split(',')[0]?.trim();
+
     return `ip:${ip}`;
   }
 
@@ -478,12 +499,15 @@ class AuthMiddleware {
         if (!req.user) {
           return res.status(401).json({
             error: 'Authentication required',
-            code: 'MISSING_AUTH'
+            code: 'MISSING_AUTH',
           });
         }
 
-        const mfaRequired = await this.mfaService.requireMFA(req.user.id, operation);
-        
+        const mfaRequired = await this.mfaService.requireMFA(
+          req.user.id,
+          operation,
+        );
+
         if (!mfaRequired) {
           return next();
         }
@@ -496,14 +520,13 @@ class AuthMiddleware {
         return res.status(403).json({
           error: 'Multi-factor authentication required',
           code: 'MFA_REQUIRED',
-          operation: operation
+          operation: operation,
         });
-
       } catch (error) {
-        console.error('MFA middleware error:', error);
+        logger.error('MFA middleware error:', error);
         return res.status(500).json({
           error: 'MFA check failed',
-          code: 'MFA_CHECK_ERROR'
+          code: 'MFA_CHECK_ERROR',
         });
       }
     };
@@ -515,21 +538,21 @@ class AuthMiddleware {
         if (!req.user) {
           return res.status(401).json({
             error: 'Authentication required',
-            code: 'MISSING_AUTH'
+            code: 'MISSING_AUTH',
           });
         }
 
         const { mfaData } = req.body;
-        
+
         if (!mfaData) {
           return res.status(400).json({
             error: 'MFA data is required',
-            code: 'MISSING_MFA_DATA'
+            code: 'MISSING_MFA_DATA',
           });
         }
 
         const isValid = await this.mfaService.verifyMFA(req.user.id, mfaData);
-        
+
         if (isValid) {
           // Mark MFA as verified in session
           if (req.session) {
@@ -539,15 +562,14 @@ class AuthMiddleware {
         } else {
           return res.status(400).json({
             error: 'MFA verification failed',
-            code: 'MFA_VERIFICATION_FAILED'
+            code: 'MFA_VERIFICATION_FAILED',
           });
         }
-
       } catch (error) {
-        console.error('MFA verification middleware error:', error);
+        logger.error('MFA verification middleware error:', error);
         return res.status(500).json({
           error: 'MFA verification failed',
-          code: 'MFA_VERIFICATION_ERROR'
+          code: 'MFA_VERIFICATION_ERROR',
         });
       }
     };
@@ -567,11 +589,11 @@ class AuthMiddleware {
       user_agent: req.headers['user-agent'],
       endpoint: req.originalUrl,
       method: req.method,
-      ...details
+      ...details,
     };
 
     // This would integrate with your logging system
-    console.log('Access log:', logData);
+    logger.info('Access log:', logData);
   }
 }
 

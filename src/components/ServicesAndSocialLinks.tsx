@@ -10,7 +10,14 @@ import {
   TextInput,
   Modal,
 } from 'react-native';
-import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../styles/designSystem';
+import { errorLog } from '../utils/logger';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  Shadows,
+} from '../styles/designSystem';
 import { apiV5Service } from '../services/api-v5';
 import { Entity, Service, SocialLink } from '../types/entities';
 
@@ -42,8 +49,15 @@ const ServicesAndSocialLinks: React.FC<ServicesAndSocialLinksProps> = ({
 
   // Common social platforms
   const socialPlatforms = [
-    'facebook', 'instagram', 'twitter', 'whatsapp', 'tiktok', 
-    'youtube', 'snapchat', 'linkedin', 'website'
+    'facebook',
+    'instagram',
+    'twitter',
+    'whatsapp',
+    'tiktok',
+    'youtube',
+    'snapchat',
+    'linkedin',
+    'website',
   ];
 
   // Load entity services and social links
@@ -53,21 +67,70 @@ const ServicesAndSocialLinks: React.FC<ServicesAndSocialLinksProps> = ({
       setError(null);
 
       // Load entity details (this would include services and social links in a real implementation)
-      const entityResponse = await apiV5Service.getEntity(entityType + 's' as any, entityId);
-      
+      const entityResponse = await apiV5Service.getEntity(
+        (entityType + 's') as any,
+        entityId,
+      );
+
       if (entityResponse.success && entityResponse.data) {
-        const entity = entityResponse.data.entity as Entity;
-        
+        const entity = entityResponse.data.entity as unknown as Entity;
+
         // Mock data for demonstration - in real implementation, this would come from the API
         const mockServices: Service[] = [
-          { id: '1', key: 'delivery', name: 'Delivery', description: 'Food delivery service', category: 'restaurant', isActive: true, sortOrder: 1, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-          { id: '2', key: 'takeout', name: 'Takeout', description: 'Takeout orders', category: 'restaurant', isActive: true, sortOrder: 2, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-          { id: '3', key: 'catering', name: 'Catering', description: 'Catering services', category: 'restaurant', isActive: true, sortOrder: 3, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+          {
+            id: '1',
+            key: 'delivery',
+            name: 'Delivery',
+            description: 'Food delivery service',
+            category: 'restaurant',
+            isActive: true,
+            sortOrder: 1,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+          {
+            id: '2',
+            key: 'takeout',
+            name: 'Takeout',
+            description: 'Takeout orders',
+            category: 'restaurant',
+            isActive: true,
+            sortOrder: 2,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+          {
+            id: '3',
+            key: 'catering',
+            name: 'Catering',
+            description: 'Catering services',
+            category: 'restaurant',
+            isActive: true,
+            sortOrder: 3,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
         ];
 
         const mockSocialLinks: SocialLink[] = [
-          { id: '1', entityId, platform: 'facebook', url: 'https://facebook.com/example', isVerified: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-          { id: '2', entityId, platform: 'instagram', url: 'https://instagram.com/example', isVerified: false, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+          {
+            id: '1',
+            entityId,
+            platform: 'facebook',
+            url: 'https://facebook.com/example',
+            isVerified: true,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+          {
+            id: '2',
+            entityId,
+            platform: 'instagram',
+            url: 'https://instagram.com/example',
+            isVerified: false,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
         ];
 
         setServices(mockServices);
@@ -80,7 +143,7 @@ const ServicesAndSocialLinks: React.FC<ServicesAndSocialLinksProps> = ({
       }
     } catch (err) {
       setError('Failed to load entity data');
-      console.error('Error loading entity data:', err);
+      errorLog('Error loading entity data:', err);
     } finally {
       setLoading(false);
     }
@@ -91,16 +154,66 @@ const ServicesAndSocialLinks: React.FC<ServicesAndSocialLinksProps> = ({
     try {
       // Mock available services - in real implementation, this would come from the API
       const mockAvailableServices: Service[] = [
-        { id: '1', key: 'delivery', name: 'Delivery', description: 'Food delivery service', category: 'restaurant', isActive: true, sortOrder: 1, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-        { id: '2', key: 'takeout', name: 'Takeout', description: 'Takeout orders', category: 'restaurant', isActive: true, sortOrder: 2, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-        { id: '3', key: 'catering', name: 'Catering', description: 'Catering services', category: 'restaurant', isActive: true, sortOrder: 3, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-        { id: '4', key: 'dine_in', name: 'Dine In', description: 'In-restaurant dining', category: 'restaurant', isActive: true, sortOrder: 4, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-        { id: '5', key: 'outdoor_seating', name: 'Outdoor Seating', description: 'Outdoor dining area', category: 'restaurant', isActive: true, sortOrder: 5, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+        {
+          id: '1',
+          key: 'delivery',
+          name: 'Delivery',
+          description: 'Food delivery service',
+          category: 'restaurant',
+          isActive: true,
+          sortOrder: 1,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          id: '2',
+          key: 'takeout',
+          name: 'Takeout',
+          description: 'Takeout orders',
+          category: 'restaurant',
+          isActive: true,
+          sortOrder: 2,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          id: '3',
+          key: 'catering',
+          name: 'Catering',
+          description: 'Catering services',
+          category: 'restaurant',
+          isActive: true,
+          sortOrder: 3,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          id: '4',
+          key: 'dine_in',
+          name: 'Dine In',
+          description: 'In-restaurant dining',
+          category: 'restaurant',
+          isActive: true,
+          sortOrder: 4,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          id: '5',
+          key: 'outdoor_seating',
+          name: 'Outdoor Seating',
+          description: 'Outdoor dining area',
+          category: 'restaurant',
+          isActive: true,
+          sortOrder: 5,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
       ];
 
       setAvailableServices(mockAvailableServices);
     } catch (err) {
-      console.error('Error loading available services:', err);
+      errorLog('Error loading available services:', err);
     }
   }, []);
 
@@ -110,45 +223,51 @@ const ServicesAndSocialLinks: React.FC<ServicesAndSocialLinksProps> = ({
   }, [loadEntityData]);
 
   // Handle adding a service
-  const handleAddService = useCallback(async (service: Service) => {
-    try {
-      // Mock API call - in real implementation, this would call the actual API
-      const newServices = [...services, service];
-      setServices(newServices);
-      setShowAddServiceModal(false);
-      onServiceUpdate?.(newServices);
-      
-      Alert.alert('Success', 'Service added successfully!');
-    } catch (err) {
-      Alert.alert('Error', 'Failed to add service');
-      console.error('Error adding service:', err);
-    }
-  }, [services, onServiceUpdate]);
+  const handleAddService = useCallback(
+    async (service: Service) => {
+      try {
+        // Mock API call - in real implementation, this would call the actual API
+        const newServices = [...services, service];
+        setServices(newServices);
+        setShowAddServiceModal(false);
+        onServiceUpdate?.(newServices);
+
+        Alert.alert('Success', 'Service added successfully!');
+      } catch (err) {
+        Alert.alert('Error', 'Failed to add service');
+        errorLog('Error adding service:', err);
+      }
+    },
+    [services, onServiceUpdate],
+  );
 
   // Handle removing a service
-  const handleRemoveService = useCallback(async (serviceId: string) => {
-    try {
-      Alert.alert(
-        'Remove Service',
-        'Are you sure you want to remove this service?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Remove',
-            style: 'destructive',
-            onPress: () => {
-              const newServices = services.filter(s => s.id !== serviceId);
-              setServices(newServices);
-              onServiceUpdate?.(newServices);
-            }
-          }
-        ]
-      );
-    } catch (err) {
-      Alert.alert('Error', 'Failed to remove service');
-      console.error('Error removing service:', err);
-    }
-  }, [services, onServiceUpdate]);
+  const handleRemoveService = useCallback(
+    async (serviceId: string) => {
+      try {
+        Alert.alert(
+          'Remove Service',
+          'Are you sure you want to remove this service?',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Remove',
+              style: 'destructive',
+              onPress: () => {
+                const newServices = services.filter(s => s.id !== serviceId);
+                setServices(newServices);
+                onServiceUpdate?.(newServices);
+              },
+            },
+          ],
+        );
+      } catch (err) {
+        Alert.alert('Error', 'Failed to remove service');
+        errorLog('Error removing service:', err);
+      }
+    },
+    [services, onServiceUpdate],
+  );
 
   // Handle adding a social link
   const handleAddSocialLink = useCallback(async () => {
@@ -175,38 +294,49 @@ const ServicesAndSocialLinks: React.FC<ServicesAndSocialLinksProps> = ({
       setNewSocialPlatform('');
       setNewSocialUrl('');
       onSocialLinkUpdate?.(newSocialLinks);
-      
+
       Alert.alert('Success', 'Social link added successfully!');
     } catch (err) {
       Alert.alert('Error', 'Failed to add social link');
-      console.error('Error adding social link:', err);
+      errorLog('Error adding social link:', err);
     }
-  }, [entityId, newSocialPlatform, newSocialUrl, socialLinks, onSocialLinkUpdate]);
+  }, [
+    entityId,
+    newSocialPlatform,
+    newSocialUrl,
+    socialLinks,
+    onSocialLinkUpdate,
+  ]);
 
   // Handle removing a social link
-  const handleRemoveSocialLink = useCallback(async (socialLinkId: string) => {
-    try {
-      Alert.alert(
-        'Remove Social Link',
-        'Are you sure you want to remove this social link?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Remove',
-            style: 'destructive',
-            onPress: () => {
-              const newSocialLinks = socialLinks.filter(sl => sl.id !== socialLinkId);
-              setSocialLinks(newSocialLinks);
-              onSocialLinkUpdate?.(newSocialLinks);
-            }
-          }
-        ]
-      );
-    } catch (err) {
-      Alert.alert('Error', 'Failed to remove social link');
-      console.error('Error removing social link:', err);
-    }
-  }, [socialLinks, onSocialLinkUpdate]);
+  const handleRemoveSocialLink = useCallback(
+    async (socialLinkId: string) => {
+      try {
+        Alert.alert(
+          'Remove Social Link',
+          'Are you sure you want to remove this social link?',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Remove',
+              style: 'destructive',
+              onPress: () => {
+                const newSocialLinks = socialLinks.filter(
+                  sl => sl.id !== socialLinkId,
+                );
+                setSocialLinks(newSocialLinks);
+                onSocialLinkUpdate?.(newSocialLinks);
+              },
+            },
+          ],
+        );
+      } catch (err) {
+        Alert.alert('Error', 'Failed to remove social link');
+        errorLog('Error removing social link:', err);
+      }
+    },
+    [socialLinks, onSocialLinkUpdate],
+  );
 
   // Get platform icon
   const getPlatformIcon = (platform: string) => {
@@ -240,7 +370,7 @@ const ServicesAndSocialLinks: React.FC<ServicesAndSocialLinksProps> = ({
       </View>
 
       <View style={styles.servicesGrid}>
-        {services.map((service) => (
+        {services.map(service => (
           <View key={service.id} style={styles.serviceCard}>
             <View style={styles.serviceHeader}>
               <Text style={styles.serviceName}>{service.name}</Text>
@@ -254,7 +384,9 @@ const ServicesAndSocialLinks: React.FC<ServicesAndSocialLinksProps> = ({
               )}
             </View>
             {service.description && (
-              <Text style={styles.serviceDescription}>{service.description}</Text>
+              <Text style={styles.serviceDescription}>
+                {service.description}
+              </Text>
             )}
             <Text style={styles.serviceCategory}>{service.category}</Text>
           </View>
@@ -294,7 +426,7 @@ const ServicesAndSocialLinks: React.FC<ServicesAndSocialLinksProps> = ({
       </View>
 
       <View style={styles.socialLinksList}>
-        {socialLinks.map((socialLink) => (
+        {socialLinks.map(socialLink => (
           <View key={socialLink.id} style={styles.socialLinkCard}>
             <View style={styles.socialLinkHeader}>
               <View style={styles.socialLinkInfo}>
@@ -303,7 +435,8 @@ const ServicesAndSocialLinks: React.FC<ServicesAndSocialLinksProps> = ({
                 </Text>
                 <View style={styles.socialLinkDetails}>
                   <Text style={styles.socialLinkPlatform}>
-                    {socialLink.platform.charAt(0).toUpperCase() + socialLink.platform.slice(1)}
+                    {socialLink.platform.charAt(0).toUpperCase() +
+                      socialLink.platform.slice(1)}
                   </Text>
                   <Text style={styles.socialLinkUrl}>{socialLink.url}</Text>
                 </View>
@@ -365,7 +498,7 @@ const ServicesAndSocialLinks: React.FC<ServicesAndSocialLinksProps> = ({
           <Text style={styles.modalSubtitle}>Available Services</Text>
           {availableServices
             .filter(service => !services.find(s => s.id === service.id))
-            .map((service) => (
+            .map(service => (
               <TouchableOpacity
                 key={service.id}
                 style={styles.availableServiceCard}
@@ -402,21 +535,29 @@ const ServicesAndSocialLinks: React.FC<ServicesAndSocialLinksProps> = ({
 
         <ScrollView style={styles.modalContent}>
           <Text style={styles.modalSubtitle}>Platform</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.platformSelector}>
-            {socialPlatforms.map((platform) => (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.platformSelector}
+          >
+            {socialPlatforms.map(platform => (
               <TouchableOpacity
                 key={platform}
                 style={[
                   styles.platformOption,
-                  newSocialPlatform === platform && styles.platformOptionActive
+                  newSocialPlatform === platform && styles.platformOptionActive,
                 ]}
                 onPress={() => setNewSocialPlatform(platform)}
               >
-                <Text style={[
-                  styles.platformOptionText,
-                  newSocialPlatform === platform && styles.platformOptionTextActive
-                ]}>
-                  {getPlatformIcon(platform)} {platform.charAt(0).toUpperCase() + platform.slice(1)}
+                <Text
+                  style={[
+                    styles.platformOptionText,
+                    newSocialPlatform === platform &&
+                      styles.platformOptionTextActive,
+                  ]}
+                >
+                  {getPlatformIcon(platform)}{' '}
+                  {platform.charAt(0).toUpperCase() + platform.slice(1)}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -447,7 +588,9 @@ const ServicesAndSocialLinks: React.FC<ServicesAndSocialLinksProps> = ({
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={Colors.primary.main} />
-        <Text style={styles.loadingText}>Loading services and social links...</Text>
+        <Text style={styles.loadingText}>
+          Loading services and social links...
+        </Text>
       </View>
     );
   }
@@ -465,7 +608,10 @@ const ServicesAndSocialLinks: React.FC<ServicesAndSocialLinksProps> = ({
 
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+      >
         {renderServicesSection()}
         {renderSocialLinksSection()}
       </ScrollView>
@@ -479,7 +625,7 @@ const ServicesAndSocialLinks: React.FC<ServicesAndSocialLinksProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.background.primary,
   },
   scrollView: {
     flex: 1,
@@ -553,7 +699,7 @@ const styles = StyleSheet.create({
   },
   serviceCard: {
     width: '48%',
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.background.primary,
     padding: Spacing.md,
     borderRadius: BorderRadius.md,
     marginBottom: Spacing.sm,
@@ -584,7 +730,7 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   socialLinkCard: {
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.background.primary,
     padding: Spacing.md,
     borderRadius: BorderRadius.md,
   },
@@ -662,7 +808,7 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.background.primary,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -670,7 +816,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: Spacing.lg,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: Colors.border.primary,
   },
   modalTitle: {
     ...Typography.styles.h2,
@@ -680,7 +826,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: Colors.border,
+    backgroundColor: Colors.border.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -724,7 +870,7 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
     marginRight: Spacing.sm,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: Colors.border.primary,
   },
   platformOptionActive: {
     backgroundColor: Colors.primary.main,

@@ -1,5 +1,6 @@
 import { Linking, Alert } from 'react-native';
 import { authService } from './AuthService';
+import { debugLog, errorLog } from '../utils/logger';
 
 export interface MagicLinkResult {
   success: boolean;
@@ -11,19 +12,22 @@ class MagicLinkService {
   /**
    * Send magic link to email
    */
-  async sendMagicLink(email: string, purpose: 'login' | 'register' = 'login'): Promise<MagicLinkResult> {
+  async sendMagicLink(
+    email: string,
+    purpose: 'login' | 'register' = 'login',
+  ): Promise<MagicLinkResult> {
     try {
-      console.log(`📧 Sending magic link to: ${email} for purpose: ${purpose}`);
-      
+      debugLog(`📧 Sending magic link to: ${email} for purpose: ${purpose}`);
+
       const result = await authService.sendMagicLink({
         email,
         purpose,
       });
 
-      console.log('✅ Magic link sent successfully');
+      debugLog('✅ Magic link sent successfully');
       return result;
     } catch (error: any) {
-      console.error('Magic link sending error:', error);
+      errorLog('Magic link sending error:', error);
       throw new Error(error.message || 'Failed to send magic link');
     }
   }
@@ -33,14 +37,14 @@ class MagicLinkService {
    */
   async verifyMagicLink(token: string) {
     try {
-      console.log('🔗 Verifying magic link token');
-      
+      debugLog('🔗 Verifying magic link token');
+
       const result = await authService.verifyMagicLink(token);
-      
-      console.log('✅ Magic link verification successful');
+
+      debugLog('✅ Magic link verification successful');
       return result;
     } catch (error: any) {
-      console.error('Magic link verification error:', error);
+      errorLog('Magic link verification error:', error);
       throw new Error(error.message || 'Magic link verification failed');
     }
   }
@@ -50,12 +54,13 @@ class MagicLinkService {
    */
   handleDeepLink(url: string) {
     try {
-      console.log('🔗 Handling deep link:', url);
-      
+      debugLog('🔗 Handling deep link:', url);
+
       // Parse URL to extract token
       const urlObj = new URL(url);
-      const token = urlObj.searchParams?.get('token') || this.extractTokenFromUrl(url);
-      
+      const token =
+        urlObj.searchParams?.get('token') || this.extractTokenFromUrl(url);
+
       if (!token) {
         throw new Error('No token found in magic link');
       }
@@ -63,7 +68,7 @@ class MagicLinkService {
       // Verify the magic link
       return this.verifyMagicLink(token);
     } catch (error: any) {
-      console.error('Deep link handling error:', error);
+      errorLog('Deep link handling error:', error);
       throw new Error(error.message || 'Failed to handle magic link');
     }
   }
@@ -81,27 +86,30 @@ class MagicLinkService {
    */
   setupDeepLinkListener(callback: (result: any) => void) {
     const handleUrl = (url: string) => {
-      console.log('🔗 Received deep link:', url);
-      
+      debugLog('🔗 Received deep link:', url);
+
       if (url.includes('magic-link') && url.includes('token=')) {
         this.handleDeepLink(url)
           .then(callback)
-          .catch((error) => {
-            console.error('Magic link handling error:', error);
-            Alert.alert('Error', 'Failed to verify magic link. Please try again.');
+          .catch(error => {
+            errorLog('Magic link handling error:', error);
+            Alert.alert(
+              'Error',
+              'Failed to verify magic link. Please try again.',
+            );
           });
       }
     };
 
     // Handle initial URL (app opened via deep link)
-    Linking.getInitialURL().then((url) => {
+    Linking.getInitialURL().then(url => {
       if (url) {
         handleUrl(url);
       }
     });
 
     // Handle subsequent URLs (app already running)
-    const subscription = Linking.addEventListener('url', (event) => {
+    const subscription = Linking.addEventListener('url', event => {
       handleUrl(event.url);
     });
 
@@ -116,12 +124,12 @@ class MagicLinkService {
       // Try to open the default email app
       await Linking.openURL('mailto:');
     } catch (error) {
-      console.error('Failed to open email app:', error);
+      errorLog('Failed to open email app:', error);
       // Fallback: show alert with instructions
       Alert.alert(
         'Check Your Email',
         'Please check your email for the magic link. You may need to open your email app manually.',
-        [{ text: 'OK' }]
+        [{ text: 'OK' }],
       );
     }
   }
@@ -134,13 +142,13 @@ class MagicLinkService {
       const expirationDate = new Date(expiresAt);
       const now = new Date();
       const diffMs = expirationDate.getTime() - now.getTime();
-      
+
       if (diffMs <= 0) {
         return 'Expired';
       }
-      
+
       const diffMinutes = Math.floor(diffMs / (1000 * 60));
-      
+
       if (diffMinutes < 1) {
         return 'Less than 1 minute';
       } else if (diffMinutes === 1) {
@@ -152,7 +160,7 @@ class MagicLinkService {
         return `${diffHours} hour${diffHours > 1 ? 's' : ''}`;
       }
     } catch (error) {
-      console.error('Error formatting expiration time:', error);
+      errorLog('Error formatting expiration time:', error);
       return 'Unknown';
     }
   }

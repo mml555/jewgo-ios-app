@@ -12,6 +12,7 @@ import {
   Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { errorLog } from '../utils/logger';
 // Using emoji icons instead of vector icons to avoid dependencies
 
 // Types for database entities
@@ -63,11 +64,13 @@ const DatabaseDashboard: React.FC = () => {
   const [stats, setStats] = useState<DatabaseStats | null>(null);
   const [connection, setConnection] = useState<DatabaseConnection>({
     status: 'disconnected',
-    message: 'Not connected'
+    message: 'Not connected',
   });
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedEntity, setSelectedEntity] = useState<DatabaseEntity | null>(null);
+  const [selectedEntity, setSelectedEntity] = useState<DatabaseEntity | null>(
+    null,
+  );
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
@@ -77,7 +80,7 @@ const DatabaseDashboard: React.FC = () => {
     try {
       setLoading(true);
       const startTime = Date.now();
-      
+
       const response = await fetch('http://127.0.0.1:3001/health', {
         method: 'GET',
         headers: {
@@ -86,26 +89,28 @@ const DatabaseDashboard: React.FC = () => {
       });
 
       const responseTime = Date.now() - startTime;
-      
+
       if (response.ok) {
         setConnection({
           status: 'connected',
           message: 'Database connection successful',
-          response_time: responseTime
+          response_time: responseTime,
         });
         return true;
       } else {
         setConnection({
           status: 'error',
           message: `Connection failed: ${response.status}`,
-          response_time: responseTime
+          response_time: responseTime,
         });
         return false;
       }
     } catch (error) {
       setConnection({
         status: 'error',
-        message: `Connection error: ${error.message}`,
+        message: `Connection error: ${
+          (error as Error).message || String(error)
+        }`,
       });
       return false;
     } finally {
@@ -116,19 +121,22 @@ const DatabaseDashboard: React.FC = () => {
   // Fetch database statistics
   const fetchStats = useCallback(async () => {
     try {
-      const response = await fetch('http://127.0.0.1:3001/api/v5/dashboard/entities/stats', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await fetch(
+        'http://127.0.0.1:3001/api/v5/dashboard/entities/stats',
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
         },
-      });
+      );
 
       if (response.ok) {
         const data = await response.json();
         setStats(data);
       }
     } catch (error) {
-      console.error('Error fetching stats:', error);
+      errorLog('Error fetching stats:', error);
     }
   }, []);
 
@@ -136,12 +144,15 @@ const DatabaseDashboard: React.FC = () => {
   const fetchEntities = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://127.0.0.1:3001/api/v5/dashboard/entities/recent?limit=100', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await fetch(
+        'http://127.0.0.1:3001/api/v5/dashboard/entities/recent?limit=100',
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
         },
-      });
+      );
 
       if (response.ok) {
         const data = await response.json();
@@ -150,69 +161,96 @@ const DatabaseDashboard: React.FC = () => {
         Alert.alert('Error', 'Failed to fetch entities');
       }
     } catch (error) {
-      Alert.alert('Error', `Failed to fetch entities: ${error.message}`);
+      Alert.alert(
+        'Error',
+        `Failed to fetch entities: ${
+          (error as Error).message || String(error)
+        }`,
+      );
     } finally {
       setLoading(false);
     }
   }, []);
 
   // Update entity
-  const updateEntity = useCallback(async (entityId: string, updates: Partial<DatabaseEntity>) => {
-    try {
-      const response = await fetch(`http://127.0.0.1:3001/api/v5/entities/${entityId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(updates),
-      });
+  const updateEntity = useCallback(
+    async (entityId: string, updates: Partial<DatabaseEntity>) => {
+      try {
+        const response = await fetch(
+          `http://127.0.0.1:3001/api/v5/entities/${entityId}`,
+          {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(updates),
+          },
+        );
 
-      if (response.ok) {
-        Alert.alert('Success', 'Entity updated successfully');
-        fetchEntities(); // Refresh the list
-        setEditModalVisible(false);
-        setSelectedEntity(null);
-      } else {
-        Alert.alert('Error', 'Failed to update entity');
+        if (response.ok) {
+          Alert.alert('Success', 'Entity updated successfully');
+          fetchEntities(); // Refresh the list
+          setEditModalVisible(false);
+          setSelectedEntity(null);
+        } else {
+          Alert.alert('Error', 'Failed to update entity');
+        }
+      } catch (error) {
+        Alert.alert(
+          'Error',
+          `Failed to update entity: ${
+            (error as Error).message || String(error)
+          }`,
+        );
       }
-    } catch (error) {
-      Alert.alert('Error', `Failed to update entity: ${error.message}`);
-    }
-  }, [fetchEntities]);
+    },
+    [fetchEntities],
+  );
 
   // Delete entity
-  const deleteEntity = useCallback(async (entityId: string) => {
-    Alert.alert(
-      'Confirm Delete',
-      'Are you sure you want to delete this entity? This action cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const response = await fetch(`http://127.0.0.1:3001/api/v5/entities/${entityId}`, {
-                method: 'DELETE',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-              });
+  const deleteEntity = useCallback(
+    async (entityId: string) => {
+      Alert.alert(
+        'Confirm Delete',
+        'Are you sure you want to delete this entity? This action cannot be undone.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                const response = await fetch(
+                  `http://127.0.0.1:3001/api/v5/entities/${entityId}`,
+                  {
+                    method: 'DELETE',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                  },
+                );
 
-              if (response.ok) {
-                Alert.alert('Success', 'Entity deleted successfully');
-                fetchEntities(); // Refresh the list
-              } else {
-                Alert.alert('Error', 'Failed to delete entity');
+                if (response.ok) {
+                  Alert.alert('Success', 'Entity deleted successfully');
+                  fetchEntities(); // Refresh the list
+                } else {
+                  Alert.alert('Error', 'Failed to delete entity');
+                }
+              } catch (error) {
+                Alert.alert(
+                  'Error',
+                  `Failed to delete entity: ${
+                    (error as Error).message || String(error)
+                  }`,
+                );
               }
-            } catch (error) {
-              Alert.alert('Error', `Failed to delete entity: ${error.message}`);
-            }
+            },
           },
-        },
-      ]
-    );
-  }, [fetchEntities]);
+        ],
+      );
+    },
+    [fetchEntities],
+  );
 
   // Initialize dashboard
   useEffect(() => {
@@ -235,27 +273,37 @@ const DatabaseDashboard: React.FC = () => {
 
   // Filter entities
   const filteredEntities = entities.filter(entity => {
-    const matchesSearch = entity.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         entity.city.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesType = filterType === 'all' || entity.entity_type === filterType;
+    const matchesSearch =
+      entity.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      entity.city.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesType =
+      filterType === 'all' || entity.entity_type === filterType;
     return matchesSearch && matchesType;
   });
 
   const getConnectionStatusColor = () => {
     switch (connection.status) {
-      case 'connected': return '#4CAF50';
-      case 'error': return '#F44336';
-      default: return '#FF9800';
+      case 'connected':
+        return '#4CAF50';
+      case 'error':
+        return '#F44336';
+      default:
+        return '#FF9800';
     }
   };
 
   const getEntityTypeColor = (type: string) => {
     switch (type) {
-      case 'restaurant': return '#FF5722';
-      case 'synagogue': return '#2196F3';
-      case 'mikvah': return '#9C27B0';
-      case 'store': return '#4CAF50';
-      default: return '#607D8B';
+      case 'restaurant':
+        return '#FF5722';
+      case 'synagogue':
+        return '#2196F3';
+      case 'mikvah':
+        return '#9C27B0';
+      case 'store':
+        return '#4CAF50';
+      default:
+        return '#607D8B';
     }
   };
 
@@ -271,7 +319,10 @@ const DatabaseDashboard: React.FC = () => {
         <View style={styles.header}>
           <Text style={styles.title}>Database Dashboard</Text>
           <TouchableOpacity
-            style={[styles.connectionButton, { backgroundColor: getConnectionStatusColor() }]}
+            style={[
+              styles.connectionButton,
+              { backgroundColor: getConnectionStatusColor() },
+            ]}
             onPress={testConnection}
           >
             <Text style={styles.connectionIcon}>📶</Text>
@@ -334,19 +385,21 @@ const DatabaseDashboard: React.FC = () => {
             onChangeText={setSearchQuery}
           />
           <View style={styles.filterButtons}>
-            {['all', 'restaurant', 'synagogue', 'mikvah', 'store'].map((type) => (
+            {['all', 'restaurant', 'synagogue', 'mikvah', 'store'].map(type => (
               <TouchableOpacity
                 key={type}
                 style={[
                   styles.filterButton,
-                  filterType === type && styles.filterButtonActive
+                  filterType === type && styles.filterButtonActive,
                 ]}
                 onPress={() => setFilterType(type)}
               >
-                <Text style={[
-                  styles.filterButtonText,
-                  filterType === type && styles.filterButtonTextActive
-                ]}>
+                <Text
+                  style={[
+                    styles.filterButtonText,
+                    filterType === type && styles.filterButtonTextActive,
+                  ]}
+                >
                   {type.charAt(0).toUpperCase() + type.slice(1)}
                 </Text>
               </TouchableOpacity>
@@ -359,11 +412,11 @@ const DatabaseDashboard: React.FC = () => {
           <Text style={styles.entitiesTitle}>
             Entities ({filteredEntities.length})
           </Text>
-          
+
           {loading ? (
             <ActivityIndicator size="large" color="#2196F3" />
           ) : (
-            filteredEntities.map((entity) => (
+            filteredEntities.map(entity => (
               <TouchableOpacity
                 key={entity.id}
                 style={styles.entityItem}
@@ -376,7 +429,8 @@ const DatabaseDashboard: React.FC = () => {
                   <View style={styles.entityInfo}>
                     <Text style={styles.entityName}>{entity.name}</Text>
                     <Text style={styles.entityType}>
-                      {entity.entity_type.charAt(0).toUpperCase() + entity.entity_type.slice(1)}
+                      {entity.entity_type.charAt(0).toUpperCase() +
+                        entity.entity_type.slice(1)}
                     </Text>
                   </View>
                   <View style={styles.entityBadges}>
@@ -385,24 +439,32 @@ const DatabaseDashboard: React.FC = () => {
                         <Text style={styles.verifiedIcon}>✓</Text>
                       </View>
                     )}
-                    <View style={[
-                      styles.typeBadge,
-                      { backgroundColor: getEntityTypeColor(entity.entity_type) }
-                    ]}>
+                    <View
+                      style={[
+                        styles.typeBadge,
+                        {
+                          backgroundColor: getEntityTypeColor(
+                            entity.entity_type,
+                          ),
+                        },
+                      ]}
+                    >
                       <Text style={styles.typeBadgeText}>
                         {entity.entity_type.charAt(0).toUpperCase()}
                       </Text>
                     </View>
                   </View>
                 </View>
-                
+
                 <Text style={styles.entityAddress}>
-                  {entity.address}, {entity.city}, {entity.state} {entity.zip_code}
+                  {entity.address}, {entity.city}, {entity.state}{' '}
+                  {entity.zip_code}
                 </Text>
-                
+
                 <View style={styles.entityFooter}>
                   <Text style={styles.entityRating}>
-                    ⭐ {entity.rating.toFixed(1)} ({entity.review_count} reviews)
+                    ⭐ {entity.rating.toFixed(1)} ({entity.review_count}{' '}
+                    reviews)
                   </Text>
                   <View style={styles.entityActions}>
                     <TouchableOpacity
@@ -446,7 +508,9 @@ const DatabaseDashboard: React.FC = () => {
                 <TextInput
                   style={styles.formInput}
                   value={selectedEntity.name}
-                  onChangeText={(text) => setSelectedEntity({...selectedEntity, name: text})}
+                  onChangeText={text =>
+                    setSelectedEntity({ ...selectedEntity, name: text })
+                  }
                 />
               </View>
 
@@ -455,7 +519,9 @@ const DatabaseDashboard: React.FC = () => {
                 <TextInput
                   style={[styles.formInput, styles.textArea]}
                   value={selectedEntity.description}
-                  onChangeText={(text) => setSelectedEntity({...selectedEntity, description: text})}
+                  onChangeText={text =>
+                    setSelectedEntity({ ...selectedEntity, description: text })
+                  }
                   multiline
                 />
               </View>
@@ -465,7 +531,9 @@ const DatabaseDashboard: React.FC = () => {
                 <TextInput
                   style={styles.formInput}
                   value={selectedEntity.address}
-                  onChangeText={(text) => setSelectedEntity({...selectedEntity, address: text})}
+                  onChangeText={text =>
+                    setSelectedEntity({ ...selectedEntity, address: text })
+                  }
                 />
               </View>
 
@@ -475,7 +543,9 @@ const DatabaseDashboard: React.FC = () => {
                   <TextInput
                     style={styles.formInput}
                     value={selectedEntity.city}
-                    onChangeText={(text) => setSelectedEntity({...selectedEntity, city: text})}
+                    onChangeText={text =>
+                      setSelectedEntity({ ...selectedEntity, city: text })
+                    }
                   />
                 </View>
                 <View style={[styles.formGroup, styles.formGroupHalf]}>
@@ -483,7 +553,9 @@ const DatabaseDashboard: React.FC = () => {
                   <TextInput
                     style={styles.formInput}
                     value={selectedEntity.state}
-                    onChangeText={(text) => setSelectedEntity({...selectedEntity, state: text})}
+                    onChangeText={text =>
+                      setSelectedEntity({ ...selectedEntity, state: text })
+                    }
                   />
                 </View>
               </View>
@@ -493,7 +565,9 @@ const DatabaseDashboard: React.FC = () => {
                 <TextInput
                   style={styles.formInput}
                   value={selectedEntity.phone}
-                  onChangeText={(text) => setSelectedEntity({...selectedEntity, phone: text})}
+                  onChangeText={text =>
+                    setSelectedEntity({ ...selectedEntity, phone: text })
+                  }
                 />
               </View>
 
@@ -502,7 +576,9 @@ const DatabaseDashboard: React.FC = () => {
                 <TextInput
                   style={styles.formInput}
                   value={selectedEntity.email}
-                  onChangeText={(text) => setSelectedEntity({...selectedEntity, email: text})}
+                  onChangeText={text =>
+                    setSelectedEntity({ ...selectedEntity, email: text })
+                  }
                 />
               </View>
 
@@ -511,7 +587,9 @@ const DatabaseDashboard: React.FC = () => {
                 <TextInput
                   style={styles.formInput}
                   value={selectedEntity.website}
-                  onChangeText={(text) => setSelectedEntity({...selectedEntity, website: text})}
+                  onChangeText={text =>
+                    setSelectedEntity({ ...selectedEntity, website: text })
+                  }
                 />
               </View>
 
@@ -521,9 +599,14 @@ const DatabaseDashboard: React.FC = () => {
                   <TouchableOpacity
                     style={[
                       styles.checkbox,
-                      selectedEntity.is_verified && styles.checkboxChecked
+                      selectedEntity.is_verified && styles.checkboxChecked,
                     ]}
-                    onPress={() => setSelectedEntity({...selectedEntity, is_verified: !selectedEntity.is_verified})}
+                    onPress={() =>
+                      setSelectedEntity({
+                        ...selectedEntity,
+                        is_verified: !selectedEntity.is_verified,
+                      })
+                    }
                     activeOpacity={0.7}
                     accessibilityRole="checkbox"
                     accessibilityState={{ checked: selectedEntity.is_verified }}
@@ -539,9 +622,14 @@ const DatabaseDashboard: React.FC = () => {
                   <TouchableOpacity
                     style={[
                       styles.checkbox,
-                      selectedEntity.is_active && styles.checkboxChecked
+                      selectedEntity.is_active && styles.checkboxChecked,
                     ]}
-                    onPress={() => setSelectedEntity({...selectedEntity, is_active: !selectedEntity.is_active})}
+                    onPress={() =>
+                      setSelectedEntity({
+                        ...selectedEntity,
+                        is_active: !selectedEntity.is_active,
+                      })
+                    }
                     activeOpacity={0.7}
                     accessibilityRole="checkbox"
                     accessibilityState={{ checked: selectedEntity.is_active }}

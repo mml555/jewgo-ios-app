@@ -13,7 +13,14 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { CreateStoreForm } from '../types/shtetl';
-import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../styles/designSystem';
+import { errorLog } from '../utils/logger';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  Shadows,
+} from '../styles/designSystem';
 
 const CreateStoreScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -35,7 +42,9 @@ const CreateStoreScreen: React.FC = () => {
     shippingAvailable: false,
   });
 
-  const [errors, setErrors] = useState<Partial<Record<keyof CreateStoreForm, string>>>({});
+  const [errors, setErrors] = useState<
+    Partial<Record<keyof CreateStoreForm, string>>
+  >({});
 
   const storeTypes = [
     { key: 'general', label: 'General Store', emoji: '🏪' },
@@ -53,13 +62,16 @@ const CreateStoreScreen: React.FC = () => {
     { key: 'pas-yisrael', label: 'Pas Yisrael' },
   ];
 
-  const handleInputChange = useCallback((field: keyof CreateStoreForm, value: string | boolean) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    // Clear error when user starts typing
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: undefined }));
-    }
-  }, [errors]);
+  const handleInputChange = useCallback(
+    (field: keyof CreateStoreForm, value: string | boolean) => {
+      setFormData(prev => ({ ...prev, [field]: value }));
+      // Clear error when user starts typing
+      if (errors[field]) {
+        setErrors(prev => ({ ...prev, [field]: undefined }));
+      }
+    },
+    [errors],
+  );
 
   const validateForm = useCallback((): boolean => {
     const newErrors: Partial<Record<keyof CreateStoreForm, string>> = {};
@@ -110,10 +122,10 @@ const CreateStoreScreen: React.FC = () => {
     try {
       // TODO: Replace with actual API call
       // await shtetlService.createStore(formData);
-      
+
       // Mock success for now
       await new Promise(resolve => setTimeout(resolve, 2000));
-      
+
       Alert.alert(
         'Store Created!',
         'Your store has been created successfully. You can now start adding products.',
@@ -122,11 +134,11 @@ const CreateStoreScreen: React.FC = () => {
             text: 'OK',
             onPress: () => navigation.goBack(),
           },
-        ]
+        ],
       );
     } catch (error) {
       Alert.alert('Error', 'Failed to create store. Please try again.');
-      console.error('Error creating store:', error);
+      errorLog('Error creating store:', error);
     } finally {
       setLoading(false);
     }
@@ -137,7 +149,7 @@ const CreateStoreScreen: React.FC = () => {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Store Type *</Text>
         <View style={styles.typeGrid}>
-          {storeTypes.map((type) => (
+          {storeTypes.map(type => (
             <TouchableOpacity
               key={type.key}
               style={[
@@ -147,10 +159,12 @@ const CreateStoreScreen: React.FC = () => {
               onPress={() => handleInputChange('storeType', type.key)}
             >
               <Text style={styles.typeEmoji}>{type.emoji}</Text>
-              <Text style={[
-                styles.typeLabel,
-                formData.storeType === type.key && styles.typeLabelSelected,
-              ]}>
+              <Text
+                style={[
+                  styles.typeLabel,
+                  formData.storeType === type.key && styles.typeLabelSelected,
+                ]}
+              >
                 {type.label}
               </Text>
             </TouchableOpacity>
@@ -165,19 +179,23 @@ const CreateStoreScreen: React.FC = () => {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Kosher Level (Optional)</Text>
         <View style={styles.kosherGrid}>
-          {kosherLevels.map((level) => (
+          {kosherLevels.map(level => (
             <TouchableOpacity
               key={level.key}
               style={[
                 styles.kosherOption,
-                formData.kosherLevel === level.key && styles.kosherOptionSelected,
+                formData.kosherLevel === level.key &&
+                  styles.kosherOptionSelected,
               ]}
               onPress={() => handleInputChange('kosherLevel', level.key)}
             >
-              <Text style={[
-                styles.kosherLabel,
-                formData.kosherLevel === level.key && styles.kosherLabelSelected,
-              ]}>
+              <Text
+                style={[
+                  styles.kosherLabel,
+                  formData.kosherLevel === level.key &&
+                    styles.kosherLabelSelected,
+                ]}
+              >
                 {level.label}
               </Text>
             </TouchableOpacity>
@@ -197,13 +215,20 @@ const CreateStoreScreen: React.FC = () => {
               styles.serviceOption,
               formData.deliveryAvailable && styles.serviceOptionSelected,
             ]}
-            onPress={() => handleInputChange('deliveryAvailable', !formData.deliveryAvailable)}
+            onPress={() =>
+              handleInputChange(
+                'deliveryAvailable',
+                !formData.deliveryAvailable,
+              )
+            }
           >
             <Text style={styles.serviceEmoji}>🚚</Text>
-            <Text style={[
-              styles.serviceLabel,
-              formData.deliveryAvailable && styles.serviceLabelSelected,
-            ]}>
+            <Text
+              style={[
+                styles.serviceLabel,
+                formData.deliveryAvailable && styles.serviceLabelSelected,
+              ]}
+            >
               Delivery
             </Text>
           </TouchableOpacity>
@@ -213,13 +238,17 @@ const CreateStoreScreen: React.FC = () => {
               styles.serviceOption,
               formData.pickupAvailable && styles.serviceOptionSelected,
             ]}
-            onPress={() => handleInputChange('pickupAvailable', !formData.pickupAvailable)}
+            onPress={() =>
+              handleInputChange('pickupAvailable', !formData.pickupAvailable)
+            }
           >
             <Text style={styles.serviceEmoji}>🏃</Text>
-            <Text style={[
-              styles.serviceLabel,
-              formData.pickupAvailable && styles.serviceLabelSelected,
-            ]}>
+            <Text
+              style={[
+                styles.serviceLabel,
+                formData.pickupAvailable && styles.serviceLabelSelected,
+              ]}
+            >
               Pickup
             </Text>
           </TouchableOpacity>
@@ -229,13 +258,20 @@ const CreateStoreScreen: React.FC = () => {
               styles.serviceOption,
               formData.shippingAvailable && styles.serviceOptionSelected,
             ]}
-            onPress={() => handleInputChange('shippingAvailable', !formData.shippingAvailable)}
+            onPress={() =>
+              handleInputChange(
+                'shippingAvailable',
+                !formData.shippingAvailable,
+              )
+            }
           >
             <Text style={styles.serviceEmoji}>📦</Text>
-            <Text style={[
-              styles.serviceLabel,
-              formData.shippingAvailable && styles.serviceLabelSelected,
-            ]}>
+            <Text
+              style={[
+                styles.serviceLabel,
+                formData.shippingAvailable && styles.serviceLabelSelected,
+              ]}
+            >
               Shipping
             </Text>
           </TouchableOpacity>
@@ -249,9 +285,15 @@ const CreateStoreScreen: React.FC = () => {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
             <Text style={styles.backButtonText}>← Back</Text>
           </TouchableOpacity>
           <View style={styles.headerContent}>
@@ -266,31 +308,38 @@ const CreateStoreScreen: React.FC = () => {
           {/* Basic Information */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Basic Information *</Text>
-            
+
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Store Name</Text>
               <TextInput
                 style={[styles.input, errors.name && styles.inputError]}
                 value={formData.name}
-                onChangeText={(value) => handleInputChange('name', value)}
+                onChangeText={value => handleInputChange('name', value)}
                 placeholder="Enter your store name"
                 placeholderTextColor={Colors.gray400}
               />
-              {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
+              {errors.name && (
+                <Text style={styles.errorText}>{errors.name}</Text>
+              )}
             </View>
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Description</Text>
               <TextInput
-                style={[styles.textArea, errors.description && styles.inputError]}
+                style={[
+                  styles.textArea,
+                  errors.description && styles.inputError,
+                ]}
                 value={formData.description}
-                onChangeText={(value) => handleInputChange('description', value)}
+                onChangeText={value => handleInputChange('description', value)}
                 placeholder="Describe your store and what you sell"
                 placeholderTextColor={Colors.gray400}
                 multiline
                 numberOfLines={4}
               />
-              {errors.description && <Text style={styles.errorText}>{errors.description}</Text>}
+              {errors.description && (
+                <Text style={styles.errorText}>{errors.description}</Text>
+              )}
             </View>
           </View>
 
@@ -300,17 +349,19 @@ const CreateStoreScreen: React.FC = () => {
           {/* Location */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Location *</Text>
-            
+
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Address</Text>
               <TextInput
                 style={[styles.input, errors.address && styles.inputError]}
                 value={formData.address}
-                onChangeText={(value) => handleInputChange('address', value)}
+                onChangeText={value => handleInputChange('address', value)}
                 placeholder="Street address"
                 placeholderTextColor={Colors.gray400}
               />
-              {errors.address && <Text style={styles.errorText}>{errors.address}</Text>}
+              {errors.address && (
+                <Text style={styles.errorText}>{errors.address}</Text>
+              )}
             </View>
 
             <View style={styles.row}>
@@ -319,23 +370,29 @@ const CreateStoreScreen: React.FC = () => {
                 <TextInput
                   style={[styles.input, errors.city && styles.inputError]}
                   value={formData.city}
-                  onChangeText={(value) => handleInputChange('city', value)}
+                  onChangeText={value => handleInputChange('city', value)}
                   placeholder="City"
                   placeholderTextColor={Colors.gray400}
                 />
-                {errors.city && <Text style={styles.errorText}>{errors.city}</Text>}
+                {errors.city && (
+                  <Text style={styles.errorText}>{errors.city}</Text>
+                )}
               </View>
 
-              <View style={[styles.inputGroup, styles.flex1, styles.marginLeft]}>
+              <View
+                style={[styles.inputGroup, styles.flex1, styles.marginLeft]}
+              >
                 <Text style={styles.label}>State</Text>
                 <TextInput
                   style={[styles.input, errors.state && styles.inputError]}
                   value={formData.state}
-                  onChangeText={(value) => handleInputChange('state', value)}
+                  onChangeText={value => handleInputChange('state', value)}
                   placeholder="State"
                   placeholderTextColor={Colors.gray400}
                 />
-                {errors.state && <Text style={styles.errorText}>{errors.state}</Text>}
+                {errors.state && (
+                  <Text style={styles.errorText}>{errors.state}</Text>
+                )}
               </View>
             </View>
 
@@ -344,25 +401,29 @@ const CreateStoreScreen: React.FC = () => {
               <TextInput
                 style={[styles.input, errors.zipCode && styles.inputError]}
                 value={formData.zipCode}
-                onChangeText={(value) => handleInputChange('zipCode', value)}
+                onChangeText={value => handleInputChange('zipCode', value)}
                 placeholder="ZIP code"
                 placeholderTextColor={Colors.gray400}
                 keyboardType="numeric"
               />
-              {errors.zipCode && <Text style={styles.errorText}>{errors.zipCode}</Text>}
+              {errors.zipCode && (
+                <Text style={styles.errorText}>{errors.zipCode}</Text>
+              )}
             </View>
           </View>
 
           {/* Contact Information */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Contact Information (Optional)</Text>
-            
+            <Text style={styles.sectionTitle}>
+              Contact Information (Optional)
+            </Text>
+
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Phone</Text>
               <TextInput
                 style={styles.input}
                 value={formData.phone}
-                onChangeText={(value) => handleInputChange('phone', value)}
+                onChangeText={value => handleInputChange('phone', value)}
                 placeholder="Phone number"
                 placeholderTextColor={Colors.gray400}
                 keyboardType="phone-pad"
@@ -374,13 +435,15 @@ const CreateStoreScreen: React.FC = () => {
               <TextInput
                 style={[styles.input, errors.email && styles.inputError]}
                 value={formData.email}
-                onChangeText={(value) => handleInputChange('email', value)}
+                onChangeText={value => handleInputChange('email', value)}
                 placeholder="Email address"
                 placeholderTextColor={Colors.gray400}
                 keyboardType="email-address"
                 autoCapitalize="none"
               />
-              {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+              {errors.email && (
+                <Text style={styles.errorText}>{errors.email}</Text>
+              )}
             </View>
 
             <View style={styles.inputGroup}>
@@ -388,13 +451,15 @@ const CreateStoreScreen: React.FC = () => {
               <TextInput
                 style={[styles.input, errors.website && styles.inputError]}
                 value={formData.website}
-                onChangeText={(value) => handleInputChange('website', value)}
+                onChangeText={value => handleInputChange('website', value)}
                 placeholder="https://yourwebsite.com"
                 placeholderTextColor={Colors.gray400}
                 keyboardType="url"
                 autoCapitalize="none"
               />
-              {errors.website && <Text style={styles.errorText}>{errors.website}</Text>}
+              {errors.website && (
+                <Text style={styles.errorText}>{errors.website}</Text>
+              )}
             </View>
           </View>
 
@@ -445,7 +510,7 @@ const styles = StyleSheet.create({
     marginRight: Spacing.md,
   },
   backButtonText: {
-    ...Typography.body1,
+    ...Typography.styles.body1,
     color: Colors.primary.main,
     fontWeight: '600',
   },
@@ -458,7 +523,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   subtitle: {
-    ...Typography.body1,
+    ...Typography.styles.body1,
     color: Colors.gray600,
   },
   form: {
@@ -468,7 +533,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xl,
   },
   sectionTitle: {
-    ...Typography.h3,
+    ...Typography.styles.h3,
     color: Colors.gray900,
     marginBottom: Spacing.md,
   },
@@ -476,7 +541,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   label: {
-    ...Typography.body2,
+    ...Typography.styles.body2,
     color: Colors.gray700,
     marginBottom: Spacing.sm,
     fontWeight: '600',
@@ -488,7 +553,7 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
-    ...Typography.body1,
+    ...Typography.styles.body1,
     color: Colors.gray900,
   },
   textArea: {
@@ -498,7 +563,7 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
-    ...Typography.body1,
+    ...Typography.styles.body1,
     color: Colors.gray900,
     height: 100,
     textAlignVertical: 'top',
@@ -507,7 +572,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.error,
   },
   errorText: {
-    ...Typography.caption,
+    ...Typography.styles.caption,
     color: Colors.error,
     marginTop: Spacing.xs,
   },
@@ -537,14 +602,14 @@ const styles = StyleSheet.create({
   },
   typeOptionSelected: {
     borderColor: Colors.primary.main,
-    backgroundColor: Colors.primaryLight,
+    backgroundColor: Colors.primary.light,
   },
   typeEmoji: {
     fontSize: 24,
     marginBottom: Spacing.xs,
   },
   typeLabel: {
-    ...Typography.caption,
+    ...Typography.styles.caption,
     color: Colors.gray700,
     textAlign: 'center',
   },
@@ -568,10 +633,10 @@ const styles = StyleSheet.create({
   },
   kosherOptionSelected: {
     borderColor: Colors.primary.main,
-    backgroundColor: Colors.primaryLight,
+    backgroundColor: Colors.primary.light,
   },
   kosherLabel: {
-    ...Typography.body2,
+    ...Typography.styles.body2,
     color: Colors.gray700,
   },
   kosherLabelSelected: {
@@ -594,14 +659,14 @@ const styles = StyleSheet.create({
   },
   serviceOptionSelected: {
     borderColor: Colors.primary.main,
-    backgroundColor: Colors.primaryLight,
+    backgroundColor: Colors.primary.light,
   },
   serviceEmoji: {
     fontSize: 20,
     marginBottom: Spacing.xs,
   },
   serviceLabel: {
-    ...Typography.caption,
+    ...Typography.styles.caption,
     color: Colors.gray700,
     textAlign: 'center',
   },
@@ -632,4 +697,3 @@ const styles = StyleSheet.create({
 });
 
 export default CreateStoreScreen;
-

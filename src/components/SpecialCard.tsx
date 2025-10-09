@@ -5,41 +5,53 @@ import {
   Image,
   StyleSheet,
   TouchableOpacity,
+  Pressable,
   Dimensions,
 } from 'react-native';
-import { Colors, Typography, Spacing, BorderRadius, Shadows, TouchTargets } from '../styles/designSystem';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  Shadows,
+  TouchTargets,
+} from '../styles/designSystem';
 import HeartIcon from './HeartIcon';
 
-type CurrencyCode = "USD" | "ILS" | "EUR" | string;
+type CurrencyCode = 'USD' | 'ILS' | 'EUR' | string;
 
 export interface DealGridCard {
-  id: string;                           // deal id
-  title: string;                        // "16\" Pizza Pie"
-  imageUrl: string;                     // hero image for card
-  badge?: {                             // the pill in the top-left, e.g., "20% OFF"
+  id: string; // deal id
+  title: string; // "16\" Pizza Pie"
+  imageUrl: string; // hero image for card
+  badge?: {
+    // the pill in the top-left, e.g., "20% OFF"
     text: string;
-    type?: "percent" | "amount" | "custom";
+    type?: 'percent' | 'amount' | 'custom' | 'bogo' | 'free_item';
   };
-  merchantName: string;                 // Milano's Kosher Pizza
+  merchantName: string; // Milano's Kosher Pizza
   price: {
-    original: number;                   // 24.99
-    sale: number;                       // 19.99
-    currency: CurrencyCode;             // "USD"
+    original: number; // 24.99
+    sale: number; // 19.99
+    currency: CurrencyCode; // "USD"
   };
-  timeLeftSeconds?: number;             // for countdown (e.g., 9 * 3600)
-  expiresAt?: string;                   // ISO if you prefer absolute time
-  claimsLeft?: number;                  // 15
-  totalClaims?: number;                 // optional, e.g., 100
-  views?: number;                       // 1200
-  distanceMiles?: number;               // for "1.3 mi"
-  addressShort?: string;                // "1234 Main St"
+  timeLeftSeconds?: number; // for countdown (e.g., 9 * 3600)
+  expiresAt?: string; // ISO if you prefer absolute time
+  claimsLeft?: number; // 15
+  totalClaims?: number; // optional, e.g., 100
+  views?: number; // 1200
+  distanceMiles?: number; // for "1.3 mi"
+  addressShort?: string; // "1234 Main St"
   geo?: { lat: number; lng: number };
   isLiked: boolean;
-  showHeart: boolean;                   // to render the heart overlay
-  isClaimed?: boolean;                  // user state
-  ctaText?: string;                     // "Click to Claim"
+  showHeart: boolean; // to render the heart overlay
+  isClaimed?: boolean; // user state
+  ctaText?: string; // "Click to Claim"
+  // Deal type information
+  discountType?: 'percentage' | 'fixed_amount' | 'bogo' | 'free_item' | 'other';
+  discountValue?: number;
   // Optional visual helpers
-  overlayTag?: string;                  // e.g., "Meat", "Dairy", etc. if you want a corner tag
+  overlayTag?: string; // e.g., "Meat", "Dairy", etc. if you want a corner tag
 }
 
 interface SpecialCardProps {
@@ -55,112 +67,145 @@ const CARD_SPACING = 8; // Space between cards in a row
 const CARD_WIDTH = (screenWidth - ROW_PADDING - CARD_SPACING) / 2;
 const IMAGE_HEIGHT = (CARD_WIDTH * 3) / 4; // 4:3 aspect ratio
 
-const SpecialCard: React.FC<SpecialCardProps> = memo(({ item, onPress, onClaim, onToggleLike }) => {
-  // Format time left for display
-  const timeLeftDisplay = useMemo(() => {
-    if (item.timeLeftSeconds && item.timeLeftSeconds > 0) {
-      const hours = Math.floor(item.timeLeftSeconds / 3600);
-      if (hours < 24) {
-        return `${hours} Hours Left`;
-      } else {
-        const days = Math.floor(hours / 24);
-        return `${days} Days Left`;
+const SpecialCard: React.FC<SpecialCardProps> = memo(
+  ({ item, onPress, onClaim, onToggleLike }) => {
+    // Format time left for display
+    const timeLeftDisplay = useMemo(() => {
+      if (item.timeLeftSeconds && item.timeLeftSeconds > 0) {
+        const hours = Math.floor(item.timeLeftSeconds / 3600);
+        if (hours < 24) {
+          return `${hours} Hours Left`;
+        } else {
+          const days = Math.floor(hours / 24);
+          return `${days} Days Left`;
+        }
       }
-    }
-    return null;
-  }, [item.timeLeftSeconds]);
+      return null;
+    }, [item.timeLeftSeconds]);
 
-  // Format price display
-  const priceDisplay = useMemo(() => {
-    const currencySymbol = item.price.currency === 'USD' ? '$' : 
-                          item.price.currency === 'ILS' ? '₪' : 
-                          item.price.currency === 'EUR' ? '€' : item.price.currency;
-    
-    return {
-      original: `${currencySymbol}${item.price.original.toFixed(2)}`,
-      sale: `${currencySymbol}${item.price.sale.toFixed(2)}`,
+    // Format price display
+    const priceDisplay = useMemo(() => {
+      const currencySymbol =
+        item.price.currency === 'USD'
+          ? '$'
+          : item.price.currency === 'ILS'
+          ? '₪'
+          : item.price.currency === 'EUR'
+          ? '€'
+          : item.price.currency;
+
+      return {
+        original: `${currencySymbol}${item.price.original.toFixed(2)}`,
+        sale: `${currencySymbol}${item.price.sale.toFixed(2)}`,
+      };
+    }, [item.price]);
+
+    // Get badge color based on deal type
+    const getBadgeColor = (type?: string): string => {
+      switch (type) {
+        case 'percent':
+          return Colors.primary.main;
+        case 'amount':
+          return Colors.success;
+        case 'bogo':
+          return Colors.warning;
+        case 'free_item':
+          return Colors.info;
+        default:
+          return Colors.primary.main;
+      }
     };
-  }, [item.price]);
 
-  const handlePress = () => {
-    onPress(item);
-  };
+    const handlePress = () => {
+      onPress(item);
+    };
 
-  const handleHeartPress = () => {
-    if (onToggleLike) {
-      onToggleLike(item.id);
-    }
-  };
+    const handleHeartPress = () => {
+      if (onToggleLike) {
+        onToggleLike(item.id);
+      }
+    };
 
-  return (
-    <TouchableOpacity
-      style={styles.container}
-      onPress={handlePress}
-      activeOpacity={0.8}
-      accessible={true}
-      accessibilityRole="button"
-      accessibilityLabel={`${item.title}, ${item.badge?.text}, ${item.merchantName}`}
-      accessibilityHint="Tap to view deal details"
-    >
-      <View style={styles.imageContainer}>
-        <Image
-          source={{ uri: item.imageUrl }}
-          style={styles.image}
-          resizeMode="cover"
-          accessible={true}
-          accessibilityLabel={`Image for ${item.title}`}
-        />
-        
-        {/* Badge on top left (discount/offer) */}
-        {item.badge && (
-          <View style={styles.tagContainer}>
-            <Text style={styles.tagText}>{item.badge.text}</Text>
-          </View>
-        )}
-        
-        {/* Heart button on top right */}
-        {item.showHeart && (
-          <TouchableOpacity
-            style={styles.heartButton}
-            onPress={handleHeartPress}
+    return (
+      <TouchableOpacity
+        style={styles.container}
+        onPress={handlePress}
+        activeOpacity={0.8}
+        accessible={true}
+        accessibilityRole="button"
+        accessibilityLabel={`${item.title}, ${item.badge?.text}, ${item.merchantName}`}
+        accessibilityHint="Tap to view deal details"
+      >
+        <View style={styles.imageContainer}>
+          <Image
+            source={{ uri: item.imageUrl }}
+            style={styles.image}
+            resizeMode="cover"
             accessible={true}
-            accessibilityRole="button"
-            accessibilityLabel={item.isLiked ? "Remove from favorites" : "Add to favorites"}
-            accessibilityHint="Tap to toggle favorite status"
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <HeartIcon 
-              size={20} 
-              color={item.isLiked ? Colors.error : Colors.textSecondary} 
-              filled={item.isLiked} 
-            />
-          </TouchableOpacity>
-        )}
-      </View>
-      
-      <View style={styles.contentContainer}>
-        {/* Deal Name and Time Left on same line */}
-        <View style={styles.titleSection}>
-          <Text style={styles.title} numberOfLines={1}>
-            {item.title}
-          </Text>
-          {timeLeftDisplay && (
-            <Text style={styles.timeLeftText}>{timeLeftDisplay}</Text>
+            accessibilityLabel={`Image for ${item.title}`}
+          />
+
+          {/* Badge on top left (discount/offer) */}
+          {item.badge && (
+            <View
+              style={[
+                styles.tagContainer,
+                { backgroundColor: getBadgeColor(item.badge.type) },
+              ]}
+            >
+              <Text style={styles.tagText}>{item.badge.text}</Text>
+            </View>
+          )}
+
+          {/* Heart button on top right */}
+          {item.showHeart && (
+            <Pressable
+              style={({ pressed }) => [
+                styles.heartButton,
+                pressed && { opacity: 0.7 },
+              ]}
+              onPress={handleHeartPress}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel={
+                item.isLiked ? 'Remove from favorites' : 'Add to favorites'
+              }
+              accessibilityHint="Tap to toggle favorite status"
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <HeartIcon
+                size={20}
+                color={item.isLiked ? Colors.error : Colors.textSecondary}
+                filled={item.isLiked}
+              />
+            </Pressable>
           )}
         </View>
-        
-        {/* Price Section with Claim button on same line */}
-        <View style={styles.priceSection}>
-          <View style={styles.priceContainer}>
-            <Text style={styles.originalPrice}>{priceDisplay.original}</Text>
-            <Text style={styles.salePrice}>{priceDisplay.sale}</Text>
+
+        <View style={styles.contentContainer}>
+          {/* Deal Name and Time Left on same line */}
+          <View style={styles.titleSection}>
+            <Text style={styles.title} numberOfLines={1}>
+              {item.title}
+            </Text>
+            {timeLeftDisplay && (
+              <Text style={styles.timeLeftText}>{timeLeftDisplay}</Text>
+            )}
           </View>
-          <Text style={styles.ctaText}>Claim</Text>
+
+          {/* Price Section with Claim button on same line */}
+          <View style={styles.priceSection}>
+            <View style={styles.priceContainer}>
+              <Text style={styles.originalPrice}>{priceDisplay.original}</Text>
+              <Text style={styles.salePrice}>{priceDisplay.sale}</Text>
+            </View>
+            <Text style={styles.ctaText}>Claim</Text>
+          </View>
         </View>
-      </View>
-    </TouchableOpacity>
-  );
-});
+      </TouchableOpacity>
+    );
+  },
+);
 
 SpecialCard.displayName = 'SpecialCard';
 
@@ -187,7 +232,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: Spacing.sm,
     left: Spacing.sm,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)', // Dark background for better contrast
+    backgroundColor: Colors.primary.main, // Default color, will be overridden by dynamic color
     borderRadius: BorderRadius.full,
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.xs,
@@ -204,8 +249,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: Spacing.sm - 6, // Move up 6px total for better visual alignment
     right: Spacing.sm,
-    width: 40,
-    height: 40, // Keep same height for touch target
+    width: TouchTargets.minimum,
+    height: TouchTargets.minimum,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -282,4 +327,3 @@ const styles = StyleSheet.create({
 });
 
 export default SpecialCard;
-export type { DealGridCard };

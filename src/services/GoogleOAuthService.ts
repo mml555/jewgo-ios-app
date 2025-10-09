@@ -1,5 +1,10 @@
-import { GoogleSignin, GoogleSigninButton, statusCodes } from '@react-native-google-signin/google-signin';
+import {
+  GoogleSignin,
+  GoogleSigninButton,
+  statusCodes,
+} from '@react-native-google-signin/google-signin';
 import { configService } from '../config/ConfigService';
+import { debugLog, errorLog, infoLog } from '../utils/logger';
 
 export interface GoogleUser {
   user: {
@@ -33,9 +38,9 @@ class GoogleOAuthService {
         iosClientId: configService.getConfig().googleOAuthClientId, // [iOS] if you want to specify the client ID of type iOS (otherwise, it is taken from GoogleService-Info.plist)
       });
       this.isConfigured = true;
-      console.log('✅ Google Sign-In configured successfully');
+      infoLog('✅ Google Sign-In configured successfully');
     } catch (error) {
-      console.error('❌ Google Sign-In configuration failed:', error);
+      errorLog('❌ Google Sign-In configuration failed:', error);
     }
   }
 
@@ -44,9 +49,11 @@ class GoogleOAuthService {
    */
   async isSignedIn(): Promise<boolean> {
     try {
-      return await GoogleSignin.isSignedIn();
+      // Check if user is signed in by trying to get current user
+      const user = await GoogleSignin.getCurrentUser();
+      return user !== null;
     } catch (error) {
-      console.error('Error checking Google Sign-In status:', error);
+      errorLog('Error checking Google Sign-In status:', error);
       return false;
     }
   }
@@ -65,34 +72,36 @@ class GoogleOAuthService {
 
       // Sign in
       const userInfo = await GoogleSignin.signIn();
-      
-      console.log('✅ Google Sign-In successful:', userInfo.user.email);
-      
+
+      infoLog('✅ Google Sign-In successful:', userInfo.data?.user?.email);
+
       return {
         user: {
-          id: userInfo.user.id,
-          name: userInfo.user.name || '',
-          email: userInfo.user.email,
-          photo: userInfo.user.photo || '',
+          id: userInfo.data?.user?.id || '',
+          name: userInfo.data?.user?.name || '',
+          email: userInfo.data?.user?.email || '',
+          photo: userInfo.data?.user?.photo || '',
         },
-        idToken: userInfo.idToken || '',
-        serverAuthCode: userInfo.serverAuthCode || '',
+        idToken: userInfo.data?.idToken || '',
+        serverAuthCode: userInfo.data?.serverAuthCode || '',
       };
     } catch (error: any) {
-      console.error('Google Sign-In error:', error);
-      
+      errorLog('Google Sign-In error:', error);
+
       if (error.code === statusCodes.SIGN_IN_CANCELLED) {
         // User cancelled the login flow
-        console.log('User cancelled Google Sign-In');
+        debugLog('User cancelled Google Sign-In');
         return null;
       } else if (error.code === statusCodes.IN_PROGRESS) {
         // Operation (e.g. sign in) is in progress already
-        console.log('Google Sign-In already in progress');
+        debugLog('Google Sign-In already in progress');
         return null;
       } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
         // Play services not available or outdated
-        console.log('Google Play Services not available');
-        throw new Error('Google Play Services not available. Please update Google Play Services.');
+        debugLog('Google Play Services not available');
+        throw new Error(
+          'Google Play Services not available. Please update Google Play Services.',
+        );
       } else {
         // Some other error happened
         throw new Error(`Google Sign-In failed: ${error.message}`);
@@ -106,9 +115,9 @@ class GoogleOAuthService {
   async signOut(): Promise<void> {
     try {
       await GoogleSignin.signOut();
-      console.log('✅ Google Sign-Out successful');
+      infoLog('✅ Google Sign-Out successful');
     } catch (error) {
-      console.error('Google Sign-Out error:', error);
+      errorLog('Google Sign-Out error:', error);
       throw error;
     }
   }
@@ -119,19 +128,19 @@ class GoogleOAuthService {
   async getCurrentUser(): Promise<GoogleUser | null> {
     try {
       const userInfo = await GoogleSignin.signInSilently();
-      
+
       return {
         user: {
-          id: userInfo.user.id,
-          name: userInfo.user.name || '',
-          email: userInfo.user.email,
-          photo: userInfo.user.photo || '',
+          id: userInfo.data?.user?.id || '',
+          name: userInfo.data?.user?.name || '',
+          email: userInfo.data?.user?.email || '',
+          photo: userInfo.data?.user?.photo || '',
         },
-        idToken: userInfo.idToken || '',
-        serverAuthCode: userInfo.serverAuthCode || '',
+        idToken: userInfo.data?.idToken || '',
+        serverAuthCode: userInfo.data?.serverAuthCode || '',
       };
     } catch (error) {
-      console.error('Error getting current Google user:', error);
+      errorLog('Error getting current Google user:', error);
       return null;
     }
   }
@@ -142,9 +151,9 @@ class GoogleOAuthService {
   async revokeAccess(): Promise<void> {
     try {
       await GoogleSignin.revokeAccess();
-      console.log('✅ Google access revoked');
+      infoLog('✅ Google access revoked');
     } catch (error) {
-      console.error('Error revoking Google access:', error);
+      errorLog('Error revoking Google access:', error);
       throw error;
     }
   }

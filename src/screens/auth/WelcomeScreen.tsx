@@ -11,7 +11,13 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
-import { Colors, Typography, Spacing, Shadows } from '../../styles/designSystem';
+import { errorLog } from '../../utils/logger';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  Shadows,
+} from '../../styles/designSystem';
 import HeartIcon from '../../components/HeartIcon';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -19,7 +25,6 @@ const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 const WelcomeScreen: React.FC = () => {
   const navigation = useNavigation();
   const { createGuestSession, isLoading } = useAuth();
-  
 
   const handleSignIn = () => {
     navigation.navigate('Login' as never);
@@ -34,14 +39,14 @@ const WelcomeScreen: React.FC = () => {
       await createGuestSession();
       // Navigation will be handled by auth state change
     } catch (error: any) {
-      console.error('Guest session error:', error);
+      errorLog('Guest session error:', error);
       // Handle error - maybe show a toast or alert
     }
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView 
+      <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
@@ -52,7 +57,8 @@ const WelcomeScreen: React.FC = () => {
             <Text style={styles.appName}>Jewgo</Text>
           </View>
           <Text style={styles.tagline}>
-            Discover kosher restaurants, synagogues, and Jewish businesses near you
+            Discover kosher restaurants, synagogues, and Jewish businesses near
+            you
           </Text>
         </View>
 
@@ -116,25 +122,29 @@ const WelcomeScreen: React.FC = () => {
         {/* Benefits Section */}
         <View style={styles.benefitsContainer}>
           <Text style={styles.benefitsTitle}>Why Create an Account?</Text>
-          
+
           <View style={styles.benefitItem}>
             <Text style={styles.benefitIcon}>⭐</Text>
             <Text style={styles.benefitText}>Write and manage reviews</Text>
           </View>
-          
+
           <View style={styles.benefitItem}>
             <HeartIcon size={24} color={Colors.primary.main} filled={true} />
             <Text style={styles.benefitText}>Save your favorite places</Text>
           </View>
-          
+
           <View style={styles.benefitItem}>
             <Text style={styles.benefitIcon}>📝</Text>
-            <Text style={styles.benefitText}>Add and manage business listings</Text>
+            <Text style={styles.benefitText}>
+              Add and manage business listings
+            </Text>
           </View>
-          
+
           <View style={styles.benefitItem}>
             <Text style={styles.benefitIcon}>🔔</Text>
-            <Text style={styles.benefitText}>Get personalized recommendations</Text>
+            <Text style={styles.benefitText}>
+              Get personalized recommendations
+            </Text>
           </View>
         </View>
 

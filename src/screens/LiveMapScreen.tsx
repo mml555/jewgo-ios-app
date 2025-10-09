@@ -1,4 +1,11 @@
-import React, { useState, useCallback, useMemo, useRef, useEffect, memo } from 'react';
+import React, {
+  useState,
+  useCallback,
+  useMemo,
+  useRef,
+  useEffect,
+  memo,
+} from 'react';
 import {
   View,
   Text,
@@ -24,43 +31,46 @@ import SpecialsIcon from '../components/SpecialsIcon';
 import { Spacing, Shadows } from '../styles/designSystem';
 import { useLocation, calculateDistance } from '../hooks/useLocation';
 import { useCategoryData } from '../hooks/useCategoryData';
+import { debugLog } from '../utils/logger';
+import { configService } from '../config/ConfigService';
 
-// Google Maps API Key: AIzaSyCl7ryK-cp9EtGoYMJ960P1jZO-nnTCCqM
 // This implementation uses Google Maps JavaScript API via WebView
 // for a real map experience without native dependencies
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 // Memoized WebView component to prevent unnecessary re-renders
-const MemoizedWebView = memo(({ 
-  mapHTML, 
-  onMessage, 
-  webViewRef 
-}: { 
-  mapHTML: string; 
-  onMessage: (event: any) => void; 
-  webViewRef: React.RefObject<WebView>; 
-}) => (
-  <WebView
-    ref={webViewRef}
-    source={{ html: mapHTML }}
-    style={styles.map}
-    onMessage={onMessage}
-    javaScriptEnabled={true}
-    domStorageEnabled={true}
-    startInLoadingState={true}
-    scalesPageToFit={false}
-    allowsInlineMediaPlayback={true}
-    mediaPlaybackRequiresUserAction={false}
-    mixedContentMode="compatibility"
-    thirdPartyCookiesEnabled={false}
-    sharedCookiesEnabled={false}
-    onShouldStartLoadWithRequest={() => true}
-    onLoadEnd={() => {
-      // Map is loaded, we can start sending marker updates
-    }}
-  />
-));
+const MemoizedWebView = memo(
+  ({
+    mapHTML,
+    onMessage,
+    webViewRef,
+  }: {
+    mapHTML: string;
+    onMessage: (event: any) => void;
+    webViewRef: React.RefObject<WebView | null>;
+  }) => (
+    <WebView
+      ref={webViewRef}
+      source={{ html: mapHTML }}
+      style={styles.map}
+      onMessage={onMessage}
+      javaScriptEnabled={true}
+      domStorageEnabled={true}
+      startInLoadingState={true}
+      scalesPageToFit={false}
+      allowsInlineMediaPlayback={true}
+      mediaPlaybackRequiresUserAction={false}
+      mixedContentMode="compatibility"
+      thirdPartyCookiesEnabled={false}
+      sharedCookiesEnabled={false}
+      onShouldStartLoadWithRequest={() => true}
+      onLoadEnd={() => {
+        // Map is loaded, we can start sending marker updates
+      }}
+    />
+  ),
+);
 
 interface MapListing {
   id: string;
@@ -68,10 +78,13 @@ interface MapListing {
   description: string;
   category: string;
   rating?: number;
-  distance?: number;
+  distance?: string;
   latitude: number;
   longitude: number;
   imageUrl?: string;
+  price?: string;
+  isOpen?: boolean;
+  openWeekends?: boolean;
 }
 
 const LiveMapScreen: React.FC = () => {
@@ -87,18 +100,26 @@ const LiveMapScreen: React.FC = () => {
     getActiveFiltersCount,
   } = useFilters();
   const webViewRef = useRef<WebView>(null);
-  const { location, getCurrentLocation, permissionGranted, loading: locationLoading } = useLocation();
-  
+  const {
+    location,
+    getCurrentLocation,
+    permissionGranted,
+    loading: locationLoading,
+  } = useLocation();
+
   // Get current category from route params, default to 'mikvah'
   const currentCategory = (route.params as any)?.category || 'mikvah';
-  const [selectedCategory, setSelectedCategory] = useState<string>(currentCategory);
-  const [selectedListing, setSelectedListing] = useState<MapListing | null>(null);
+  const [selectedCategory, setSelectedCategory] =
+    useState<string>(currentCategory);
+  const [selectedListing, setSelectedListing] = useState<MapListing | null>(
+    null,
+  );
   const [mapLoaded, setMapLoaded] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [mapRegion, setMapRegion] = useState({
     latitude: 40.7128, // Default to NYC
-    longitude: -74.0060,
+    longitude: -74.006,
     latitudeDelta: 0.1,
     longitudeDelta: 0.1,
   });
@@ -107,35 +128,63 @@ const LiveMapScreen: React.FC = () => {
   // Categories configuration - matching the keys from ActionBar
   const categories = [
     { key: 'all', label: 'All', emoji: '📍', color: '#74e1a0' },
-    { key: 'eatery', label: 'Eatery', emoji: '🍽️', color: '#FF6B6B', iconComponent: EateryIcon },
+    {
+      key: 'eatery',
+      label: 'Eatery',
+      emoji: '🍽️',
+      color: '#FF6B6B',
+      iconComponent: EateryIcon,
+    },
     { key: 'shul', label: 'Shul', emoji: '🕍', color: '#4ECDC4' },
-    { key: 'mikvah', label: 'Mikvah', emoji: '🛁', color: '#45B7D1', iconComponent: MikvahIcon },
+    {
+      key: 'mikvah',
+      label: 'Mikvah',
+      emoji: '🛁',
+      color: '#45B7D1',
+      iconComponent: MikvahIcon,
+    },
     { key: 'schools', label: 'Schools', emoji: '🎓', color: '#96CEB4' },
-    { key: 'stores', label: 'Stores', emoji: '🛒', color: '#FFEAA7', iconComponent: StoreIcon },
+    {
+      key: 'stores',
+      label: 'Stores',
+      emoji: '🛒',
+      color: '#FFEAA7',
+      iconComponent: StoreIcon,
+    },
     { key: 'services', label: 'Services', emoji: '🔧', color: '#DDA0DD' },
     { key: 'housing', label: 'Housing', emoji: '🏠', color: '#F7DC6F' },
-    { key: 'shuk', label: 'Shuk', emoji: '🛒', color: '#FFEAA7', iconComponent: StoreIcon },
     { key: 'shtetl', label: 'Shtetl', emoji: '🏘️', color: '#98D8C8' },
-    { key: 'events', label: 'Events', emoji: '🎉', color: '#FFB6C1', iconComponent: HeartIcon },
+    {
+      key: 'events',
+      label: 'Events',
+      emoji: '🎉',
+      color: '#FFB6C1',
+      iconComponent: HeartIcon,
+    },
     { key: 'jobs', label: 'Jobs', emoji: '💼', color: '#DDA0DD' },
   ];
 
   // Get data for the current category only
-  const { data: allListings } = useCategoryData({ 
-    categoryKey: selectedCategory, 
-    query: '', 
-    pageSize: 100 
+  const { data: allListings } = useCategoryData({
+    categoryKey: selectedCategory,
+    query: '',
+    pageSize: 100,
   });
 
   // Debug logging
-  console.log('🗺️ LiveMapScreen - selectedCategory:', selectedCategory);
-  console.log('🗺️ LiveMapScreen - allListings.length:', allListings?.length || 0);
-  console.log('🗺️ LiveMapScreen - category found:', categories.find(c => c.key === selectedCategory));
-  
+  debugLog('🗺️ LiveMapScreen - selectedCategory:', selectedCategory);
+  debugLog('🗺️ LiveMapScreen - allListings.length:', allListings?.length || 0);
+  debugLog(
+    '🗺️ LiveMapScreen - category found:',
+    categories.find(c => c.key === selectedCategory),
+  );
 
   // Convert listings to map format with coordinates - only show current category
   const mapListings: MapListing[] = useMemo(() => {
-    console.log('🗺️ Converting listings to map format - allListings:', allListings);
+    debugLog(
+      '🗺️ Converting listings to map format - allListings:',
+      allListings,
+    );
     // Only use real data from the API for the specific category
     const converted = allListings.map((item, index) => ({
       id: item.id || `fallback-${index}`,
@@ -143,24 +192,31 @@ const LiveMapScreen: React.FC = () => {
       description: item.description,
       category: item.category,
       rating: item.rating,
-      distance: item.distance,
-      latitude: item.latitude || (40.7128 + (Math.random() - 0.5) * 0.15), // NYC area with more spread
-      longitude: item.longitude || (-74.0060 + (Math.random() - 0.5) * 0.15),
-      imageUrl: item.images && item.images.length > 0 ? item.images[0].url : item.imageUrl, // Use first image from enhanced data
+      distance: '0.5 mi', // Default distance since CategoryItem doesn't have distance
+      latitude: item.latitude || 40.7128 + (Math.random() - 0.5) * 0.15, // NYC area with more spread
+      longitude: item.longitude || -74.006 + (Math.random() - 0.5) * 0.15,
+      imageUrl: item.imageUrl, // Use imageUrl from CategoryItem
     }));
-    console.log('🗺️ Converted mapListings:', converted);
+    debugLog('🗺️ Converted mapListings:', converted);
     return converted;
   }, [allListings]);
 
   // Filter and sort listings based on search query and global filters
   const filteredListings = useMemo(() => {
-    console.log('🗺️ FILTERING MAP DATA - original data.length:', mapListings.length, 'location:', !!location, 'filters:', filters);
-    
-    const filtered = mapListings.filter((listing) => {
+    debugLog(
+      '🗺️ FILTERING MAP DATA - original data.length:',
+      mapListings.length,
+      'location:',
+      !!location,
+      'filters:',
+      filters,
+    );
+
+    const filtered = mapListings.filter(listing => {
       // Search filter
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase().trim();
-        const matchesSearch = 
+        const matchesSearch =
           listing.title.toLowerCase().includes(query) ||
           listing.description.toLowerCase().includes(query) ||
           listing.category.toLowerCase().includes(query);
@@ -170,45 +226,91 @@ const LiveMapScreen: React.FC = () => {
       }
 
       // Distance filter - calculate real distance if location available
-      if (location && listing.latitude && listing.longitude && filters.maxDistance < 100) {
+      if (
+        location &&
+        listing.latitude &&
+        listing.longitude &&
+        filters.maxDistance < 100
+      ) {
         const distance = calculateDistance(
           location.latitude,
           location.longitude,
           listing.latitude,
-          listing.longitude
+          listing.longitude,
         );
-        
+
         // For testing: if distance is extremely large (like iOS simulator SF to NYC),
         // don't apply distance filter to avoid filtering out all items
         if (distance > 2000) {
-          console.log('🗺️ DISTANCE TOO LARGE FOR FILTERING:', distance, 'miles - skipping distance filter');
+          debugLog(
+            '🗺️ DISTANCE TOO LARGE FOR FILTERING:',
+            distance,
+            'miles - skipping distance filter',
+          );
         } else if (distance > filters.maxDistance) {
-          console.log('🗺️ FILTERED OUT BY DISTANCE:', listing.title, 'distance:', distance, 'maxDistance:', filters.maxDistance);
+          debugLog(
+            '🗺️ FILTERED OUT BY DISTANCE:',
+            listing.title,
+            'distance:',
+            distance,
+            'maxDistance:',
+            filters.maxDistance,
+          );
           return false;
         }
       }
 
       // Rating filter
-      if (filters.minRating > 0 && (!listing.rating || listing.rating < filters.minRating)) {
-        console.log('🗺️ FILTERED OUT BY RATING:', listing.title, 'rating:', listing.rating, 'minRating:', filters.minRating);
+      if (
+        filters.minRating > 0 &&
+        (!listing.rating || listing.rating < filters.minRating)
+      ) {
+        debugLog(
+          '🗺️ FILTERED OUT BY RATING:',
+          listing.title,
+          'rating:',
+          listing.rating,
+          'minRating:',
+          filters.minRating,
+        );
         return false;
       }
 
       // Price range filter
-      if (filters.priceRange !== 'any' && listing.price !== filters.priceRange) {
-        console.log('🗺️ FILTERED OUT BY PRICE:', listing.title, 'price:', listing.price, 'priceRange:', filters.priceRange);
+      if (
+        filters.priceRange !== 'any' &&
+        listing.price !== filters.priceRange
+      ) {
+        debugLog(
+          '🗺️ FILTERED OUT BY PRICE:',
+          listing.title,
+          'price:',
+          listing.price,
+          'priceRange:',
+          filters.priceRange,
+        );
         return false;
       }
 
       // Open now filter
       if (filters.openNow && !listing.isOpen) {
-        console.log('🗺️ FILTERED OUT BY OPEN NOW:', listing.title, 'isOpen:', listing.isOpen);
+        debugLog(
+          '🗺️ FILTERED OUT BY OPEN NOW:',
+          listing.title,
+          'isOpen:',
+          listing.isOpen,
+        );
         return false;
       }
 
       // Weekend filter
       if (filters.openWeekends && !listing.openWeekends) {
-        console.log('🗺️ FILTERED OUT BY WEEKEND:', listing.title, 'openWeekends:', listing.openWeekends);
+        debugLog(
+          '🗺️ FILTERED OUT BY WEEKEND:',
+          listing.title,
+          'openWeekends:',
+          listing.openWeekends,
+        );
         return false;
       }
 
@@ -217,7 +319,7 @@ const LiveMapScreen: React.FC = () => {
 
     // Auto-sort by distance when location is available
     if (location) {
-      console.log('🗺️ SORTING MAP DATA BY DISTANCE - location available');
+      debugLog('🗺️ SORTING MAP DATA BY DISTANCE - location available');
       filtered.sort((a, b) => {
         // If both listings have coordinates, sort by distance
         if (a.latitude && a.longitude && b.latitude && b.longitude) {
@@ -225,27 +327,32 @@ const LiveMapScreen: React.FC = () => {
             location.latitude,
             location.longitude,
             a.latitude,
-            a.longitude
+            a.longitude,
           );
           const distanceB = calculateDistance(
             location.latitude,
             location.longitude,
             b.latitude,
-            b.longitude
+            b.longitude,
           );
           return distanceA - distanceB; // Sort closest first
         }
-        
+
         // If only one has coordinates, prioritize it
-        if ((a.latitude && a.longitude) && (!b.latitude || !b.longitude)) return -1;
-        if ((!a.latitude || !a.longitude) && (b.latitude && b.longitude)) return 1;
-        
+        if (a.latitude && a.longitude && (!b.latitude || !b.longitude))
+          return -1;
+        if ((!a.latitude || !a.longitude) && b.latitude && b.longitude)
+          return 1;
+
         // If neither has coordinates, maintain original order
         return 0;
       });
     }
-    
-    console.log('🗺️ FILTERED AND SORTED MAP DATA - filtered.length:', filtered.length);
+
+    debugLog(
+      '🗺️ FILTERED AND SORTED MAP DATA - filtered.length:',
+      filtered.length,
+    );
     return filtered;
   }, [mapListings, filters, searchQuery, location]);
 
@@ -261,13 +368,16 @@ const LiveMapScreen: React.FC = () => {
     setSelectedListing(null);
   }, []);
 
-  const handleViewDetails = useCallback((listing: MapListing) => {
-    navigation.navigate('ListingDetail' as never, { 
-      itemId: listing.id, 
-      categoryKey: listing.category 
-    } as never);
-    setSelectedListing(null);
-  }, [navigation]);
+  const handleViewDetails = useCallback(
+    (listing: MapListing) => {
+      (navigation as any).navigate('ListingDetail', {
+        itemId: listing.id,
+        categoryKey: listing.category,
+      });
+      setSelectedListing(null);
+    },
+    [navigation],
+  );
 
   const getCategoryColor = (category: string) => {
     const cat = categories.find(c => c.key === category);
@@ -275,7 +385,8 @@ const LiveMapScreen: React.FC = () => {
   };
 
   // Generate static Google Maps HTML (memoized to prevent re-renders)
-  const mapHTML = useMemo(() => `
+  const mapHTML = useMemo(
+    () => `
     <!DOCTYPE html>
     <html>
     <head>
@@ -321,7 +432,9 @@ const LiveMapScreen: React.FC = () => {
 
           // Add user location marker if available
           const userLocationMarker = new google.maps.Marker({
-            position: { lat: ${location?.latitude || mapRegion.latitude}, lng: ${location?.longitude || mapRegion.longitude} },
+            position: { lat: ${
+              location?.latitude || mapRegion.latitude
+            }, lng: ${location?.longitude || mapRegion.longitude} },
             map: map,
             title: 'Your Location',
             icon: {
@@ -388,16 +501,16 @@ const LiveMapScreen: React.FC = () => {
         }
 
         function updateMarkers(listings) {
-          console.log('🗺️ WebView received markers:', listings.length, 'markers');
+          debugLog('🗺️ WebView received markers:', listings.length, 'markers');
           
           // Check if listings have actually changed to prevent unnecessary updates
           const listingsChanged = JSON.stringify(listings) !== JSON.stringify(currentListings);
           if (!listingsChanged && markers.length > 0) {
-            console.log('🗺️ Markers unchanged, skipping update');
+            debugLog('🗺️ Markers unchanged, skipping update');
             return;
           }
           
-          console.log('🗺️ Updating markers due to data change');
+          debugLog('🗺️ Updating markers due to data change');
           
           // Clear existing markers
           markers.forEach(marker => marker.setMap(null));
@@ -406,7 +519,7 @@ const LiveMapScreen: React.FC = () => {
 
           // Add new markers
           listings.forEach((listing, index) => {
-            console.log('🗺️ WebView creating marker:', listing.title, 'at', listing.position);
+            debugLog('🗺️ WebView creating marker:', listing.title, 'at', listing.position);
             
             // Create custom marker with more rounded pill shape
             const marker = new google.maps.Marker({
@@ -471,12 +584,12 @@ const LiveMapScreen: React.FC = () => {
         window.addEventListener('message', function(event) {
           try {
             const data = JSON.parse(event.data);
-            console.log('🗺️ WebView received message:', data.type);
+            debugLog('🗺️ WebView received message:', data.type);
             if (data.type === 'update_markers') {
               updateMarkers(data.listings);
             }
           } catch (error) {
-            console.log('🗺️ WebView message parse error:', error);
+            debugLog('🗺️ WebView message parse error:', error);
           }
         });
 
@@ -484,59 +597,72 @@ const LiveMapScreen: React.FC = () => {
         document.addEventListener('message', function(event) {
           try {
             const data = JSON.parse(event.data);
-            console.log('🗺️ WebView received document message:', data.type);
+            debugLog('🗺️ WebView received document message:', data.type);
             if (data.type === 'update_markers') {
               updateMarkers(data.listings);
             }
           } catch (error) {
-            console.log('🗺️ WebView document message parse error:', error);
+            debugLog('🗺️ WebView document message parse error:', error);
           }
         });
       </script>
       <script async defer
-        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCl7ryK-cp9EtGoYMJ960P1jZO-nnTCCqM&callback=initMap">
+        src="https://maps.googleapis.com/maps/api/js?key=${
+          configService.googlePlacesApiKey
+        }&callback=initMap">
       </script>
     </body>
     </html>
-  `, [mapRegion.latitude, mapRegion.longitude]);
+  `,
+    [mapRegion.latitude, mapRegion.longitude, configService.googlePlacesApiKey],
+  );
 
-  const handleWebViewMessage = useCallback((event: any) => {
-    try {
-      const data = JSON.parse(event.nativeEvent.data);
-      
-      if (data.type === 'marker_click') {
-        handleMarkerPress(data.listing);
-      } else if (data.type === 'region_changed') {
-        // Don't update state on every region change to prevent re-renders
-        // Only update if the change is significant and user is not interacting
-        if (!isUserInteracting) {
-          const newRegion = data.region;
-          const currentRegion = mapRegion;
-          const latDiff = Math.abs(newRegion.latitude - currentRegion.latitude);
-          const lngDiff = Math.abs(newRegion.longitude - currentRegion.longitude);
-          
-          if (latDiff > 0.01 || lngDiff > 0.01) {
-            setMapRegion(newRegion);
+  const handleWebViewMessage = useCallback(
+    (event: any) => {
+      try {
+        const data = JSON.parse(event.nativeEvent.data);
+
+        if (data.type === 'marker_click') {
+          handleMarkerPress(data.listing);
+        } else if (data.type === 'region_changed') {
+          // Don't update state on every region change to prevent re-renders
+          // Only update if the change is significant and user is not interacting
+          if (!isUserInteracting) {
+            const newRegion = data.region;
+            const currentRegion = mapRegion;
+            const latDiff = Math.abs(
+              newRegion.latitude - currentRegion.latitude,
+            );
+            const lngDiff = Math.abs(
+              newRegion.longitude - currentRegion.longitude,
+            );
+
+            if (latDiff > 0.01 || lngDiff > 0.01) {
+              setMapRegion(newRegion);
+            }
           }
+        } else if (data.type === 'map_loaded') {
+          setMapLoaded(true);
+        } else if (data.type === 'user_interaction_start') {
+          setIsUserInteracting(true);
+        } else if (data.type === 'user_interaction_end') {
+          setIsUserInteracting(false);
         }
-      } else if (data.type === 'map_loaded') {
-        setMapLoaded(true);
-      } else if (data.type === 'user_interaction_start') {
-        setIsUserInteracting(true);
-      } else if (data.type === 'user_interaction_end') {
-        setIsUserInteracting(false);
-      }
-    } catch (error) {
-    }
-  }, [handleMarkerPress, mapRegion]);
+      } catch (error) {}
+    },
+    [handleMarkerPress, mapRegion],
+  );
 
   // Memoize marker data to prevent unnecessary updates
   const markerData = useMemo(() => {
-    console.log('🗺️ Creating marker data from filteredListings:', filteredListings.length);
-    
-    const markers = filteredListings.map((listing) => {
+    debugLog(
+      '🗺️ Creating marker data from filteredListings:',
+      filteredListings.length,
+    );
+
+    const markers = filteredListings.map(listing => {
       const category = categories.find(c => c.key === listing.category);
-      
+
       // Calculate real distance if user location is available
       let realDistance = listing.distance || 0;
       if (location) {
@@ -544,17 +670,17 @@ const LiveMapScreen: React.FC = () => {
           location.latitude,
           location.longitude,
           listing.latitude,
-          listing.longitude
+          listing.longitude,
         );
       } else {
         // Handle both string and number distance values
-        if (typeof listing.distance === 'string') {
+        if (typeof listing.distance === 'string' && listing.distance) {
           // Extract number from string like "1.2 mi" or "1.2"
           const match = listing.distance.match(/(\d+\.?\d*)/);
           realDistance = match ? parseFloat(match[1]) : 0;
         }
       }
-      
+
       const marker = {
         id: listing.id,
         position: { lat: listing.latitude, lng: listing.longitude },
@@ -564,14 +690,19 @@ const LiveMapScreen: React.FC = () => {
         emoji: category?.emoji || '📍',
         color: getCategoryColor(listing.category),
         rating: listing.rating || 0,
-        distance: realDistance
+        distance: realDistance,
       };
-      
-      console.log('🗺️ Created marker:', marker.title, 'at', `lat: ${marker.position.lat}, lng: ${marker.position.lng}`);
+
+      debugLog(
+        '🗺️ Created marker:',
+        marker.title,
+        'at',
+        `lat: ${marker.position.lat}, lng: ${marker.position.lng}`,
+      );
       return marker;
     });
-    
-    console.log('🗺️ Total markers created:', markers.length);
+
+    debugLog('🗺️ Total markers created:', markers.length);
     return markers;
   }, [filteredListings, categories, location]);
 
@@ -592,23 +723,24 @@ const LiveMapScreen: React.FC = () => {
     };
 
     initializeLocation();
-  }, [permissionGranted, getCurrentLocation]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [permissionGranted]); // Don't add getCurrentLocation to avoid infinite loop
 
   // Send marker updates to WebView when markerData changes (with debouncing)
   useEffect(() => {
     if (webViewRef.current && markerData.length > 0 && mapLoaded) {
       const message = JSON.stringify({
         type: 'update_markers',
-        listings: markerData
+        listings: markerData,
       });
-      
+
       // Debounce marker updates to prevent flickering
       const timeoutId = setTimeout(() => {
         if (webViewRef.current) {
           webViewRef.current.postMessage(message);
         }
       }, 300); // 300ms debounce
-      
+
       return () => clearTimeout(timeoutId);
     }
   }, [markerData.length, mapLoaded]); // Simplified dependencies to prevent infinite loop
@@ -620,10 +752,14 @@ const LiveMapScreen: React.FC = () => {
         <TouchableOpacity style={styles.backButton} onPress={handleBackPress}>
           <Text style={styles.backIcon}>←</Text>
         </TouchableOpacity>
-        
+
         <View style={styles.headerContent}>
           <Text style={styles.headerTitle}>
-            {selectedCategory === 'all' ? 'Live Map' : `${categories.find(c => c.key === selectedCategory)?.label} Map`}
+            {selectedCategory === 'all'
+              ? 'Live Map'
+              : `${
+                  categories.find(c => c.key === selectedCategory)?.label
+                } Map`}
           </Text>
           <Text style={styles.headerSubtitle}>
             {filteredListings.length} places found
@@ -633,7 +769,9 @@ const LiveMapScreen: React.FC = () => {
 
       {/* Search Bar */}
       <View style={styles.searchContainer}>
-        <View style={[styles.searchBar, isSearchFocused && styles.searchBarFocused]}>
+        <View
+          style={[styles.searchBar, isSearchFocused && styles.searchBarFocused]}
+        >
           <Text style={styles.searchIcon}>🔍</Text>
           <TextInput
             style={styles.searchInput}
@@ -647,19 +785,19 @@ const LiveMapScreen: React.FC = () => {
             clearButtonMode="while-editing"
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity 
-              onPress={() => setSearchQuery('')} 
+            <TouchableOpacity
+              onPress={() => setSearchQuery('')}
               style={styles.clearButton}
             >
               <Text style={styles.clearButtonText}>✕</Text>
             </TouchableOpacity>
           )}
-          
+
           {/* Filter Button */}
           <TouchableOpacity
             style={[
               styles.filterButton,
-              getActiveFiltersCount() > 0 && styles.filterButtonActive
+              getActiveFiltersCount() > 0 && styles.filterButtonActive,
             ]}
             onPress={openFiltersModal}
             accessible={true}
@@ -672,7 +810,9 @@ const LiveMapScreen: React.FC = () => {
             </View>
             {getActiveFiltersCount() > 0 && (
               <View style={styles.filterBadge}>
-                <Text style={styles.filterBadgeText}>{getActiveFiltersCount()}</Text>
+                <Text style={styles.filterBadgeText}>
+                  {getActiveFiltersCount()}
+                </Text>
               </View>
             )}
           </TouchableOpacity>
@@ -686,13 +826,25 @@ const LiveMapScreen: React.FC = () => {
           onMessage={handleWebViewMessage}
           webViewRef={webViewRef}
         />
-        
+
         {/* Map Legend */}
         <View style={styles.mapLegend}>
           <Text style={styles.legendTitle}>Legend</Text>
           <View style={styles.legendItem}>
-            <View style={[styles.legendColor, { backgroundColor: categories.find(c => c.key === selectedCategory)?.color || '#74e1a0' }]} />
-            <Text style={styles.legendText}>{categories.find(c => c.key === selectedCategory)?.label || 'Places'}</Text>
+            <View
+              style={[
+                styles.legendColor,
+                {
+                  backgroundColor:
+                    categories.find(c => c.key === selectedCategory)?.color ||
+                    '#74e1a0',
+                },
+              ]}
+            />
+            <Text style={styles.legendText}>
+              {categories.find(c => c.key === selectedCategory)?.label ||
+                'Places'}
+            </Text>
           </View>
           <View style={styles.legendItem}>
             <Text style={styles.legendIcon}>⭐</Text>
@@ -704,26 +856,35 @@ const LiveMapScreen: React.FC = () => {
       {/* Selected Listing Popup - Wider Card Version */}
       {selectedListing && (
         <View style={styles.popupOverlay}>
-          <TouchableOpacity style={styles.popupBackground} onPress={handleClosePopup} />
+          <TouchableOpacity
+            style={styles.popupBackground}
+            onPress={handleClosePopup}
+          />
           <View style={styles.popupCard}>
             {/* Card Image */}
             <View style={styles.popupImageContainer}>
               {selectedListing.imageUrl ? (
-                <Image 
-                  source={{ uri: selectedListing.imageUrl }} 
+                <Image
+                  source={{ uri: selectedListing.imageUrl }}
                   style={styles.popupImage}
                   resizeMode="cover"
                 />
               ) : (
                 <View style={styles.popupImagePlaceholder}>
                   <Text style={styles.popupImageEmoji}>
-                    {categories.find(c => c.key === selectedListing.category)?.emoji}
+                    {
+                      categories.find(c => c.key === selectedListing.category)
+                        ?.emoji
+                    }
                   </Text>
                 </View>
               )}
               <View style={styles.popupTag}>
                 <Text style={styles.popupTagText}>
-                  {categories.find(c => c.key === selectedListing.category)?.label}
+                  {
+                    categories.find(c => c.key === selectedListing.category)
+                      ?.label
+                  }
                 </Text>
               </View>
               <TouchableOpacity style={styles.popupHeartButton}>
@@ -740,7 +901,9 @@ const LiveMapScreen: React.FC = () => {
                 </Text>
                 <View style={styles.popupRatingContainer}>
                   <Text style={styles.popupRating}>
-                    {selectedListing.rating ? `⭐ ${selectedListing.rating}` : 'No rating'}
+                    {selectedListing.rating
+                      ? `⭐ ${selectedListing.rating}`
+                      : 'No rating'}
                   </Text>
                 </View>
               </View>
@@ -751,13 +914,13 @@ const LiveMapScreen: React.FC = () => {
                   {selectedListing.description}
                 </Text>
                 <Text style={styles.popupDistance}>
-                  {selectedListing.distance && typeof selectedListing.distance === 'number' ? `${selectedListing.distance.toFixed(1)}mi` : ''}
+                  {selectedListing.distance || ''}
                 </Text>
               </View>
 
               {/* Action Button */}
-              <TouchableOpacity 
-                style={styles.popupActionButton} 
+              <TouchableOpacity
+                style={styles.popupActionButton}
                 onPress={() => handleViewDetails(selectedListing)}
               >
                 <Text style={styles.popupActionButtonText}>View Details</Text>
@@ -1102,7 +1265,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 12,
     minWidth: 120,
-    backdropFilter: 'blur(10px)',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.3)',
     shadowColor: '#000',

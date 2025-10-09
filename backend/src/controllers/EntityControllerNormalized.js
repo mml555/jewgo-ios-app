@@ -1,12 +1,11 @@
-const { Pool } = require('pg');
 const pool = require('../database/connection');
+const logger = require('../utils/logger');
 
 /**
  * Normalized Entity Controller
  * Uses proper JOINs with the new normalized database structure
  */
 class EntityControllerNormalized {
-  
   // Get all entities with proper JOINs
   static async getAllEntities(req, res) {
     try {
@@ -19,7 +18,7 @@ class EntityControllerNormalized {
         limit = 50,
         offset = 0,
         sortBy = 'created_at',
-        sortOrder = 'DESC'
+        sortOrder = 'DESC',
       } = req.query;
 
       let query = `
@@ -50,7 +49,7 @@ class EntityControllerNormalized {
         LEFT JOIN users u ON e.owner_id = u.id
         WHERE e.is_active = true
       `;
-      
+
       const params = [];
       let paramCount = 0;
 
@@ -89,15 +88,16 @@ class EntityControllerNormalized {
       query += ` ORDER BY e.${sortBy} ${sortOrder}`;
       paramCount++;
       query += ` LIMIT $${paramCount}`;
-      params.push(parseInt(limit));
+      params.push(parseInt(limit, 10));
       paramCount++;
       query += ` OFFSET $${paramCount}`;
-      params.push(parseInt(offset));
+      params.push(parseInt(offset, 10));
 
       const result = await pool.query(query, params);
 
       // Get total count for pagination
-      let countQuery = 'SELECT COUNT(*) FROM entities_normalized WHERE is_active = true';
+      let countQuery =
+        'SELECT COUNT(*) FROM entities_normalized WHERE is_active = true';
       const countParams = [];
       let countParamCount = 0;
 
@@ -132,17 +132,20 @@ class EntityControllerNormalized {
       }
 
       const countResult = await pool.query(countQuery, countParams);
-      const total = parseInt(countResult.rows[0].count);
+      const total = parseInt(countResult.rows[0].count, 10);
 
       // Enhance entities with specialized data
       const enhancedEntities = await Promise.all(
-        result.rows.map(async (entity) => {
-          const specializedData = await this.getSpecializedData(entity.id, entity.entity_type);
+        result.rows.map(async entity => {
+          const specializedData = await this.getSpecializedData(
+            entity.id,
+            entity.entity_type,
+          );
           return {
             ...entity,
-            ...specializedData
+            ...specializedData,
           };
-        })
+        }),
       );
 
       res.json({
@@ -151,19 +154,18 @@ class EntityControllerNormalized {
           entities: enhancedEntities,
           pagination: {
             total,
-            limit: parseInt(limit),
-            offset: parseInt(offset),
-            hasMore: (parseInt(offset) + parseInt(limit)) < total
-          }
-        }
+            limit: parseInt(limit, 10),
+            offset: parseInt(offset, 10),
+            hasMore: parseInt(offset, 10) + parseInt(limit, 10) < total,
+          },
+        },
       });
-
     } catch (error) {
-      console.error('Error fetching entities:', error);
+      logger.error('Error fetching entities:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to fetch entities',
-        message: error.message
+        message: error.message,
       });
     }
   }
@@ -174,17 +176,19 @@ class EntityControllerNormalized {
       const { entityType } = req.params;
       const { limit = 20, offset = 0 } = req.query;
 
-      const result = await this.getAllEntities({
-        ...req,
-        query: { ...req.query, entityType, limit, offset }
-      }, res);
-
+      await this.getAllEntities(
+        {
+          ...req,
+          query: { ...req.query, entityType, limit, offset },
+        },
+        res,
+      );
     } catch (error) {
-      console.error('Error fetching entities by type:', error);
+      logger.error('Error fetching entities by type:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to fetch entities by type',
-        message: error.message
+        message: error.message,
       });
     }
   }
@@ -193,44 +197,58 @@ class EntityControllerNormalized {
   static async getEntityById(req, res) {
     try {
       const { id } = req.params;
-      
+
+      // Validate UUID format
+      const uuidRegex =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(id)) {
+        logger.warn('Invalid UUID format:', id);
+        return res.status(404).json({
+          success: false,
+          error: 'Entity not found',
+        });
+      }
+
       // Use the helper function to get entity with all related data
-      const result = await pool.query('SELECT * FROM get_entity_with_details($1)', [id]);
-      
+      const result = await pool.query(
+        'SELECT * FROM get_entity_with_details($1)',
+        [id],
+      );
+
       if (result.rows.length === 0) {
         return res.status(404).json({
           success: false,
-          error: 'Entity not found'
+          error: 'Entity not found',
         });
       }
 
       const entity = result.rows[0];
 
       // Get additional data (business hours, images, reviews)
-      const [businessHoursResult, imagesResult, reviewsResult] = await Promise.all([
-        this.getBusinessHours(id),
-        this.getImages(id),
-        this.getReviews(id, { limit: 5 })
-      ]);
+      const [businessHoursResult, imagesResult, reviewsResult] =
+        await Promise.all([
+          this.getBusinessHours(id),
+          this.getImages(id),
+          this.getReviews(id, { limit: 5 }),
+        ]);
 
       const entityData = {
         ...entity,
         business_hours: businessHoursResult.rows,
         images: imagesResult.rows,
-        recent_reviews: reviewsResult.rows
+        recent_reviews: reviewsResult.rows,
       };
 
       res.json({
         success: true,
-        data: { entity: entityData }
+        data: { entity: entityData },
       });
-
     } catch (error) {
-      console.error('Error fetching entity:', error);
+      logger.error('Error fetching entity:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to fetch entity',
-        message: error.message
+        message: error.message,
       });
     }
   }
@@ -243,16 +261,20 @@ class EntityControllerNormalized {
 
       switch (entityType) {
         case 'mikvah':
-          specializedQuery = 'SELECT * FROM mikvahs_normalized WHERE entity_id = $1';
+          specializedQuery =
+            'SELECT * FROM mikvahs_normalized WHERE entity_id = $1';
           break;
         case 'synagogue':
-          specializedQuery = 'SELECT * FROM synagogues_normalized WHERE entity_id = $1';
+          specializedQuery =
+            'SELECT * FROM synagogues_normalized WHERE entity_id = $1';
           break;
         case 'restaurant':
-          specializedQuery = 'SELECT * FROM restaurants_normalized WHERE entity_id = $1';
+          specializedQuery =
+            'SELECT * FROM restaurants_normalized WHERE entity_id = $1';
           break;
         case 'store':
-          specializedQuery = 'SELECT * FROM stores_normalized WHERE entity_id = $1';
+          specializedQuery =
+            'SELECT * FROM stores_normalized WHERE entity_id = $1';
           break;
         default:
           return {};
@@ -260,9 +282,8 @@ class EntityControllerNormalized {
 
       const result = await pool.query(specializedQuery, params);
       return result.rows[0] || {};
-
     } catch (error) {
-      console.error('Error fetching specialized data:', error);
+      logger.error('Error fetching specialized data:', error);
       return {};
     }
   }
@@ -337,7 +358,7 @@ class EntityControllerNormalized {
       if (!searchQuery) {
         return res.status(400).json({
           success: false,
-          error: 'Search query is required'
+          error: 'Search query is required',
         });
       }
 
@@ -380,22 +401,25 @@ class EntityControllerNormalized {
       query += ` ORDER BY e.rating DESC, e.review_count DESC`;
       paramCount++;
       query += ` LIMIT $${paramCount}`;
-      params.push(parseInt(limit));
+      params.push(parseInt(limit, 10));
       paramCount++;
       query += ` OFFSET $${paramCount}`;
-      params.push(parseInt(offset));
+      params.push(parseInt(offset, 10));
 
       const result = await pool.query(query, params);
 
       // Enhance with specialized data
       const enhancedEntities = await Promise.all(
-        result.rows.map(async (entity) => {
-          const specializedData = await this.getSpecializedData(entity.id, entity.entity_type);
+        result.rows.map(async entity => {
+          const specializedData = await this.getSpecializedData(
+            entity.id,
+            entity.entity_type,
+          );
           return {
             ...entity,
-            ...specializedData
+            ...specializedData,
           };
-        })
+        }),
       );
 
       res.json({
@@ -404,18 +428,17 @@ class EntityControllerNormalized {
           entities: enhancedEntities,
           searchQuery,
           pagination: {
-            limit: parseInt(limit),
-            offset: parseInt(offset)
-          }
-        }
+            limit: parseInt(limit, 10),
+            offset: parseInt(offset, 10),
+          },
+        },
       });
-
     } catch (error) {
-      console.error('Error searching entities:', error);
+      logger.error('Error searching entities:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to search entities',
-        message: error.message
+        message: error.message,
       });
     }
   }
@@ -423,22 +446,22 @@ class EntityControllerNormalized {
   // Get nearby entities with distance calculation
   static async getNearbyEntities(req, res) {
     try {
-      const { 
-        latitude, 
-        longitude, 
+      const {
+        latitude,
+        longitude,
         radius = 10, // in miles
         entityType,
-        limit = 20 
+        limit = 20,
       } = req.query;
 
       if (!latitude || !longitude) {
         return res.status(400).json({
           success: false,
-          error: 'Latitude and longitude are required'
+          error: 'Latitude and longitude are required',
         });
       }
 
-      const query = `
+      let query = `
         SELECT 
           e.id,
           e.entity_type,
@@ -470,7 +493,11 @@ class EntityControllerNormalized {
         )) <= $3
       `;
 
-      const params = [parseFloat(latitude), parseFloat(longitude), parseFloat(radius)];
+      const params = [
+        parseFloat(latitude),
+        parseFloat(longitude),
+        parseFloat(radius),
+      ];
       let paramCount = 3;
 
       if (entityType) {
@@ -482,39 +509,44 @@ class EntityControllerNormalized {
       query += ` ORDER BY distance_miles ASC`;
       paramCount++;
       query += ` LIMIT $${paramCount}`;
-      params.push(parseInt(limit));
+      params.push(parseInt(limit, 10));
 
       const result = await pool.query(query, params);
 
       // Enhance with specialized data
       const enhancedEntities = await Promise.all(
-        result.rows.map(async (entity) => {
-          const specializedData = await this.getSpecializedData(entity.id, entity.entity_type);
+        result.rows.map(async entity => {
+          const specializedData = await this.getSpecializedData(
+            entity.id,
+            entity.entity_type,
+          );
           return {
             ...entity,
-            ...specializedData
+            ...specializedData,
           };
-        })
+        }),
       );
 
       res.json({
         success: true,
         data: {
           entities: enhancedEntities,
-          location: { latitude: parseFloat(latitude), longitude: parseFloat(longitude) },
+          location: {
+            latitude: parseFloat(latitude),
+            longitude: parseFloat(longitude),
+          },
           radius: parseFloat(radius),
           pagination: {
-            limit: parseInt(limit)
-          }
-        }
+            limit: parseInt(limit, 10),
+          },
+        },
       });
-
     } catch (error) {
-      console.error('Error fetching nearby entities:', error);
+      logger.error('Error fetching nearby entities:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to fetch nearby entities',
-        message: error.message
+        message: error.message,
       });
     }
   }
@@ -534,7 +566,7 @@ class EntityControllerNormalized {
         longitude,
         phone,
         email,
-        website
+        website,
       } = req.body;
 
       // Validate required fields
@@ -542,7 +574,14 @@ class EntityControllerNormalized {
         return res.status(400).json({
           success: false,
           error: 'Missing required fields',
-          required: ['entityType', 'name', 'address', 'city', 'state', 'zip_code']
+          required: [
+            'entityType',
+            'name',
+            'address',
+            'city',
+            'state',
+            'zip_code',
+          ],
         });
       }
 
@@ -555,8 +594,18 @@ class EntityControllerNormalized {
       `;
 
       const values = [
-        entityType, name, description, address, city, state, zip_code,
-        latitude, longitude, phone, email, website
+        entityType,
+        name,
+        description,
+        address,
+        city,
+        state,
+        zip_code,
+        latitude,
+        longitude,
+        phone,
+        email,
+        website,
       ];
 
       const result = await pool.query(query, values);
@@ -564,15 +613,14 @@ class EntityControllerNormalized {
 
       res.status(201).json({
         success: true,
-        data: entity
+        data: entity,
       });
-
     } catch (error) {
-      console.error('Error creating entity:', error);
+      logger.error('Error creating entity:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to create entity',
-        message: error.message
+        message: error.message,
       });
     }
   }
@@ -599,7 +647,7 @@ class EntityControllerNormalized {
       if (updateFields.length === 0) {
         return res.status(400).json({
           success: false,
-          error: 'No valid fields to update'
+          error: 'No valid fields to update',
         });
       }
 
@@ -616,21 +664,20 @@ class EntityControllerNormalized {
       if (result.rows.length === 0) {
         return res.status(404).json({
           success: false,
-          error: 'Entity not found'
+          error: 'Entity not found',
         });
       }
 
       res.json({
         success: true,
-        data: result.rows[0]
+        data: result.rows[0],
       });
-
     } catch (error) {
-      console.error('Error updating entity:', error);
+      logger.error('Error updating entity:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to update entity',
-        message: error.message
+        message: error.message,
       });
     }
   }
@@ -652,22 +699,21 @@ class EntityControllerNormalized {
       if (result.rows.length === 0) {
         return res.status(404).json({
           success: false,
-          error: 'Entity not found'
+          error: 'Entity not found',
         });
       }
 
       res.json({
         success: true,
         message: 'Entity deleted successfully',
-        data: result.rows[0]
+        data: result.rows[0],
       });
-
     } catch (error) {
-      console.error('Error deleting entity:', error);
+      logger.error('Error deleting entity:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to delete entity',
-        message: error.message
+        message: error.message,
       });
     }
   }

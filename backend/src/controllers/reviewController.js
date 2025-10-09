@@ -31,11 +31,11 @@ class ReviewController {
 
       const [reviewsResult, countResult] = await Promise.all([
         pool.query(query, [entityId, limit, offset]),
-        pool.query(countQuery, [entityId])
+        pool.query(countQuery, [entityId]),
       ]);
 
-      const total = parseInt(countResult.rows[0].count);
-      const hasNext = (offset + reviewsResult.rows.length) < total;
+      const total = parseInt(countResult.rows[0].count, 10);
+      const hasNext = offset + reviewsResult.rows.length < total;
       const hasPrev = offset > 0;
 
       res.json({
@@ -43,17 +43,19 @@ class ReviewController {
         data: {
           reviews: reviewsResult.rows,
           pagination: {
-            page: parseInt(page),
-            limit: parseInt(limit),
+            page: parseInt(page, 10),
+            limit: parseInt(limit, 10),
             total,
             hasNext,
-            hasPrev
-          }
-        }
+            hasPrev,
+          },
+        },
       });
     } catch (error) {
       console.error('Error getting entity reviews:', error);
-      res.status(500).json({ success: false, error: 'Failed to retrieve reviews' });
+      res
+        .status(500)
+        .json({ success: false, error: 'Failed to retrieve reviews' });
     }
   }
 
@@ -78,13 +80,17 @@ class ReviewController {
       const result = await pool.query(query, [id]);
 
       if (result.rows.length === 0) {
-        return res.status(404).json({ success: false, error: 'Review not found' });
+        return res
+          .status(404)
+          .json({ success: false, error: 'Review not found' });
       }
 
       res.json({ success: true, data: { review: result.rows[0] } });
     } catch (error) {
       console.error('Error getting review by ID:', error);
-      res.status(500).json({ success: false, error: 'Failed to retrieve review' });
+      res
+        .status(500)
+        .json({ success: false, error: 'Failed to retrieve review' });
     }
   }
 
@@ -98,14 +104,50 @@ class ReviewController {
       if (!rating || rating < 1 || rating > 5) {
         return res.status(400).json({
           success: false,
-          error: 'Rating must be between 1 and 5'
+          error: 'Rating must be between 1 and 5',
         });
       }
 
       if (!userId) {
         return res.status(400).json({
           success: false,
-          error: 'User ID is required'
+          error: 'User ID is required',
+        });
+      }
+
+      // Validate title length
+      if (title && title.trim().length > 200) {
+        return res.status(400).json({
+          success: false,
+          error: 'Title must be 200 characters or less',
+        });
+      }
+
+      // Validate content length
+      if (content && content.trim().length > 5000) {
+        return res.status(400).json({
+          success: false,
+          error: 'Review content must be 5000 characters or less',
+        });
+      }
+
+      // Validate minimum content length (if provided)
+      if (content && content.trim().length < 10) {
+        return res.status(400).json({
+          success: false,
+          error: 'Review content must be at least 10 characters',
+        });
+      }
+
+      // Basic sanitization - trim whitespace and prevent null bytes
+      const sanitizedTitle = title ? title.trim().replace(/\0/g, '') : '';
+      const sanitizedContent = content ? content.trim().replace(/\0/g, '') : '';
+
+      // Validate entityId is a valid number
+      if (!entityId || isNaN(entityId)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid entity ID',
         });
       }
 
@@ -118,18 +160,29 @@ class ReviewController {
         entityId,
         userId,
         rating,
-        title || '',
-        content || ''
+        sanitizedTitle,
+        sanitizedContent,
       ]);
+
+      const logger = require('../utils/logger');
+      logger.info('Review created', {
+        reviewId: result.rows[0].id,
+        entityId,
+        userId,
+        rating,
+      });
 
       res.status(201).json({
         success: true,
         data: { review: result.rows[0] },
-        message: 'Review submitted successfully and is pending moderation'
+        message: 'Review submitted successfully and is pending moderation',
       });
     } catch (error) {
-      console.error('Error creating review:', error);
-      res.status(500).json({ success: false, error: 'Failed to create review' });
+      const logger = require('../utils/logger');
+      logger.error('Error creating review:', error);
+      res
+        .status(500)
+        .json({ success: false, error: 'Failed to create review' });
     }
   }
 
@@ -148,16 +201,20 @@ class ReviewController {
       const result = await pool.query(query, [is_moderated, is_verified, id]);
 
       if (result.rows.length === 0) {
-        return res.status(404).json({ success: false, error: 'Review not found' });
+        return res
+          .status(404)
+          .json({ success: false, error: 'Review not found' });
       }
 
       res.json({
         success: true,
-        data: { review: result.rows[0] }
+        data: { review: result.rows[0] },
       });
     } catch (error) {
       console.error('Error updating review:', error);
-      res.status(500).json({ success: false, error: 'Failed to update review' });
+      res
+        .status(500)
+        .json({ success: false, error: 'Failed to update review' });
     }
   }
 
@@ -169,16 +226,20 @@ class ReviewController {
       const result = await pool.query(query, [id]);
 
       if (result.rows.length === 0) {
-        return res.status(404).json({ success: false, error: 'Review not found' });
+        return res
+          .status(404)
+          .json({ success: false, error: 'Review not found' });
       }
 
       res.json({
         success: true,
-        message: 'Review deleted successfully'
+        message: 'Review deleted successfully',
       });
     } catch (error) {
       console.error('Error deleting review:', error);
-      res.status(500).json({ success: false, error: 'Failed to delete review' });
+      res
+        .status(500)
+        .json({ success: false, error: 'Failed to delete review' });
     }
   }
 
@@ -206,8 +267,8 @@ class ReviewController {
           data: {
             total_reviews: 0,
             average_rating: 0,
-            rating_distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
-          }
+            rating_distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+          },
         });
       }
 
@@ -215,20 +276,25 @@ class ReviewController {
       res.json({
         success: true,
         data: {
-          total_reviews: parseInt(stats.total_reviews),
+          total_reviews: parseInt(stats.total_reviews, 10),
           average_rating: parseFloat(stats.average_rating) || 0,
           rating_distribution: {
-            5: parseInt(stats.rating_5),
-            4: parseInt(stats.rating_4),
-            3: parseInt(stats.rating_3),
-            2: parseInt(stats.rating_2),
-            1: parseInt(stats.rating_1)
-          }
-        }
+            5: parseInt(stats.rating_5, 10),
+            4: parseInt(stats.rating_4, 10),
+            3: parseInt(stats.rating_3, 10),
+            2: parseInt(stats.rating_2, 10),
+            1: parseInt(stats.rating_1, 10),
+          },
+        },
       });
     } catch (error) {
       console.error('Error getting review stats:', error);
-      res.status(500).json({ success: false, error: 'Failed to retrieve review statistics' });
+      res
+        .status(500)
+        .json({
+          success: false,
+          error: 'Failed to retrieve review statistics',
+        });
     }
   }
 }

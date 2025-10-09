@@ -1,4 +1,5 @@
 import Config from 'react-native-config';
+import { debugLog, warnLog, errorLog } from '../utils/logger';
 
 export interface EnvironmentConfig {
   nodeEnv: 'development' | 'staging' | 'production';
@@ -29,16 +30,23 @@ export class ConfigService {
 
   private loadConfig(): EnvironmentConfig {
     // Force the correct API URL for development - use 127.0.0.1 for iOS simulator compatibility
-    const apiBaseUrl = __DEV__ ? 'http://127.0.0.1:3001/api/v5' : (Config.API_BASE_URL || 'https://api.jewgo.app/api/v5');
-    
+    const apiBaseUrl = __DEV__
+      ? 'http://127.0.0.1:3001/api/v5'
+      : Config.API_BASE_URL || 'https://api.jewgo.app/api/v5';
+
     return {
-      nodeEnv: (Config.NODE_ENV as 'development' | 'staging' | 'production') || 'development',
+      nodeEnv:
+        (Config.NODE_ENV as 'development' | 'staging' | 'production') ||
+        'development',
       apiBaseUrl: apiBaseUrl,
       googlePlacesApiKey: Config.GOOGLE_PLACES_API_KEY || '',
-      googleOAuthClientId: Config.GOOGLE_OAUTH_CLIENT_ID || '',
-      recaptchaSiteKey: Config.RECAPTCHA_SITE_KEY || '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI', // Test key
+      googleOAuthClientId: (Config as any).GOOGLE_OAUTH_CLIENT_ID || '',
+      recaptchaSiteKey:
+        (Config as any).RECAPTCHA_SITE_KEY ||
+        '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI', // Test key
       enableAnalytics: Config.ENABLE_ANALYTICS === 'true',
-      enablePerformanceMonitoring: Config.ENABLE_PERFORMANCE_MONITORING === 'true',
+      enablePerformanceMonitoring:
+        Config.ENABLE_PERFORMANCE_MONITORING === 'true',
       debugMode: Config.DEBUG_MODE === 'true',
     };
   }
@@ -55,21 +63,25 @@ export class ConfigService {
     });
 
     if (missingFields.length > 0) {
-      const errorMessage = `Missing required environment variables: ${missingFields.join(', ')}`;
-      console.error('❌ Configuration Error:', errorMessage);
-      
+      const errorMessage = `Missing required environment variables: ${missingFields.join(
+        ', ',
+      )}`;
+      errorLog('❌ Configuration Error:', errorMessage);
+
       if (this.config.nodeEnv === 'production') {
         throw new Error(errorMessage);
       } else {
-        console.warn('⚠️ Configuration Warning:', errorMessage);
+        warnLog('⚠️ Configuration Warning:', errorMessage);
       }
     }
 
     // Log configuration in development mode
     if (this.config.debugMode) {
-      console.log('🔧 Configuration loaded:', {
+      debugLog('🔧 Configuration loaded:', {
         ...this.config,
-        googlePlacesApiKey: this.config.googlePlacesApiKey ? '***HIDDEN***' : 'NOT SET',
+        googlePlacesApiKey: this.config.googlePlacesApiKey
+          ? '***HIDDEN***'
+          : 'NOT SET',
       });
     }
   }

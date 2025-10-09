@@ -9,9 +9,20 @@ import {
   Alert,
   Dimensions,
 } from 'react-native';
-import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../styles/designSystem';
+import { errorLog } from '../utils/logger';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  Shadows,
+} from '../styles/designSystem';
 import { specialsService } from '../services/SpecialsService';
-import { Special, RestaurantWithSpecials, SpecialsAnalytics } from '../types/specials';
+import {
+  Special,
+  RestaurantWithSpecials,
+  SpecialsAnalytics,
+} from '../types/specials';
 
 interface SpecialsDashboardProps {
   userId?: string;
@@ -30,11 +41,15 @@ const SpecialsDashboard: React.FC<SpecialsDashboardProps> = ({
 }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'priority' | 'nearby' | 'analytics'>('priority');
+  const [activeTab, setActiveTab] = useState<
+    'priority' | 'nearby' | 'analytics'
+  >('priority');
 
   // Data states
   const [prioritySpecials, setPrioritySpecials] = useState<Special[]>([]);
-  const [nearbyRestaurants, setNearbyRestaurants] = useState<RestaurantWithSpecials[]>([]);
+  const [nearbyRestaurants, setNearbyRestaurants] = useState<
+    RestaurantWithSpecials[]
+  >([]);
   const [analytics, setAnalytics] = useState<SpecialsAnalytics[]>([]);
   const [performanceMetrics, setPerformanceMetrics] = useState<any>(null);
 
@@ -48,10 +63,10 @@ const SpecialsDashboard: React.FC<SpecialsDashboardProps> = ({
       });
 
       if (response.success && response.data) {
-        setPrioritySpecials(response.data.specials);
+        setPrioritySpecials(response.data.specials as unknown as Special[]);
       }
     } catch (err) {
-      console.error('Error loading priority specials:', err);
+      errorLog('Error loading priority specials:', err);
     }
   }, []);
 
@@ -64,14 +79,16 @@ const SpecialsDashboard: React.FC<SpecialsDashboardProps> = ({
         latitude,
         longitude,
         5000, // 5km radius
-        10
+        10,
       );
 
       if (response.success && response.data) {
-        setNearbyRestaurants(response.data.restaurants);
+        setNearbyRestaurants(
+          response.data.restaurants as unknown as RestaurantWithSpecials[],
+        );
       }
     } catch (err) {
-      console.error('Error loading nearby restaurants:', err);
+      errorLog('Error loading nearby restaurants:', err);
     }
   }, [latitude, longitude]);
 
@@ -93,22 +110,28 @@ const SpecialsDashboard: React.FC<SpecialsDashboardProps> = ({
 
       if (analyticsResponse.success && analyticsResponse.data) {
         // Transform to analytics format
-        const analyticsData: SpecialsAnalytics[] = analyticsResponse.data.specials.map(special => ({
-          specialId: special.id,
-          title: special.title,
-          businessName: special.business?.name || 'Unknown',
-          totalViews: Math.floor(Math.random() * 1000) + 100, // Mock data
-          totalClicks: Math.floor(Math.random() * 100) + 10,
-          totalClaims: special.claimsTotal,
-          conversionRate: special.claimsTotal > 0 ? 
-            ((Math.floor(Math.random() * 100) + 10) / (Math.floor(Math.random() * 1000) + 100)) * 100 : 0,
-          claimUtilization: special.maxClaimsTotal ? 
-            (special.claimsTotal / special.maxClaimsTotal) * 100 : 0,
-        }));
+        const analyticsData: SpecialsAnalytics[] =
+          analyticsResponse.data.specials.map(special => ({
+            specialId: special.id,
+            title: special.title,
+            businessName: (special as any).business?.name || 'Unknown',
+            totalViews: Math.floor(Math.random() * 1000) + 100, // Mock data
+            totalClicks: Math.floor(Math.random() * 100) + 10,
+            totalClaims: special.claimsTotal,
+            conversionRate:
+              special.claimsTotal > 0
+                ? ((Math.floor(Math.random() * 100) + 10) /
+                    (Math.floor(Math.random() * 1000) + 100)) *
+                  100
+                : 0,
+            claimUtilization: special.maxClaimsTotal
+              ? (special.claimsTotal / special.maxClaimsTotal) * 100
+              : 0,
+          }));
         setAnalytics(analyticsData);
       }
     } catch (err) {
-      console.error('Error loading analytics:', err);
+      errorLog('Error loading analytics:', err);
     }
   }, []);
 
@@ -125,7 +148,7 @@ const SpecialsDashboard: React.FC<SpecialsDashboardProps> = ({
       ]);
     } catch (err) {
       setError('Failed to load specials data');
-      console.error('Error loading specials dashboard:', err);
+      errorLog('Error loading specials dashboard:', err);
     } finally {
       setLoading(false);
     }
@@ -136,27 +159,30 @@ const SpecialsDashboard: React.FC<SpecialsDashboardProps> = ({
   }, [loadAllData]);
 
   // Handle special claim
-  const handleClaimSpecial = useCallback(async (specialId: string) => {
-    try {
-      const response = await specialsService.claimSpecial({
-        specialId,
-        userId: userId || 'guest-user',
-        ipAddress: '127.0.0.1',
-        userAgent: 'JewgoApp/1.0',
-      });
+  const handleClaimSpecial = useCallback(
+    async (specialId: string) => {
+      try {
+        const response = await specialsService.claimSpecial({
+          specialId,
+          userId: userId || 'guest-user',
+          ipAddress: '127.0.0.1',
+          userAgent: 'JewgoApp/1.0',
+        });
 
-      if (response.success) {
-        Alert.alert('Success', 'Special claimed successfully!');
-        // Reload data to update claims
-        await loadAllData();
-      } else {
-        Alert.alert('Error', response.error || 'Failed to claim special');
+        if (response.success) {
+          Alert.alert('Success', 'Special claimed successfully!');
+          // Reload data to update claims
+          await loadAllData();
+        } else {
+          Alert.alert('Error', response.error || 'Failed to claim special');
+        }
+      } catch (err) {
+        Alert.alert('Error', 'Failed to claim special');
+        errorLog('Error claiming special:', err);
       }
-    } catch (err) {
-      Alert.alert('Error', 'Failed to claim special');
-      console.error('Error claiming special:', err);
-    }
-  }, [userId, loadAllData]);
+    },
+    [userId, loadAllData],
+  );
 
   // Handle refresh
   const handleRefresh = useCallback(async () => {
@@ -174,10 +200,7 @@ const SpecialsDashboard: React.FC<SpecialsDashboardProps> = ({
       {prioritySpecials.map((special, index) => (
         <TouchableOpacity
           key={special.id}
-          style={[
-            styles.specialCard,
-            index === 0 && styles.topSpecialCard,
-          ]}
+          style={[styles.specialCard, index === 0 && styles.topSpecialCard]}
           onPress={() => onSpecialPress?.(special)}
         >
           <View style={styles.specialHeader}>
@@ -202,10 +225,11 @@ const SpecialsDashboard: React.FC<SpecialsDashboardProps> = ({
             </View>
             <View style={styles.statItem}>
               <Text style={styles.statValue}>
-                {special.maxClaimsTotal ? 
-                  `${Math.round((special.claimsTotal / special.maxClaimsTotal) * 100)}%` : 
-                  '∞'
-                }
+                {special.maxClaimsTotal
+                  ? `${Math.round(
+                      (special.claimsTotal / special.maxClaimsTotal) * 100,
+                    )}%`
+                  : '∞'}
               </Text>
               <Text style={styles.statLabel}>Utilized</Text>
             </View>
@@ -231,12 +255,14 @@ const SpecialsDashboard: React.FC<SpecialsDashboardProps> = ({
   // Render nearby restaurants
   const renderNearbyRestaurants = () => (
     <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
-      <Text style={styles.sectionTitle}>📍 Nearby Restaurants with Specials</Text>
+      <Text style={styles.sectionTitle}>
+        📍 Nearby Restaurants with Specials
+      </Text>
       <Text style={styles.sectionSubtitle}>
         Restaurants with active specials near your location
       </Text>
 
-      {nearbyRestaurants.map((restaurant) => (
+      {nearbyRestaurants.map(restaurant => (
         <TouchableOpacity
           key={restaurant.entityId}
           style={styles.restaurantCard}
@@ -254,10 +280,13 @@ const SpecialsDashboard: React.FC<SpecialsDashboardProps> = ({
           <Text style={styles.restaurantLocation}>
             {restaurant.city}, {restaurant.state}
           </Text>
-          
-          {restaurant.distanceMeters && (
+
+          {(restaurant as any).distanceMeters && (
             <Text style={styles.restaurantDistance}>
-              📍 {Math.round(restaurant.distanceMeters / 1000 * 10) / 10}km away
+              📍{' '}
+              {Math.round(((restaurant as any).distanceMeters / 1000) * 10) /
+                10}
+              km away
             </Text>
           )}
 
@@ -289,15 +318,21 @@ const SpecialsDashboard: React.FC<SpecialsDashboardProps> = ({
           <Text style={styles.metricsTitle}>Overall Performance</Text>
           <View style={styles.metricsGrid}>
             <View style={styles.metricItem}>
-              <Text style={styles.metricValue}>{performanceMetrics.totalSpecials}</Text>
+              <Text style={styles.metricValue}>
+                {performanceMetrics.totalSpecials}
+              </Text>
               <Text style={styles.metricLabel}>Total Specials</Text>
             </View>
             <View style={styles.metricItem}>
-              <Text style={styles.metricValue}>{performanceMetrics.activeSpecials}</Text>
+              <Text style={styles.metricValue}>
+                {performanceMetrics.activeSpecials}
+              </Text>
               <Text style={styles.metricLabel}>Active</Text>
             </View>
             <View style={styles.metricItem}>
-              <Text style={styles.metricValue}>{performanceMetrics.totalClaims}</Text>
+              <Text style={styles.metricValue}>
+                {performanceMetrics.totalClaims}
+              </Text>
               <Text style={styles.metricLabel}>Total Claims</Text>
             </View>
             <View style={styles.metricItem}>
@@ -318,7 +353,7 @@ const SpecialsDashboard: React.FC<SpecialsDashboardProps> = ({
             <Text style={styles.analyticsTitle}>{item.title}</Text>
           </View>
           <Text style={styles.analyticsBusiness}>{item.businessName}</Text>
-          
+
           <View style={styles.analyticsStats}>
             <View style={styles.analyticsStat}>
               <Text style={styles.analyticsStatValue}>{item.totalViews}</Text>
@@ -374,7 +409,12 @@ const SpecialsDashboard: React.FC<SpecialsDashboardProps> = ({
           style={[styles.tab, activeTab === 'priority' && styles.activeTab]}
           onPress={() => setActiveTab('priority')}
         >
-          <Text style={[styles.tabText, activeTab === 'priority' && styles.activeTabText]}>
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === 'priority' && styles.activeTabText,
+            ]}
+          >
             🔥 Priority
           </Text>
         </TouchableOpacity>
@@ -382,7 +422,12 @@ const SpecialsDashboard: React.FC<SpecialsDashboardProps> = ({
           style={[styles.tab, activeTab === 'nearby' && styles.activeTab]}
           onPress={() => setActiveTab('nearby')}
         >
-          <Text style={[styles.tabText, activeTab === 'nearby' && styles.activeTabText]}>
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === 'nearby' && styles.activeTabText,
+            ]}
+          >
             📍 Nearby
           </Text>
         </TouchableOpacity>
@@ -390,7 +435,12 @@ const SpecialsDashboard: React.FC<SpecialsDashboardProps> = ({
           style={[styles.tab, activeTab === 'analytics' && styles.activeTab]}
           onPress={() => setActiveTab('analytics')}
         >
-          <Text style={[styles.tabText, activeTab === 'analytics' && styles.activeTabText]}>
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === 'analytics' && styles.activeTabText,
+            ]}
+          >
             📊 Analytics
           </Text>
         </TouchableOpacity>
@@ -407,7 +457,7 @@ const SpecialsDashboard: React.FC<SpecialsDashboardProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.background.primary,
   },
   loadingContainer: {
     flex: 1,
@@ -492,7 +542,7 @@ const styles = StyleSheet.create({
   topSpecialCard: {
     borderWidth: 2,
     borderColor: Colors.primary.main,
-    backgroundColor: Colors.primaryLight,
+    backgroundColor: Colors.primary.light,
   },
   specialHeader: {
     flexDirection: 'row',
@@ -543,7 +593,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     marginBottom: Spacing.lg,
     paddingVertical: Spacing.md,
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.background.primary,
     borderRadius: BorderRadius.md,
   },
   statItem: {
@@ -609,7 +659,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   topSpecialPreview: {
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.background.primary,
     padding: Spacing.md,
     borderRadius: BorderRadius.md,
   },

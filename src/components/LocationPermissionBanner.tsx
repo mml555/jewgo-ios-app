@@ -1,7 +1,21 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, Linking } from 'react-native';
-import { Colors, Typography, Spacing, BorderRadius } from '../styles/designSystem';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  Linking,
+} from 'react-native';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  TouchTargets,
+} from '../styles/designSystem';
 import { useLocationHardened } from '../hooks/useLocationHardened';
+import { errorLog } from '../utils/logger';
 
 export interface LocationPermissionBannerProps {
   onDismiss?: () => void;
@@ -9,16 +23,14 @@ export interface LocationPermissionBannerProps {
   testID?: string;
 }
 
-export const LocationPermissionBanner: React.FC<LocationPermissionBannerProps> = ({
-  onDismiss,
-  style,
-  testID
-}) => {
-  const { 
-    permissionStatus, 
-    requestPermission, 
+export const LocationPermissionBanner: React.FC<
+  LocationPermissionBannerProps
+> = ({ onDismiss, style, testID }) => {
+  const {
+    permissionStatus,
+    requestPermission,
     isLocationServicesEnabled,
-    loading 
+    loading,
   } = useLocationHardened();
 
   const handleRequestPermission = async () => {
@@ -31,15 +43,15 @@ export const LocationPermissionBanner: React.FC<LocationPermissionBannerProps> =
           'To show distances to nearby businesses, please enable location access in Settings.',
           [
             { text: 'Cancel', style: 'cancel' },
-            { 
-              text: 'Settings', 
-              onPress: () => Linking.openSettings() 
-            }
-          ]
+            {
+              text: 'Settings',
+              onPress: () => Linking.openSettings(),
+            },
+          ],
         );
       }
     } catch (error) {
-      console.error('Error requesting location permission:', error);
+      errorLog('Error requesting location permission:', error);
     }
   };
 
@@ -51,11 +63,11 @@ export const LocationPermissionBanner: React.FC<LocationPermissionBannerProps> =
         'Please enable Location Services in your device settings to see distances to nearby businesses.',
         [
           { text: 'Cancel', style: 'cancel' },
-          { 
-            text: 'Settings', 
-            onPress: () => Linking.openSettings() 
-          }
-        ]
+          {
+            text: 'Settings',
+            onPress: () => Linking.openSettings(),
+          },
+        ],
       );
     }
   };
@@ -73,18 +85,18 @@ export const LocationPermissionBanner: React.FC<LocationPermissionBannerProps> =
           title: 'Location Access Denied',
           subtitle: 'Enable location to see distances to nearby businesses',
           buttonText: 'Settings',
-          onPress: () => Linking.openSettings()
+          onPress: () => Linking.openSettings(),
         };
-      
+
       case 'restricted':
         return {
           icon: '🔒',
           title: 'Location Access Restricted',
           subtitle: 'Location access is restricted on this device',
           buttonText: 'Settings',
-          onPress: () => Linking.openSettings()
+          onPress: () => Linking.openSettings(),
         };
-      
+
       case 'undetermined':
       default:
         return {
@@ -92,7 +104,7 @@ export const LocationPermissionBanner: React.FC<LocationPermissionBannerProps> =
           title: 'Enable Location',
           subtitle: 'See distances to nearby businesses',
           buttonText: loading ? 'Requesting...' : 'Enable',
-          onPress: handleRequestPermission
+          onPress: handleRequestPermission,
         };
     }
   };
@@ -108,7 +120,9 @@ export const LocationPermissionBanner: React.FC<LocationPermissionBannerProps> =
         disabled={loading}
         accessible={true}
         accessibilityRole="button"
-        accessibilityLabel={`${content.title}. ${content.subtitle}. Tap to ${content.buttonText.toLowerCase()}`}
+        accessibilityLabel={`${content.title}. ${
+          content.subtitle
+        }. Tap to ${content.buttonText.toLowerCase()}`}
       >
         <View style={styles.content}>
           <Text style={styles.icon}>{content.icon}</Text>
@@ -121,7 +135,7 @@ export const LocationPermissionBanner: React.FC<LocationPermissionBannerProps> =
           </Text>
         </View>
       </TouchableOpacity>
-      
+
       {onDismiss && (
         <TouchableOpacity
           style={styles.dismissButton}
@@ -146,9 +160,10 @@ export interface LocationAccuracyBannerProps {
 export const LocationAccuracyBanner: React.FC<LocationAccuracyBannerProps> = ({
   onDismiss,
   style,
-  testID
+  testID,
 }) => {
-  const { accuracyAuthorization, handleReducedAccuracy } = useLocationHardened();
+  const { accuracyAuthorization, handleReducedAccuracy } =
+    useLocationHardened();
 
   // Only show for reduced accuracy
   if (accuracyAuthorization !== 'reduced') {
@@ -169,12 +184,14 @@ export const LocationAccuracyBanner: React.FC<LocationAccuracyBannerProps> = ({
           <Text style={styles.icon}>📍</Text>
           <View style={styles.textContainer}>
             <Text style={styles.title}>Using Approximate Location</Text>
-            <Text style={styles.subtitle}>Tap to improve accuracy for better distances</Text>
+            <Text style={styles.subtitle}>
+              Tap to improve accuracy for better distances
+            </Text>
           </View>
           <Text style={styles.button}>Improve</Text>
         </View>
       </TouchableOpacity>
-      
+
       {onDismiss && (
         <TouchableOpacity
           style={styles.dismissButton}
@@ -203,7 +220,7 @@ export const LocationErrorBanner: React.FC<LocationErrorBannerProps> = ({
   onRetry,
   onDismiss,
   style,
-  testID
+  testID,
 }) => {
   return (
     <View style={[styles.container, style]} testID={testID}>
@@ -227,7 +244,7 @@ export const LocationErrorBanner: React.FC<LocationErrorBannerProps> = ({
           )}
         </View>
       </View>
-      
+
       {onDismiss && (
         <TouchableOpacity
           style={styles.dismissButton}
@@ -249,44 +266,44 @@ const styles = StyleSheet.create({
     marginHorizontal: Spacing.md,
     marginVertical: Spacing.sm,
   },
-  
+
   banner: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
     borderRadius: BorderRadius.md,
     padding: Spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: Colors.shadow,
+    shadowColor: Colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
-  
+
   accuracyBanner: {
     backgroundColor: Colors.warning,
   },
-  
+
   errorBanner: {
     backgroundColor: Colors.error,
   },
-  
+
   content: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
   },
-  
+
   icon: {
     fontSize: 20,
     marginRight: Spacing.sm,
   },
-  
+
   textContainer: {
     flex: 1,
     marginRight: Spacing.sm,
   },
-  
+
   title: {
     ...Typography.styles.body,
     fontSize: 16,
@@ -294,14 +311,14 @@ const styles = StyleSheet.create({
     color: Colors.white,
     marginBottom: 2,
   },
-  
+
   subtitle: {
     ...Typography.styles.caption,
     fontSize: 14,
     color: Colors.white,
     opacity: 0.9,
   },
-  
+
   button: {
     ...Typography.styles.body,
     fontSize: 16,
@@ -312,37 +329,37 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.sm,
     borderRadius: BorderRadius.sm,
   },
-  
+
   buttonDisabled: {
     opacity: 0.6,
   },
-  
+
   retryButton: {
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
     borderRadius: BorderRadius.sm,
   },
-  
+
   retryText: {
     ...Typography.styles.body,
     fontSize: 14,
     fontWeight: '600',
     color: Colors.white,
   },
-  
+
   dismissButton: {
     position: 'absolute',
     top: Spacing.xs,
     right: Spacing.xs,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: TouchTargets.minimum,
+    height: TouchTargets.minimum,
+    borderRadius: TouchTargets.minimum / 2,
     backgroundColor: 'rgba(0, 0, 0, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  
+
   dismissText: {
     ...Typography.styles.body,
     fontSize: 16,

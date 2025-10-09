@@ -11,7 +11,14 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Review } from '../services/api';
-import { Colors, Typography, Spacing, BorderRadius, Shadows, TouchTargets } from '../styles/designSystem';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  Shadows,
+  TouchTargets,
+} from '../styles/designSystem';
 
 // Types
 interface ReviewsModalProps {
@@ -20,9 +27,33 @@ interface ReviewsModalProps {
   reviews: Review[] | null;
   itemRating: number;
   onWriteReview: () => void;
-  onSortChange: (sortBy: 'newest' | 'oldest' | 'rating_high' | 'rating_low' | 'verified' | 'recent' | 'rating_5' | 'rating_4' | 'rating_3' | 'rating_2' | 'rating_1') => void;
+  onSortChange: (
+    sortBy:
+      | 'newest'
+      | 'oldest'
+      | 'rating_high'
+      | 'rating_low'
+      | 'verified'
+      | 'recent'
+      | 'rating_5'
+      | 'rating_4'
+      | 'rating_3'
+      | 'rating_2'
+      | 'rating_1',
+  ) => void;
   onPageChange: (page: number) => void;
-  sortBy: 'newest' | 'oldest' | 'rating_high' | 'rating_low' | 'verified' | 'recent' | 'rating_5' | 'rating_4' | 'rating_3' | 'rating_2' | 'rating_1';
+  sortBy:
+    | 'newest'
+    | 'oldest'
+    | 'rating_high'
+    | 'rating_low'
+    | 'verified'
+    | 'recent'
+    | 'rating_5'
+    | 'rating_4'
+    | 'rating_3'
+    | 'rating_2'
+    | 'rating_1';
   currentPage: number;
   getPaginatedReviews: () => Review[];
   getTotalPages: () => number;
@@ -47,12 +78,12 @@ const ReviewsModal: React.FC<ReviewsModalProps> = ({
   const renderStars = (rating: number) => {
     return (
       <View style={styles.starsContainer}>
-        {[1, 2, 3, 4, 5].map((star) => (
+        {[1, 2, 3, 4, 5].map(star => (
           <Text
             key={star}
             style={[
               styles.star,
-              star <= rating ? styles.starFilled : styles.starEmpty
+              star <= rating ? styles.starFilled : styles.starEmpty,
             ]}
           >
             ★
@@ -72,7 +103,7 @@ const ReviewsModal: React.FC<ReviewsModalProps> = ({
       <SafeAreaView style={styles.modalContainer}>
         <View style={styles.modalHeader}>
           <Text style={styles.modalTitle}>Reviews & Ratings</Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.closeButton}
             onPress={onClose}
             activeOpacity={0.7}
@@ -81,7 +112,10 @@ const ReviewsModal: React.FC<ReviewsModalProps> = ({
           </TouchableOpacity>
         </View>
 
-        <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          style={styles.modalContent}
+          showsVerticalScrollIndicator={false}
+        >
           {/* Rating Summary */}
           <View style={styles.ratingSummary}>
             <View style={styles.ratingSummaryLeft}>
@@ -91,10 +125,12 @@ const ReviewsModal: React.FC<ReviewsModalProps> = ({
                   <Text style={styles.mainRatingNumber}>{itemRating || 0}</Text>
                 </View>
               </View>
-              <Text style={styles.reviewCount}>{reviews?.length || 0} reviews</Text>
+              <Text style={styles.reviewCount}>
+                {reviews?.length || 0} reviews
+              </Text>
             </View>
-            <TouchableOpacity 
-              style={styles.writeReviewButton} 
+            <TouchableOpacity
+              style={styles.writeReviewButton}
               onPress={onWriteReview}
               activeOpacity={0.7}
             >
@@ -105,42 +141,56 @@ const ReviewsModal: React.FC<ReviewsModalProps> = ({
           {/* Rating Breakdown */}
           <View style={styles.ratingBreakdown}>
             <Text style={styles.ratingBreakdownTitle}>Rating Breakdown</Text>
-            {[5, 4, 3, 2, 1].map((star) => {
+            {[5, 4, 3, 2, 1].map(star => {
               const count = reviews?.filter(r => r.rating === star).length || 0;
-              const percentage = reviews?.length ? Math.round((count / reviews.length) * 100) : 0;
+              const percentage = reviews?.length
+                ? Math.round((count / reviews.length) * 100)
+                : 0;
               const isSelected = sortBy === `rating_${star}`;
               return (
-                <TouchableOpacity 
-                  key={star} 
+                <TouchableOpacity
+                  key={star}
                   style={[
                     styles.ratingBreakdownRow,
-                    isSelected && styles.ratingBreakdownRowSelected
+                    isSelected && styles.ratingBreakdownRowSelected,
                   ]}
                   onPress={() => onSortChange(`rating_${star}` as any)}
                   activeOpacity={0.7}
                 >
                   <View style={styles.ratingBreakdownStarContainer}>
-                    <Text style={[
-                      styles.ratingBreakdownStarSymbol,
-                      isSelected && styles.ratingBreakdownStarSelected
-                    ]}>★</Text>
-                    <Text style={[
-                      styles.ratingBreakdownStarNumber,
-                      isSelected && styles.ratingBreakdownStarSelected
-                    ]}>{star}</Text>
+                    <Text
+                      style={[
+                        styles.ratingBreakdownStarSymbol,
+                        isSelected && styles.ratingBreakdownStarSelected,
+                      ]}
+                    >
+                      ★
+                    </Text>
+                    <Text
+                      style={[
+                        styles.ratingBreakdownStarNumber,
+                        isSelected && styles.ratingBreakdownStarSelected,
+                      ]}
+                    >
+                      {star}
+                    </Text>
                   </View>
                   <View style={styles.ratingBreakdownBar}>
-                    <View 
+                    <View
                       style={[
-                        styles.ratingBreakdownBarFill, 
-                        { width: `${percentage}%` }
-                      ]} 
+                        styles.ratingBreakdownBarFill,
+                        { width: `${percentage}%` },
+                      ]}
                     />
                   </View>
-                  <Text style={[
-                    styles.ratingBreakdownCount,
-                    isSelected && styles.ratingBreakdownCountSelected
-                  ]}>{count}</Text>
+                  <Text
+                    style={[
+                      styles.ratingBreakdownCount,
+                      isSelected && styles.ratingBreakdownCountSelected,
+                    ]}
+                  >
+                    {count}
+                  </Text>
                 </TouchableOpacity>
               );
             })}
@@ -153,47 +203,53 @@ const ReviewsModal: React.FC<ReviewsModalProps> = ({
               <TouchableOpacity
                 style={[
                   styles.sortButton,
-                  sortBy === 'newest' && styles.sortButtonActive
+                  sortBy === 'newest' && styles.sortButtonActive,
                 ]}
                 onPress={() => onSortChange('newest')}
                 activeOpacity={0.7}
               >
-                <Text style={[
-                  styles.sortButtonText,
-                  sortBy === 'newest' && styles.sortButtonTextActive
-                ]}>
+                <Text
+                  style={[
+                    styles.sortButtonText,
+                    sortBy === 'newest' && styles.sortButtonTextActive,
+                  ]}
+                >
                   Newest
                 </Text>
               </TouchableOpacity>
-              
+
               <TouchableOpacity
                 style={[
                   styles.sortButton,
-                  sortBy === 'oldest' && styles.sortButtonActive
+                  sortBy === 'oldest' && styles.sortButtonActive,
                 ]}
                 onPress={() => onSortChange('oldest')}
                 activeOpacity={0.7}
               >
-                <Text style={[
-                  styles.sortButtonText,
-                  sortBy === 'oldest' && styles.sortButtonTextActive
-                ]}>
+                <Text
+                  style={[
+                    styles.sortButtonText,
+                    sortBy === 'oldest' && styles.sortButtonTextActive,
+                  ]}
+                >
                   Oldest
                 </Text>
               </TouchableOpacity>
-              
+
               <TouchableOpacity
                 style={[
                   styles.sortButton,
-                  sortBy.startsWith('rating_') && styles.sortButtonActive
+                  sortBy.startsWith('rating_') && styles.sortButtonActive,
                 ]}
                 onPress={() => setShowRatingDropdown(!showRatingDropdown)}
                 activeOpacity={0.7}
               >
-                <Text style={[
-                  styles.sortButtonText,
-                  sortBy.startsWith('rating_') && styles.sortButtonTextActive
-                ]}>
+                <Text
+                  style={[
+                    styles.sortButtonText,
+                    sortBy.startsWith('rating_') && styles.sortButtonTextActive,
+                  ]}
+                >
                   Sort by Rating
                 </Text>
               </TouchableOpacity>
@@ -203,12 +259,13 @@ const ReviewsModal: React.FC<ReviewsModalProps> = ({
           {/* Rating Dropdown */}
           {showRatingDropdown && (
             <View style={styles.ratingDropdown}>
-              {[5, 4, 3, 2, 1].map((star) => (
+              {[5, 4, 3, 2, 1].map(star => (
                 <TouchableOpacity
                   key={star}
                   style={[
                     styles.ratingDropdownItem,
-                    sortBy === `rating_${star}` && styles.ratingDropdownItemActive
+                    sortBy === `rating_${star}` &&
+                      styles.ratingDropdownItemActive,
                   ]}
                   onPress={() => {
                     onSortChange(`rating_${star}` as any);
@@ -216,10 +273,13 @@ const ReviewsModal: React.FC<ReviewsModalProps> = ({
                   }}
                   activeOpacity={0.7}
                 >
-                  <Text style={[
-                    styles.ratingDropdownText,
-                    sortBy === `rating_${star}` && styles.ratingDropdownTextActive
-                  ]}>
+                  <Text
+                    style={[
+                      styles.ratingDropdownText,
+                      sortBy === `rating_${star}` &&
+                        styles.ratingDropdownTextActive,
+                    ]}
+                  >
                     {'⭐'.repeat(star)} {star} Star{star !== 1 ? 's' : ''}
                   </Text>
                 </TouchableOpacity>
@@ -229,18 +289,24 @@ const ReviewsModal: React.FC<ReviewsModalProps> = ({
 
           {/* Reviews List */}
           <View style={styles.reviewsListContainer}>
-            {getPaginatedReviews().map((review) => (
+            {getPaginatedReviews().map(review => (
               <View key={review.id} style={styles.modalReviewItem}>
                 <View style={styles.reviewHeader}>
-                  <Text style={styles.reviewAuthor}>{review.user_email || 'Anonymous'}</Text>
+                  <Text style={styles.reviewAuthor}>
+                    {(review as any).user_email || 'Anonymous'}
+                  </Text>
                   <View style={styles.reviewRating}>
                     {renderStars(review.rating)}
                   </View>
                 </View>
-                {review.title && <Text style={styles.reviewTitle}>{review.title}</Text>}
+                {review.title && (
+                  <Text style={styles.reviewTitle}>{review.title}</Text>
+                )}
                 <Text style={styles.reviewText}>{review.content}</Text>
                 <View style={styles.reviewFooter}>
-                  <Text style={styles.reviewDate}>{new Date(review.created_at).toLocaleDateString()}</Text>
+                  <Text style={styles.reviewDate}>
+                    {new Date(review.created_at).toLocaleDateString()}
+                  </Text>
                 </View>
               </View>
             ))}
@@ -250,27 +316,45 @@ const ReviewsModal: React.FC<ReviewsModalProps> = ({
           {getTotalPages() > 1 && (
             <View style={styles.pagination}>
               <TouchableOpacity
-                style={[styles.paginationButton, currentPage === 1 && styles.paginationButtonDisabled]}
+                style={[
+                  styles.paginationButton,
+                  currentPage === 1 && styles.paginationButtonDisabled,
+                ]}
                 onPress={() => onPageChange(currentPage - 1)}
                 disabled={currentPage === 1}
                 activeOpacity={0.7}
               >
-                <Text style={[styles.paginationButtonText, currentPage === 1 && styles.paginationButtonTextDisabled]}>
+                <Text
+                  style={[
+                    styles.paginationButtonText,
+                    currentPage === 1 && styles.paginationButtonTextDisabled,
+                  ]}
+                >
                   Previous
                 </Text>
               </TouchableOpacity>
-              
+
               <Text style={styles.paginationInfo}>
                 Page {currentPage} of {getTotalPages()}
               </Text>
-              
+
               <TouchableOpacity
-                style={[styles.paginationButton, currentPage === getTotalPages() && styles.paginationButtonDisabled]}
+                style={[
+                  styles.paginationButton,
+                  currentPage === getTotalPages() &&
+                    styles.paginationButtonDisabled,
+                ]}
                 onPress={() => onPageChange(currentPage + 1)}
                 disabled={currentPage === getTotalPages()}
                 activeOpacity={0.7}
               >
-                <Text style={[styles.paginationButtonText, currentPage === getTotalPages() && styles.paginationButtonTextDisabled]}>
+                <Text
+                  style={[
+                    styles.paginationButtonText,
+                    currentPage === getTotalPages() &&
+                      styles.paginationButtonTextDisabled,
+                  ]}
+                >
                   Next
                 </Text>
               </TouchableOpacity>
@@ -285,7 +369,7 @@ const ReviewsModal: React.FC<ReviewsModalProps> = ({
 const styles = StyleSheet.create({
   modalContainer: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.background.primary,
   },
   modalContent: {
     flex: 1,
@@ -421,7 +505,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
+    borderBottomColor: Colors.border.primary,
   },
   ratingDropdownItemActive: {
     backgroundColor: Colors.primary.main + '10',
@@ -475,7 +559,7 @@ const styles = StyleSheet.create({
   ratingBreakdownBar: {
     flex: 1,
     height: 8,
-    backgroundColor: Colors.borderLight,
+    backgroundColor: Colors.border.primary,
     borderRadius: 4,
     marginHorizontal: Spacing.xs,
     overflow: 'hidden',

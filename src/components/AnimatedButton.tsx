@@ -1,4 +1,4 @@
-import React, { useRef, useCallback, memo } from 'react';
+import React, { useRef, useCallback, memo, useMemo } from 'react';
 import {
   TouchableOpacity,
   Text,
@@ -8,8 +8,18 @@ import {
   TextStyle,
   ActivityIndicator,
 } from 'react-native';
-import { Colors, Typography, Spacing, BorderRadius, TouchTargets } from '../styles/designSystem';
-import { hapticButtonPress, hapticSuccess, hapticError } from '../utils/hapticFeedback';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  TouchTargets,
+} from '../styles/designSystem';
+import {
+  hapticButtonPress,
+  hapticSuccess,
+  hapticError,
+} from '../utils/hapticFeedback';
 import {
   createScaleAnimation,
   createSuccessAnimation,
@@ -43,238 +53,335 @@ interface AnimatedButtonProps {
   animateError?: boolean;
 }
 
-const AnimatedButton: React.FC<AnimatedButtonProps> = memo(({
-  title,
-  onPress,
-  variant = 'primary',
-  size = 'medium',
-  disabled = false,
-  loading = false,
-  success = false,
-  error = false,
-  icon,
-  style,
-  textStyle,
-  accessibilityLabel,
-  accessibilityHint,
-  hapticFeedback = true,
-  animatePress = true,
-  animateSuccess = true,
-  animateError = true,
-}) => {
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-  const successScaleAnim = useRef(new Animated.Value(1)).current;
-  const successOpacityAnim = useRef(new Animated.Value(0)).current;
-  const errorShakeAnim = useRef(new Animated.Value(0)).current;
-  const loadingOpacityAnim = useRef(new Animated.Value(0)).current;
+const AnimatedButton: React.FC<AnimatedButtonProps> = memo(
+  ({
+    title,
+    onPress,
+    variant = 'primary',
+    size = 'medium',
+    disabled = false,
+    loading = false,
+    success = false,
+    error = false,
+    icon,
+    style,
+    textStyle,
+    accessibilityLabel,
+    accessibilityHint,
+    hapticFeedback = true,
+    animatePress = true,
+    animateSuccess = true,
+    animateError = true,
+  }) => {
+    // Optimize animation values - only create when needed
+    const scaleAnim = useRef(new Animated.Value(1)).current;
+    const successScaleAnim = useRef(new Animated.Value(1)).current;
+    const successOpacityAnim = useRef(new Animated.Value(0)).current;
+    const errorShakeAnim = useRef(new Animated.Value(0)).current;
+    const loadingOpacityAnim = useRef(new Animated.Value(0)).current;
 
-  // Handle press with animation
-  const handlePressIn = useCallback(() => {
-    if (disabled || loading) return;
+    // Optimize press handlers with better memoization
+    const handlePressIn = useCallback(() => {
+      if (disabled || loading) return;
 
-    if (animatePress) {
-      createScaleAnimation(scaleAnim, 0.95, AnimationConfig.fast).start();
-    }
-
-    if (hapticFeedback) {
-      hapticButtonPress();
-    }
-  }, [disabled, loading, animatePress, hapticFeedback, scaleAnim]);
-
-  const handlePressOut = useCallback(() => {
-    if (disabled || loading) return;
-
-    if (animatePress) {
-      createScaleAnimation(scaleAnim, 1, AnimationConfig.fast).start();
-    }
-  }, [disabled, loading, animatePress, scaleAnim]);
-
-  const handlePress = useCallback(() => {
-    if (disabled || loading) return;
-    onPress();
-  }, [disabled, loading, onPress]);
-
-  // Success animation effect
-  React.useEffect(() => {
-    if (success && animateSuccess) {
-      if (hapticFeedback) {
-        hapticSuccess();
+      if (animatePress) {
+        createScaleAnimation(scaleAnim, 0.95, AnimationConfig.fast).start();
       }
-      createSuccessAnimation(successScaleAnim, successOpacityAnim).start();
-    } else {
-      successOpacityAnim.setValue(0);
-      successScaleAnim.setValue(1);
-    }
-  }, [success, animateSuccess, hapticFeedback, successScaleAnim, successOpacityAnim]);
 
-  // Error animation effect
-  React.useEffect(() => {
-    if (error && animateError) {
       if (hapticFeedback) {
-        hapticError();
+        hapticButtonPress();
       }
-      createErrorAnimation(errorShakeAnim).start();
-    } else {
-      errorShakeAnim.setValue(0);
-    }
-  }, [error, animateError, hapticFeedback, errorShakeAnim]);
+    }, [disabled, loading, animatePress, hapticFeedback, scaleAnim]);
 
-  // Loading animation effect
-  React.useEffect(() => {
-    if (loading) {
-      createFadeAnimation(loadingOpacityAnim, 1, AnimationConfig.normal).start();
-    } else {
-      createFadeAnimation(loadingOpacityAnim, 0, AnimationConfig.fast).start();
-    }
-  }, [loading, loadingOpacityAnim]);
+    const handlePressOut = useCallback(() => {
+      if (disabled || loading) return;
 
-  // Get button styles based on variant and state
-  const getButtonStyles = (): ViewStyle[] => {
-    const baseStyles = [styles.button, styles[`button${size.charAt(0).toUpperCase() + size.slice(1)}`]];
-    
-    if (disabled) {
-      baseStyles.push(styles.buttonDisabled);
-    } else if (error) {
-      baseStyles.push(styles.buttonError);
-    } else if (success) {
-      baseStyles.push(styles.buttonSuccess);
-    } else {
-      baseStyles.push(styles[`button${variant.charAt(0).toUpperCase() + variant.slice(1)}`]);
-    }
+      if (animatePress) {
+        createScaleAnimation(scaleAnim, 1, AnimationConfig.fast).start();
+      }
+    }, [disabled, loading, animatePress, scaleAnim]);
 
-    if (style) {
-      baseStyles.push(style);
-    }
+    const handlePress = useCallback(() => {
+      if (disabled || loading) return;
+      onPress();
+    }, [disabled, loading, onPress]);
 
-    return baseStyles;
-  };
+    // Track active animations for cleanup
+    const activeAnimations = useRef<Animated.CompositeAnimation[]>([]);
 
-  // Get text styles based on variant and state
-  const getTextStyles = (): TextStyle[] => {
-    const baseStyles = [styles.text, styles[`text${size.charAt(0).toUpperCase() + size.slice(1)}`]];
-    
-    if (disabled) {
-      baseStyles.push(styles.textDisabled);
-    } else if (error) {
-      baseStyles.push(styles.textError);
-    } else if (success) {
-      baseStyles.push(styles.textSuccess);
-    } else {
-      baseStyles.push(styles[`text${variant.charAt(0).toUpperCase() + variant.slice(1)}`]);
-    }
+    // Success animation effect
+    React.useEffect(() => {
+      // Stop previous animations
+      activeAnimations.current.forEach(anim => {
+        try {
+          anim.stop();
+        } catch (e) {
+          // Ignore errors
+        }
+      });
+      activeAnimations.current = [];
 
-    if (textStyle) {
-      baseStyles.push(textStyle);
-    }
+      if (success && animateSuccess) {
+        if (hapticFeedback) {
+          hapticSuccess();
+        }
+        const anim = createSuccessAnimation(
+          successScaleAnim,
+          successOpacityAnim,
+        );
+        activeAnimations.current.push(anim);
+        anim.start();
+      } else {
+        successOpacityAnim.setValue(0);
+        successScaleAnim.setValue(1);
+      }
 
-    return baseStyles;
-  };
+      return () => {
+        activeAnimations.current.forEach(anim => {
+          try {
+            anim.stop();
+          } catch (e) {
+            // Ignore errors
+          }
+        });
+        activeAnimations.current = [];
+      };
+    }, [
+      success,
+      animateSuccess,
+      hapticFeedback,
+      successScaleAnim,
+      successOpacityAnim,
+    ]);
 
-  // Generate accessibility properties
-  const finalAccessibilityLabel = accessibilityLabel || title;
-  const finalAccessibilityHint = accessibilityHint || 
-    generateAccessibilityHint('activate button', 
-      loading ? 'Button is currently loading' :
-      success ? 'Action completed successfully' :
-      error ? 'Action failed, try again' : undefined
+    // Error animation effect
+    React.useEffect(() => {
+      if (error && animateError) {
+        if (hapticFeedback) {
+          hapticError();
+        }
+        const anim = createErrorAnimation(errorShakeAnim);
+        const cleanup = () => {
+          try {
+            anim.stop();
+          } catch (e) {
+            // Ignore errors
+          }
+        };
+        anim.start();
+        return cleanup;
+      } else {
+        errorShakeAnim.setValue(0);
+      }
+    }, [error, animateError, hapticFeedback, errorShakeAnim]);
+
+    // Loading animation effect
+    React.useEffect(() => {
+      let anim: Animated.CompositeAnimation;
+
+      if (loading) {
+        anim = createFadeAnimation(
+          loadingOpacityAnim,
+          1,
+          AnimationConfig.normal,
+        );
+        anim.start();
+      } else {
+        anim = createFadeAnimation(loadingOpacityAnim, 0, AnimationConfig.fast);
+        anim.start();
+      }
+
+      return () => {
+        if (anim) {
+          try {
+            anim.stop();
+          } catch (e) {
+            // Ignore errors
+          }
+        }
+      };
+    }, [loading, loadingOpacityAnim]);
+
+    // Memoize button styles to prevent unnecessary recalculations
+    const buttonStyles = useMemo((): ViewStyle[] => {
+      const baseStyles = [
+        styles.button,
+        (styles as any)[
+          `button${size.charAt(0).toUpperCase() + size.slice(1)}`
+        ],
+      ];
+
+      if (disabled) {
+        baseStyles.push(styles.buttonDisabled);
+      } else if (error) {
+        baseStyles.push(styles.buttonError);
+      } else if (success) {
+        baseStyles.push(styles.buttonSuccess);
+      } else {
+        baseStyles.push(
+          (styles as any)[
+            `button${variant.charAt(0).toUpperCase() + variant.slice(1)}`
+          ],
+        );
+      }
+
+      if (style) {
+        baseStyles.push(style);
+      }
+
+      return baseStyles;
+    }, [size, disabled, error, success, variant, style]);
+
+    // Memoize text styles to prevent unnecessary recalculations
+    const textStyles = useMemo((): TextStyle[] => {
+      const baseStyles = [
+        styles.text,
+        (styles as any)[`text${size.charAt(0).toUpperCase() + size.slice(1)}`],
+      ];
+
+      if (disabled) {
+        baseStyles.push(styles.textDisabled);
+      } else if (error) {
+        baseStyles.push(styles.textError);
+      } else if (success) {
+        baseStyles.push(styles.textSuccess);
+      } else {
+        baseStyles.push(
+          (styles as any)[
+            `text${variant.charAt(0).toUpperCase() + variant.slice(1)}`
+          ],
+        );
+      }
+
+      if (textStyle) {
+        baseStyles.push(textStyle);
+      }
+
+      return baseStyles;
+    }, [size, disabled, error, success, variant, textStyle]);
+
+    // Memoize accessibility properties
+    const accessibilityProps = useMemo(
+      () => ({
+        label: accessibilityLabel || title,
+        hint:
+          accessibilityHint ||
+          generateAccessibilityHint(
+            'activate button',
+            loading
+              ? 'Button is currently loading'
+              : success
+              ? 'Action completed successfully'
+              : error
+              ? 'Action failed, try again'
+              : undefined,
+          ),
+        state: generateAccessibilityState(
+          false,
+          error,
+          disabled || loading,
+          success,
+        ),
+      }),
+      [
+        accessibilityLabel,
+        title,
+        accessibilityHint,
+        loading,
+        success,
+        error,
+        disabled,
+      ],
     );
 
-  const accessibilityState = generateAccessibilityState(
-    false,
-    error,
-    disabled || loading,
-    success
-  );
+    // Log accessibility info in development
+    if (__DEV__) {
+      logAccessibilityInfo('AnimatedButton', {
+        accessibilityLabel: accessibilityProps.label,
+        accessibilityHint: accessibilityProps.hint,
+        accessibilityRole: 'button',
+        accessibilityState: accessibilityProps.state,
+      });
+    }
 
-  // Log accessibility info in development
-  if (__DEV__) {
-    logAccessibilityInfo('AnimatedButton', {
-      accessibilityLabel: finalAccessibilityLabel,
-      accessibilityHint: finalAccessibilityHint,
-      accessibilityRole: 'button',
-      accessibilityState,
-    });
-  }
-
-  return (
-    <TouchableOpacity
-      style={getButtonStyles()}
-      onPress={handlePress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-      disabled={disabled || loading}
-      activeOpacity={0.8}
-      accessibilityRole="button"
-      accessibilityLabel={finalAccessibilityLabel}
-      accessibilityHint={finalAccessibilityHint}
-      accessibilityState={accessibilityState}
-    >
-      <Animated.View
-        style={[
-          styles.buttonContent,
-          {
-            transform: [
-              { scale: scaleAnim },
-              { translateX: errorShakeAnim },
-            ],
-          },
-        ]}
+    return (
+      <TouchableOpacity
+        style={buttonStyles}
+        onPress={handlePress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        disabled={disabled || loading}
+        activeOpacity={0.8}
+        accessibilityRole="button"
+        accessibilityLabel={accessibilityProps.label}
+        accessibilityHint={accessibilityProps.hint}
+        accessibilityState={accessibilityProps.state}
       >
-        {/* Icon */}
-        {icon && !loading && (
-          <Text style={[styles.icon, getTextStyles()]}>
-            {icon}
-          </Text>
-        )}
-
-        {/* Loading indicator */}
-        {loading && (
-          <Animated.View
-            style={[
-              styles.loadingContainer,
-              { opacity: loadingOpacityAnim },
-            ]}
-          >
-            <ActivityIndicator
-              size="small"
-              color={variant === 'outline' ? Colors.primary.main : Colors.white}
-              accessibilityLabel="Loading"
-            />
-          </Animated.View>
-        )}
-
-        {/* Button text */}
-        <Animated.Text
+        <Animated.View
           style={[
-            getTextStyles(),
-            loading && styles.textLoading,
-            { opacity: loading ? loadingOpacityAnim.interpolate({
-              inputRange: [0, 1],
-              outputRange: [1, 0],
-            }) : 1 },
+            styles.buttonContent,
+            {
+              transform: [{ scale: scaleAnim }, { translateX: errorShakeAnim }],
+            },
           ]}
         >
-          {title}
-        </Animated.Text>
+          {/* Icon */}
+          {icon && !loading && (
+            <Text style={[styles.icon, textStyles]}>{icon}</Text>
+          )}
 
-        {/* Success overlay */}
-        {success && animateSuccess && (
-          <Animated.View
+          {/* Loading indicator */}
+          {loading && (
+            <Animated.View
+              style={[styles.loadingContainer, { opacity: loadingOpacityAnim }]}
+            >
+              <ActivityIndicator
+                size="small"
+                color={
+                  variant === 'outline' ? Colors.primary.main : Colors.white
+                }
+                accessibilityLabel="Loading"
+              />
+            </Animated.View>
+          )}
+
+          {/* Button text */}
+          <Animated.Text
             style={[
-              styles.successOverlay,
+              textStyles,
+              loading && styles.textLoading,
               {
-                opacity: successOpacityAnim,
-                transform: [{ scale: successScaleAnim }],
+                opacity: loading
+                  ? loadingOpacityAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [1, 0],
+                    })
+                  : 1,
               },
             ]}
           >
-            <Text style={styles.successIcon}>✓</Text>
-          </Animated.View>
-        )}
-      </Animated.View>
-    </TouchableOpacity>
-  );
-});
+            {title}
+          </Animated.Text>
+
+          {/* Success overlay */}
+          {success && animateSuccess && (
+            <Animated.View
+              style={[
+                styles.successOverlay,
+                {
+                  opacity: successOpacityAnim,
+                  transform: [{ scale: successScaleAnim }],
+                },
+              ]}
+            >
+              <Text style={styles.successIcon}>✓</Text>
+            </Animated.View>
+          )}
+        </Animated.View>
+      </TouchableOpacity>
+    );
+  },
+);
 
 const styles = StyleSheet.create({
   button: {
@@ -293,7 +400,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   buttonSmall: {
-    minHeight: 36,
+    minHeight: TouchTargets.minimum,
     paddingHorizontal: Spacing.sm,
   },
   buttonMedium: {

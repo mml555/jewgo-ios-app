@@ -13,6 +13,7 @@ import {
   Modal,
   TextInput,
 } from 'react-native';
+import { errorLog } from '../utils/logger';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useLocation, calculateDistance } from '../hooks/useLocation';
@@ -31,7 +32,14 @@ import WriteReviewModal from '../components/WriteReviewModal';
 import ImageCarousel from '../components/ImageCarousel';
 import DetailHeaderBar from '../components/DetailHeaderBar';
 import BusinessSpecials from '../components/BusinessSpecials';
-import { Colors, Typography, Spacing, BorderRadius, Shadows, TouchTargets } from '../styles/designSystem';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  Shadows,
+  TouchTargets,
+} from '../styles/designSystem';
 import { infoLog } from '../utils/logger';
 
 // Types
@@ -48,7 +56,13 @@ const ListingDetailScreen: React.FC = () => {
   const { itemId, categoryKey } = route.params as ListingDetailParams;
   const { location, getCurrentLocation } = useLocation();
   const { accuracyAuthorization } = useLocationSimple();
-  const { reviews, loading: reviewsLoading, error: reviewsError, writeReview, loadReviews } = useReviews();
+  const {
+    reviews,
+    loading: reviewsLoading,
+    error: reviewsError,
+    writeReview,
+    loadReviews,
+  } = useReviews();
   const { isFavorited, toggleFavorite } = useFavorites();
 
   const [item, setItem] = useState<DetailedListing | null>(null);
@@ -57,7 +71,19 @@ const ListingDetailScreen: React.FC = () => {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [showReviewsModal, setShowReviewsModal] = useState(false);
   const [showWriteReviewModal, setShowWriteReviewModal] = useState(false);
-  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'rating_high' | 'rating_low' | 'verified' | 'recent' | 'rating_5' | 'rating_4' | 'rating_3' | 'rating_2' | 'rating_1'>('newest');
+  const [sortBy, setSortBy] = useState<
+    | 'newest'
+    | 'oldest'
+    | 'rating_high'
+    | 'rating_low'
+    | 'verified'
+    | 'recent'
+    | 'rating_5'
+    | 'rating_4'
+    | 'rating_3'
+    | 'rating_2'
+    | 'rating_1'
+  >('newest');
   const [currentPage, setCurrentPage] = useState(1);
   const [showHoursDropdown, setShowHoursDropdown] = useState(false);
   const [pressedButtons, setPressedButtons] = useState<Set<string>>(new Set());
@@ -78,21 +104,17 @@ const ListingDetailScreen: React.FC = () => {
   // Handle special card navigation
   const handleSpecialPress = (specialId: string) => {
     // Navigate to the special detail screen
-    navigation.navigate('SpecialDetail', { 
+    (navigation as any).navigate('SpecialDetail', {
       specialId: specialId,
-      businessId: itemId // Pass the business ID for context
+      businessId: itemId, // Pass the business ID for context
     });
   };
 
-  // Handle viewing all specials for this business
+  // Handle viewing all specials
   const handleViewAllSpecials = () => {
-    // Navigate to specials screen with business filter
-    navigation.navigate('MainTabs', {
+    // Navigate to main specials screen showing all specials
+    (navigation as any).navigate('MainTabs', {
       screen: 'Specials',
-      params: { 
-        businessId: itemId,
-        businessName: item?.name || 'Business'
-      }
     });
   };
 
@@ -102,42 +124,67 @@ const ListingDetailScreen: React.FC = () => {
     Alert.alert(
       `Open ${platform.charAt(0).toUpperCase() + platform.slice(1)}`,
       `This would open ${url} in the browser or social media app.`,
-      [{ text: 'OK' }]
+      [{ text: 'OK' }],
     );
   };
 
   // Calculate real distance if user location is available
   const realDistance = useMemo(() => {
-    infoLog('📍 DEBUG: realDistance calculation - item:', item ? 'loaded' : 'null', 'location:', location ? 'available' : 'null');
+    infoLog(
+      '📍 DEBUG: realDistance calculation - item:',
+      item ? 'loaded' : 'null',
+      'location:',
+      location ? 'available' : 'null',
+    );
     if (item) {
-      infoLog('📍 DEBUG: item coordinates - lat:', item.latitude, 'lng:', item.longitude);
+      infoLog(
+        '📍 DEBUG: item coordinates - lat:',
+        item.latitude,
+        'lng:',
+        item.longitude,
+      );
     }
-    
+
     if (location && item?.latitude && item?.longitude) {
       const distanceMiles = calculateDistance(
         location.latitude,
         location.longitude,
         item.latitude,
-        item.longitude
+        item.longitude,
       );
-      
+
       // Convert miles to meters
       const distanceMeters = distanceMiles * 1609.34;
-      
-      infoLog('📍 Distance calculated:', `${distanceMeters.toFixed(0)} meters (${distanceMiles.toFixed(1)} miles)`);
-      infoLog('📍 Location coords:', location.latitude, location.longitude);
-      infoLog('📍 Item coords:', item.latitude, item.longitude);
-      
+
+      if (__DEV__) {
+        infoLog(
+          '📍 Distance calculated:',
+          `${distanceMeters.toFixed(0)} meters (${distanceMiles.toFixed(
+            1,
+          )} miles)`,
+        );
+        infoLog('📍 Location coords:', location.latitude, location.longitude);
+        infoLog('📍 Item coords:', item.latitude, item.longitude);
+      }
+
       // For testing: allow larger distances since iOS simulator gives SF location
       // In production, this should be much smaller (like 50-100 miles = 80-160km)
-      if (distanceMeters > 16093400) { // 10,000 miles in meters - more reasonable threshold
-        infoLog('📍 Distance too large, likely incorrect coordinates');
+      if (distanceMeters > 16093400) {
+        // 10,000 miles in meters - more reasonable threshold
+        if (__DEV__) {
+          infoLog('📍 Distance too large, likely incorrect coordinates');
+        }
         return null;
       }
-      
+
       return distanceMeters;
     }
-    infoLog('📍 No location or coordinates available:', `hasLocation: ${!!location}, hasItemLat: ${!!item?.latitude}, hasItemLng: ${!!item?.longitude}`);
+    if (__DEV__) {
+      infoLog(
+        '📍 No location or coordinates available:',
+        `hasLocation: ${!!location}, hasItemLat: ${!!item?.latitude}, hasItemLng: ${!!item?.longitude}`,
+      );
+    }
     return null;
   }, [location, item]);
 
@@ -145,21 +192,29 @@ const ListingDetailScreen: React.FC = () => {
   const fetchItemDetails = useCallback(async () => {
     try {
       setLoading(true);
-      infoLog('🔍 DEBUG: Fetching item details for ID:', itemId, 'Category:', categoryKey);
+      if (__DEV__) {
+        infoLog(
+          '🔍 DEBUG: Fetching item details for ID:',
+          itemId,
+          'Category:',
+          categoryKey,
+        );
+      }
       const response = await apiService.getListing(itemId);
-      infoLog('🔍 DEBUG: getListing response:', response);
-      
+
       if (response.success && response.data) {
-        infoLog('🔍 DEBUG: Setting item data:', response.data.listing);
+        if (__DEV__) {
+          infoLog('🔍 DEBUG: Setting item data:', response.data.listing);
+        }
         setItem(response.data.listing);
         // Load reviews separately to avoid circular dependency
         loadReviews(itemId);
       } else {
-        console.error('🔍 DEBUG: Failed to load listing:', response.error);
+        errorLog('🔍 DEBUG: Failed to load listing:', response.error);
         setError(response.error || 'Failed to load listing details');
       }
     } catch (err) {
-      console.error('🔍 DEBUG: Exception in fetchItemDetails:', err);
+      errorLog('🔍 DEBUG: Exception in fetchItemDetails:', err);
       setError('Failed to load listing details');
     } finally {
       setLoading(false);
@@ -168,23 +223,30 @@ const ListingDetailScreen: React.FC = () => {
 
   useEffect(() => {
     fetchItemDetails();
-    // Request location for distance calculation
+    // Request location for distance calculation (only once on mount)
     getCurrentLocation();
-  }, [fetchItemDetails, getCurrentLocation]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchItemDetails]); // Don't add getCurrentLocation to avoid infinite loop
 
   // Debug: Track modal state changes
   useEffect(() => {
     // Modal state changed
   }, [showWriteReviewModal]);
 
-
   // Handle image swipe
   const handleImageSwipe = (event: any) => {
     const { contentOffset } = event.nativeEvent;
     // ScrollView width is now screen width minus margins
-    const imageWidth = screenWidth - (Spacing.md * 2); // Image width
+    const imageWidth = screenWidth - Spacing.md * 2; // Image width
     const index = Math.round(contentOffset.x / imageWidth);
-    infoLog('🖼️ Image swipe - contentOffset.x:', contentOffset.x, 'imageWidth:', imageWidth, 'index:', index);
+    infoLog(
+      '🖼️ Image swipe - contentOffset.x:',
+      contentOffset.x,
+      'imageWidth:',
+      imageWidth,
+      'index:',
+      index,
+    );
     setActiveImageIndex(index);
   };
 
@@ -194,14 +256,15 @@ const ListingDetailScreen: React.FC = () => {
       // Pass entity data for guest users
       const entityData = {
         entity_name: item.title,
-        entity_type: item.entity_type || item.category_name,
+        entity_type: item.category_name,
         description: item.description,
         address: item.address,
         city: item.city,
         state: item.state,
         rating: parseFloat(item.rating),
         review_count: item.review_count,
-        image_url: item.image_url,
+        image_url:
+          item.images && item.images.length > 0 ? item.images[0] : undefined,
         category: item.category_name,
       };
       await toggleFavorite(item.id, entityData);
@@ -225,17 +288,26 @@ const ListingDetailScreen: React.FC = () => {
       'What would you like to report about this listing?',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Incorrect Information', onPress: () => submitReport('incorrect_info') },
-        { text: 'Inappropriate Content', onPress: () => submitReport('inappropriate') },
+        {
+          text: 'Incorrect Information',
+          onPress: () => submitReport('incorrect_info'),
+        },
+        {
+          text: 'Inappropriate Content',
+          onPress: () => submitReport('inappropriate'),
+        },
         { text: 'Closed Business', onPress: () => submitReport('closed') },
-        { text: 'Other', onPress: () => submitReport('other') }
-      ]
+        { text: 'Other', onPress: () => submitReport('other') },
+      ],
     );
   };
 
   const submitReport = (reason: string) => {
     // TODO: Implement report submission to backend
-    Alert.alert('Report Submitted', 'Thank you for your feedback. We will review this listing.');
+    Alert.alert(
+      'Report Submitted',
+      'Thank you for your feedback. We will review this listing.',
+    );
   };
 
   // Format count numbers (e.g., 1200 -> 1.2k, 24 -> 24)
@@ -250,7 +322,11 @@ const ListingDetailScreen: React.FC = () => {
   };
 
   // Handle submit review
-  const handleSubmitReview = async (review: { rating: number; title: string; content: string }) => {
+  const handleSubmitReview = async (review: {
+    rating: number;
+    title: string;
+    content: string;
+  }) => {
     if (!item) return;
 
     const success = await writeReview(item.id, {
@@ -272,16 +348,22 @@ const ListingDetailScreen: React.FC = () => {
   // Get paginated reviews
   const getPaginatedReviews = () => {
     if (!reviews) return [];
-    
+
     let sortedReviews = [...reviews];
-    
+
     // Apply filtering and sorting
     switch (sortBy) {
       case 'newest':
-        sortedReviews.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        sortedReviews.sort(
+          (a, b) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+        );
         break;
       case 'oldest':
-        sortedReviews.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+        sortedReviews.sort(
+          (a, b) =>
+            new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+        );
         break;
       case 'rating_high':
         sortedReviews.sort((a, b) => b.rating - a.rating);
@@ -295,7 +377,9 @@ const ListingDetailScreen: React.FC = () => {
       case 'recent':
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        sortedReviews = sortedReviews.filter(review => new Date(review.created_at) > thirtyDaysAgo);
+        sortedReviews = sortedReviews.filter(
+          review => new Date(review.created_at) > thirtyDaysAgo,
+        );
         break;
       case 'rating_5':
         sortedReviews = sortedReviews.filter(review => review.rating === 5);
@@ -313,7 +397,7 @@ const ListingDetailScreen: React.FC = () => {
         sortedReviews = sortedReviews.filter(review => review.rating === 1);
         break;
     }
-    
+
     const startIndex = (currentPage - 1) * 5;
     return sortedReviews.slice(startIndex, startIndex + 5);
   };
@@ -321,9 +405,9 @@ const ListingDetailScreen: React.FC = () => {
   // Get total pages
   const getTotalPages = () => {
     if (!reviews) return 1;
-    
+
     let sortedReviews = [...reviews];
-    
+
     // Apply same filtering logic as getPaginatedReviews
     switch (sortBy) {
       case 'verified':
@@ -332,7 +416,9 @@ const ListingDetailScreen: React.FC = () => {
       case 'recent':
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        sortedReviews = sortedReviews.filter(review => new Date(review.created_at) > thirtyDaysAgo);
+        sortedReviews = sortedReviews.filter(
+          review => new Date(review.created_at) > thirtyDaysAgo,
+        );
         break;
       case 'rating_5':
         sortedReviews = sortedReviews.filter(review => review.rating === 5);
@@ -350,12 +436,25 @@ const ListingDetailScreen: React.FC = () => {
         sortedReviews = sortedReviews.filter(review => review.rating === 1);
         break;
     }
-    
+
     return Math.ceil(sortedReviews.length / 5);
   };
 
   // Handle sort change
-  const handleSortChange = (newSortBy: 'newest' | 'oldest' | 'rating_high' | 'rating_low' | 'verified' | 'recent' | 'rating_5' | 'rating_4' | 'rating_3' | 'rating_2' | 'rating_1') => {
+  const handleSortChange = (
+    newSortBy:
+      | 'newest'
+      | 'oldest'
+      | 'rating_high'
+      | 'rating_low'
+      | 'verified'
+      | 'recent'
+      | 'rating_5'
+      | 'rating_4'
+      | 'rating_3'
+      | 'rating_2'
+      | 'rating_1',
+  ) => {
     setSortBy(newSortBy);
     setCurrentPage(1);
   };
@@ -379,7 +478,7 @@ const ListingDetailScreen: React.FC = () => {
       // For now, keep using picsum.photos but ensure proper dimensions
       const randomMatch = url.match(/random=(\d+)/);
       const randomId = randomMatch ? randomMatch[1] : '1';
-      
+
       // Use picsum.photos with proper dimensions for the carousel
       return `https://picsum.photos/400/300?random=${randomId}`;
     }
@@ -389,51 +488,69 @@ const ListingDetailScreen: React.FC = () => {
   // Transform business hours from API format (array with day_of_week numbers) to display format (object with day names)
   const transformBusinessHours = (businessHours: any[]) => {
     if (!businessHours || !Array.isArray(businessHours)) return {};
-    
-    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+
+    const dayNames = [
+      'sunday',
+      'monday',
+      'tuesday',
+      'wednesday',
+      'thursday',
+      'friday',
+      'saturday',
+    ];
     const transformed: any = {};
-    
+
     businessHours.forEach(hours => {
       const dayName = dayNames[hours.day_of_week];
       if (dayName) {
         transformed[dayName] = {
           open_time: hours.open_time,
           close_time: hours.close_time,
-          is_closed: hours.is_closed
+          is_closed: hours.is_closed,
         };
       }
     });
-    
+
     return transformed;
   };
 
   // Get business hours status
   const getBusinessHoursStatus = () => {
     if (!item?.business_hours) return { isOpen: false, nextChange: null };
-    
+
     const transformedHours = transformBusinessHours(item.business_hours);
     const now = new Date();
     const currentDay = now.getDay();
     const currentTime = now.getHours() * 60 + now.getMinutes();
-    
-    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+
+    const dayNames = [
+      'sunday',
+      'monday',
+      'tuesday',
+      'wednesday',
+      'thursday',
+      'friday',
+      'saturday',
+    ];
     const todayDayName = dayNames[currentDay];
     const todayHours = transformedHours[todayDayName];
-    
+
     if (!todayHours || todayHours.is_closed) {
       return { isOpen: false, nextChange: null };
     }
-    
+
     const openTime = todayHours.open_time.split(':').map(Number);
     const closeTime = todayHours.close_time.split(':').map(Number);
     const openMinutes = openTime[0] * 60 + openTime[1];
     const closeMinutes = closeTime[0] * 60 + closeTime[1];
-    
+
     const isOpen = currentTime >= openMinutes && currentTime < closeMinutes;
-    
+
     return {
       isOpen,
-      nextChange: isOpen ? formatTime(todayHours.close_time) : formatTime(todayHours.open_time)
+      nextChange: isOpen
+        ? formatTime(todayHours.close_time)
+        : formatTime(todayHours.open_time),
     };
   };
 
@@ -453,8 +570,8 @@ const ListingDetailScreen: React.FC = () => {
       <SafeAreaView style={styles.container}>
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>{error || 'Listing not found'}</Text>
-          <TouchableOpacity 
-            style={styles.retryButton} 
+          <TouchableOpacity
+            style={styles.retryButton}
             onPress={fetchItemDetails}
             activeOpacity={0.7}
           >
@@ -484,337 +601,373 @@ const ListingDetailScreen: React.FC = () => {
           onFavoritePress={handleFavoriteToggle}
           centerContent={{
             type: 'view_count',
-            count: item?.view_count || 0
+            count: item?.view_count || 0,
           }}
           rightContent={{
             type: 'share_favorite',
             shareCount: item?.share_count || 0,
             likeCount: item?.like_count || 0,
-            isFavorited: item?.id ? isFavorited(item.id) : false
+            isFavorited: item?.id ? isFavorited(item.id) : false,
           }}
         />
 
-        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Image Carousel - Reusable Component */}
-        <ImageCarousel
-          images={item.images}
-          fallbackImageUrl={`https://picsum.photos/400/300?random=${item.id}`}
-          height={280}
-          borderRadius={25}
-        />
-
-        {/* Content */}
-        <View style={styles.content}>
-          {/* Title and Rating */}
-          <View style={styles.titleSection}>
-            <Text style={styles.title}>{item.title}</Text>
-            <TouchableOpacity 
-              style={styles.ratingButton} 
-              onPress={handleRatingPress}
-              activeOpacity={0.7}
-            >
-              <View style={styles.ratingContainer}>
-                <Text style={styles.ratingStar}>★</Text>
-                <Text style={styles.ratingText}>
-                  {(() => {
-                    const rating = item.rating as any;
-                    if (typeof rating === 'number') {
-                      return rating.toFixed(1);
-                    } else if (rating) {
-                      return parseFloat(String(rating)).toFixed(1);
-                    }
-                    return '0.0';
-                  })()}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          </View>
-
-          {/* Price and Distance */}
-          <View style={styles.infoRow}>
-            <Text style={styles.priceText}>{(item as any).price_range || '$$'}</Text>
-            {realDistance ? (
-              <DistanceDisplay
-                distanceMeters={realDistance}
-                accuracyContext={{
-                  accuracyAuthorization,
-                  isApproximate: false
-                }}
-                textStyle={styles.distanceText}
-                options={{ unit: 'imperial' }}
-              />
-            ) : (
-              <Text style={styles.distanceText}>
-                {item.zip_code ? `${item.zip_code}` : 'Location N/A'}
-              </Text>
-            )}
-          </View>
-
-          {/* Hours */}
-          <TouchableOpacity 
-            style={styles.hoursButton}
-            onPress={() => setShowHoursDropdown(!showHoursDropdown)}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.hoursText}>
-              🕒 Hours: 
-              <Text style={[styles.statusText, businessStatus.isOpen ? styles.statusOpen : styles.statusClosed]}>
-                {businessStatus.isOpen ? ' Open' : ' Closed'}
-              </Text>
-              {businessStatus.nextChange && (
-                <Text style={styles.nextChangeText}>
-                  {businessStatus.isOpen ? ' closes at ' : ' opens at '}{businessStatus.nextChange}
-                </Text>
-              )}
-              <Text style={styles.dropdownIcon}> ▼</Text>
-            </Text>
-          </TouchableOpacity>
-
-          {/* Hours Dropdown */}
-          {showHoursDropdown && item.business_hours && (
-            <View style={styles.hoursDropdown}>
-              {Object.entries(transformBusinessHours(item.business_hours)).map(([day, hours]) => (
-                <View key={day} style={styles.hoursRow}>
-                  <Text style={styles.dayLabel}>{day.charAt(0).toUpperCase() + day.slice(1)}</Text>
-                  <Text style={styles.hoursText}>
-                    {(hours as any).is_closed ? 'Closed' : `${formatTime((hours as any).open_time)} - ${formatTime((hours as any).close_time)}`}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          )}
-
-          {/* Address */}
-          <View style={styles.addressContainer}>
-            <Text style={styles.addressText}>
-              {item.address}
-              {item.city && `, ${item.city}`}
-              {item.state && `, ${item.state}`}
-              {item.zip_code && ` ${item.zip_code}`}
-            </Text>
-          </View>
-
-          {/* Contact Buttons */}
-          <View style={styles.contactButtonsContainer}>
-            <TouchableOpacity 
-              style={[
-                styles.contactButton,
-                pressedButtons.has('call') && styles.contactButtonPressed
-              ]}
-              onPressIn={() => handlePressIn('call')}
-              onPressOut={() => handlePressOut('call')}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.contactButtonText}>Call</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[
-                styles.contactButton,
-                pressedButtons.has('website') && styles.contactButtonPressed
-              ]}
-              onPressIn={() => handlePressIn('website')}
-              onPressOut={() => handlePressOut('website')}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.contactButtonText}>Website</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[
-                styles.contactButton,
-                pressedButtons.has('email') && styles.contactButtonPressed
-              ]}
-              onPressIn={() => handlePressIn('email')}
-              onPressOut={() => handlePressOut('email')}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.contactButtonText}>Email</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Order Button */}
-          <TouchableOpacity 
-            style={[
-              styles.orderButton,
-              pressedButtons.has('order-now') && styles.orderButtonPressed
-            ]}
-            onPressIn={() => handlePressIn('order-now')}
-            onPressOut={() => handlePressOut('order-now')}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.orderButtonText}>Order Now</Text>
-          </TouchableOpacity>
-
-          {/* Feature Tags */}
-          <View style={styles.featureTagsContainer}>
-            <View style={[styles.featureTag, styles.featureTagPrimary]}>
-              <Text style={styles.featureTagText}>Popular</Text>
-            </View>
-            <View style={[styles.featureTag, styles.featureTagSecondary]}>
-              <Text style={styles.featureTagText}>Trending</Text>
-            </View>
-            <View style={[styles.featureTag, styles.featureTagAccent]}>
-              <Text style={styles.featureTagText}>New</Text>
-            </View>
-          </View>
-
-
-          {/* Description */}
-          <Text style={styles.description}>{item.description}</Text>
-
-          {/* Divider */}
-          <View style={styles.divider} />
-
-          {/* Business Specials */}
-          <BusinessSpecials
-            businessId={itemId}
-            businessName={item?.name || 'Business'}
-            onSpecialPress={handleSpecialPress}
-            onViewAllPress={handleViewAllSpecials}
-            maxDisplayCount={3}
+        <ScrollView
+          style={styles.scrollView}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Image Carousel - Reusable Component */}
+          <ImageCarousel
+            images={item.images}
+            fallbackImageUrl={`https://picsum.photos/400/300?random=${item.id}`}
+            height={280}
+            borderRadius={25}
           />
 
-          {/* Social Media Icons */}
-          {(item.facebook_url || item.instagram_url || item.whatsapp_url || item.tiktok_url) && (
-            <View style={styles.socialMediaContainer}>
-              <Text style={styles.socialMediaTitle}>Follow Us</Text>
-              <View style={styles.socialMediaIcons}>
-                {item.facebook_url && (
-                  <TouchableOpacity 
-                    style={styles.socialMediaButton}
-                    onPress={() => handleSocialMediaPress('facebook', item.facebook_url!)}
-                    activeOpacity={0.7}
-                  >
-                    <FacebookIcon size={24} color="#1877F2" />
-                  </TouchableOpacity>
-                )}
-                {item.instagram_url && (
-                  <TouchableOpacity 
-                    style={styles.socialMediaButton}
-                    onPress={() => handleSocialMediaPress('instagram', item.instagram_url!)}
-                    activeOpacity={0.7}
-                  >
-                    <InstagramIcon size={24} color="#E4405F" />
-                  </TouchableOpacity>
-                )}
-                {item.whatsapp_url && (
-                  <TouchableOpacity 
-                    style={styles.socialMediaButton}
-                    onPress={() => handleSocialMediaPress('whatsapp', item.whatsapp_url!)}
-                    activeOpacity={0.7}
-                  >
-                    <WhatsAppIcon size={24} color="#25D366" />
-                  </TouchableOpacity>
-                )}
-                {item.tiktok_url && (
-                  <TouchableOpacity 
-                    style={styles.socialMediaButton}
-                    onPress={() => handleSocialMediaPress('tiktok', item.tiktok_url!)}
-                    activeOpacity={0.7}
-                  >
-                    <TikTokIcon size={24} color="#000000" />
-                  </TouchableOpacity>
-                )}
-              </View>
-            </View>
-          )}
-
-          {/* Long Description */}
-          {item.long_description && (
-            <View style={styles.longDescriptionContainer}>
-              <Text style={styles.longDescriptionTitle}>About Us</Text>
-              <Text style={styles.longDescriptionText}>{item.long_description}</Text>
-            </View>
-          )}
-
-          {/* Reviews Section */}
-          <View style={styles.reviewsSectionContainer}>
-            <View style={styles.reviewsSectionHeader}>
-              <Text style={styles.reviewsSectionTitle}>Customer Reviews</Text>
-              <TouchableOpacity 
-                style={styles.writeReviewButton}
-                onPress={handleWriteReview}
+          {/* Content */}
+          <View style={styles.content}>
+            {/* Title and Rating */}
+            <View style={styles.titleSection}>
+              <Text style={styles.title}>{item.title}</Text>
+              <TouchableOpacity
+                style={styles.ratingButton}
+                onPress={handleRatingPress}
                 activeOpacity={0.7}
               >
-                <Text style={styles.writeReviewButtonText}>Write Review</Text>
+                <View style={styles.ratingContainer}>
+                  <Text style={styles.ratingStar}>★</Text>
+                  <Text style={styles.ratingText}>
+                    {(() => {
+                      const rating = item.rating as any;
+                      if (typeof rating === 'number') {
+                        return rating.toFixed(1);
+                      } else if (rating) {
+                        return parseFloat(String(rating)).toFixed(1);
+                      }
+                      return '0.0';
+                    })()}
+                  </Text>
+                </View>
               </TouchableOpacity>
             </View>
-            
-            {reviews && reviews.length > 0 ? (
-              <>
-                {reviews.slice(0, 5).map((review, index) => (
-                  <View key={review.id || index} style={styles.reviewItem}>
-                    <View style={styles.reviewHeader}>
-                      <Text style={styles.reviewAuthor}>
-                        {(review as any).user_name || 'Anonymous'}
-                      </Text>
-                      <View style={styles.reviewRating}>
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <Text 
-                            key={star} 
-                            style={[
-                              styles.reviewStar,
-                              star <= (Number(review.rating) || 0) && styles.reviewStarFilled
-                            ]}
-                          >
-                            ★
-                          </Text>
-                        ))}
-                      </View>
-                    </View>
-                    
-                    {review.title && (
-                      <Text style={styles.reviewTitle}>{review.title}</Text>
-                    )}
-                    
-                    {review.content && (
-                      <Text style={styles.reviewText}>{review.content}</Text>
-                    )}
-                    
-                    <View style={styles.reviewFooter}>
-                      <Text style={styles.reviewDate}>
-                        {new Date(review.created_at).toLocaleDateString()}
-                      </Text>
-                    </View>
+
+            {/* Price and Distance */}
+            <View style={styles.infoRow}>
+              <Text style={styles.priceText}>
+                {(item as any).price_range || '$$'}
+              </Text>
+              {realDistance ? (
+                <DistanceDisplay
+                  distanceMeters={realDistance}
+                  accuracyContext={{
+                    accuracyAuthorization,
+                    isApproximate: false,
+                  }}
+                  textStyle={styles.distanceText}
+                  options={{ unit: 'imperial' }}
+                />
+              ) : (
+                <Text style={styles.distanceText}>
+                  {item.zip_code ? `${item.zip_code}` : 'Location N/A'}
+                </Text>
+              )}
+            </View>
+
+            {/* Hours */}
+            <TouchableOpacity
+              style={styles.hoursButton}
+              onPress={() => setShowHoursDropdown(!showHoursDropdown)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.hoursText}>
+                🕒 Hours:
+                <Text
+                  style={[
+                    styles.statusText,
+                    businessStatus.isOpen
+                      ? styles.statusOpen
+                      : styles.statusClosed,
+                  ]}
+                >
+                  {businessStatus.isOpen ? ' Open' : ' Closed'}
+                </Text>
+                {businessStatus.nextChange && (
+                  <Text style={styles.nextChangeText}>
+                    {businessStatus.isOpen ? ' closes at ' : ' opens at '}
+                    {businessStatus.nextChange}
+                  </Text>
+                )}
+                <Text style={styles.dropdownIcon}> ▼</Text>
+              </Text>
+            </TouchableOpacity>
+
+            {/* Hours Dropdown */}
+            {showHoursDropdown && item.business_hours && (
+              <View style={styles.hoursDropdown}>
+                {Object.entries(
+                  transformBusinessHours(item.business_hours),
+                ).map(([day, hours]) => (
+                  <View key={day} style={styles.hoursRow}>
+                    <Text style={styles.dayLabel}>
+                      {day.charAt(0).toUpperCase() + day.slice(1)}
+                    </Text>
+                    <Text style={styles.hoursText}>
+                      {(hours as any).is_closed
+                        ? 'Closed'
+                        : `${formatTime(
+                            (hours as any).open_time,
+                          )} - ${formatTime((hours as any).close_time)}`}
+                    </Text>
                   </View>
                 ))}
-              </>
-            ) : (
-              <View style={styles.noReviewsContainer}>
-                <Text style={styles.noReviewsText}>No reviews yet</Text>
-                <Text style={styles.noReviewsSubtext}>Be the first to share your experience!</Text>
               </View>
             )}
-            
-            {/* View More Button */}
-            {reviews && reviews.length > 0 && (
-              <View style={styles.viewMoreContainer}>
-                <TouchableOpacity 
-                  style={styles.viewMoreButton}
-                  onPress={() => setShowReviewsModal(true)}
+
+            {/* Address */}
+            <View style={styles.addressContainer}>
+              <Text style={styles.addressText}>
+                {item.address}
+                {item.city && `, ${item.city}`}
+                {item.state && `, ${item.state}`}
+                {item.zip_code && ` ${item.zip_code}`}
+              </Text>
+            </View>
+
+            {/* Contact Buttons */}
+            <View style={styles.contactButtonsContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.contactButton,
+                  pressedButtons.has('call') && styles.contactButtonPressed,
+                ]}
+                onPressIn={() => handlePressIn('call')}
+                onPressOut={() => handlePressOut('call')}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.contactButtonText}>Call</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.contactButton,
+                  pressedButtons.has('website') && styles.contactButtonPressed,
+                ]}
+                onPressIn={() => handlePressIn('website')}
+                onPressOut={() => handlePressOut('website')}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.contactButtonText}>Website</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.contactButton,
+                  pressedButtons.has('email') && styles.contactButtonPressed,
+                ]}
+                onPressIn={() => handlePressIn('email')}
+                onPressOut={() => handlePressOut('email')}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.contactButtonText}>Email</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Order Button */}
+            <TouchableOpacity
+              style={[
+                styles.orderButton,
+                pressedButtons.has('order-now') && styles.orderButtonPressed,
+              ]}
+              onPressIn={() => handlePressIn('order-now')}
+              onPressOut={() => handlePressOut('order-now')}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.orderButtonText}>Order Now</Text>
+            </TouchableOpacity>
+
+            {/* Feature Tags */}
+            <View style={styles.featureTagsContainer}>
+              <View style={[styles.featureTag, styles.featureTagPrimary]}>
+                <Text style={styles.featureTagText}>Popular</Text>
+              </View>
+              <View style={[styles.featureTag, styles.featureTagSecondary]}>
+                <Text style={styles.featureTagText}>Trending</Text>
+              </View>
+              <View style={[styles.featureTag, styles.featureTagAccent]}>
+                <Text style={styles.featureTagText}>New</Text>
+              </View>
+            </View>
+
+            {/* Description */}
+            <Text style={styles.description}>{item.description}</Text>
+
+            {/* Divider */}
+            <View style={styles.divider} />
+
+            {/* Business Specials */}
+            <BusinessSpecials
+              businessId={itemId}
+              businessName={item?.title || 'Business'}
+              onSpecialPress={handleSpecialPress}
+              onViewAllPress={handleViewAllSpecials}
+              maxDisplayCount={3}
+            />
+
+            {/* Social Media Icons */}
+            {(item.facebook_url ||
+              item.instagram_url ||
+              item.whatsapp_url ||
+              item.tiktok_url) && (
+              <View style={styles.socialMediaContainer}>
+                <Text style={styles.socialMediaTitle}>Follow Us</Text>
+                <View style={styles.socialMediaIcons}>
+                  {item.facebook_url && (
+                    <TouchableOpacity
+                      style={styles.socialMediaButton}
+                      onPress={() =>
+                        handleSocialMediaPress('facebook', item.facebook_url!)
+                      }
+                      activeOpacity={0.7}
+                    >
+                      <FacebookIcon size={24} color="#1877F2" />
+                    </TouchableOpacity>
+                  )}
+                  {item.instagram_url && (
+                    <TouchableOpacity
+                      style={styles.socialMediaButton}
+                      onPress={() =>
+                        handleSocialMediaPress('instagram', item.instagram_url!)
+                      }
+                      activeOpacity={0.7}
+                    >
+                      <InstagramIcon size={24} color="#E4405F" />
+                    </TouchableOpacity>
+                  )}
+                  {item.whatsapp_url && (
+                    <TouchableOpacity
+                      style={styles.socialMediaButton}
+                      onPress={() =>
+                        handleSocialMediaPress('whatsapp', item.whatsapp_url!)
+                      }
+                      activeOpacity={0.7}
+                    >
+                      <WhatsAppIcon size={24} color="#25D366" />
+                    </TouchableOpacity>
+                  )}
+                  {item.tiktok_url && (
+                    <TouchableOpacity
+                      style={styles.socialMediaButton}
+                      onPress={() =>
+                        handleSocialMediaPress('tiktok', item.tiktok_url!)
+                      }
+                      activeOpacity={0.7}
+                    >
+                      <TikTokIcon size={24} color="#000000" />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+            )}
+
+            {/* Long Description */}
+            {item.long_description && (
+              <View style={styles.longDescriptionContainer}>
+                <Text style={styles.longDescriptionTitle}>About Us</Text>
+                <Text style={styles.longDescriptionText}>
+                  {item.long_description}
+                </Text>
+              </View>
+            )}
+
+            {/* Reviews Section */}
+            <View style={styles.reviewsSectionContainer}>
+              <View style={styles.reviewsSectionHeader}>
+                <Text style={styles.reviewsSectionTitle}>Customer Reviews</Text>
+                <TouchableOpacity
+                  style={styles.writeReviewButton}
+                  onPress={handleWriteReview}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.viewMoreButtonText}>View More</Text>
+                  <Text style={styles.writeReviewButtonText}>Write Review</Text>
                 </TouchableOpacity>
               </View>
-            )}
-          </View>
-        </View>
-      </ScrollView>
 
-      {/* Reviews Modal */}
-      <ReviewsModal
-        visible={showReviewsModal}
-        onClose={() => setShowReviewsModal(false)}
-        reviews={reviews}
-        itemRating={Number(item?.rating) || 0}
-        onWriteReview={handleWriteReview}
-        onSortChange={handleSortChange}
-        onPageChange={handlePageChange}
-        sortBy={sortBy}
-        currentPage={currentPage}
-        getPaginatedReviews={getPaginatedReviews}
-        getTotalPages={getTotalPages}
-      />
+              {reviews && reviews.length > 0 ? (
+                <>
+                  {reviews.slice(0, 5).map((review, index) => (
+                    <View key={review.id || index} style={styles.reviewItem}>
+                      <View style={styles.reviewHeader}>
+                        <Text style={styles.reviewAuthor}>
+                          {(review as any).user_name || 'Anonymous'}
+                        </Text>
+                        <View style={styles.reviewRating}>
+                          {[1, 2, 3, 4, 5].map(star => (
+                            <Text
+                              key={star}
+                              style={[
+                                styles.reviewStar,
+                                star <= (Number(review.rating) || 0) &&
+                                  styles.reviewStarFilled,
+                              ]}
+                            >
+                              ★
+                            </Text>
+                          ))}
+                        </View>
+                      </View>
+
+                      {review.title && (
+                        <Text style={styles.reviewTitle}>{review.title}</Text>
+                      )}
+
+                      {review.content && (
+                        <Text style={styles.reviewText}>{review.content}</Text>
+                      )}
+
+                      <View style={styles.reviewFooter}>
+                        <Text style={styles.reviewDate}>
+                          {new Date(review.created_at).toLocaleDateString()}
+                        </Text>
+                      </View>
+                    </View>
+                  ))}
+                </>
+              ) : (
+                <View style={styles.noReviewsContainer}>
+                  <Text style={styles.noReviewsText}>No reviews yet</Text>
+                  <Text style={styles.noReviewsSubtext}>
+                    Be the first to share your experience!
+                  </Text>
+                </View>
+              )}
+
+              {/* View More Button */}
+              {reviews && reviews.length > 0 && (
+                <View style={styles.viewMoreContainer}>
+                  <TouchableOpacity
+                    style={styles.viewMoreButton}
+                    onPress={() => setShowReviewsModal(true)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.viewMoreButtonText}>View More</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          </View>
+        </ScrollView>
+
+        {/* Reviews Modal */}
+        <ReviewsModal
+          visible={showReviewsModal}
+          onClose={() => setShowReviewsModal(false)}
+          reviews={reviews}
+          itemRating={Number(item?.rating) || 0}
+          onWriteReview={handleWriteReview}
+          onSortChange={handleSortChange}
+          onPageChange={handlePageChange}
+          sortBy={sortBy}
+          currentPage={currentPage}
+          getPaginatedReviews={getPaginatedReviews}
+          getTotalPages={getTotalPages}
+        />
       </SafeAreaView>
 
       {/* Write Review Modal */}
@@ -831,7 +984,7 @@ const ListingDetailScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.background.primary,
   },
   loadingContainer: {
     flex: 1,
@@ -883,7 +1036,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   image: {
-    width: screenWidth - (Spacing.md * 2), // Full width of the ScrollView
+    width: screenWidth - Spacing.md * 2, // Full width of the ScrollView
     height: 280,
     borderRadius: 25,
     marginHorizontal: 0, // No margins since ScrollView handles positioning
@@ -898,7 +1051,7 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
   placeholderImage: {
-    width: screenWidth - (Spacing.md * 2),
+    width: screenWidth - Spacing.md * 2,
     height: 280,
     backgroundColor: Colors.gray200,
     justifyContent: 'center',
@@ -1139,7 +1292,7 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: Colors.border,
+    backgroundColor: Colors.border.primary,
     marginVertical: Spacing.md,
   },
   // Header Bar Styles (pill shape with glass effect, above image)
@@ -1279,7 +1432,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     ...Shadows.sm,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: Colors.border.primary,
   },
   // Long Description Styles
   longDescriptionContainer: {

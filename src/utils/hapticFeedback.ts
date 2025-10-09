@@ -1,5 +1,6 @@
 import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 import { Platform } from 'react-native';
+import { warnLog } from './logger';
 
 // Haptic feedback options
 const hapticOptions = {
@@ -10,28 +11,28 @@ const hapticOptions = {
 export enum HapticFeedbackType {
   // Light feedback for subtle interactions
   LIGHT = 'impactLight',
-  
+
   // Medium feedback for standard interactions
   MEDIUM = 'impactMedium',
-  
+
   // Heavy feedback for important interactions
   HEAVY = 'impactHeavy',
-  
+
   // Success feedback for positive actions
   SUCCESS = 'notificationSuccess',
-  
+
   // Warning feedback for cautionary actions
   WARNING = 'notificationWarning',
-  
+
   // Error feedback for negative actions
   ERROR = 'notificationError',
-  
+
   // Selection feedback for picker/selector changes
   SELECTION = 'selection',
-  
+
   // Rigid feedback for firm interactions
   RIGID = 'rigid',
-  
+
   // Soft feedback for gentle interactions
   SOFT = 'soft',
 }
@@ -41,7 +42,10 @@ export enum HapticFeedbackType {
  * @param type - The type of haptic feedback to trigger
  * @param enabled - Whether haptic feedback is enabled (default: true)
  */
-export const triggerHaptic = (type: HapticFeedbackType, enabled: boolean = true): void => {
+export const triggerHaptic = (
+  type: HapticFeedbackType,
+  enabled: boolean = true,
+): void => {
   if (!enabled || Platform.OS !== 'ios') {
     return;
   }
@@ -49,7 +53,7 @@ export const triggerHaptic = (type: HapticFeedbackType, enabled: boolean = true)
   try {
     ReactNativeHapticFeedback.trigger(type, hapticOptions);
   } catch (error) {
-    console.warn('Haptic feedback failed:', error);
+    warnLog('Haptic feedback failed:', error);
   }
 };
 

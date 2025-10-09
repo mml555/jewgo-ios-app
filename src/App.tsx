@@ -1,22 +1,15 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
-import { StatusBar, Text, TextInput } from 'react-native';
+import { StatusBar } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from './contexts/AuthContext';
 import RootNavigator from './navigation/RootNavigator';
 import { configService } from './config/ConfigService';
+import { debugLog } from './utils/logger';
+import navigationService from './services/NavigationService';
 
-// Set default font family for all Text and TextInput components
-const defaultTextProps = {
-  style: { fontFamily: 'Nunito' }
-};
-
-// Apply default props to Text and TextInput
-Text.defaultProps = Text.defaultProps || {};
-Text.defaultProps.style = defaultTextProps.style;
-
-TextInput.defaultProps = TextInput.defaultProps || {};
-TextInput.defaultProps.style = defaultTextProps.style;
+// Note: defaultProps is deprecated in newer React Native versions
+// Font family should be set through StyleSheet or individual component styles
 
 export default function App(): React.JSX.Element {
   // Initialize configuration service at app startup
@@ -25,7 +18,7 @@ export default function App(): React.JSX.Element {
     // This ensures any configuration errors are caught early
     const config = configService.getConfig();
     if (configService.debugMode) {
-      console.log('🚀 JEWGO App started with configuration:', {
+      debugLog('🚀 JEWGO App started with configuration:', {
         environment: config.nodeEnv,
         apiBaseUrl: config.apiBaseUrl,
         debugMode: config.debugMode,
@@ -36,7 +29,7 @@ export default function App(): React.JSX.Element {
   return (
     <SafeAreaProvider>
       <AuthProvider>
-        <NavigationContainer>
+        <NavigationContainer ref={navigationService.setNavigationRef}>
           <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
           <RootNavigator />
         </NavigationContainer>

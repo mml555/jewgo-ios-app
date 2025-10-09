@@ -8,7 +8,14 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../styles/designSystem';
+import { errorLog } from '../utils/logger';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  Shadows,
+} from '../styles/designSystem';
 import { specialsService } from '../services/SpecialsService';
 import { SpecialClaim, UserSpecialClaim } from '../types/specials';
 
@@ -30,30 +37,31 @@ const ClaimsTracker: React.FC<ClaimsTrackerProps> = ({
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
 
   // Load user's claimed specials
-  const loadClaims = useCallback(async (showLoading = true) => {
-    try {
-      if (showLoading) setLoading(true);
-      setError(null);
+  const loadClaims = useCallback(
+    async (showLoading = true) => {
+      try {
+        if (showLoading) setLoading(true);
+        setError(null);
 
-      const response = await specialsService.getUserClaimedSpecials(userId, {
-        limit: 50,
-        sortBy: 'claimed_at',
-        sortOrder: 'desc',
-      });
+        const response = await specialsService.getUserClaimedSpecials(userId, {
+          limit: 50,
+        });
 
-      if (response.success && response.data) {
-        setClaims(response.data.claims);
-        setLastUpdated(new Date());
-      } else {
-        setError(response.error || 'Failed to load claims');
+        if (response.success && response.data) {
+          setClaims(response.data.claims);
+          setLastUpdated(new Date());
+        } else {
+          setError(response.error || 'Failed to load claims');
+        }
+      } catch (err) {
+        setError('Failed to load claims');
+        errorLog('Error loading claims:', err);
+      } finally {
+        if (showLoading) setLoading(false);
       }
-    } catch (err) {
-      setError('Failed to load claims');
-      console.error('Error loading claims:', err);
-    } finally {
-      if (showLoading) setLoading(false);
-    }
-  }, [userId]);
+    },
+    [userId],
+  );
 
   // Handle refresh
   const handleRefresh = useCallback(async () => {
@@ -63,24 +71,27 @@ const ClaimsTracker: React.FC<ClaimsTrackerProps> = ({
   }, [loadClaims]);
 
   // Handle claim action (redeem, cancel, etc.)
-  const handleClaimAction = useCallback(async (
-    claimId: string, 
-    action: 'redeemed' | 'cancelled' | 'revoked'
-  ) => {
-    try {
-      const response = await specialsService.updateClaimStatus(claimId, action);
-      
-      if (response.success) {
-        Alert.alert('Success', `Claim ${action} successfully!`);
-        await loadClaims(false); // Reload claims
-      } else {
-        Alert.alert('Error', response.error || `Failed to ${action} claim`);
+  const handleClaimAction = useCallback(
+    async (claimId: string, action: 'redeemed' | 'cancelled' | 'revoked') => {
+      try {
+        const response = await specialsService.updateClaimStatus(
+          claimId,
+          action,
+        );
+
+        if (response.success) {
+          Alert.alert('Success', `Claim ${action} successfully!`);
+          await loadClaims(false); // Reload claims
+        } else {
+          Alert.alert('Error', response.error || `Failed to ${action} claim`);
+        }
+      } catch (err) {
+        Alert.alert('Error', `Failed to ${action} claim`);
+        errorLog(`Error ${action} claim:`, err);
       }
-    } catch (err) {
-      Alert.alert('Error', `Failed to ${action} claim`);
-      console.error(`Error ${action} claim:`, err);
-    }
-  }, [loadClaims]);
+    },
+    [loadClaims],
+  );
 
   // Auto-refresh
   useEffect(() => {
@@ -112,24 +123,36 @@ const ClaimsTracker: React.FC<ClaimsTrackerProps> = ({
   // Get status color
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'claimed': return Colors.primary.main;
-      case 'redeemed': return Colors.success;
-      case 'expired': return Colors.error;
-      case 'cancelled': return Colors.textSecondary;
-      case 'revoked': return Colors.error;
-      default: return Colors.textSecondary;
+      case 'claimed':
+        return Colors.primary.main;
+      case 'redeemed':
+        return Colors.success;
+      case 'expired':
+        return Colors.error;
+      case 'cancelled':
+        return Colors.textSecondary;
+      case 'revoked':
+        return Colors.error;
+      default:
+        return Colors.textSecondary;
     }
   };
 
   // Get status icon
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'claimed': return '⏳';
-      case 'redeemed': return '✅';
-      case 'expired': return '⏰';
-      case 'cancelled': return '❌';
-      case 'revoked': return '🚫';
-      default: return '❓';
+      case 'claimed':
+        return '⏳';
+      case 'redeemed':
+        return '✅';
+      case 'expired':
+        return '⏰';
+      case 'cancelled':
+        return '❌';
+      case 'revoked':
+        return '🚫';
+      default:
+        return '❓';
     }
   };
 
@@ -153,10 +176,12 @@ const ClaimsTracker: React.FC<ClaimsTrackerProps> = ({
             <Text style={styles.statusIcon}>
               {getStatusIcon(item.claim.status)}
             </Text>
-            <Text style={[
-              styles.statusText,
-              { color: getStatusColor(item.claim.status) }
-            ]}>
+            <Text
+              style={[
+                styles.statusText,
+                { color: getStatusColor(item.claim.status) },
+              ]}
+            >
               {item.claim.status.toUpperCase()}
             </Text>
           </View>
@@ -176,7 +201,7 @@ const ClaimsTracker: React.FC<ClaimsTrackerProps> = ({
               {new Date(item.claim.claimedAt).toLocaleString()}
             </Text>
           </View>
-          
+
           {item.claim.status === 'redeemed' && item.claim.redeemedAt && (
             <View style={styles.detailItem}>
               <Text style={styles.detailLabel}>Redeemed:</Text>
@@ -188,20 +213,14 @@ const ClaimsTracker: React.FC<ClaimsTrackerProps> = ({
 
           <View style={styles.detailItem}>
             <Text style={styles.detailLabel}>Expires:</Text>
-            <Text style={[
-              styles.detailValue,
-              isExpired && styles.expiredText
-            ]}>
+            <Text style={[styles.detailValue, isExpired && styles.expiredText]}>
               {new Date(item.special.validUntil).toLocaleString()}
             </Text>
           </View>
 
           <View style={styles.detailItem}>
             <Text style={styles.detailLabel}>Time Remaining:</Text>
-            <Text style={[
-              styles.detailValue,
-              isExpired && styles.expiredText
-            ]}>
+            <Text style={[styles.detailValue, isExpired && styles.expiredText]}>
               {timeRemaining}
             </Text>
           </View>
@@ -242,7 +261,8 @@ const ClaimsTracker: React.FC<ClaimsTrackerProps> = ({
       <Text style={styles.emptyIcon}>🎫</Text>
       <Text style={styles.emptyTitle}>No Claims Yet</Text>
       <Text style={styles.emptyDescription}>
-        Claim specials from restaurants to see them here. Your claimed offers will appear with real-time tracking.
+        Claim specials from restaurants to see them here. Your claimed offers
+        will appear with real-time tracking.
       </Text>
     </View>
   );
@@ -256,7 +276,7 @@ const ClaimsTracker: React.FC<ClaimsTrackerProps> = ({
           Updated: {lastUpdated.toLocaleTimeString()}
         </Text>
       </View>
-      
+
       <View style={styles.statsContainer}>
         <View style={styles.statItem}>
           <Text style={styles.statValue}>{claims.length}</Text>
@@ -309,7 +329,7 @@ const ClaimsTracker: React.FC<ClaimsTrackerProps> = ({
       <FlatList
         data={claims}
         renderItem={renderClaimItem}
-        keyExtractor={(item) => item.claim.id}
+        keyExtractor={item => item.claim.id}
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={renderEmptyState}
         onRefresh={handleRefresh}
@@ -324,7 +344,7 @@ const ClaimsTracker: React.FC<ClaimsTrackerProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.background.primary,
   },
   loadingContainer: {
     flex: 1,
@@ -408,7 +428,7 @@ const styles = StyleSheet.create({
   },
   expiredCard: {
     opacity: 0.7,
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.background.primary,
   },
   redeemedCard: {
     borderLeftWidth: 4,
@@ -453,7 +473,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   claimDetails: {
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.background.primary,
     borderRadius: BorderRadius.md,
     padding: Spacing.md,
     marginBottom: Spacing.md,
@@ -503,7 +523,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   codeContainer: {
-    backgroundColor: Colors.primaryLight,
+    backgroundColor: Colors.primary.light,
     borderRadius: BorderRadius.md,
     padding: Spacing.md,
     alignItems: 'center',

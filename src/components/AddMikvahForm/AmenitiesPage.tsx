@@ -8,7 +8,13 @@ import {
   TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Colors, Typography, Spacing, BorderRadius, TouchTargets } from '../../styles/designSystem';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  TouchTargets,
+} from '../../styles/designSystem';
 import { hapticButtonPress } from '../../utils/hapticFeedback';
 
 export interface MikvahFormData {
@@ -19,7 +25,7 @@ export interface MikvahFormData {
   has_heating: boolean;
   has_air_conditioning: boolean;
   has_wifi: boolean;
-  
+
   // Pricing
   price_per_use?: number;
   currency: string;
@@ -37,21 +43,28 @@ const AmenitiesPage: React.FC<AmenitiesPageProps> = ({
   formData,
   onFormDataChange,
 }) => {
-  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const handleToggle = useCallback(
+    (field: keyof MikvahFormData) => {
+      hapticButtonPress();
+      onFormDataChange({ [field]: !formData[field] });
+    },
+    [formData, onFormDataChange],
+  );
 
-  const handleToggle = useCallback((field: keyof MikvahFormData) => {
-    hapticButtonPress();
-    onFormDataChange({ [field]: !formData[field] });
-  }, [formData, onFormDataChange]);
+  const handlePriceChange = useCallback(
+    (text: string) => {
+      const value = parseFloat(text) || 0;
+      onFormDataChange({ price_per_use: value });
+    },
+    [onFormDataChange],
+  );
 
-  const handlePriceChange = useCallback((text: string) => {
-    const value = parseFloat(text) || 0;
-    onFormDataChange({ price_per_use: value });
-  }, [onFormDataChange]);
-
-  const handleCurrencyChange = useCallback((text: string) => {
-    onFormDataChange({ currency: text });
-  }, [onFormDataChange]);
+  const handleCurrencyChange = useCallback(
+    (text: string) => {
+      onFormDataChange({ currency: text });
+    },
+    [onFormDataChange],
+  );
 
   const amenities = [
     {
@@ -124,14 +137,16 @@ const AmenitiesPage: React.FC<AmenitiesPageProps> = ({
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
         <View style={styles.header}>
           <Text style={styles.title}>Amenities & Pricing</Text>
-          <Text style={styles.subtitle}>Tell us about your mikvah facilities and pricing</Text>
+          <Text style={styles.subtitle}>
+            Tell us about your mikvah facilities and pricing
+          </Text>
         </View>
 
         <View style={styles.form}>
@@ -141,40 +156,48 @@ const AmenitiesPage: React.FC<AmenitiesPageProps> = ({
             <Text style={styles.sectionDescription}>
               Select all amenities available at your mikvah
             </Text>
-            
+
             <View style={styles.amenitiesGrid}>
-              {amenities.map((amenity) => (
+              {amenities.map(amenity => (
                 <TouchableOpacity
                   key={amenity.key}
                   style={[
                     styles.amenityCard,
-                    amenity.enabled && styles.amenityCardSelected
+                    amenity.enabled && styles.amenityCardSelected,
                   ]}
                   onPress={() => handleToggle(amenity.key)}
                   activeOpacity={0.7}
                 >
                   <View style={styles.amenityHeader}>
                     <Text style={styles.amenityIcon}>{amenity.icon}</Text>
-                    <View style={[
-                      styles.toggleSwitch,
-                      amenity.enabled && styles.toggleSwitchActive
-                    ]}>
-                      <View style={[
-                        styles.toggleThumb,
-                        amenity.enabled && styles.toggleThumbActive
-                      ]} />
+                    <View
+                      style={[
+                        styles.toggleSwitch,
+                        amenity.enabled && styles.toggleSwitchActive,
+                      ]}
+                    >
+                      <View
+                        style={[
+                          styles.toggleThumb,
+                          amenity.enabled && styles.toggleThumbActive,
+                        ]}
+                      />
                     </View>
                   </View>
-                  <Text style={[
-                    styles.amenityTitle,
-                    amenity.enabled && styles.amenityTitleSelected
-                  ]}>
+                  <Text
+                    style={[
+                      styles.amenityTitle,
+                      amenity.enabled && styles.amenityTitleSelected,
+                    ]}
+                  >
                     {amenity.title}
                   </Text>
-                  <Text style={[
-                    styles.amenityDescription,
-                    amenity.enabled && styles.amenityDescriptionSelected
-                  ]}>
+                  <Text
+                    style={[
+                      styles.amenityDescription,
+                      amenity.enabled && styles.amenityDescriptionSelected,
+                    ]}
+                  >
                     {amenity.description}
                   </Text>
                 </TouchableOpacity>
@@ -188,7 +211,7 @@ const AmenitiesPage: React.FC<AmenitiesPageProps> = ({
             <Text style={styles.sectionDescription}>
               Set your mikvah usage fees and accepted payment methods
             </Text>
-            
+
             <View style={styles.pricingRow}>
               <View style={styles.priceInputGroup}>
                 <Text style={styles.label}>Price per Use</Text>
@@ -204,7 +227,7 @@ const AmenitiesPage: React.FC<AmenitiesPageProps> = ({
                   />
                 </View>
               </View>
-              
+
               <View style={styles.currencyInputGroup}>
                 <Text style={styles.label}>Currency</Text>
                 <TextInput
@@ -226,40 +249,48 @@ const AmenitiesPage: React.FC<AmenitiesPageProps> = ({
             <Text style={styles.sectionDescription}>
               Select which payment methods you accept
             </Text>
-            
+
             <View style={styles.paymentGrid}>
-              {paymentMethods.map((method) => (
+              {paymentMethods.map(method => (
                 <TouchableOpacity
                   key={method.key}
                   style={[
                     styles.paymentCard,
-                    method.enabled && styles.paymentCardSelected
+                    method.enabled && styles.paymentCardSelected,
                   ]}
                   onPress={() => handleToggle(method.key)}
                   activeOpacity={0.7}
                 >
                   <View style={styles.paymentHeader}>
                     <Text style={styles.paymentIcon}>{method.icon}</Text>
-                    <View style={[
-                      styles.toggleSwitch,
-                      method.enabled && styles.toggleSwitchActive
-                    ]}>
-                      <View style={[
-                        styles.toggleThumb,
-                        method.enabled && styles.toggleThumbActive
-                      ]} />
+                    <View
+                      style={[
+                        styles.toggleSwitch,
+                        method.enabled && styles.toggleSwitchActive,
+                      ]}
+                    >
+                      <View
+                        style={[
+                          styles.toggleThumb,
+                          method.enabled && styles.toggleThumbActive,
+                        ]}
+                      />
                     </View>
                   </View>
-                  <Text style={[
-                    styles.paymentTitle,
-                    method.enabled && styles.paymentTitleSelected
-                  ]}>
+                  <Text
+                    style={[
+                      styles.paymentTitle,
+                      method.enabled && styles.paymentTitleSelected,
+                    ]}
+                  >
                     {method.title}
                   </Text>
-                  <Text style={[
-                    styles.paymentDescription,
-                    method.enabled && styles.paymentDescriptionSelected
-                  ]}>
+                  <Text
+                    style={[
+                      styles.paymentDescription,
+                      method.enabled && styles.paymentDescriptionSelected,
+                    ]}
+                  >
                     {method.description}
                   </Text>
                 </TouchableOpacity>
@@ -289,7 +320,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: Typography.sizes.xxl,
-    fontWeight: Typography.weights.bold,
+    fontWeight: '700' as const,
     color: Colors.text.primary,
     marginBottom: Spacing.xs,
   },
@@ -305,7 +336,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: Typography.sizes.xl,
-    fontWeight: Typography.weights.bold,
+    fontWeight: '700' as const,
     color: Colors.text.primary,
   },
   sectionDescription: {
@@ -338,7 +369,7 @@ const styles = StyleSheet.create({
   },
   amenityTitle: {
     fontSize: Typography.sizes.md,
-    fontWeight: Typography.weights.semibold,
+    fontWeight: '600' as const,
     color: Colors.text.primary,
     marginBottom: Spacing.xs,
   },
@@ -364,7 +395,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: Typography.sizes.md,
-    fontWeight: Typography.weights.semibold,
+    fontWeight: '600' as const,
     color: Colors.text.primary,
     marginBottom: Spacing.sm,
   },
@@ -379,7 +410,7 @@ const styles = StyleSheet.create({
   },
   currencySymbol: {
     fontSize: Typography.sizes.lg,
-    fontWeight: Typography.weights.semibold,
+    fontWeight: '600' as const,
     color: Colors.text.primary,
     marginRight: Spacing.xs,
   },
@@ -425,7 +456,7 @@ const styles = StyleSheet.create({
   },
   paymentTitle: {
     fontSize: Typography.sizes.md,
-    fontWeight: Typography.weights.semibold,
+    fontWeight: '600' as const,
     color: Colors.text.primary,
     marginBottom: Spacing.xs,
   },

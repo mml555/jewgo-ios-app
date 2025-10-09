@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ListingFormData } from '../screens/AddCategoryScreen';
+import { debugLog, errorLog } from '../utils/logger';
 
 // Form persistence configuration
 const FORM_STORAGE_KEY = 'add_eatery_form_data';
@@ -31,11 +32,12 @@ export class FormPersistenceService {
   private saveStatus: SaveStatus = SaveStatus.IDLE;
   private saveStatusCallbacks: ((status: SaveStatus) => void)[] = [];
   private currentVersion = '1.0.0';
+  private statusResetTimer: NodeJS.Timeout | null = null;
 
   // Subscribe to save status changes
   onSaveStatusChange(callback: (status: SaveStatus) => void): () => void {
     this.saveStatusCallbacks.push(callback);
-    
+
     // Return unsubscribe function
     return () => {
       const index = this.saveStatusCallbacks.indexOf(callback);
@@ -58,9 +60,9 @@ export class FormPersistenceService {
 
   // Save form data to AsyncStorage
   async saveFormData(
-    formData: Partial<ListingFormData>, 
+    formData: Partial<ListingFormData>,
     currentStep: number,
-    isComplete: boolean = false
+    isComplete: boolean = false,
   ): Promise<void> {
     try {
       this.updateSaveStatus(SaveStatus.SAVING);
@@ -74,7 +76,7 @@ export class FormPersistenceService {
         lastSaved: new Date().toISOString(),
         currentStep,
         version: this.currentVersion,
-        saveCount: (await this.getMetadata())?.saveCount + 1 || 1,
+        saveCount: ((await this.getMetadata())?.saveCount || 0) + 1,
         isComplete,
       };
 
@@ -85,28 +87,39 @@ export class FormPersistenceService {
       ]);
 
       // Save to history for recovery
-      await this.saveToHistory(mergedData, metadata);
+      await this.saveToHistory(mergedData as any, metadata);
 
       this.updateSaveStatus(SaveStatus.SAVED);
-      
+
+      // Clear any existing status reset timer
+      if (this.statusResetTimer) {
+        clearTimeout(this.statusResetTimer);
+      }
+
       // Reset to idle after 2 seconds
-      setTimeout(() => {
+      this.statusResetTimer = setTimeout(() => {
         if (this.saveStatus === SaveStatus.SAVED) {
           this.updateSaveStatus(SaveStatus.IDLE);
         }
+        this.statusResetTimer = null;
       }, 2000);
-
     } catch (error) {
-      console.error('Error saving form data:', error);
+      errorLog('Error saving form data:', error);
       this.updateSaveStatus(SaveStatus.ERROR);
-      
+
+      // Clear any existing status reset timer
+      if (this.statusResetTimer) {
+        clearTimeout(this.statusResetTimer);
+      }
+
       // Reset to idle after 3 seconds
-      setTimeout(() => {
+      this.statusResetTimer = setTimeout(() => {
         if (this.saveStatus === SaveStatus.ERROR) {
           this.updateSaveStatus(SaveStatus.IDLE);
         }
+        this.statusResetTimer = null;
       }, 3000);
-      
+
       throw error;
     }
   }
@@ -118,11 +131,11 @@ export class FormPersistenceService {
       if (!data) return null;
 
       const parsedData = JSON.parse(data) as ListingFormData;
-      
+
       // Perform schema migration if needed
       return await this.migrateFormData(parsedData);
     } catch (error) {
-      console.error('Error loading form data:', error);
+      errorLog('Error loading form data:', error);
       return null;
     }
   }
@@ -133,7 +146,7 @@ export class FormPersistenceService {
       const metadata = await AsyncStorage.getItem(FORM_METADATA_KEY);
       return metadata ? JSON.parse(metadata) : null;
     } catch (error) {
-      console.error('Error loading form metadata:', error);
+      errorLog('Error loading form metadata:', error);
       return null;
     }
   }
@@ -145,13 +158,13 @@ export class FormPersistenceService {
         AsyncStorage.removeItem(FORM_STORAGE_KEY),
         AsyncStorage.removeItem(FORM_METADATA_KEY),
       ]);
-      
+
       // Clear history as well
       await this.clearHistory();
-      
+
       this.updateSaveStatus(SaveStatus.IDLE);
     } catch (error) {
-      console.error('Error clearing form data:', error);
+      errorLog('Error clearing form data:', error);
       throw error;
     }
   }
@@ -168,7 +181,7 @@ export class FormPersistenceService {
       const data = await AsyncStorage.getItem(FORM_STORAGE_KEY);
       return data !== null;
     } catch (error) {
-      console.error('Error checking for saved data:', error);
+      errorLog('Error checking for saved data:', error);
       return false;
     }
   }
@@ -177,7 +190,7 @@ export class FormPersistenceService {
   startAutoSave(
     getFormData: () => Partial<ListingFormData>,
     getCurrentStep: () => number,
-    isFormComplete: () => boolean = () => false
+    isFormComplete: () => boolean = () => false,
   ): void {
     this.stopAutoSave(); // Clear any existing timer
 
@@ -186,13 +199,13 @@ export class FormPersistenceService {
         const formData = getFormData();
         const currentStep = getCurrentStep();
         const isComplete = isFormComplete();
-        
+
         // Only auto-save if there's meaningful data
         if (this.hasMinimalData(formData)) {
           await this.saveFormData(formData, currentStep, isComplete);
         }
       } catch (error) {
-        console.error('Auto-save error:', error);
+        errorLog('Auto-save error:', error);
       }
     }, AUTO_SAVE_INTERVAL);
   }
@@ -202,6 +215,11 @@ export class FormPersistenceService {
     if (this.autoSaveTimer) {
       clearInterval(this.autoSaveTimer);
       this.autoSaveTimer = null;
+    }
+    // Also clear status reset timer
+    if (this.statusResetTimer) {
+      clearTimeout(this.statusResetTimer);
+      this.statusResetTimer = null;
     }
   }
 
@@ -218,41 +236,44 @@ export class FormPersistenceService {
 
   // Save to history for recovery
   private async saveToHistory(
-    formData: ListingFormData, 
-    metadata: FormMetadata
+    formData: ListingFormData,
+    metadata: FormMetadata,
   ): Promise<void> {
     try {
       const historyKey = `${FORM_STORAGE_KEY}_history`;
       const existingHistory = await AsyncStorage.getItem(historyKey);
-      let history: Array<{ data: ListingFormData; metadata: FormMetadata }> = [];
-      
+      let history: Array<{ data: ListingFormData; metadata: FormMetadata }> =
+        [];
+
       if (existingHistory) {
         history = JSON.parse(existingHistory);
       }
-      
+
       // Add new save to history
       history.unshift({ data: formData, metadata });
-      
+
       // Keep only the last MAX_SAVE_HISTORY saves
       if (history.length > MAX_SAVE_HISTORY) {
         history = history.slice(0, MAX_SAVE_HISTORY);
       }
-      
+
       await AsyncStorage.setItem(historyKey, JSON.stringify(history));
     } catch (error) {
-      console.error('Error saving to history:', error);
+      errorLog('Error saving to history:', error);
       // Don't throw - history is not critical
     }
   }
 
   // Get save history for recovery
-  async getSaveHistory(): Promise<Array<{ data: ListingFormData; metadata: FormMetadata }>> {
+  async getSaveHistory(): Promise<
+    Array<{ data: ListingFormData; metadata: FormMetadata }>
+  > {
     try {
       const historyKey = `${FORM_STORAGE_KEY}_history`;
       const history = await AsyncStorage.getItem(historyKey);
       return history ? JSON.parse(history) : [];
     } catch (error) {
-      console.error('Error loading save history:', error);
+      errorLog('Error loading save history:', error);
       return [];
     }
   }
@@ -263,7 +284,7 @@ export class FormPersistenceService {
       const historyKey = `${FORM_STORAGE_KEY}_history`;
       await AsyncStorage.removeItem(historyKey);
     } catch (error) {
-      console.error('Error clearing history:', error);
+      errorLog('Error clearing history:', error);
       // Don't throw - not critical
     }
   }
@@ -274,15 +295,19 @@ export class FormPersistenceService {
       const history = await this.getSaveHistory();
       if (index >= 0 && index < history.length) {
         const entry = history[index];
-        
+
         // Save as current data
-        await this.saveFormData(entry.data, entry.metadata.currentStep, entry.metadata.isComplete);
-        
+        await this.saveFormData(
+          entry.data,
+          entry.metadata.currentStep,
+          entry.metadata.isComplete,
+        );
+
         return entry.data;
       }
       return null;
     } catch (error) {
-      console.error('Error restoring from history:', error);
+      errorLog('Error restoring from history:', error);
       return null;
     }
   }
@@ -291,15 +316,15 @@ export class FormPersistenceService {
   private async migrateFormData(data: any): Promise<ListingFormData> {
     const metadata = await this.getMetadata();
     const dataVersion = metadata?.version || '1.0.0';
-    
+
     // If versions match, no migration needed
     if (dataVersion === this.currentVersion) {
       return data as ListingFormData;
     }
-    
+
     // Perform migrations based on version
     let migratedData = { ...data };
-    
+
     // Example migration from version 1.0.0 to 1.1.0
     if (dataVersion === '1.0.0' && this.currentVersion === '1.1.0') {
       // Add any new fields with defaults
@@ -308,13 +333,13 @@ export class FormPersistenceService {
         // Add new fields here with default values
       };
     }
-    
+
     // Update version after migration
     if (metadata) {
       metadata.version = this.currentVersion;
       await AsyncStorage.setItem(FORM_METADATA_KEY, JSON.stringify(metadata));
     }
-    
+
     return migratedData as ListingFormData;
   }
 
@@ -322,11 +347,11 @@ export class FormPersistenceService {
   async getFormCompletionPercentage(): Promise<number> {
     const formData = await this.loadFormData();
     if (!formData) return 0;
-    
+
     // Define required fields for completion calculation
     const requiredFields = [
       'name',
-      'address', 
+      'address',
       'phone',
       'business_email',
       'listing_type',
@@ -334,7 +359,7 @@ export class FormPersistenceService {
       'short_description',
       'business_hours',
     ];
-    
+
     const completedFields = requiredFields.filter(field => {
       const value = formData[field as keyof ListingFormData];
       if (Array.isArray(value)) {
@@ -342,7 +367,7 @@ export class FormPersistenceService {
       }
       return value && String(value).trim().length > 0;
     });
-    
+
     return Math.round((completedFields.length / requiredFields.length) * 100);
   }
 
@@ -352,15 +377,19 @@ export class FormPersistenceService {
       const formData = await this.loadFormData();
       const metadata = await this.getMetadata();
       const history = await this.getSaveHistory();
-      
-      return JSON.stringify({
-        formData,
-        metadata,
-        history,
-        exportedAt: new Date().toISOString(),
-      }, null, 2);
+
+      return JSON.stringify(
+        {
+          formData,
+          metadata,
+          history,
+          exportedAt: new Date().toISOString(),
+        },
+        null,
+        2,
+      );
     } catch (error) {
-      console.error('Error exporting form data:', error);
+      errorLog('Error exporting form data:', error);
       throw error;
     }
   }
@@ -369,22 +398,25 @@ export class FormPersistenceService {
   async importFormData(jsonData: string): Promise<void> {
     try {
       const imported = JSON.parse(jsonData);
-      
+
       if (imported.formData) {
         await this.saveFormData(
-          imported.formData, 
+          imported.formData,
           imported.metadata?.currentStep || 1,
-          imported.metadata?.isComplete || false
+          imported.metadata?.isComplete || false,
         );
       }
-      
+
       // Restore history if available
       if (imported.history) {
         const historyKey = `${FORM_STORAGE_KEY}_history`;
-        await AsyncStorage.setItem(historyKey, JSON.stringify(imported.history));
+        await AsyncStorage.setItem(
+          historyKey,
+          JSON.stringify(imported.history),
+        );
       }
     } catch (error) {
-      console.error('Error importing form data:', error);
+      errorLog('Error importing form data:', error);
       throw error;
     }
   }

@@ -1,4 +1,5 @@
 // Import the shared database connection
+const logger = require('../utils/logger');
 let pool = null;
 
 // Initialize pool if not already done
@@ -11,7 +12,8 @@ function getPool() {
       database: process.env.DB_NAME || 'jewgo_dev',
       user: process.env.DB_USER || 'jewgo_user',
       password: process.env.DB_PASSWORD || 'jewgo_password',
-      ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
+      ssl:
+        process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
       max: 20,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 2000,
@@ -25,18 +27,19 @@ class FavoritesController {
   static async getUserFavorites(req, res) {
     try {
       const userId = req.user?.type === 'guest' ? null : req.user?.id;
-      const guestSessionId = req.user?.type === 'guest' ? req.user.sessionId : req.guestSession?.id;
+      const guestSessionId =
+        req.user?.type === 'guest' ? req.user.sessionId : req.guestSession?.id;
       const { limit = 50, offset = 0 } = req.query;
-      const limitNum = parseInt(limit);
-      const offsetNum = parseInt(offset);
+      const limitNum = parseInt(limit, 10);
+      const offsetNum = parseInt(offset, 10);
 
-      console.log(`📋 Getting favorites for user: ${userId || 'guest'}`);
+      logger.info(`📋 Getting favorites for user: ${userId || 'guest'}`);
 
       if (!userId && !guestSessionId) {
         return res.status(401).json({
           success: false,
           error: 'Authentication required',
-          message: 'User must be authenticated to access favorites'
+          message: 'User must be authenticated to access favorites',
         });
       }
 
@@ -50,7 +53,7 @@ class FavoritesController {
             total: 0,
             limit: limitNum,
             offset: offsetNum,
-          }
+          },
         });
       }
 
@@ -88,7 +91,7 @@ class FavoritesController {
 
       const [favoritesResult, countResult] = await Promise.all([
         getPool().query(favoritesQuery, [userId, limitNum, offsetNum]),
-        getPool().query(countQuery, [userId])
+        getPool().query(countQuery, [userId]),
       ]);
 
       const favorites = favoritesResult.rows.map(favorite => ({
@@ -115,17 +118,17 @@ class FavoritesController {
         success: true,
         data: {
           favorites: favorites,
-          total: parseInt(countResult.rows[0].total),
+          total: parseInt(countResult.rows[0].total, 10),
           limit: limitNum,
           offset: offsetNum,
-        }
+        },
       });
     } catch (error) {
-      console.error('Error getting user favorites:', error);
+      logger.error('Error getting user favorites:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error',
-        message: error.message
+        message: error.message,
       });
     }
   }
@@ -136,15 +139,20 @@ class FavoritesController {
     try {
       const { entity_id } = req.body;
       const userId = req.user?.type === 'guest' ? null : req.user?.id;
-      const guestSessionId = req.user?.type === 'guest' ? req.user.sessionId : req.guestSession?.id;
+      const guestSessionId =
+        req.user?.type === 'guest' ? req.user.sessionId : req.guestSession?.id;
 
-      console.log(`💖 Adding to favorites: entity ${entity_id} for user ${userId || 'guest'}`);
+      logger.info(
+        `💖 Adding to favorites: entity ${entity_id} for user ${
+          userId || 'guest'
+        }`,
+      );
 
       if (!userId && !guestSessionId) {
         return res.status(401).json({
           success: false,
           error: 'Authentication required',
-          message: 'User must be authenticated to add favorites'
+          message: 'User must be authenticated to add favorites',
         });
       }
 
@@ -153,7 +161,7 @@ class FavoritesController {
         return res.status(400).json({
           success: false,
           error: 'Guest favorites not supported',
-          message: 'Please create an account to save favorites'
+          message: 'Please create an account to save favorites',
         });
       }
 
@@ -161,25 +169,28 @@ class FavoritesController {
         return res.status(400).json({
           success: false,
           error: 'Entity ID required',
-          message: 'entity_id is required in request body'
+          message: 'entity_id is required in request body',
         });
       }
 
       await client.query('BEGIN');
 
       // Check if entity exists and is active
-      const entityCheck = await client.query(`
+      const entityCheck = await client.query(
+        `
         SELECT id, name, entity_type, is_active
         FROM entities
         WHERE id = $1
-      `, [entity_id]);
+      `,
+        [entity_id],
+      );
 
       if (entityCheck.rows.length === 0) {
         await client.query('ROLLBACK');
         return res.status(404).json({
           success: false,
           error: 'Entity not found',
-          message: `Entity with ID ${entity_id} not found`
+          message: `Entity with ID ${entity_id} not found`,
         });
       }
 
@@ -190,31 +201,37 @@ class FavoritesController {
         return res.status(400).json({
           success: false,
           error: 'Entity not available',
-          message: 'This entity is no longer active'
+          message: 'This entity is no longer active',
         });
       }
 
       // Check if already favorited
-      const existingFavorite = await client.query(`
+      const existingFavorite = await client.query(
+        `
         SELECT id FROM favorites
         WHERE user_id = $1 AND entity_id = $2
-      `, [userId, entity_id]);
+      `,
+        [userId, entity_id],
+      );
 
       if (existingFavorite.rows.length > 0) {
         await client.query('ROLLBACK');
         return res.status(400).json({
           success: false,
           error: 'Already favorited',
-          message: 'This entity is already in your favorites'
+          message: 'This entity is already in your favorites',
         });
       }
 
       // Add to favorites
-      const favoriteResult = await client.query(`
+      const favoriteResult = await client.query(
+        `
         INSERT INTO favorites (user_id, entity_id)
         VALUES ($1, $2)
         RETURNING id, created_at
-      `, [userId, entity_id]);
+      `,
+        [userId, entity_id],
+      );
 
       await client.query('COMMIT');
 
@@ -227,18 +244,17 @@ class FavoritesController {
             entity_id: entity_id,
             entity_name: entity.name,
             entity_type: entity.entity_type,
-            favorited_at: favoriteResult.rows[0].created_at.toISOString()
-          }
-        }
+            favorited_at: favoriteResult.rows[0].created_at.toISOString(),
+          },
+        },
       });
-
     } catch (error) {
       await client.query('ROLLBACK');
-      console.error('Error adding to favorites:', error);
+      logger.error('Error adding to favorites:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error',
-        message: error.message
+        message: error.message,
       });
     } finally {
       client.release();
@@ -250,15 +266,20 @@ class FavoritesController {
     try {
       const { entity_id } = req.params;
       const userId = req.user?.type === 'guest' ? null : req.user?.id;
-      const guestSessionId = req.user?.type === 'guest' ? req.user.sessionId : req.guestSession?.id;
+      const guestSessionId =
+        req.user?.type === 'guest' ? req.user.sessionId : req.guestSession?.id;
 
-      console.log(`💔 Removing from favorites: entity ${entity_id} for user ${userId || 'guest'}`);
+      logger.info(
+        `💔 Removing from favorites: entity ${entity_id} for user ${
+          userId || 'guest'
+        }`,
+      );
 
       if (!userId && !guestSessionId) {
         return res.status(401).json({
           success: false,
           error: 'Authentication required',
-          message: 'User must be authenticated to manage favorites'
+          message: 'User must be authenticated to manage favorites',
         });
       }
 
@@ -267,21 +288,24 @@ class FavoritesController {
         return res.status(400).json({
           success: false,
           error: 'Guest favorites not supported',
-          message: 'Please create an account to manage favorites'
+          message: 'Please create an account to manage favorites',
         });
       }
 
-      const result = await getPool().query(`
+      const result = await getPool().query(
+        `
         DELETE FROM favorites
         WHERE user_id = $1 AND entity_id = $2
         RETURNING id
-      `, [userId, entity_id]);
+      `,
+        [userId, entity_id],
+      );
 
       if (result.rows.length === 0) {
         return res.status(404).json({
           success: false,
           error: 'Favorite not found',
-          message: 'This entity is not in your favorites'
+          message: 'This entity is not in your favorites',
         });
       }
 
@@ -289,16 +313,15 @@ class FavoritesController {
         success: true,
         data: {
           message: 'Removed from favorites successfully!',
-          entity_id: entity_id
-        }
+          entity_id: entity_id,
+        },
       });
-
     } catch (error) {
-      console.error('Error removing from favorites:', error);
+      logger.error('Error removing from favorites:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error',
-        message: error.message
+        message: error.message,
       });
     }
   }
@@ -308,15 +331,20 @@ class FavoritesController {
     try {
       const { entity_id } = req.params;
       const userId = req.user?.type === 'guest' ? null : req.user?.id;
-      const guestSessionId = req.user?.type === 'guest' ? req.user.sessionId : req.guestSession?.id;
+      const guestSessionId =
+        req.user?.type === 'guest' ? req.user.sessionId : req.guestSession?.id;
 
-      console.log(`🔍 Checking favorite status: entity ${entity_id} for user ${userId || 'guest'}`);
+      logger.info(
+        `🔍 Checking favorite status: entity ${entity_id} for user ${
+          userId || 'guest'
+        }`,
+      );
 
       if (!userId && !guestSessionId) {
         return res.status(401).json({
           success: false,
           error: 'Authentication required',
-          message: 'User must be authenticated to check favorites'
+          message: 'User must be authenticated to check favorites',
         });
       }
 
@@ -326,16 +354,19 @@ class FavoritesController {
           success: true,
           data: {
             is_favorited: false,
-            entity_id: entity_id
-          }
+            entity_id: entity_id,
+          },
         });
       }
 
-      const result = await getPool().query(`
+      const result = await getPool().query(
+        `
         SELECT id, created_at
         FROM favorites
         WHERE user_id = $1 AND entity_id = $2
-      `, [userId, entity_id]);
+      `,
+        [userId, entity_id],
+      );
 
       const isFavorited = result.rows.length > 0;
 
@@ -344,16 +375,17 @@ class FavoritesController {
         data: {
           is_favorited: isFavorited,
           entity_id: entity_id,
-          favorited_at: isFavorited ? result.rows[0].created_at.toISOString() : null
-        }
+          favorited_at: isFavorited
+            ? result.rows[0].created_at.toISOString()
+            : null,
+        },
       });
-
     } catch (error) {
-      console.error('Error checking favorite status:', error);
+      logger.error('Error checking favorite status:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error',
-        message: error.message
+        message: error.message,
       });
     }
   }
@@ -363,15 +395,20 @@ class FavoritesController {
     try {
       const { entity_id } = req.body;
       const userId = req.user?.type === 'guest' ? null : req.user?.id;
-      const guestSessionId = req.user?.type === 'guest' ? req.user.sessionId : req.guestSession?.id;
+      const guestSessionId =
+        req.user?.type === 'guest' ? req.user.sessionId : req.guestSession?.id;
 
-      console.log(`🔄 Toggling favorite: entity ${entity_id} for user ${userId || 'guest'}`);
+      logger.info(
+        `🔄 Toggling favorite: entity ${entity_id} for user ${
+          userId || 'guest'
+        }`,
+      );
 
       if (!userId && !guestSessionId) {
         return res.status(401).json({
           success: false,
           error: 'Authentication required',
-          message: 'User must be authenticated to toggle favorites'
+          message: 'User must be authenticated to toggle favorites',
         });
       }
 
@@ -380,7 +417,7 @@ class FavoritesController {
         return res.status(400).json({
           success: false,
           error: 'Guest favorites not supported',
-          message: 'Please create an account to manage favorites'
+          message: 'Please create an account to manage favorites',
         });
       }
 
@@ -388,46 +425,55 @@ class FavoritesController {
         return res.status(400).json({
           success: false,
           error: 'Entity ID required',
-          message: 'entity_id is required in request body'
+          message: 'entity_id is required in request body',
         });
       }
 
       // Check current status
-      const currentStatus = await getPool().query(`
+      const currentStatus = await getPool().query(
+        `
         SELECT id FROM favorites
         WHERE user_id = $1 AND entity_id = $2
-      `, [userId, entity_id]);
+      `,
+        [userId, entity_id],
+      );
 
       const isCurrentlyFavorited = currentStatus.rows.length > 0;
 
       if (isCurrentlyFavorited) {
         // Remove from favorites
-        await getPool().query(`
+        await getPool().query(
+          `
           DELETE FROM favorites
           WHERE user_id = $1 AND entity_id = $2
-        `, [userId, entity_id]);
+        `,
+          [userId, entity_id],
+        );
 
         res.json({
           success: true,
           data: {
             message: 'Removed from favorites',
             is_favorited: false,
-            entity_id: entity_id
-          }
+            entity_id: entity_id,
+          },
         });
       } else {
         // Add to favorites (reuse the add logic)
-        const entityCheck = await getPool().query(`
+        const entityCheck = await getPool().query(
+          `
           SELECT id, name, entity_type, is_active
           FROM entities
           WHERE id = $1
-        `, [entity_id]);
+        `,
+          [entity_id],
+        );
 
         if (entityCheck.rows.length === 0) {
           return res.status(404).json({
             success: false,
             error: 'Entity not found',
-            message: `Entity with ID ${entity_id} not found`
+            message: `Entity with ID ${entity_id} not found`,
           });
         }
 
@@ -437,15 +483,18 @@ class FavoritesController {
           return res.status(400).json({
             success: false,
             error: 'Entity not available',
-            message: 'This entity is no longer active'
+            message: 'This entity is no longer active',
           });
         }
 
-        const favoriteResult = await getPool().query(`
+        const favoriteResult = await getPool().query(
+          `
           INSERT INTO favorites (user_id, entity_id)
           VALUES ($1, $2)
           RETURNING id, created_at
-        `, [userId, entity_id]);
+        `,
+          [userId, entity_id],
+        );
 
         res.json({
           success: true,
@@ -454,17 +503,16 @@ class FavoritesController {
             is_favorited: true,
             entity_id: entity_id,
             favorite_id: favoriteResult.rows[0].id,
-            favorited_at: favoriteResult.rows[0].created_at.toISOString()
-          }
+            favorited_at: favoriteResult.rows[0].created_at.toISOString(),
+          },
         });
       }
-
     } catch (error) {
-      console.error('Error toggling favorite:', error);
+      logger.error('Error toggling favorite:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error',
-        message: error.message
+        message: error.message,
       });
     }
   }

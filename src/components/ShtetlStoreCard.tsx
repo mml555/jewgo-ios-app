@@ -9,7 +9,14 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { ShtetlStore } from '../types/shtetl';
-import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../styles/designSystem';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  Shadows,
+  TouchTargets,
+} from '../styles/designSystem';
 
 interface ShtetlStoreCardProps {
   store: ShtetlStore;
@@ -17,9 +24,12 @@ interface ShtetlStoreCardProps {
 }
 
 const { width: screenWidth } = Dimensions.get('window');
-const CARD_WIDTH = (screenWidth - (Spacing.lg * 3)) / 2;
+const CARD_WIDTH = (screenWidth - Spacing.lg * 3) / 2;
 
-const ShtetlStoreCard: React.FC<ShtetlStoreCardProps> = ({ store, onPress }) => {
+const ShtetlStoreCard: React.FC<ShtetlStoreCardProps> = ({
+  store,
+  onPress,
+}) => {
   const navigation = useNavigation();
 
   const handlePress = () => {
@@ -27,13 +37,13 @@ const ShtetlStoreCard: React.FC<ShtetlStoreCardProps> = ({ store, onPress }) => 
       onPress(store);
     } else {
       // Navigate to store detail page
-      navigation.navigate('StoreDetail', { storeId: store.id });
+      (navigation as any).navigate('StoreDetail', { storeId: store.id });
     }
   };
 
   const renderRating = () => {
     if (store.reviewCount === 0) return null;
-    
+
     return (
       <View style={styles.ratingContainer}>
         <Text style={styles.ratingText}>⭐ {store.rating.toFixed(1)}</Text>
@@ -55,7 +65,9 @@ const ShtetlStoreCard: React.FC<ShtetlStoreCardProps> = ({ store, onPress }) => 
 
     return (
       <View style={styles.typeContainer}>
-        <Text style={styles.typeEmoji}>{typeEmojis[store.storeType] || '🏪'}</Text>
+        <Text style={styles.typeEmoji}>
+          {typeEmojis[store.storeType] || '🏪'}
+        </Text>
         <Text style={styles.typeText}>{store.storeType}</Text>
       </View>
     );
@@ -157,8 +169,8 @@ const styles = StyleSheet.create({
     right: Spacing.sm,
     backgroundColor: Colors.primary.main,
     borderRadius: BorderRadius.full,
-    width: 24,
-    height: 24,
+    width: TouchTargets.minimum,
+    height: TouchTargets.minimum,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -177,7 +189,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   storeName: {
-    ...Typography.h3,
+    ...Typography.styles.h3,
     color: Colors.gray900,
     flex: 1,
     marginRight: Spacing.sm,
@@ -189,12 +201,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   typeText: {
-    ...Typography.caption,
+    ...Typography.styles.caption,
     color: Colors.gray600,
     textTransform: 'capitalize',
   },
   description: {
-    ...Typography.body2,
+    ...Typography.styles.body2,
     color: Colors.gray700,
     marginBottom: Spacing.sm,
   },
@@ -202,7 +214,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   locationText: {
-    ...Typography.caption,
+    ...Typography.styles.caption,
     color: Colors.gray600,
   },
   footer: {
@@ -216,12 +228,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   ratingText: {
-    ...Typography.caption,
+    ...Typography.styles.caption,
     color: Colors.gray700,
     fontWeight: '600',
   },
   reviewCount: {
-    ...Typography.caption,
+    ...Typography.styles.caption,
     color: Colors.gray500,
     marginLeft: Spacing.xs,
   },
@@ -229,7 +241,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   productCountText: {
-    ...Typography.caption,
+    ...Typography.styles.caption,
     color: Colors.gray600,
   },
   deliveryBadge: {
@@ -240,11 +252,10 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.sm,
   },
   deliveryText: {
-    ...Typography.caption,
+    ...Typography.styles.caption,
     color: Colors.success,
     fontWeight: '600',
   },
 });
 
 export default ShtetlStoreCard;
-

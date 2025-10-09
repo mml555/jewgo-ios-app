@@ -9,7 +9,13 @@ import {
   Alert,
 } from 'react-native';
 import { ListingFormData } from '../../screens/AddCategoryScreen';
-import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../styles/designSystem';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  Shadows,
+} from '../../styles/designSystem';
 
 interface PhotosReviewPageProps {
   formData: ListingFormData;
@@ -21,19 +27,21 @@ interface PhotosReviewPageProps {
 const PhotosReviewPage: React.FC<PhotosReviewPageProps> = ({
   formData,
   onFormDataChange,
-  category,
   isReviewStep = false,
 }) => {
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
-  const handleInputChange = useCallback((field: keyof ListingFormData, value: any) => {
-    onFormDataChange({ [field]: value });
-    
-    // Clear error when user makes changes
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
-    }
-  }, [onFormDataChange, errors]);
+  const handleInputChange = useCallback(
+    (field: keyof ListingFormData, value: any) => {
+      onFormDataChange({ [field]: value });
+
+      // Clear error when user makes changes
+      if (errors[field]) {
+        setErrors(prev => ({ ...prev, [field]: '' }));
+      }
+    },
+    [onFormDataChange, errors],
+  );
 
   const validateForm = useCallback(() => {
     const newErrors: { [key: string]: string } = {};
@@ -70,8 +78,8 @@ const PhotosReviewPage: React.FC<PhotosReviewPageProps> = ({
       'Image picker functionality would be implemented here',
       [
         { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Add Sample Image', 
+        {
+          text: 'Add Sample Image',
           onPress: () => {
             const sampleImages = [
               'https://picsum.photos/400/300?random=1',
@@ -80,25 +88,34 @@ const PhotosReviewPage: React.FC<PhotosReviewPageProps> = ({
               'https://picsum.photos/400/300?random=4',
               'https://picsum.photos/400/300?random=5',
             ];
-            
-            const availableImages = sampleImages.filter(img => 
-              !formData.business_images.includes(img)
+
+            const availableImages = sampleImages.filter(
+              img => !formData.business_images.includes(img),
             );
-            
+
             if (availableImages.length > 0) {
-              const randomImage = availableImages[Math.floor(Math.random() * availableImages.length)];
-              handleInputChange('business_images', [...formData.business_images, randomImage]);
+              const randomImage =
+                availableImages[
+                  Math.floor(Math.random() * availableImages.length)
+                ];
+              handleInputChange('business_images', [
+                ...formData.business_images,
+                randomImage,
+              ]);
             }
-          }
-        }
-      ]
+          },
+        },
+      ],
     );
   }, [formData.business_images, handleInputChange]);
 
-  const handleRemoveImage = useCallback((index: number) => {
-    const newImages = formData.business_images.filter((_, i) => i !== index);
-    handleInputChange('business_images', newImages);
-  }, [formData.business_images, handleInputChange]);
+  const handleRemoveImage = useCallback(
+    (index: number) => {
+      const newImages = formData.business_images.filter((_, i) => i !== index);
+      handleInputChange('business_images', newImages);
+    },
+    [formData.business_images, handleInputChange],
+  );
 
   const renderImagesStep = () => (
     <View style={styles.content}>
@@ -107,7 +124,7 @@ const PhotosReviewPage: React.FC<PhotosReviewPageProps> = ({
         <Text style={styles.sectionDescription}>
           Add 2-5 photos of your business (restaurant photos, food photos, etc.)
         </Text>
-        
+
         {/* Image Grid */}
         <View style={styles.imageGrid}>
           {formData.business_images.map((image, index) => (
@@ -122,18 +139,24 @@ const PhotosReviewPage: React.FC<PhotosReviewPageProps> = ({
               </TouchableOpacity>
             </View>
           ))}
-          
+
           {/* Add Image Button */}
           {formData.business_images.length < 5 && (
-            <TouchableOpacity style={styles.addImageButton} onPress={handleAddImage} activeOpacity={0.7}>
+            <TouchableOpacity
+              style={styles.addImageButton}
+              onPress={handleAddImage}
+              activeOpacity={0.7}
+            >
               <Text style={styles.addImageText}>+</Text>
               <Text style={styles.addImageLabel}>Add Image</Text>
             </TouchableOpacity>
           )}
         </View>
-        
-        {errors.business_images && <Text style={styles.errorText}>{errors.business_images}</Text>}
-        
+
+        {errors.business_images && (
+          <Text style={styles.errorText}>{errors.business_images}</Text>
+        )}
+
         <Text style={styles.imageCount}>
           {formData.business_images.length}/5 images
         </Text>
@@ -146,9 +169,10 @@ const PhotosReviewPage: React.FC<PhotosReviewPageProps> = ({
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Review Your Submission</Text>
         <Text style={styles.sectionDescription}>
-          Please review all the information below before submitting your eatery listing.
+          Please review all the information below before submitting your eatery
+          listing.
         </Text>
-        
+
         {/* Business Information */}
         <View style={styles.reviewSection}>
           <Text style={styles.reviewSectionTitle}>Business Information</Text>
@@ -211,8 +235,8 @@ const PhotosReviewPage: React.FC<PhotosReviewPageProps> = ({
           <View style={styles.reviewItem}>
             <Text style={styles.reviewLabel}>Certifying Agency:</Text>
             <Text style={styles.reviewValue}>
-              {formData.certifying_agency === 'Other' 
-                ? formData.custom_certifying_agency 
+              {formData.certifying_agency === 'Other'
+                ? formData.custom_certifying_agency
                 : formData.certifying_agency}
             </Text>
           </View>
@@ -251,18 +275,24 @@ const PhotosReviewPage: React.FC<PhotosReviewPageProps> = ({
           )}
           <View style={styles.reviewItem}>
             <Text style={styles.reviewLabel}>Hours of Operation:</Text>
-            <Text style={styles.reviewValue}>{formData.hours_of_operation}</Text>
+            <Text style={styles.reviewValue}>
+              {formData.hours_of_operation}
+            </Text>
           </View>
           {formData.seating_capacity > 0 && (
             <View style={styles.reviewItem}>
               <Text style={styles.reviewLabel}>Seating Capacity:</Text>
-              <Text style={styles.reviewValue}>{formData.seating_capacity}</Text>
+              <Text style={styles.reviewValue}>
+                {formData.seating_capacity}
+              </Text>
             </View>
           )}
           {formData.years_in_business > 0 && (
             <View style={styles.reviewItem}>
               <Text style={styles.reviewLabel}>Years in Business:</Text>
-              <Text style={styles.reviewValue}>{formData.years_in_business}</Text>
+              <Text style={styles.reviewValue}>
+                {formData.years_in_business}
+              </Text>
             </View>
           )}
         </View>
@@ -272,32 +302,45 @@ const PhotosReviewPage: React.FC<PhotosReviewPageProps> = ({
           <Text style={styles.reviewSectionTitle}>Service Options</Text>
           <View style={styles.reviewItem}>
             <Text style={styles.reviewLabel}>Delivery:</Text>
-            <Text style={styles.reviewValue}>{formData.delivery_available ? 'Available' : 'Not Available'}</Text>
+            <Text style={styles.reviewValue}>
+              {formData.delivery_available ? 'Available' : 'Not Available'}
+            </Text>
           </View>
           <View style={styles.reviewItem}>
             <Text style={styles.reviewLabel}>Takeout:</Text>
-            <Text style={styles.reviewValue}>{formData.takeout_available ? 'Available' : 'Not Available'}</Text>
+            <Text style={styles.reviewValue}>
+              {formData.takeout_available ? 'Available' : 'Not Available'}
+            </Text>
           </View>
           <View style={styles.reviewItem}>
             <Text style={styles.reviewLabel}>Catering:</Text>
-            <Text style={styles.reviewValue}>{formData.catering_available ? 'Available' : 'Not Available'}</Text>
+            <Text style={styles.reviewValue}>
+              {formData.catering_available ? 'Available' : 'Not Available'}
+            </Text>
           </View>
         </View>
 
         {/* Social Media Links */}
-        {(formData.google_listing_url || formData.instagram_link || formData.facebook_link || formData.tiktok_link) && (
+        {(formData.google_listing_url ||
+          formData.instagram_link ||
+          formData.facebook_link ||
+          formData.tiktok_link) && (
           <View style={styles.reviewSection}>
             <Text style={styles.reviewSectionTitle}>Social Media Links</Text>
             {formData.google_listing_url && (
               <View style={styles.reviewItem}>
                 <Text style={styles.reviewLabel}>Google Maps:</Text>
-                <Text style={styles.reviewValue}>{formData.google_listing_url}</Text>
+                <Text style={styles.reviewValue}>
+                  {formData.google_listing_url}
+                </Text>
               </View>
             )}
             {formData.instagram_link && (
               <View style={styles.reviewItem}>
                 <Text style={styles.reviewLabel}>Instagram:</Text>
-                <Text style={styles.reviewValue}>{formData.instagram_link}</Text>
+                <Text style={styles.reviewValue}>
+                  {formData.instagram_link}
+                </Text>
               </View>
             )}
             {formData.facebook_link && (
@@ -318,10 +361,16 @@ const PhotosReviewPage: React.FC<PhotosReviewPageProps> = ({
         {/* Images */}
         {formData.business_images.length > 0 && (
           <View style={styles.reviewSection}>
-            <Text style={styles.reviewSectionTitle}>Business Images ({formData.business_images.length})</Text>
+            <Text style={styles.reviewSectionTitle}>
+              Business Images ({formData.business_images.length})
+            </Text>
             <View style={styles.reviewImageGrid}>
               {formData.business_images.map((image, index) => (
-                <Image key={index} source={{ uri: image }} style={styles.reviewImage} />
+                <Image
+                  key={index}
+                  source={{ uri: image }}
+                  style={styles.reviewImage}
+                />
               ))}
             </View>
           </View>
@@ -332,11 +381,15 @@ const PhotosReviewPage: React.FC<PhotosReviewPageProps> = ({
           <Text style={styles.reviewSectionTitle}>Contact Preferences</Text>
           <View style={styles.reviewItem}>
             <Text style={styles.reviewLabel}>Preferred Contact Method:</Text>
-            <Text style={styles.reviewValue}>{formData.preferred_contact_method}</Text>
+            <Text style={styles.reviewValue}>
+              {formData.preferred_contact_method}
+            </Text>
           </View>
           <View style={styles.reviewItem}>
             <Text style={styles.reviewLabel}>Preferred Contact Time:</Text>
-            <Text style={styles.reviewValue}>{formData.preferred_contact_time}</Text>
+            <Text style={styles.reviewValue}>
+              {formData.preferred_contact_time}
+            </Text>
           </View>
           {formData.contact_notes && (
             <View style={styles.reviewItem}>

@@ -13,18 +13,26 @@ import {
   Image,
   Dimensions,
 } from 'react-native';
+import { debugLog, errorLog } from '../../utils/logger';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigation } from '@react-navigation/native';
 import ReCaptchaComponent from '../../components/auth/ReCaptchaComponent';
 import GoogleSignInButton from '../../components/auth/GoogleSignInButton';
 import MagicLinkForm from '../../components/auth/MagicLinkForm';
 import { configService } from '../../config/ConfigService';
-import { Colors, Typography, Spacing, BorderRadius, Shadows, TouchTargets } from '../../styles/designSystem';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  Shadows,
+  TouchTargets,
+} from '../../styles/designSystem';
 
 const RegisterScreen: React.FC = () => {
   const { register, isLoading } = useAuth();
   const navigation = useNavigation();
-  
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -34,8 +42,12 @@ const RegisterScreen: React.FC = () => {
   const [showCaptcha, setShowCaptcha] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showMagicLink, setShowMagicLink] = useState(false);
-  const [passwordStrength, setPasswordStrength] = useState<'weak' | 'medium' | 'strong'>('weak');
-  const [passwordMatch, setPasswordMatch] = useState<'match' | 'no-match' | 'empty'>('empty');
+  const [passwordStrength, setPasswordStrength] = useState<
+    'weak' | 'medium' | 'strong'
+  >('weak');
+  const [passwordMatch, setPasswordMatch] = useState<
+    'match' | 'no-match' | 'empty'
+  >('empty');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -52,25 +64,31 @@ const RegisterScreen: React.FC = () => {
     }
   }, []);
 
-  const handlePasswordChange = useCallback((pwd: string) => {
-    setPassword(pwd);
-    setPasswordStrength(calculatePasswordStrength(pwd));
-    
-    if (confirmPassword) {
-      setPasswordMatch(pwd === confirmPassword ? 'match' : 'no-match');
-    }
-  }, [confirmPassword, calculatePasswordStrength]);
+  const handlePasswordChange = useCallback(
+    (pwd: string) => {
+      setPassword(pwd);
+      setPasswordStrength(calculatePasswordStrength(pwd));
 
-  const handleConfirmPasswordChange = useCallback((pwd: string) => {
-    setConfirmPassword(pwd);
-    if (!pwd) {
-      setPasswordMatch('empty');
-    } else if (pwd === password) {
-      setPasswordMatch('match');
-    } else {
-      setPasswordMatch('no-match');
-    }
-  }, [password]);
+      if (confirmPassword) {
+        setPasswordMatch(pwd === confirmPassword ? 'match' : 'no-match');
+      }
+    },
+    [confirmPassword, calculatePasswordStrength],
+  );
+
+  const handleConfirmPasswordChange = useCallback(
+    (pwd: string) => {
+      setConfirmPassword(pwd);
+      if (!pwd) {
+        setPasswordMatch('empty');
+      } else if (pwd === password) {
+        setPasswordMatch('match');
+      } else {
+        setPasswordMatch('no-match');
+      }
+    },
+    [password],
+  );
 
   const validateForm = useCallback(() => {
     const newErrors: Record<string, string> = {};
@@ -125,19 +143,28 @@ const RegisterScreen: React.FC = () => {
       Alert.alert(
         'Registration Successful',
         'Your account has been created successfully!',
-        [{ text: 'OK' }]
+        [{ text: 'OK' }],
       );
 
       // Navigation will be handled by the auth state change
     } catch (error: any) {
-      console.error('Registration error:', error);
+      errorLog('Registration error:', error);
       Alert.alert(
         'Registration Failed',
-        error.message || 'An error occurred during registration. Please try again.',
-        [{ text: 'OK' }]
+        error.message ||
+          'An error occurred during registration. Please try again.',
+        [{ text: 'OK' }],
       );
     }
-  }, [email, password, firstName, lastName, captchaToken, register, validateForm]);
+  }, [
+    email,
+    password,
+    firstName,
+    lastName,
+    captchaToken,
+    register,
+    validateForm,
+  ]);
 
   const handleCaptchaVerify = useCallback((token: string) => {
     setCaptchaToken(token);
@@ -145,12 +172,10 @@ const RegisterScreen: React.FC = () => {
   }, []);
 
   const handleCaptchaError = useCallback((error: string) => {
-    console.error('CAPTCHA error:', error);
-    Alert.alert(
-      'Verification Failed',
-      'Please try the verification again.',
-      [{ text: 'OK' }]
-    );
+    errorLog('CAPTCHA error:', error);
+    Alert.alert('Verification Failed', 'Please try the verification again.', [
+      { text: 'OK' },
+    ]);
   }, []);
 
   const handleCaptchaExpire = useCallback(() => {
@@ -158,7 +183,7 @@ const RegisterScreen: React.FC = () => {
     Alert.alert(
       'Verification Expired',
       'Please complete the verification again.',
-      [{ text: 'OK' }]
+      [{ text: 'OK' }],
     );
   }, []);
 
@@ -167,19 +192,22 @@ const RegisterScreen: React.FC = () => {
   }, [navigation]);
 
   const handleGoogleSignInSuccess = useCallback((user: any) => {
-    console.log('✅ Google Sign-In successful:', user.email);
+    debugLog('✅ Google Sign-In successful:', user.email);
     // Navigation will be handled by the auth state change
   }, []);
 
   const handleGoogleSignInError = useCallback((error: string) => {
-    console.error('❌ Google Sign-In error:', error);
+    errorLog('❌ Google Sign-In error:', error);
     Alert.alert('Google Sign-In Failed', error, [{ text: 'OK' }]);
   }, []);
 
-  const handleMagicLinkSuccess = useCallback((message: string, expiresAt: string) => {
-    console.log('✅ Magic link sent successfully');
-    // The MagicLinkForm component will handle showing the success message
-  }, []);
+  const handleMagicLinkSuccess = useCallback(
+    (message: string, expiresAt: string) => {
+      debugLog('✅ Magic link sent successfully');
+      // The MagicLinkForm component will handle showing the success message
+    },
+    [],
+  );
 
   const handleMagicLinkError = useCallback((error: string) => {
     console.error('❌ Magic link error:', error);
@@ -224,7 +252,10 @@ const RegisterScreen: React.FC = () => {
               <Text style={styles.title}>Let's sign up</Text>
               <Text style={styles.subtitle}>
                 Already have an account?{' '}
-                <TouchableOpacity onPress={navigateToLogin} disabled={isLoading}>
+                <TouchableOpacity
+                  onPress={navigateToLogin}
+                  disabled={isLoading}
+                >
                   <Text style={styles.linkText}>Sign in</Text>
                 </TouchableOpacity>
               </Text>
@@ -239,7 +270,7 @@ const RegisterScreen: React.FC = () => {
                   <TextInput
                     style={[
                       styles.nameInput,
-                      errors.firstName && styles.inputError
+                      errors.firstName && styles.inputError,
                     ]}
                     value={firstName}
                     onChangeText={setFirstName}
@@ -258,7 +289,7 @@ const RegisterScreen: React.FC = () => {
                   <TextInput
                     style={[
                       styles.nameInput,
-                      errors.lastName && styles.inputError
+                      errors.lastName && styles.inputError,
                     ]}
                     value={lastName}
                     onChangeText={setLastName}
@@ -281,10 +312,7 @@ const RegisterScreen: React.FC = () => {
                     <Text style={styles.iconText}>✉</Text>
                   </View>
                   <TextInput
-                    style={[
-                      styles.input,
-                      errors.email && styles.inputError
-                    ]}
+                    style={[styles.input, errors.email && styles.inputError]}
                     value={email}
                     onChangeText={setEmail}
                     placeholder="Email Address"
@@ -320,7 +348,8 @@ const RegisterScreen: React.FC = () => {
                   </View>
                 </View>
                 <Text style={styles.helperText}>
-                  Adding your phone number helps secure your account and improves your experience.
+                  Adding your phone number helps secure your account and
+                  improves your experience.
                 </Text>
               </View>
 
@@ -340,7 +369,9 @@ const RegisterScreen: React.FC = () => {
                     <Text style={styles.optionalText}>Optional</Text>
                   </View>
                 </View>
-                <Text style={styles.helperText}>Help us personalize your experience (optional).</Text>
+                <Text style={styles.helperText}>
+                  Help us personalize your experience (optional).
+                </Text>
               </View>
 
               {/* Password Field */}
@@ -350,10 +381,7 @@ const RegisterScreen: React.FC = () => {
                     <Text style={styles.iconText}>🔒</Text>
                   </View>
                   <TextInput
-                    style={[
-                      styles.input,
-                      errors.password && styles.inputError
-                    ]}
+                    style={[styles.input, errors.password && styles.inputError]}
                     value={password}
                     onChangeText={handlePasswordChange}
                     placeholder="Create Password"
@@ -369,7 +397,9 @@ const RegisterScreen: React.FC = () => {
                     style={styles.eyeIcon}
                     onPress={() => setShowPassword(!showPassword)}
                   >
-                    <Text style={styles.eyeIconText}>{showPassword ? '👁' : '👁‍🗨'}</Text>
+                    <Text style={styles.eyeIconText}>
+                      {showPassword ? '👁' : '👁‍🗨'}
+                    </Text>
                   </TouchableOpacity>
                 </View>
                 {errors.password && (
@@ -386,7 +416,7 @@ const RegisterScreen: React.FC = () => {
                   <TextInput
                     style={[
                       styles.input,
-                      errors.confirmPassword && styles.inputError
+                      errors.confirmPassword && styles.inputError,
                     ]}
                     value={confirmPassword}
                     onChangeText={handleConfirmPasswordChange}
@@ -403,7 +433,9 @@ const RegisterScreen: React.FC = () => {
                     style={styles.eyeIcon}
                     onPress={() => setShowConfirmPassword(!showConfirmPassword)}
                   >
-                    <Text style={styles.eyeIconText}>{showConfirmPassword ? '👁' : '👁‍🗨'}</Text>
+                    <Text style={styles.eyeIconText}>
+                      {showConfirmPassword ? '👁' : '👁‍🗨'}
+                    </Text>
                   </TouchableOpacity>
                 </View>
                 {errors.confirmPassword && (
@@ -415,22 +447,39 @@ const RegisterScreen: React.FC = () => {
               {password && (
                 <View style={styles.passwordStrengthContainer}>
                   <View style={styles.passwordStrengthBar}>
-                    <View style={[
-                      styles.passwordStrengthFill,
-                      {
-                        width: passwordStrength === 'weak' ? '33%' : passwordStrength === 'medium' ? '66%' : '100%',
-                        backgroundColor: passwordStrength === 'weak' ? Colors.status.error : 
-                                      passwordStrength === 'medium' ? Colors.status.warning : Colors.status.success
-                      }
-                    ]} />
+                    <View
+                      style={[
+                        styles.passwordStrengthFill,
+                        {
+                          width:
+                            passwordStrength === 'weak'
+                              ? '33%'
+                              : passwordStrength === 'medium'
+                              ? '66%'
+                              : '100%',
+                          backgroundColor:
+                            passwordStrength === 'weak'
+                              ? Colors.status.error
+                              : passwordStrength === 'medium'
+                              ? Colors.status.warning
+                              : Colors.status.success,
+                        },
+                      ]}
+                    />
                   </View>
-                  <Text style={[
-                    styles.passwordStrengthText,
-                    {
-                      color: passwordStrength === 'weak' ? Colors.status.error : 
-                             passwordStrength === 'medium' ? Colors.status.warning : Colors.status.success
-                    }
-                  ]}>
+                  <Text
+                    style={[
+                      styles.passwordStrengthText,
+                      {
+                        color:
+                          passwordStrength === 'weak'
+                            ? Colors.status.error
+                            : passwordStrength === 'medium'
+                            ? Colors.status.warning
+                            : Colors.status.success,
+                      },
+                    ]}
+                  >
                     Password strength: {passwordStrength}
                   </Text>
                 </View>
@@ -439,15 +488,24 @@ const RegisterScreen: React.FC = () => {
               {/* Password Match Indicator */}
               {confirmPassword && (
                 <View style={styles.passwordMatchContainer}>
-                  <Text style={[
-                    styles.passwordMatchText,
-                    {
-                      color: passwordMatch === 'match' ? Colors.success : 
-                             passwordMatch === 'no-match' ? Colors.error : Colors.gray500
-                    }
-                  ]}>
-                    {passwordMatch === 'match' ? '✓ Passwords match' : 
-                     passwordMatch === 'no-match' ? '✗ Passwords do not match' : ''}
+                  <Text
+                    style={[
+                      styles.passwordMatchText,
+                      {
+                        color:
+                          passwordMatch === 'match'
+                            ? Colors.success
+                            : passwordMatch === 'no-match'
+                            ? Colors.error
+                            : Colors.gray500,
+                      },
+                    ]}
+                  >
+                    {passwordMatch === 'match'
+                      ? '✓ Passwords match'
+                      : passwordMatch === 'no-match'
+                      ? '✗ Passwords do not match'
+                      : ''}
                   </Text>
                 </View>
               )}
@@ -468,7 +526,10 @@ const RegisterScreen: React.FC = () => {
 
               {/* Register Button */}
               <TouchableOpacity
-                style={[styles.registerButton, isLoading && styles.registerButtonDisabled]}
+                style={[
+                  styles.registerButton,
+                  isLoading && styles.registerButtonDisabled,
+                ]}
                 onPress={handleRegister}
                 disabled={isLoading}
                 activeOpacity={0.8}
@@ -486,7 +547,9 @@ const RegisterScreen: React.FC = () => {
                 onPress={toggleMagicLink}
                 disabled={isLoading}
               >
-                <Text style={styles.magicLinkToggleText}>Use Magic Link Instead</Text>
+                <Text style={styles.magicLinkToggleText}>
+                  Use Magic Link Instead
+                </Text>
               </TouchableOpacity>
             </>
           ) : (
@@ -506,7 +569,9 @@ const RegisterScreen: React.FC = () => {
                 onPress={toggleMagicLink}
                 disabled={isLoading}
               >
-                <Text style={styles.magicLinkToggleText}>Use Password Instead</Text>
+                <Text style={styles.magicLinkToggleText}>
+                  Use Password Instead
+                </Text>
               </TouchableOpacity>
             </>
           )}
@@ -520,7 +585,9 @@ const RegisterScreen: React.FC = () => {
 
           {/* Social Media Text */}
           <View style={styles.socialHeader}>
-            <Text style={styles.socialHeaderText}>Join With Your Favourite Social Media Account</Text>
+            <Text style={styles.socialHeaderText}>
+              Join With Your Favourite Social Media Account
+            </Text>
           </View>
 
           {/* Social Login Buttons */}
@@ -543,13 +610,18 @@ const RegisterScreen: React.FC = () => {
             <TouchableOpacity
               style={[styles.socialButton, styles.appleButton]}
               onPress={() => {
-                Alert.alert('Coming Soon', 'Apple Sign-In will be available soon!');
+                Alert.alert(
+                  'Coming Soon',
+                  'Apple Sign-In will be available soon!',
+                );
               }}
               disabled={isLoading}
             >
               <View style={styles.socialButtonContent}>
                 <Text style={styles.appleIcon}>🍎</Text>
-                <Text style={[styles.socialButtonText, styles.appleButtonText]}>Apple</Text>
+                <Text style={[styles.socialButtonText, styles.appleButtonText]}>
+                  Apple
+                </Text>
               </View>
             </TouchableOpacity>
           </View>
@@ -573,7 +645,7 @@ const { width } = Dimensions.get('window');
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.jewgoLightGray,
+    backgroundColor: Colors.background.secondary,
   },
   scrollContent: {
     flexGrow: 1,
@@ -622,7 +694,7 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: 20,
-    color: Colors.jewgoJetBlack,
+    color: Colors.black,
     fontWeight: '600',
   },
   headerContent: {
@@ -632,18 +704,18 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: Colors.jewgoJetBlack,
+    color: Colors.black,
     marginBottom: Spacing.sm,
     fontFamily: Typography.fontFamilyBold,
   },
   subtitle: {
     fontSize: 14,
-    color: Colors.jewgoJetBlack,
+    color: Colors.black,
     textAlign: 'center',
     fontFamily: Typography.fontFamily,
   },
   linkText: {
-    color: Colors.jewgoJetBlack,
+    color: Colors.black,
     fontWeight: '600',
     textDecorationLine: 'underline',
   },
@@ -661,7 +733,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
     fontSize: 16,
-    color: Colors.jewgoJetBlack,
+    color: Colors.black,
     fontFamily: Typography.fontFamily,
     minHeight: TouchTargets.minimum,
   },
@@ -686,7 +758,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 16,
-    color: Colors.jewgoJetBlack,
+    color: Colors.black,
     fontFamily: Typography.fontFamily,
     paddingVertical: Spacing.sm,
   },
@@ -702,7 +774,7 @@ const styles = StyleSheet.create({
     color: Colors.gray500,
   },
   recommendedTag: {
-    backgroundColor: Colors.jewgoSignatureGreen,
+    backgroundColor: Colors.primary.main,
     borderRadius: BorderRadius.full,
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.xs,
@@ -773,7 +845,7 @@ const styles = StyleSheet.create({
   captchaLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: Colors.jewgoJetBlack,
+    color: Colors.black,
     marginBottom: Spacing.sm,
     fontFamily: Typography.fontFamilySemiBold,
   },
@@ -801,7 +873,7 @@ const styles = StyleSheet.create({
   },
   magicLinkToggleText: {
     fontSize: 14,
-    color: Colors.jewgoJetBlack,
+    color: Colors.black,
     fontWeight: '500',
     fontFamily: Typography.fontFamily,
   },
@@ -831,7 +903,7 @@ const styles = StyleSheet.create({
   },
   socialHeaderText: {
     fontSize: 14,
-    color: Colors.jewgoJetBlack,
+    color: Colors.black,
     fontWeight: '500',
     textAlign: 'center',
     fontFamily: Typography.fontFamily,
@@ -845,7 +917,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.white,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: Colors.border.primary,
     borderRadius: BorderRadius.lg,
     paddingVertical: Spacing.sm,
     alignItems: 'center',
@@ -863,7 +935,7 @@ const styles = StyleSheet.create({
   googleIcon: {
     fontSize: 16,
     fontWeight: '600',
-    color: Colors.jewgoJetBlack,
+    color: Colors.black,
     marginRight: Spacing.xs,
   },
   appleIcon: {
@@ -873,7 +945,7 @@ const styles = StyleSheet.create({
   socialButtonText: {
     fontSize: 14,
     fontWeight: '500',
-    color: Colors.jewgoJetBlack,
+    color: Colors.black,
     fontFamily: Typography.fontFamily,
   },
   appleButtonText: {
@@ -891,7 +963,7 @@ const styles = StyleSheet.create({
     fontFamily: Typography.fontFamily,
   },
   termsLink: {
-    color: Colors.jewgoJetBlack,
+    color: Colors.black,
     textDecorationLine: 'underline',
   },
 });

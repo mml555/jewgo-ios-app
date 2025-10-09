@@ -27,13 +27,13 @@ export interface FormattedDistance {
  */
 export function formatDistance(
   distanceMeters: number,
-  options: DistanceDisplayOptions = {}
+  options: DistanceDisplayOptions = {},
 ): FormattedDistance {
   const {
     showApproximate = false,
     precision = 1,
     unit = 'metric',
-    maxDecimals = 1
+    maxDecimals = 1,
   } = options;
 
   if (distanceMeters < 0 || !isFinite(distanceMeters)) {
@@ -41,7 +41,7 @@ export function formatDistance(
       display: 'Unknown',
       value: 0,
       unit: '',
-      isApproximate: false
+      isApproximate: false,
     };
   }
 
@@ -52,7 +52,7 @@ export function formatDistance(
   if (unit === 'imperial') {
     // Convert to miles
     const miles = distanceMeters * 0.000621371;
-    
+
     if (miles < 0.1) {
       // Show in feet for very short distances
       const feet = distanceMeters * 3.28084;
@@ -80,7 +80,8 @@ export function formatDistance(
     } else {
       // Show in kilometers
       const km = distanceMeters / 1000;
-      value = Math.round(km * Math.pow(10, precision)) / Math.pow(10, precision);
+      value =
+        Math.round(km * Math.pow(10, precision)) / Math.pow(10, precision);
       unitStr = 'km';
       display = `${value.toFixed(maxDecimals)} ${unitStr}`;
     }
@@ -95,7 +96,7 @@ export function formatDistance(
     display,
     value,
     unit: unitStr,
-    isApproximate: showApproximate
+    isApproximate: showApproximate,
   };
 }
 
@@ -110,19 +111,19 @@ export function formatDistanceWithAccuracy(
     isApproximate?: boolean;
     accuracy?: number;
   } = {},
-  options: DistanceDisplayOptions = {}
+  options: DistanceDisplayOptions = {},
 ): FormattedDistance {
   const { accuracyAuthorization, isApproximate, accuracy } = accuracyContext;
-  
+
   // Determine if we should show approximate indicator
-  const showApproximate = 
-    accuracyAuthorization === 'reduced' || 
-    isApproximate || 
+  const showApproximate =
+    accuracyAuthorization === 'reduced' ||
+    isApproximate ||
     (accuracy && accuracy > 100); // Low accuracy GPS
 
   return formatDistance(distanceMeters, {
     ...options,
-    showApproximate
+    showApproximate: Boolean(showApproximate),
   });
 }
 
@@ -142,14 +143,20 @@ export function getDistanceCategory(distanceMeters: number): string {
  */
 export function getDistanceCategoryLabel(distanceMeters: number): string {
   const category = getDistanceCategory(distanceMeters);
-  
+
   switch (category) {
-    case 'very_close': return 'Very Close';
-    case 'close': return 'Close';
-    case 'nearby': return 'Nearby';
-    case 'far': return 'Far';
-    case 'very_far': return 'Very Far';
-    default: return 'Unknown';
+    case 'very_close':
+      return 'Very Close';
+    case 'close':
+      return 'Close';
+    case 'nearby':
+      return 'Nearby';
+    case 'far':
+      return 'Far';
+    case 'very_far':
+      return 'Very Far';
+    default:
+      return 'Unknown';
   }
 }
 
@@ -171,11 +178,11 @@ export function isValidDistance(distanceMeters: number): boolean {
 export function convertDistance(
   distance: number,
   fromUnit: 'meters' | 'kilometers' | 'miles' | 'feet',
-  toUnit: 'meters' | 'kilometers' | 'miles' | 'feet'
+  toUnit: 'meters' | 'kilometers' | 'miles' | 'feet',
 ): number {
   // Convert to meters first
   let meters: number;
-  
+
   switch (fromUnit) {
     case 'meters':
       meters = distance;
@@ -192,7 +199,7 @@ export function convertDistance(
     default:
       meters = distance;
   }
-  
+
   // Convert from meters to target unit
   switch (toUnit) {
     case 'meters':
@@ -214,14 +221,20 @@ export function convertDistance(
  */
 export function getDistanceColor(distanceMeters: number): string {
   const category = getDistanceCategory(distanceMeters);
-  
+
   switch (category) {
-    case 'very_close': return '#4CAF50'; // Green
-    case 'close': return '#8BC34A'; // Light Green
-    case 'nearby': return '#FFC107'; // Amber
-    case 'far': return '#FF9800'; // Orange
-    case 'very_far': return '#F44336'; // Red
-    default: return '#9E9E9E'; // Grey
+    case 'very_close':
+      return '#4CAF50'; // Green
+    case 'close':
+      return '#8BC34A'; // Light Green
+    case 'nearby':
+      return '#FFC107'; // Amber
+    case 'far':
+      return '#FF9800'; // Orange
+    case 'very_far':
+      return '#F44336'; // Red
+    default:
+      return '#9E9E9E'; // Grey
   }
 }
 
@@ -233,20 +246,20 @@ export function formatDistanceForAccessibility(
   accuracyContext: {
     accuracyAuthorization?: 'full' | 'reduced' | 'unknown';
     isApproximate?: boolean;
-  } = {}
+  } = {},
 ): string {
   const formatted = formatDistanceWithAccuracy(distanceMeters, accuracyContext);
-  
+
   let accessibilityText = `${formatted.display}`;
-  
+
   if (formatted.isApproximate) {
     accessibilityText += ', approximate distance';
   }
-  
+
   if (accuracyContext.accuracyAuthorization === 'reduced') {
     accessibilityText += ', using approximate location';
   }
-  
+
   return accessibilityText;
 }
 
@@ -255,26 +268,26 @@ export function formatDistanceForAccessibility(
  */
 export function sortEntitiesByDistance<T extends { distance_m?: number }>(
   entities: T[],
-  fallbackSort: (a: T, b: T) => number = () => 0
+  fallbackSort: (a: T, b: T) => number = () => 0,
 ): T[] {
   return entities.sort((a, b) => {
     const aDistance = a.distance_m;
     const bDistance = b.distance_m;
-    
+
     // Both have distances - sort by distance
     if (aDistance !== undefined && bDistance !== undefined) {
       return aDistance - bDistance;
     }
-    
+
     // Only one has distance - prioritize it
     if (aDistance !== undefined && bDistance === undefined) {
       return -1;
     }
-    
+
     if (aDistance === undefined && bDistance !== undefined) {
       return 1;
     }
-    
+
     // Neither has distance - use fallback sort
     return fallbackSort(a, b);
   });
@@ -286,23 +299,23 @@ export function sortEntitiesByDistance<T extends { distance_m?: number }>(
 export function filterEntitiesByDistance<T extends { distance_m?: number }>(
   entities: T[],
   minDistance?: number,
-  maxDistance?: number
+  maxDistance?: number,
 ): T[] {
   return entities.filter(entity => {
     const distance = entity.distance_m;
-    
+
     if (distance === undefined) {
       return false; // Exclude entities without distance
     }
-    
+
     if (minDistance !== undefined && distance < minDistance) {
       return false;
     }
-    
+
     if (maxDistance !== undefined && distance > maxDistance) {
       return false;
     }
-    
+
     return true;
   });
 }
@@ -317,5 +330,5 @@ export default {
   getDistanceColor,
   formatDistanceForAccessibility,
   sortEntitiesByDistance,
-  filterEntitiesByDistance
+  filterEntitiesByDistance,
 };

@@ -13,7 +13,14 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../styles/designSystem';
+import { errorLog } from '../utils/logger';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  Shadows,
+} from '../styles/designSystem';
 import { specialsService } from '../services/SpecialsService';
 import { Special } from '../types/specials';
 
@@ -62,7 +69,9 @@ const EditSpecialScreen: React.FC = () => {
     discountLabel: '',
     discountValue: '',
     validFrom: new Date().toISOString().split('T')[0],
-    validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 days from now
+    validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .split('T')[0], // 30 days from now
     priority: '0',
     maxClaimsTotal: '',
     requiresCode: false,
@@ -87,7 +96,7 @@ const EditSpecialScreen: React.FC = () => {
     try {
       setLoading(true);
       const response = await specialsService.getSpecial(specialId);
-      
+
       if (response.success && response.data?.special) {
         const special = response.data.special;
         setEditorState({
@@ -96,11 +105,19 @@ const EditSpecialScreen: React.FC = () => {
           description: special.description || '',
           discountType: special.discountType,
           discountLabel: special.discountLabel || '',
-          discountValue: special.discountValue !== undefined && special.discountValue !== null ? String(special.discountValue) : '',
+          discountValue:
+            special.discountValue !== undefined &&
+            special.discountValue !== null
+              ? String(special.discountValue)
+              : '',
           validFrom: special.validFrom || '',
           validUntil: special.validUntil || '',
           priority: String(special.priority ?? 0),
-          maxClaimsTotal: special.maxClaimsTotal !== undefined && special.maxClaimsTotal !== null ? String(special.maxClaimsTotal) : '',
+          maxClaimsTotal:
+            special.maxClaimsTotal !== undefined &&
+            special.maxClaimsTotal !== null
+              ? String(special.maxClaimsTotal)
+              : '',
           requiresCode: Boolean(special.requiresCode),
           codeHint: special.codeHint || '',
           heroImageUrl: special.heroImageUrl || '',
@@ -111,7 +128,7 @@ const EditSpecialScreen: React.FC = () => {
         navigation.goBack();
       }
     } catch (error) {
-      console.error('Error loading special:', error);
+      errorLog('Error loading special:', error);
       Alert.alert('Error', 'Unable to load special data.');
       navigation.goBack();
     } finally {
@@ -131,11 +148,15 @@ const EditSpecialScreen: React.FC = () => {
         description: editorState.description,
         discount_type: editorState.discountType,
         discount_label: editorState.discountLabel,
-        discount_value: editorState.discountValue ? parseFloat(editorState.discountValue) : null,
+        discount_value: editorState.discountValue
+          ? parseFloat(editorState.discountValue)
+          : null,
         valid_from: editorState.validFrom,
         valid_until: editorState.validUntil,
-        priority: parseInt(editorState.priority) || 0,
-        max_claims_total: editorState.maxClaimsTotal ? parseInt(editorState.maxClaimsTotal) : null,
+        priority: parseInt(editorState.priority, 10) || 0,
+        max_claims_total: editorState.maxClaimsTotal
+          ? parseInt(editorState.maxClaimsTotal, 10)
+          : null,
         requires_code: editorState.requiresCode,
         code_hint: editorState.codeHint,
         hero_image_url: editorState.heroImageUrl,
@@ -146,29 +167,41 @@ const EditSpecialScreen: React.FC = () => {
       if (isEditing && specialId) {
         response = await specialsService.updateSpecial(specialId, payload);
       } else {
-        response = await specialsService.createSpecial(payload);
+        response = await specialsService.createSpecial(payload as any);
       }
 
       if (response.success) {
         Alert.alert(
-          'Success', 
-          isEditing ? 'Special updated successfully.' : 'Special created successfully.',
-          [{ text: 'OK', onPress: () => navigation.goBack() }]
+          'Success',
+          isEditing
+            ? 'Special updated successfully.'
+            : 'Special created successfully.',
+          [{ text: 'OK', onPress: () => navigation.goBack() }],
         );
       } else {
-        Alert.alert('Error', response.error || `Failed to ${isEditing ? 'update' : 'create'} special.`);
+        Alert.alert(
+          'Error',
+          response.error ||
+            `Failed to ${isEditing ? 'update' : 'create'} special.`,
+        );
       }
     } catch (error) {
-      console.error('Error saving special:', error);
-      Alert.alert('Error', `Unable to ${isEditing ? 'update' : 'create'} special.`);
+      errorLog('Error saving special:', error);
+      Alert.alert(
+        'Error',
+        `Unable to ${isEditing ? 'update' : 'create'} special.`,
+      );
     } finally {
       setSaving(false);
     }
   }, [editorState, storeId, isEditing, specialId, navigation]);
 
-  const updateEditorState = useCallback((updates: Partial<SpecialEditorState>) => {
-    setEditorState(prev => prev ? { ...prev, ...updates } : prev);
-  }, []);
+  const updateEditorState = useCallback(
+    (updates: Partial<SpecialEditorState>) => {
+      setEditorState(prev => (prev ? { ...prev, ...updates } : prev));
+    },
+    [],
+  );
 
   if (loading) {
     return (
@@ -183,35 +216,39 @@ const EditSpecialScreen: React.FC = () => {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
           <Text style={styles.backButtonText}>← Back</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{pageTitle}</Text>
-        <TouchableOpacity 
-          style={[styles.saveButton, saving && styles.saveButtonDisabled]} 
+        <TouchableOpacity
+          style={[styles.saveButton, saving && styles.saveButtonDisabled]}
           onPress={handleSaveSpecial}
           disabled={saving}
         >
-          <Text style={styles.saveButtonText}>{saving ? 'Saving...' : 'Save'}</Text>
+          <Text style={styles.saveButtonText}>
+            {saving ? 'Saving...' : 'Save'}
+          </Text>
         </TouchableOpacity>
       </View>
 
-      <KeyboardAvoidingView 
-        style={styles.content} 
+      <KeyboardAvoidingView
+        style={styles.content}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
-          
           {/* Basic Information */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Basic Information</Text>
-            
+
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Title *</Text>
               <TextInput
                 style={styles.textInput}
                 value={editorState.title}
-                onChangeText={(text) => updateEditorState({ title: text })}
+                onChangeText={text => updateEditorState({ title: text })}
                 placeholder="e.g., 20% Off All Items"
                 placeholderTextColor={Colors.gray400}
               />
@@ -222,7 +259,7 @@ const EditSpecialScreen: React.FC = () => {
               <TextInput
                 style={styles.textInput}
                 value={editorState.subtitle}
-                onChangeText={(text) => updateEditorState({ subtitle: text })}
+                onChangeText={text => updateEditorState({ subtitle: text })}
                 placeholder="e.g., Limited time offer"
                 placeholderTextColor={Colors.gray400}
               />
@@ -233,7 +270,7 @@ const EditSpecialScreen: React.FC = () => {
               <TextInput
                 style={[styles.textInput, styles.textArea]}
                 value={editorState.description}
-                onChangeText={(text) => updateEditorState({ description: text })}
+                onChangeText={text => updateEditorState({ description: text })}
                 placeholder="Describe the special offer in detail..."
                 placeholderTextColor={Colors.gray400}
                 multiline
@@ -245,23 +282,31 @@ const EditSpecialScreen: React.FC = () => {
           {/* Discount Information */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Discount Information</Text>
-            
+
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Discount Type *</Text>
               <View style={styles.typeGrid}>
-                {discountTypeOptions.map((type) => (
+                {discountTypeOptions.map(type => (
                   <TouchableOpacity
                     key={type.key}
                     style={[
                       styles.typeOption,
-                      editorState.discountType === type.key && styles.typeOptionSelected,
+                      editorState.discountType === type.key &&
+                        styles.typeOptionSelected,
                     ]}
-                    onPress={() => updateEditorState({ discountType: type.key as Special['discountType'] })}
+                    onPress={() =>
+                      updateEditorState({
+                        discountType: type.key as Special['discountType'],
+                      })
+                    }
                   >
-                    <Text style={[
-                      styles.typeLabel,
-                      editorState.discountType === type.key && styles.typeLabelSelected,
-                    ]}>
+                    <Text
+                      style={[
+                        styles.typeLabel,
+                        editorState.discountType === type.key &&
+                          styles.typeLabelSelected,
+                      ]}
+                    >
                       {type.label}
                     </Text>
                   </TouchableOpacity>
@@ -274,8 +319,12 @@ const EditSpecialScreen: React.FC = () => {
               <TextInput
                 style={styles.textInput}
                 value={editorState.discountValue}
-                onChangeText={(text) => updateEditorState({ discountValue: text })}
-                placeholder={editorState.discountType === 'percentage' ? '20' : '10.00'}
+                onChangeText={text =>
+                  updateEditorState({ discountValue: text })
+                }
+                placeholder={
+                  editorState.discountType === 'percentage' ? '20' : '10.00'
+                }
                 placeholderTextColor={Colors.gray400}
                 keyboardType="numeric"
               />
@@ -286,7 +335,9 @@ const EditSpecialScreen: React.FC = () => {
               <TextInput
                 style={styles.textInput}
                 value={editorState.discountLabel}
-                onChangeText={(text) => updateEditorState({ discountLabel: text })}
+                onChangeText={text =>
+                  updateEditorState({ discountLabel: text })
+                }
                 placeholder="e.g., 20% OFF"
                 placeholderTextColor={Colors.gray400}
               />
@@ -296,14 +347,14 @@ const EditSpecialScreen: React.FC = () => {
           {/* Validity Period */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Validity Period</Text>
-            
+
             <View style={styles.row}>
               <View style={styles.halfInput}>
                 <Text style={styles.inputLabel}>Valid From *</Text>
                 <TextInput
                   style={styles.textInput}
                   value={editorState.validFrom}
-                  onChangeText={(text) => updateEditorState({ validFrom: text })}
+                  onChangeText={text => updateEditorState({ validFrom: text })}
                   placeholder="YYYY-MM-DD"
                   placeholderTextColor={Colors.gray400}
                 />
@@ -313,7 +364,7 @@ const EditSpecialScreen: React.FC = () => {
                 <TextInput
                   style={styles.textInput}
                   value={editorState.validUntil}
-                  onChangeText={(text) => updateEditorState({ validUntil: text })}
+                  onChangeText={text => updateEditorState({ validUntil: text })}
                   placeholder="YYYY-MM-DD"
                   placeholderTextColor={Colors.gray400}
                 />
@@ -324,13 +375,13 @@ const EditSpecialScreen: React.FC = () => {
           {/* Advanced Settings */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Advanced Settings</Text>
-            
+
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Priority</Text>
               <TextInput
                 style={styles.textInput}
                 value={editorState.priority}
-                onChangeText={(text) => updateEditorState({ priority: text })}
+                onChangeText={text => updateEditorState({ priority: text })}
                 placeholder="0"
                 placeholderTextColor={Colors.gray400}
                 keyboardType="numeric"
@@ -342,7 +393,9 @@ const EditSpecialScreen: React.FC = () => {
               <TextInput
                 style={styles.textInput}
                 value={editorState.maxClaimsTotal}
-                onChangeText={(text) => updateEditorState({ maxClaimsTotal: text })}
+                onChangeText={text =>
+                  updateEditorState({ maxClaimsTotal: text })
+                }
                 placeholder="Leave empty for unlimited"
                 placeholderTextColor={Colors.gray400}
                 keyboardType="numeric"
@@ -352,14 +405,18 @@ const EditSpecialScreen: React.FC = () => {
             <View style={styles.switchRow}>
               <View style={styles.switchLabelContainer}>
                 <Text style={styles.switchLabel}>Requires Code</Text>
-                <Text style={styles.switchDescription}>Customer must enter a code to claim</Text>
+                <Text style={styles.switchDescription}>
+                  Customer must enter a code to claim
+                </Text>
               </View>
               <TouchableOpacity
                 style={[
                   styles.checkbox,
-                  editorState.requiresCode && styles.checkboxChecked
+                  editorState.requiresCode && styles.checkboxChecked,
                 ]}
-                onPress={() => updateEditorState({ requiresCode: !editorState.requiresCode })}
+                onPress={() =>
+                  updateEditorState({ requiresCode: !editorState.requiresCode })
+                }
                 activeOpacity={0.7}
                 accessibilityRole="checkbox"
                 accessibilityState={{ checked: editorState.requiresCode }}
@@ -377,7 +434,7 @@ const EditSpecialScreen: React.FC = () => {
                 <TextInput
                   style={styles.textInput}
                   value={editorState.codeHint}
-                  onChangeText={(text) => updateEditorState({ codeHint: text })}
+                  onChangeText={text => updateEditorState({ codeHint: text })}
                   placeholder="e.g., Mention 'SAVE20' at checkout"
                   placeholderTextColor={Colors.gray400}
                 />
@@ -387,14 +444,18 @@ const EditSpecialScreen: React.FC = () => {
             <View style={styles.switchRow}>
               <View style={styles.switchLabelContainer}>
                 <Text style={styles.switchLabel}>Special Active</Text>
-                <Text style={styles.switchDescription}>Enable this special offer</Text>
+                <Text style={styles.switchDescription}>
+                  Enable this special offer
+                </Text>
               </View>
               <TouchableOpacity
                 style={[
                   styles.checkbox,
-                  editorState.isEnabled && styles.checkboxChecked
+                  editorState.isEnabled && styles.checkboxChecked,
                 ]}
-                onPress={() => updateEditorState({ isEnabled: !editorState.isEnabled })}
+                onPress={() =>
+                  updateEditorState({ isEnabled: !editorState.isEnabled })
+                }
                 activeOpacity={0.7}
                 accessibilityRole="checkbox"
                 accessibilityState={{ checked: editorState.isEnabled }}
@@ -410,13 +471,13 @@ const EditSpecialScreen: React.FC = () => {
           {/* Image URL */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Media</Text>
-            
+
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Hero Image URL</Text>
               <TextInput
                 style={styles.textInput}
                 value={editorState.heroImageUrl}
-                onChangeText={(text) => updateEditorState({ heroImageUrl: text })}
+                onChangeText={text => updateEditorState({ heroImageUrl: text })}
                 placeholder="https://example.com/image.jpg"
                 placeholderTextColor={Colors.gray400}
                 autoCapitalize="none"
@@ -443,7 +504,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background.primary,
   },
   loadingText: {
-    ...Typography.body1,
+    ...Typography.styles.body1,
     color: Colors.text.secondary,
     marginTop: Spacing.md,
   },
@@ -463,7 +524,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
   },
   backButtonText: {
-    ...Typography.body1,
+    ...Typography.styles.body1,
     color: Colors.primary.main,
     fontWeight: '600',
   },
@@ -482,7 +543,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.gray400,
   },
   saveButtonText: {
-    ...Typography.body1,
+    ...Typography.styles.body1,
     color: Colors.background.primary,
     fontWeight: '600',
   },
@@ -499,7 +560,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   sectionTitle: {
-    ...Typography.h3,
+    ...Typography.styles.h3,
     color: Colors.text.primary,
     fontWeight: '600',
     marginBottom: Spacing.lg,
@@ -508,13 +569,13 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
   },
   inputLabel: {
-    ...Typography.body1,
+    ...Typography.styles.body1,
     color: Colors.text.primary,
     fontWeight: '500',
     marginBottom: Spacing.sm,
   },
   textInput: {
-    ...Typography.body1,
+    ...Typography.styles.body1,
     borderWidth: 1,
     borderColor: Colors.border.primary,
     borderRadius: BorderRadius.md,
@@ -552,7 +613,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.primary.main,
   },
   typeLabel: {
-    ...Typography.body2,
+    ...Typography.styles.body2,
     color: Colors.text.primary,
     fontWeight: '500',
   },
@@ -570,12 +631,12 @@ const styles = StyleSheet.create({
     marginRight: Spacing.md,
   },
   switchLabel: {
-    ...Typography.body1,
+    ...Typography.styles.body1,
     color: Colors.text.primary,
     fontWeight: '500',
   },
   switchDescription: {
-    ...Typography.caption,
+    ...Typography.styles.caption,
     color: Colors.text.secondary,
     marginTop: Spacing.xs,
   },

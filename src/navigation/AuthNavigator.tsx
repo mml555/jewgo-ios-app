@@ -1,18 +1,19 @@
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
+import { AuthStackParamList } from '../types/navigation';
 import WelcomeScreen from '../screens/auth/WelcomeScreen';
 import LoginScreen from '../screens/auth/LoginScreen';
 import RegisterScreen from '../screens/auth/RegisterScreen';
 import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
 
-const Stack = createStackNavigator();
+const Stack = createStackNavigator<AuthStackParamList>();
 
 const AuthNavigator: React.FC = () => {
   return (
-    <Stack.Navigator 
-      screenOptions={{ 
+    <Stack.Navigator
+      screenOptions={{
         headerShown: false,
-        cardStyle: { backgroundColor: '#FFFFFF' }
+        cardStyle: { backgroundColor: '#FFFFFF' },
       }}
       initialRouteName="Welcome"
     >

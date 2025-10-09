@@ -1,5 +1,6 @@
 // Import the shared database connection from the auth system
 // We'll get the pool from the request context or use a shared instance
+const logger = require('../utils/logger');
 let pool = null;
 
 // Initialize pool if not already done
@@ -12,7 +13,8 @@ function getPool() {
       database: process.env.DB_NAME || 'jewgo_dev',
       user: process.env.DB_USER || 'jewgo_user',
       password: process.env.DB_PASSWORD || 'jewgo_password',
-      ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
+      ssl:
+        process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
       max: 20,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 2000,
@@ -25,19 +27,21 @@ class SpecialsController {
   // GET /api/v5/specials/active - Get active specials with priority sorting
   static async getActiveSpecials(req, res) {
     try {
-      const { 
-        limit = 20, 
-        offset = 0, 
-        sortBy = 'priority', 
+      const {
+        limit = 20,
+        offset = 0,
+        sortBy = 'priority',
         sortOrder = 'desc',
-        page = 1 
+        page = 1,
       } = req.query;
-      
-      const limitNum = parseInt(limit);
-      const offsetNum = parseInt(offset);
-      const pageNum = parseInt(page);
 
-      console.log(`🔥 Getting active specials with limit: ${limitNum}, offset: ${offsetNum}, sortBy: ${sortBy}, sortOrder: ${sortOrder}`);
+      const limitNum = parseInt(limit, 10);
+      const offsetNum = parseInt(offset, 10);
+      const pageNum = parseInt(page, 10);
+
+      logger.info(
+        `🔥 Getting active specials with limit: ${limitNum}, offset: ${offsetNum}, sortBy: ${sortBy}, sortOrder: ${sortOrder}`,
+      );
 
       // Build ORDER BY clause based on sortBy parameter
       let orderByClause = '';
@@ -117,7 +121,7 @@ class SpecialsController {
 
       const [specialsResult, countResult] = await Promise.all([
         getPool().query(specialsQuery, [limitNum, offsetNum]),
-        getPool().query(countQuery)
+        getPool().query(countQuery),
       ]);
 
       const specials = specialsResult.rows.map(special => ({
@@ -140,7 +144,7 @@ class SpecialsController {
           instagramUrl: special.instagram_url,
           whatsappUrl: special.whatsapp_url,
           rating: special.rating,
-          entityType: special.category
+          entityType: special.category,
         },
         discountType: special.discount_type,
         discountValue: special.discount_value?.toString(),
@@ -152,36 +156,45 @@ class SpecialsController {
         priority: special.priority,
         heroImageUrl: special.hero_image_url,
         isActive: special.is_active,
-        isExpiring: new Date(special.valid_until) < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        isExpiring:
+          new Date(special.valid_until) <
+          new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
         terms: special.terms,
         gallery: [], // Will be populated separately if needed
         rating: special.rating,
-        priceRange: special.rating >= 4.5 ? '$$$' : special.rating >= 3.5 ? '$$' : '$',
+        priceRange:
+          special.rating >= 4.5 ? '$$$' : special.rating >= 3.5 ? '$$' : '$',
         createdAt: special.created_at.toISOString(),
         updatedAt: special.updated_at.toISOString(),
         claimsLeft: special.claims_left,
         viewsCount: special.views_count,
-        originalPrice: special.rating >= 4.5 ? '$25.99' : special.rating >= 3.5 ? '$18.99' : '$12.99'
+        originalPrice:
+          special.rating >= 4.5
+            ? '$25.99'
+            : special.rating >= 3.5
+            ? '$18.99'
+            : '$12.99',
       }));
 
       res.json({
         success: true,
         data: {
           specials: specials,
-          total: parseInt(countResult.rows[0].total),
+          total: parseInt(countResult.rows[0].total, 10),
           limit: limitNum,
           offset: offsetNum,
           page: pageNum,
-          hasNext: (offsetNum + limitNum) < parseInt(countResult.rows[0].total),
-          hasPrev: offsetNum > 0
-        }
+          hasNext:
+            offsetNum + limitNum < parseInt(countResult.rows[0].total, 10),
+          hasPrev: offsetNum > 0,
+        },
       });
     } catch (error) {
-      console.error('Error getting active specials:', error);
+      logger.error('Error getting active specials:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error',
-        message: error.message
+        message: error.message,
       });
     }
   }
@@ -190,10 +203,12 @@ class SpecialsController {
   static async getAllSpecials(req, res) {
     try {
       const { limit = 20, offset = 0 } = req.query;
-      const limitNum = parseInt(limit);
-      const offsetNum = parseInt(offset);
+      const limitNum = parseInt(limit, 10);
+      const offsetNum = parseInt(offset, 10);
 
-      console.log(`📋 Getting specials with limit: ${limitNum}, offset: ${offsetNum}`);
+      logger.info(
+        `📋 Getting specials with limit: ${limitNum}, offset: ${offsetNum}`,
+      );
 
       // Query database for specials with business information
       const specialsQuery = `
@@ -248,7 +263,7 @@ class SpecialsController {
 
       const [specialsResult, countResult] = await Promise.all([
         getPool().query(specialsQuery, [limitNum, offsetNum]),
-        getPool().query(countQuery)
+        getPool().query(countQuery),
       ]);
 
       const specials = specialsResult.rows.map(special => ({
@@ -265,12 +280,15 @@ class SpecialsController {
         valid_from: special.valid_from.toISOString(),
         valid_until: special.valid_until.toISOString(),
         is_active: special.is_active,
-        is_expiring: new Date(special.valid_until) < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Expires within 7 days
+        is_expiring:
+          new Date(special.valid_until) <
+          new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Expires within 7 days
         terms_conditions: special.terms,
         image_url: special.hero_image_url,
         gallery: [], // Will be populated separately if needed
         rating: special.rating,
-        price_range: special.rating >= 4.5 ? '$$$' : special.rating >= 3.5 ? '$$' : '$',
+        price_range:
+          special.rating >= 4.5 ? '$$$' : special.rating >= 3.5 ? '$$' : '$',
         created_at: special.created_at.toISOString(),
         updated_at: special.updated_at.toISOString(),
         claims_left: special.claims_left,
@@ -285,24 +303,29 @@ class SpecialsController {
         facebook_url: special.facebook_url,
         instagram_url: special.instagram_url,
         whatsapp_url: special.whatsapp_url,
-        original_price: special.rating >= 4.5 ? '$25.99' : special.rating >= 3.5 ? '$18.99' : '$12.99'
+        original_price:
+          special.rating >= 4.5
+            ? '$25.99'
+            : special.rating >= 3.5
+            ? '$18.99'
+            : '$12.99',
       }));
 
       res.json({
         success: true,
         data: {
           specials: specials,
-          total: parseInt(countResult.rows[0].total),
+          total: parseInt(countResult.rows[0].total, 10),
           limit: limitNum,
           offset: offsetNum,
-        }
+        },
       });
     } catch (error) {
-      console.error('Error getting specials:', error);
+      logger.error('Error getting specials:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error',
-        message: error.message
+        message: error.message,
       });
     }
   }
@@ -311,7 +334,7 @@ class SpecialsController {
   static async getSpecialById(req, res) {
     try {
       const { id } = req.params;
-      console.log(`🔍 Getting special by ID: ${id}`);
+      logger.info(`🔍 Getting special by ID: ${id}`);
 
       const specialQuery = `
         SELECT 
@@ -372,7 +395,7 @@ class SpecialsController {
         return res.status(404).json({
           success: false,
           error: 'Special not found',
-          message: `Special with ID ${id} not found`
+          message: `Special with ID ${id} not found`,
         });
       }
 
@@ -381,16 +404,22 @@ class SpecialsController {
       // Record view event
       try {
         const userId = req.user?.type === 'guest' ? null : req.user?.id;
-        const guestSessionId = req.user?.type === 'guest' ? req.user.sessionId : req.guestSession?.id;
+        const guestSessionId =
+          req.user?.type === 'guest'
+            ? req.user.sessionId
+            : req.guestSession?.id;
         const ipAddress = req.ip;
         const userAgent = req.get('User-Agent');
 
-        await getPool().query(`
+        await getPool().query(
+          `
           INSERT INTO special_events (special_id, user_id, guest_session_id, event_type, ip_address, user_agent)
           VALUES ($1, $2, $3, 'view', $4, $5)
-        `, [id, userId, guestSessionId, ipAddress, userAgent]);
+        `,
+          [id, userId, guestSessionId, ipAddress, userAgent],
+        );
       } catch (viewError) {
-        console.warn('Failed to record view event:', viewError);
+        logger.warn('Failed to record view event:', viewError);
       }
 
       const specialData = {
@@ -407,12 +436,15 @@ class SpecialsController {
         valid_from: special.valid_from.toISOString(),
         valid_until: special.valid_until.toISOString(),
         is_active: special.is_active,
-        is_expiring: new Date(special.valid_until) < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        is_expiring:
+          new Date(special.valid_until) <
+          new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
         terms_conditions: special.terms,
         image_url: special.hero_image_url,
         gallery: special.gallery || [],
         rating: special.rating,
-        price_range: special.rating >= 4.5 ? '$$$' : special.rating >= 3.5 ? '$$' : '$',
+        price_range:
+          special.rating >= 4.5 ? '$$$' : special.rating >= 3.5 ? '$$' : '$',
         created_at: special.created_at.toISOString(),
         updated_at: special.updated_at.toISOString(),
         claims_left: special.claims_left,
@@ -427,21 +459,26 @@ class SpecialsController {
         facebook_url: special.facebook_url,
         instagram_url: special.instagram_url,
         whatsapp_url: special.whatsapp_url,
-        original_price: special.rating >= 4.5 ? '$25.99' : special.rating >= 3.5 ? '$18.99' : '$12.99'
+        original_price:
+          special.rating >= 4.5
+            ? '$25.99'
+            : special.rating >= 3.5
+            ? '$18.99'
+            : '$12.99',
       };
 
       res.json({
         success: true,
         data: {
-          special: specialData
-        }
+          special: specialData,
+        },
       });
     } catch (error) {
-      console.error('Error getting special:', error);
+      logger.error('Error getting special:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error',
-        message: error.message
+        message: error.message,
       });
     }
   }
@@ -452,11 +489,12 @@ class SpecialsController {
     try {
       const { id } = req.params;
       const userId = req.user?.type === 'guest' ? null : req.user?.id;
-      const guestSessionId = req.user?.type === 'guest' ? req.user.sessionId : req.guestSession?.id;
+      const guestSessionId =
+        req.user?.type === 'guest' ? req.user.sessionId : req.guestSession?.id;
       const ipAddress = req.ip;
       const userAgent = req.get('User-Agent');
 
-      console.log(`🎯 Claiming special: ${id}`);
+      logger.info(`🎯 Claiming special: ${id}`);
 
       await client.query('BEGIN');
 
@@ -483,7 +521,7 @@ class SpecialsController {
         return res.status(404).json({
           success: false,
           error: 'Special not found',
-          message: `Special with ID ${id} not found`
+          message: `Special with ID ${id} not found`,
         });
       }
 
@@ -494,20 +532,21 @@ class SpecialsController {
         return res.status(400).json({
           success: false,
           error: 'Special not active',
-          message: 'This special offer is no longer active'
+          message: 'This special offer is no longer active',
         });
       }
 
       // 2. Check if there are claims left
-      const claimsLeft = special.max_claims_total ? 
-        Math.max(0, special.max_claims_total - special.current_claims) : 999999;
+      const claimsLeft = special.max_claims_total
+        ? Math.max(0, special.max_claims_total - special.current_claims)
+        : 999999;
 
       if (claimsLeft <= 0) {
         await client.query('ROLLBACK');
         return res.status(400).json({
           success: false,
           error: 'No claims left',
-          message: 'This special offer has been fully claimed'
+          message: 'This special offer has been fully claimed',
         });
       }
 
@@ -517,14 +556,17 @@ class SpecialsController {
           SELECT id FROM special_claims 
           WHERE special_id = $1 AND user_id = $2 AND status IN ('claimed', 'redeemed')
         `;
-        const existingClaim = await client.query(existingClaimQuery, [id, userId]);
+        const existingClaim = await client.query(existingClaimQuery, [
+          id,
+          userId,
+        ]);
 
         if (existingClaim.rows.length > 0) {
           await client.query('ROLLBACK');
           return res.status(400).json({
             success: false,
             error: 'Already claimed',
-            message: 'You have already claimed this special offer'
+            message: 'You have already claimed this special offer',
           });
         }
       }
@@ -537,7 +579,11 @@ class SpecialsController {
       `;
 
       const claimResult = await client.query(claimQuery, [
-        id, userId, guestSessionId, ipAddress, userAgent
+        id,
+        userId,
+        guestSessionId,
+        ipAddress,
+        userAgent,
       ]);
 
       await client.query('COMMIT');
@@ -550,42 +596,47 @@ class SpecialsController {
           claim: {
             id: claimResult.rows[0].id,
             claimed_at: claimResult.rows[0].claimed_at.toISOString(),
-            status: 'claimed'
+            status: 'claimed',
           },
           special: {
             id: special.id,
             title: special.title,
             business_name: special.business_name,
-            claims_left: claimsLeft - 1
-          }
-        }
+            claims_left: claimsLeft - 1,
+          },
+        },
       });
-
     } catch (error) {
       await client.query('ROLLBACK');
-      console.error('Error claiming special:', error);
-      
+      logger.error('Error claiming special:', error);
+
       // Handle duplicate claim error
-      if (error.code === '23505' && error.constraint === 'uq_special_claim_guest') {
+      if (
+        error.code === '23505' &&
+        error.constraint === 'uq_special_claim_guest'
+      ) {
         return res.status(400).json({
           success: false,
           error: 'Already claimed',
-          message: 'You have already claimed this special offer'
+          message: 'You have already claimed this special offer',
         });
       }
-      
-      if (error.code === '23505' && error.constraint === 'uq_special_claim_user') {
+
+      if (
+        error.code === '23505' &&
+        error.constraint === 'uq_special_claim_user'
+      ) {
         return res.status(400).json({
           success: false,
           error: 'Already claimed',
-          message: 'You have already claimed this special offer'
+          message: 'You have already claimed this special offer',
         });
       }
-      
+
       res.status(500).json({
         success: false,
         error: 'Internal server error',
-        message: error.message
+        message: error.message,
       });
     } finally {
       client.release();
@@ -596,7 +647,9 @@ class SpecialsController {
   static async searchSpecials(req, res) {
     try {
       const { q, category, business_id, active_only = 'true' } = req.query;
-      console.log(`🔍 Searching specials with query: ${q}, category: ${category}, business_id: ${business_id}`);
+      logger.debug(
+        `🔍 Searching specials with query: ${q}, category: ${category}, business_id: ${business_id}`,
+      );
 
       // Build dynamic WHERE clause
       const conditions = [];
@@ -633,7 +686,8 @@ class SpecialsController {
         params.push(business_id);
       }
 
-      const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+      const whereClause =
+        conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
       const searchQuery = `
         SELECT 
@@ -694,12 +748,15 @@ class SpecialsController {
         valid_from: special.valid_from.toISOString(),
         valid_until: special.valid_until.toISOString(),
         is_active: special.is_active,
-        is_expiring: new Date(special.valid_until) < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        is_expiring:
+          new Date(special.valid_until) <
+          new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
         terms_conditions: special.terms,
         image_url: special.hero_image_url,
         gallery: [],
         rating: special.rating,
-        price_range: special.rating >= 4.5 ? '$$$' : special.rating >= 3.5 ? '$$' : '$',
+        price_range:
+          special.rating >= 4.5 ? '$$$' : special.rating >= 3.5 ? '$$' : '$',
         created_at: special.created_at.toISOString(),
         updated_at: special.updated_at.toISOString(),
         claims_left: special.claims_left,
@@ -714,7 +771,12 @@ class SpecialsController {
         facebook_url: special.facebook_url,
         instagram_url: special.instagram_url,
         whatsapp_url: special.whatsapp_url,
-        original_price: special.rating >= 4.5 ? '$25.99' : special.rating >= 3.5 ? '$18.99' : '$12.99'
+        original_price:
+          special.rating >= 4.5
+            ? '$25.99'
+            : special.rating >= 3.5
+            ? '$18.99'
+            : '$12.99',
       }));
 
       res.json({
@@ -722,15 +784,15 @@ class SpecialsController {
         data: {
           specials: specials,
           total: specials.length,
-          query: { q, category, business_id, active_only }
-        }
+          query: { q, category, business_id, active_only },
+        },
       });
     } catch (error) {
-      console.error('Error searching specials:', error);
+      logger.error('Error searching specials:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error',
-        message: error.message
+        message: error.message,
       });
     }
   }
@@ -755,27 +817,37 @@ class SpecialsController {
         code_hint,
         terms,
         hero_image_url,
-        is_active = true
+        is_active = true,
       } = req.body;
 
-      console.log(`📝 Creating new special: ${title} for business: ${business_id}`);
+      logger.info(
+        `📝 Creating new special: ${title} for business: ${business_id}`,
+      );
 
       // Validate required fields
-      if (!business_id || !title || !discount_type || !discount_label || !valid_from || !valid_until) {
+      if (
+        !business_id ||
+        !title ||
+        !discount_type ||
+        !discount_label ||
+        !valid_from ||
+        !valid_until
+      ) {
         return res.status(400).json({
           success: false,
-          error: 'Missing required fields: business_id, title, discount_type, discount_label, valid_from, valid_until'
+          error:
+            'Missing required fields: business_id, title, discount_type, discount_label, valid_from, valid_until',
         });
       }
 
       // Validate date range
       const validFromDate = new Date(valid_from);
       const validUntilDate = new Date(valid_until);
-      
+
       if (validUntilDate <= validFromDate) {
         return res.status(400).json({
           success: false,
-          error: 'valid_until must be after valid_from'
+          error: 'valid_until must be after valid_from',
         });
       }
 
@@ -791,10 +863,23 @@ class SpecialsController {
       `;
 
       const values = [
-        business_id, title, subtitle || null, description || null, discount_type,
-        discount_value || null, discount_label, valid_from, valid_until, priority,
-        max_claims_total || null, max_claims_per_user, requires_code, code_hint || null,
-        terms || null, hero_image_url || null, is_active
+        business_id,
+        title,
+        subtitle || null,
+        description || null,
+        discount_type,
+        discount_value || null,
+        discount_label,
+        valid_from,
+        valid_until,
+        priority,
+        max_claims_total || null,
+        max_claims_per_user,
+        requires_code,
+        code_hint || null,
+        terms || null,
+        hero_image_url || null,
+        is_active,
       ];
 
       const result = await getPool().query(insertQuery, values);
@@ -821,21 +906,21 @@ class SpecialsController {
         heroImageUrl: newSpecial.hero_image_url,
         isEnabled: newSpecial.is_active,
         createdAt: newSpecial.created_at,
-        updatedAt: newSpecial.updated_at
+        updatedAt: newSpecial.updated_at,
       };
 
       res.status(201).json({
         success: true,
         data: {
-          special: transformedSpecial
-        }
+          special: transformedSpecial,
+        },
       });
     } catch (error) {
-      console.error('Error creating special:', error);
+      logger.error('Error creating special:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error',
-        message: error.message
+        message: error.message,
       });
     }
   }
@@ -846,7 +931,7 @@ class SpecialsController {
       const { id } = req.params;
       const updateData = req.body;
 
-      console.log(`📝 Updating special: ${id} with data:`, updateData);
+      logger.debug(`📝 Updating special: ${id} with data:`, updateData);
 
       // Build dynamic update query
       const updateFields = [];
@@ -871,7 +956,7 @@ class SpecialsController {
         code_hint: 'code_hint',
         terms: 'terms',
         hero_image_url: 'hero_image_url',
-        is_active: 'is_active'
+        is_active: 'is_active',
       };
 
       Object.entries(updateData).forEach(([key, value]) => {
@@ -885,7 +970,7 @@ class SpecialsController {
       if (updateFields.length === 0) {
         return res.status(400).json({
           success: false,
-          error: 'No valid fields to update'
+          error: 'No valid fields to update',
         });
       }
 
@@ -906,7 +991,7 @@ class SpecialsController {
       if (result.rows.length === 0) {
         return res.status(404).json({
           success: false,
-          error: 'Special not found'
+          error: 'Special not found',
         });
       }
 
@@ -933,21 +1018,21 @@ class SpecialsController {
         heroImageUrl: updatedSpecial.hero_image_url,
         isEnabled: updatedSpecial.is_active,
         createdAt: updatedSpecial.created_at,
-        updatedAt: updatedSpecial.updated_at
+        updatedAt: updatedSpecial.updated_at,
       };
 
       res.json({
         success: true,
         data: {
-          special: transformedSpecial
-        }
+          special: transformedSpecial,
+        },
       });
     } catch (error) {
-      console.error('Error updating special:', error);
+      logger.error('Error updating special:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error',
-        message: error.message
+        message: error.message,
       });
     }
   }
@@ -957,7 +1042,7 @@ class SpecialsController {
     try {
       const { id } = req.params;
 
-      console.log(`🗑️ Deleting special: ${id}`);
+      logger.info(`🗑️ Deleting special: ${id}`);
 
       const deleteQuery = 'DELETE FROM specials WHERE id = $1 RETURNING id';
       const result = await getPool().query(deleteQuery, [id]);
@@ -965,20 +1050,20 @@ class SpecialsController {
       if (result.rows.length === 0) {
         return res.status(404).json({
           success: false,
-          error: 'Special not found'
+          error: 'Special not found',
         });
       }
 
       res.json({
         success: true,
-        message: 'Special deleted successfully'
+        message: 'Special deleted successfully',
       });
     } catch (error) {
-      console.error('Error deleting special:', error);
+      logger.error('Error deleting special:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error',
-        message: error.message
+        message: error.message,
       });
     }
   }

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Geolocation from '@react-native-community/geolocation';
 import { PermissionsAndroid, Platform, Alert } from 'react-native';
-import { debugLog } from '../utils/logger';
+import { debugLog, errorLog } from '../utils/logger';
 
 // Global location state to share across all components
 let globalLocationState: LocationState = {
@@ -16,15 +16,20 @@ let globalLocationState: LocationState = {
 const listeners = new Set<(state: LocationState) => void>();
 
 const notifyListeners = () => {
-  debugLog('🔥 Location state changed:', {
-    listeners: listeners.size,
-    hasLocation: !!globalLocationState.location,
-    location: globalLocationState.location ? `${globalLocationState.location.latitude}, ${globalLocationState.location.longitude}` : 'null',
-    permissionGranted: globalLocationState.permissionGranted,
-    permissionRequested: globalLocationState.permissionRequested,
-    loading: globalLocationState.loading,
-    error: globalLocationState.error
-  });
+  // Only log location changes very occasionally to reduce console noise
+  if (__DEV__ && Math.random() < 0.01) {
+    debugLog('🔥 Location state changed:', {
+      listeners: listeners.size,
+      hasLocation: !!globalLocationState.location,
+      location: globalLocationState.location
+        ? `${globalLocationState.location.latitude}, ${globalLocationState.location.longitude}`
+        : 'null',
+      permissionGranted: globalLocationState.permissionGranted,
+      permissionRequested: globalLocationState.permissionRequested,
+      loading: globalLocationState.loading,
+      error: globalLocationState.error,
+    });
+  }
   listeners.forEach(listener => listener(globalLocationState));
 };
 
@@ -48,7 +53,7 @@ export const calculateDistance = (
   lat1: number,
   lon1: number,
   lat2: number,
-  lon2: number
+  lon2: number,
 ): number => {
   const R = 3959; // Earth's radius in miles
   const dLat = (lat2 - lat1) * (Math.PI / 180);
@@ -71,35 +76,38 @@ export const useLocation = () => {
     const listener = (newState: LocationState) => {
       setState(newState);
     };
-    
+
     listeners.add(listener);
-    
+
     return () => {
       listeners.delete(listener);
     };
   }, []);
 
   // Update global state and notify listeners
-  const updateGlobalState = useCallback((updater: (prev: LocationState) => LocationState) => {
-    const newState = updater(globalLocationState);
-    debugLog('🔥 Updating global location state:', {
-      oldLocation: globalLocationState.location ? 'has location' : 'no location',
-      newLocation: newState.location ? 'has location' : 'no location',
-      listeners: listeners.size 
-    });
-    globalLocationState = newState;
-    notifyListeners();
-  }, []);
+  const updateGlobalState = useCallback(
+    (updater: (prev: LocationState) => LocationState) => {
+      const newState = updater(globalLocationState);
+      // debugLog('🔥 Updating global location state:', {
+      //   oldLocation: globalLocationState.location ? 'has location' : 'no location',
+      //   newLocation: newState.location ? 'has location' : 'no location',
+      //   listeners: listeners.size
+      // });
+      globalLocationState = newState;
+      notifyListeners();
+    },
+    [],
+  );
 
   const requestLocationPermission = useCallback(async (): Promise<boolean> => {
     if (Platform.OS === 'ios') {
       // For iOS, we need to actually get the location to trigger the permission dialog
       try {
         updateGlobalState(prev => ({ ...prev, loading: true, error: null }));
-        
-        return new Promise((resolve) => {
+
+        return new Promise(resolve => {
           Geolocation.getCurrentPosition(
-            (position) => {
+            position => {
               const locationData: LocationData = {
                 latitude: position.coords.latitude,
                 longitude: position.coords.longitude,
@@ -115,11 +123,11 @@ export const useLocation = () => {
                 permissionGranted: true,
                 permissionRequested: true,
               }));
-              
+
               resolve(true);
             },
-            (error) => {
-              console.error('🔥 iOS location permission error:', error);
+            error => {
+              errorLog('🔥 iOS location permission error:', error);
               updateGlobalState(prev => ({
                 ...prev,
                 loading: false,
@@ -129,12 +137,15 @@ export const useLocation = () => {
               }));
               resolve(false);
             },
-            { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
+            { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 },
           );
         });
       } catch (err) {
-        console.error('Error requesting iOS location permission:', err);
-        updateGlobalState(prev => ({ ...prev, error: 'Failed to request location permission' }));
+        errorLog('Error requesting iOS location permission:', err);
+        updateGlobalState(prev => ({
+          ...prev,
+          error: 'Failed to request location permission',
+        }));
         return false;
       }
     }
@@ -144,93 +155,138 @@ export const useLocation = () => {
         PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
         {
           title: 'Location Permission',
-          message: 'Jewgo needs access to your location to show nearby Jewish community locations and calculate distances.',
+          message:
+            'Jewgo needs access to your location to show nearby Jewish community locations and calculate distances.',
           buttonNeutral: 'Ask Me Later',
           buttonNegative: 'Cancel',
           buttonPositive: 'OK',
-        }
+        },
       );
-      
+
       const isGranted = granted === PermissionsAndroid.RESULTS.GRANTED;
-      updateGlobalState(prev => ({ ...prev, permissionGranted: isGranted, permissionRequested: true }));
+      updateGlobalState(prev => ({
+        ...prev,
+        permissionGranted: isGranted,
+        permissionRequested: true,
+      }));
       return isGranted;
     } catch (err) {
-      console.error('Error requesting location permission:', err);
-      updateGlobalState(prev => ({ ...prev, error: 'Failed to request location permission' }));
+      errorLog('Error requesting location permission:', err);
+      updateGlobalState(prev => ({
+        ...prev,
+        error: 'Failed to request location permission',
+      }));
       return false;
     }
   }, [updateGlobalState]);
 
-  const getCurrentLocation = useCallback(async (): Promise<LocationData | null> => {
-    if (!state.permissionGranted && !state.permissionRequested) {
-      const permissionGranted = await requestLocationPermission();
-      if (!permissionGranted) {
-        return null;
-      }
-    }
-
-    updateGlobalState(prev => ({ ...prev, loading: true, error: null }));
-
-    return new Promise((resolve) => {
-      Geolocation.getCurrentPosition(
-        (position) => {
-          const locationData: LocationData = {
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-            accuracy: position.coords.accuracy,
-            timestamp: position.timestamp,
-          };
-
-          updateGlobalState(prev => ({
-            ...prev,
-            location: locationData,
-            loading: false,
-            error: null,
-          }));
-
-          resolve(locationData);
-        },
-        (error) => {
-          console.error('Error getting location:', error);
-          let errorMessage = 'Failed to get location';
-          
-          switch (error.code) {
-            case 1: // PERMISSION_DENIED
-              errorMessage = 'Location permission denied';
-              break;
-            case 2: // POSITION_UNAVAILABLE
-              errorMessage = 'Location unavailable';
-              break;
-            case 3: // TIMEOUT
-              errorMessage = 'Location request timed out';
-              break;
-          }
-
-          updateGlobalState(prev => ({
-            ...prev,
-            loading: false,
-            error: errorMessage,
-            permissionGranted: false,
-          }));
-
-          resolve(null);
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 15000,
-          maximumAge: 10000,
+  const getCurrentLocation =
+    useCallback(async (): Promise<LocationData | null> => {
+      // Use globalLocationState instead of state to avoid dependency issues
+      if (
+        !globalLocationState.permissionGranted &&
+        !globalLocationState.permissionRequested
+      ) {
+        const permissionGranted = await requestLocationPermission();
+        if (!permissionGranted) {
+          return null;
         }
-      );
-    });
-  }, [state.permissionGranted, state.permissionRequested, requestLocationPermission, updateGlobalState]);
+      }
+
+      updateGlobalState(prev => ({ ...prev, loading: true, error: null }));
+
+      return new Promise(resolve => {
+        Geolocation.getCurrentPosition(
+          position => {
+            const locationData: LocationData = {
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+              accuracy: position.coords.accuracy,
+              timestamp: position.timestamp,
+            };
+
+            // Only update if location changed significantly (more than 10 meters)
+            const prevLocation = globalLocationState.location;
+            let shouldUpdate = true;
+
+            if (prevLocation) {
+              const distanceMeters =
+                calculateDistance(
+                  prevLocation.latitude,
+                  prevLocation.longitude,
+                  locationData.latitude,
+                  locationData.longitude,
+                ) * 1609.34; // Convert miles to meters
+
+              // Only update if moved more than 10 meters
+              shouldUpdate = distanceMeters > 10;
+
+              if (!shouldUpdate && __DEV__) {
+                debugLog(
+                  '🔥 Location change too small, skipping update:',
+                  distanceMeters.toFixed(2),
+                  'meters',
+                );
+              }
+            }
+
+            if (shouldUpdate) {
+              updateGlobalState(prev => ({
+                ...prev,
+                location: locationData,
+                loading: false,
+                error: null,
+              }));
+            } else {
+              updateGlobalState(prev => ({
+                ...prev,
+                loading: false,
+              }));
+            }
+
+            resolve(locationData);
+          },
+          error => {
+            errorLog('Error getting location:', error);
+            let errorMessage = 'Failed to get location';
+
+            switch (error.code) {
+              case 1: // PERMISSION_DENIED
+                errorMessage = 'Location permission denied';
+                break;
+              case 2: // POSITION_UNAVAILABLE
+                errorMessage = 'Location unavailable';
+                break;
+              case 3: // TIMEOUT
+                errorMessage = 'Location request timed out';
+                break;
+            }
+
+            updateGlobalState(prev => ({
+              ...prev,
+              loading: false,
+              error: errorMessage,
+              permissionGranted: false,
+            }));
+
+            resolve(null);
+          },
+          {
+            enableHighAccuracy: true,
+            timeout: 15000,
+            maximumAge: 10000,
+          },
+        );
+      });
+    }, [requestLocationPermission, updateGlobalState]);
 
   const watchLocation = useCallback(() => {
-    if (!state.permissionGranted) {
+    if (!globalLocationState.permissionGranted) {
       return;
     }
 
     const watchId = Geolocation.watchPosition(
-      (position) => {
+      position => {
         const locationData: LocationData = {
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
@@ -238,15 +294,42 @@ export const useLocation = () => {
           timestamp: position.timestamp,
         };
 
-        setState(prev => ({
-          ...prev,
-          location: locationData,
-          error: null,
-        }));
+        // Only update if location changed significantly (more than 10 meters)
+        const prevLocation = globalLocationState.location;
+        let shouldUpdate = true;
+
+        if (prevLocation) {
+          const distanceMeters =
+            calculateDistance(
+              prevLocation.latitude,
+              prevLocation.longitude,
+              locationData.latitude,
+              locationData.longitude,
+            ) * 1609.34; // Convert miles to meters
+
+          // Only update if moved more than 10 meters
+          shouldUpdate = distanceMeters > 10;
+
+          if (!shouldUpdate && __DEV__ && Math.random() < 0.1) {
+            debugLog(
+              '🔥 Location change too small in watch, skipping update:',
+              distanceMeters.toFixed(2),
+              'meters',
+            );
+          }
+        }
+
+        if (shouldUpdate) {
+          updateGlobalState(prev => ({
+            ...prev,
+            location: locationData,
+            error: null,
+          }));
+        }
       },
-      (error) => {
-        console.error('Error watching location:', error);
-        setState(prev => ({
+      error => {
+        errorLog('Error watching location:', error);
+        updateGlobalState(prev => ({
           ...prev,
           error: 'Failed to watch location',
         }));
@@ -255,48 +338,52 @@ export const useLocation = () => {
         enableHighAccuracy: true,
         distanceFilter: 10, // Update every 10 meters
         interval: 5000, // Update every 5 seconds
-      }
+      },
     );
 
     return () => {
       Geolocation.clearWatch(watchId);
     };
-  }, [state.permissionGranted]);
+  }, [updateGlobalState]);
 
   // Auto-request location on mount
   useEffect(() => {
     const initializeLocation = async () => {
-      debugLog('🔥 Initializing location on mount, Platform:', Platform.OS);
-      
+      // debugLog('🔥 Initializing location on mount, Platform:', Platform.OS);
+
       if (Platform.OS === 'ios') {
         // On iOS, assume permission is granted if in Info.plist
-        debugLog('🔥 Setting iOS permission as granted');
-        updateGlobalState(prev => ({ ...prev, permissionGranted: true, permissionRequested: true }));
-        
+        // debugLog('🔥 Setting iOS permission as granted');
+        updateGlobalState(prev => ({
+          ...prev,
+          permissionGranted: true,
+          permissionRequested: true,
+        }));
+
         // Actually get the location after setting permission as granted
         try {
-          debugLog('🔥 Attempting to get location on iOS...');
+          // debugLog('🔥 Attempting to get location on iOS...');
           const location = await getCurrentLocation();
           if (location) {
-            debugLog('🔥 Auto-initialized location on iOS:', location);
+            // debugLog('🔥 Auto-initialized location on iOS:', location);
           } else {
-            debugLog('🔥 Failed to get location on iOS - returned null');
+            // debugLog('🔥 Failed to get location on iOS - returned null');
           }
         } catch (error) {
-          console.error('🔥 Failed to auto-initialize location on iOS:', error);
+          errorLog('🔥 Failed to auto-initialize location on iOS:', error);
         }
       } else {
         // On Android, try to get location if permission is already granted
         try {
-          debugLog('🔥 Attempting to get location on Android...');
+          // debugLog('🔥 Attempting to get location on Android...');
           const location = await getCurrentLocation();
           if (location) {
-            debugLog('🔥 Auto-initialized location on Android:', location);
+            // debugLog('🔥 Auto-initialized location on Android:', location);
           } else {
-            debugLog('🔥 Failed to get location on Android - returned null');
+            // debugLog('🔥 Failed to get location on Android - returned null');
           }
         } catch (error) {
-          console.error('🔥 Failed to auto-initialize location on Android:', error);
+          errorLog('🔥 Failed to auto-initialize location on Android:', error);
         }
       }
     };

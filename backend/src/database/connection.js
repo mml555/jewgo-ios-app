@@ -15,10 +15,12 @@ const pool = new Pool({
 
 // Test the connection
 pool.on('connect', () => {
-  console.log('✅ Connected to PostgreSQL database');
+  if (process.env.NODE_ENV === 'development') {
+    console.log('✅ Connected to PostgreSQL database');
+  }
 });
 
-pool.on('error', (err) => {
+pool.on('error', err => {
   console.error('❌ Unexpected error on idle client', err);
   process.exit(-1);
 });
@@ -29,10 +31,37 @@ const query = async (text, params) => {
   try {
     const res = await pool.query(text, params);
     const duration = Date.now() - start;
-    console.log('🔍 Executed query', { text, duration, rows: res.rowCount });
+
+    // Only log in development or for slow queries
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    const isSlowQuery = duration > 1000; // Queries taking more than 1 second
+
+    if (isDevelopment) {
+      // In development, log all queries with truncated text for security
+      console.log('🔍 Executed query', {
+        text: text.substring(0, 100) + (text.length > 100 ? '...' : ''),
+        duration: `${duration}ms`,
+        rows: res.rowCount,
+      });
+    }
+
+    if (isSlowQuery) {
+      // Always warn about slow queries in any environment
+      console.warn('⚠️ Slow query detected', {
+        duration: `${duration}ms`,
+        rows: res.rowCount,
+        queryStart: text.substring(0, 50) + '...',
+      });
+    }
+
     return res;
   } catch (error) {
-    console.error('❌ Database query error:', error);
+    console.error('❌ Database query error:', {
+      message: error.message,
+      code: error.code,
+      // Don't log full query text in production for security
+      queryPreview: text.substring(0, 50) + '...',
+    });
     throw error;
   }
 };

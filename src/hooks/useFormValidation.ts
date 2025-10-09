@@ -1,10 +1,10 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import { 
-  FormValidationEngine, 
-  StepValidationResult, 
+import {
+  FormValidationEngine,
+  StepValidationResult,
   FieldValidationResult,
   FormValidationResult,
-  defaultValidationEngine 
+  defaultValidationEngine,
 } from '../services/FormValidation';
 import { ListingFormData } from '../screens/AddCategoryScreen';
 
@@ -20,21 +20,25 @@ interface UseFormValidationReturn {
   fieldWarnings: { [fieldName: string]: string };
   stepResults: { [stepNumber: number]: StepValidationResult };
   formResult: FormValidationResult | null;
-  
+
   // Validation state
   isValidating: boolean;
   hasErrors: boolean;
   hasWarnings: boolean;
   isFormValid: boolean;
-  
+
   // Validation functions
-  validateField: (fieldName: string, value: any, trigger?: 'onChange' | 'onBlur' | 'onSubmit') => FieldValidationResult;
+  validateField: (
+    fieldName: string,
+    value: any,
+    trigger?: 'onChange' | 'onBlur' | 'onSubmit',
+  ) => FieldValidationResult;
   validateStep: (stepNumber: number) => StepValidationResult;
   validateForm: () => FormValidationResult;
   clearFieldError: (fieldName: string) => void;
   clearStepErrors: (stepNumber: number) => void;
   clearAllErrors: () => void;
-  
+
   // Validation status helpers
   getFieldError: (fieldName: string) => string | undefined;
   getFieldWarning: (fieldName: string) => string | undefined;
@@ -42,7 +46,7 @@ interface UseFormValidationReturn {
   isStepValid: (stepNumber: number) => boolean;
   getStepCompletionPercentage: (stepNumber: number) => number;
   getFormCompletionPercentage: () => number;
-  
+
   // Validation summary
   validationSummary: {
     totalErrors: number;
@@ -56,7 +60,7 @@ interface UseFormValidationReturn {
 
 export const useFormValidation = (
   formData: ListingFormData,
-  options: UseFormValidationOptions = {}
+  options: UseFormValidationOptions = {},
 ): UseFormValidationReturn => {
   const {
     enableRealTimeValidation = true,
@@ -65,10 +69,18 @@ export const useFormValidation = (
   } = options;
 
   // State
-  const [fieldErrors, setFieldErrors] = useState<{ [fieldName: string]: string }>({});
-  const [fieldWarnings, setFieldWarnings] = useState<{ [fieldName: string]: string }>({});
-  const [stepResults, setStepResults] = useState<{ [stepNumber: number]: StepValidationResult }>({});
-  const [formResult, setFormResult] = useState<FormValidationResult | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{
+    [fieldName: string]: string;
+  }>({});
+  const [fieldWarnings, setFieldWarnings] = useState<{
+    [fieldName: string]: string;
+  }>({});
+  const [stepResults, setStepResults] = useState<{
+    [stepNumber: number]: StepValidationResult;
+  }>({});
+  const [formResult, setFormResult] = useState<FormValidationResult | null>(
+    null,
+  );
   const [isValidating, setIsValidating] = useState(false);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -76,8 +88,14 @@ export const useFormValidation = (
   const validationEngine = useMemo(() => defaultValidationEngine, []);
 
   // Derived state
-  const hasErrors = useMemo(() => Object.keys(fieldErrors).length > 0, [fieldErrors]);
-  const hasWarnings = useMemo(() => Object.keys(fieldWarnings).length > 0, [fieldWarnings]);
+  const hasErrors = useMemo(
+    () => Object.keys(fieldErrors).length > 0,
+    [fieldErrors],
+  );
+  const hasWarnings = useMemo(
+    () => Object.keys(fieldWarnings).length > 0,
+    [fieldWarnings],
+  );
   const isFormValid = useMemo(() => formResult?.isValid || false, [formResult]);
 
   // Validation summary
@@ -86,113 +104,131 @@ export const useFormValidation = (
   }, [formData, validationEngine]);
 
   // Debounced validation function
-  const debouncedValidation = useCallback((callback: () => void) => {
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-    }
+  const debouncedValidation = useCallback(
+    (callback: () => void) => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
 
-    debounceTimerRef.current = setTimeout(() => {
-      setIsValidating(true);
-      callback();
-      setIsValidating(false);
-    }, debounceMs);
-  }, [debounceMs]);
+      debounceTimerRef.current = setTimeout(() => {
+        setIsValidating(true);
+        callback();
+        setIsValidating(false);
+      }, debounceMs);
+    },
+    [debounceMs],
+  );
 
   // Validate a single field
-  const validateField = useCallback((
-    fieldName: string, 
-    value: any, 
-    trigger: 'onChange' | 'onBlur' | 'onSubmit' = 'onBlur'
-  ): FieldValidationResult => {
-    const result = validationEngine.validateField(fieldName, value, formData, trigger);
-    
-    // Update field errors and warnings
-    setFieldErrors(prev => {
-      const updated = { ...prev };
-      if (result.error) {
-        updated[fieldName] = result.error;
-      } else {
-        delete updated[fieldName];
-      }
-      return updated;
-    });
+  const validateField = useCallback(
+    (
+      fieldName: string,
+      value: any,
+      trigger: 'onChange' | 'onBlur' | 'onSubmit' = 'onBlur',
+    ): FieldValidationResult => {
+      const result = validationEngine.validateField(
+        fieldName,
+        value,
+        formData,
+        trigger,
+      );
 
-    setFieldWarnings(prev => {
-      const updated = { ...prev };
-      if (result.warning) {
-        updated[fieldName] = result.warning;
-      } else {
-        delete updated[fieldName];
-      }
-      return updated;
-    });
+      // Update field errors and warnings
+      setFieldErrors(prev => {
+        const updated = { ...prev };
+        if (result.error) {
+          updated[fieldName] = result.error;
+        } else {
+          delete updated[fieldName];
+        }
+        return updated;
+      });
 
-    return result;
-  }, [formData, validationEngine]);
+      setFieldWarnings(prev => {
+        const updated = { ...prev };
+        if (result.warning) {
+          updated[fieldName] = result.warning;
+        } else {
+          delete updated[fieldName];
+        }
+        return updated;
+      });
+
+      return result;
+    },
+    [formData, validationEngine],
+  );
 
   // Validate a step
-  const validateStep = useCallback((stepNumber: number): StepValidationResult => {
-    const result = validationEngine.validateStep(stepNumber, formData);
-    
-    // Update step results
-    setStepResults(prev => ({
-      ...prev,
-      [stepNumber]: result,
-    }));
+  const validateStep = useCallback(
+    (stepNumber: number): StepValidationResult => {
+      const result = validationEngine.validateStep(stepNumber, formData);
 
-    // Update field errors from step validation
-    setFieldErrors(prev => {
-      const updated = { ...prev };
-      
-      // Clear existing errors for this step
-      Object.keys(updated).forEach(fieldName => {
-        const fieldRule = validationEngine.rules.find(rule => rule.field === fieldName);
-        if (fieldRule?.step === stepNumber) {
-          delete updated[fieldName];
-        }
+      // Update step results
+      setStepResults(prev => ({
+        ...prev,
+        [stepNumber]: result,
+      }));
+
+      // Update field errors from step validation
+      setFieldErrors(prev => {
+        const updated = { ...prev };
+
+        // Clear existing errors for this step
+        Object.keys(updated).forEach(fieldName => {
+          const fieldRule = (validationEngine as any).rules.find(
+            (rule: any) => rule.field === fieldName,
+          );
+          if (fieldRule?.step === stepNumber) {
+            delete updated[fieldName];
+          }
+        });
+
+        // Add new errors
+        Object.assign(updated, result.errors);
+
+        return updated;
       });
-      
-      // Add new errors
-      Object.assign(updated, result.errors);
-      
-      return updated;
-    });
 
-    // Update field warnings from step validation
-    setFieldWarnings(prev => {
-      const updated = { ...prev };
-      
-      // Clear existing warnings for this step
-      Object.keys(updated).forEach(fieldName => {
-        const fieldRule = validationEngine.rules.find(rule => rule.field === fieldName);
-        if (fieldRule?.step === stepNumber) {
-          delete updated[fieldName];
-        }
+      // Update field warnings from step validation
+      setFieldWarnings(prev => {
+        const updated = { ...prev };
+
+        // Clear existing warnings for this step
+        Object.keys(updated).forEach(fieldName => {
+          const fieldRule = (validationEngine as any).rules.find(
+            (rule: any) => rule.field === fieldName,
+          );
+          if (fieldRule?.step === stepNumber) {
+            delete updated[fieldName];
+          }
+        });
+
+        // Add new warnings
+        Object.assign(updated, result.warnings);
+
+        return updated;
       });
-      
-      // Add new warnings
-      Object.assign(updated, result.warnings);
-      
-      return updated;
-    });
 
-    return result;
-  }, [formData, validationEngine]);
+      return result;
+    },
+    [formData, validationEngine],
+  );
 
   // Validate entire form
   const validateForm = useCallback((): FormValidationResult => {
     const result = validationEngine.validateForm(formData);
-    
+
     setFormResult(result);
     setStepResults(result.stepResults);
-    
+
     // Update field errors from form validation
     const allErrors: { [fieldName: string]: string } = {};
     Object.values(result.stepResults).forEach(stepResult => {
       Object.assign(allErrors, stepResult.errors);
     });
     setFieldErrors(allErrors);
-    
+
     // Update field warnings from form validation
     const allWarnings: { [fieldName: string]: string } = {};
     Object.values(result.stepResults).forEach(stepResult => {
@@ -213,31 +249,34 @@ export const useFormValidation = (
   }, []);
 
   // Clear step errors
-  const clearStepErrors = useCallback((stepNumber: number) => {
-    setFieldErrors(prev => {
-      const updated = { ...prev };
-      
-      // Find all fields for this step and clear their errors
-      validationEngine.rules
-        .filter(rule => rule.step === stepNumber)
-        .forEach(rule => {
-          delete updated[rule.field];
-        });
-      
-      return updated;
-    });
+  const clearStepErrors = useCallback(
+    (stepNumber: number) => {
+      setFieldErrors(prev => {
+        const updated = { ...prev };
 
-    setStepResults(prev => {
-      const updated = { ...prev };
-      if (updated[stepNumber]) {
-        updated[stepNumber] = {
-          ...updated[stepNumber],
-          errors: {},
-        };
-      }
-      return updated;
-    });
-  }, [validationEngine]);
+        // Find all fields for this step and clear their errors
+        (validationEngine as any).rules
+          .filter((rule: any) => rule.step === stepNumber)
+          .forEach((rule: any) => {
+            delete updated[rule.field];
+          });
+
+        return updated;
+      });
+
+      setStepResults(prev => {
+        const updated = { ...prev };
+        if (updated[stepNumber]) {
+          updated[stepNumber] = {
+            ...updated[stepNumber],
+            errors: {},
+          };
+        }
+        return updated;
+      });
+    },
+    [validationEngine],
+  );
 
   // Clear all errors
   const clearAllErrors = useCallback(() => {
@@ -248,25 +287,40 @@ export const useFormValidation = (
   }, []);
 
   // Helper functions
-  const getFieldError = useCallback((fieldName: string): string | undefined => {
-    return fieldErrors[fieldName];
-  }, [fieldErrors]);
+  const getFieldError = useCallback(
+    (fieldName: string): string | undefined => {
+      return fieldErrors[fieldName];
+    },
+    [fieldErrors],
+  );
 
-  const getFieldWarning = useCallback((fieldName: string): string | undefined => {
-    return fieldWarnings[fieldName];
-  }, [fieldWarnings]);
+  const getFieldWarning = useCallback(
+    (fieldName: string): string | undefined => {
+      return fieldWarnings[fieldName];
+    },
+    [fieldWarnings],
+  );
 
-  const isFieldValid = useCallback((fieldName: string): boolean => {
-    return !fieldErrors[fieldName];
-  }, [fieldErrors]);
+  const isFieldValid = useCallback(
+    (fieldName: string): boolean => {
+      return !fieldErrors[fieldName];
+    },
+    [fieldErrors],
+  );
 
-  const isStepValid = useCallback((stepNumber: number): boolean => {
-    return stepResults[stepNumber]?.isValid || false;
-  }, [stepResults]);
+  const isStepValid = useCallback(
+    (stepNumber: number): boolean => {
+      return stepResults[stepNumber]?.isValid || false;
+    },
+    [stepResults],
+  );
 
-  const getStepCompletionPercentage = useCallback((stepNumber: number): number => {
-    return stepResults[stepNumber]?.completionPercentage || 0;
-  }, [stepResults]);
+  const getStepCompletionPercentage = useCallback(
+    (stepNumber: number): number => {
+      return stepResults[stepNumber]?.completionPercentage || 0;
+    },
+    [stepResults],
+  );
 
   const getFormCompletionPercentage = useCallback((): number => {
     return formResult?.completionPercentage || 0;
@@ -279,14 +333,14 @@ export const useFormValidation = (
         const result = validationEngine.validateForm(formData);
         setFormResult(result);
         setStepResults(result.stepResults);
-        
+
         // Update field errors from form validation
         const allErrors: { [fieldName: string]: string } = {};
         Object.values(result.stepResults).forEach(stepResult => {
           Object.assign(allErrors, stepResult.errors);
         });
         setFieldErrors(allErrors);
-        
+
         // Update field warnings from form validation
         const allWarnings: { [fieldName: string]: string } = {};
         Object.values(result.stepResults).forEach(stepResult => {
@@ -295,7 +349,12 @@ export const useFormValidation = (
         setFieldWarnings(allWarnings);
       });
     }
-  }, [formData, enableRealTimeValidation, debouncedValidation, validationEngine]);
+  }, [
+    formData,
+    enableRealTimeValidation,
+    debouncedValidation,
+    validationEngine,
+  ]);
 
   // Validate on mount if requested
   useEffect(() => {
@@ -319,13 +378,13 @@ export const useFormValidation = (
     fieldWarnings,
     stepResults,
     formResult,
-    
+
     // Validation state
     isValidating,
     hasErrors,
     hasWarnings,
     isFormValid,
-    
+
     // Validation functions
     validateField,
     validateStep,
@@ -333,7 +392,7 @@ export const useFormValidation = (
     clearFieldError,
     clearStepErrors,
     clearAllErrors,
-    
+
     // Validation status helpers
     getFieldError,
     getFieldWarning,
@@ -341,7 +400,7 @@ export const useFormValidation = (
     isStepValid,
     getStepCompletionPercentage,
     getFormCompletionPercentage,
-    
+
     // Validation summary
     validationSummary,
   };

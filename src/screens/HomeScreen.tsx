@@ -5,6 +5,7 @@ import TopBar from '../components/TopBar';
 import CategoryRail from '../components/CategoryRail';
 import ActionBar from '../components/ActionBar';
 import CategoryGridScreen from './CategoryGridScreen';
+import EnhancedJobsScreen from './EnhancedJobsScreen';
 import { Colors } from '../styles/designSystem';
 
 interface HomeScreenProps {
@@ -14,32 +15,40 @@ interface HomeScreenProps {
 const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
   const [activeCategory, setActiveCategory] = useState('mikvah');
   const [searchQuery, setSearchQuery] = useState('');
+  const [jobMode, setJobMode] = useState<'seeking' | 'hiring'>('hiring');
 
-  const handleSearchChange = useCallback((query: string) => {
-    setSearchQuery(query);
-    // Pass search query to parent component (RootTabs)
-    onSearchChange?.(query);
-  }, [onSearchChange]);
+  const handleSearchChange = useCallback(
+    (query: string) => {
+      setSearchQuery(query);
+      // Pass search query to parent component (RootTabs)
+      onSearchChange?.(query);
+    },
+    [onSearchChange],
+  );
 
   const handleCategoryChange = useCallback((category: string) => {
     setActiveCategory(category);
   }, []);
 
   const handleActionPress = useCallback((action: string) => {
+    // Handle job mode changes
+    if (action.startsWith('jobMode:')) {
+      const mode = action.split(':')[1] as 'seeking' | 'hiring';
+      setJobMode(mode);
+    }
     // Here you would typically handle different actions
     // For now, we'll just log the action
   }, []);
 
   const getCategoryDisplayName = (categoryKey: string) => {
     const categoryMap: { [key: string]: string } = {
-      'mikvah': 'Mikvah',
-      'eatery': 'Eatery',
-      'shul': 'Shul',
-      'stores': 'Store',
-      'shuk': 'Shuk',
-      'shtetl': 'Shtetl',
-      'shidduch': 'Shidduch',
-      'social': 'Social',
+      mikvah: 'Mikvah',
+      eatery: 'Eatery',
+      shul: 'Shul',
+      stores: 'Store',
+      shtetl: 'Shtetl',
+      shidduch: 'Shidduch',
+      social: 'Social',
     };
     return categoryMap[categoryKey] || 'Place';
   };
@@ -47,18 +56,27 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
   return (
     <View style={styles.container}>
       <TopBar onQueryChange={handleSearchChange} />
-      <CategoryRail 
-        activeCategory={activeCategory} 
-        onCategoryChange={handleCategoryChange} 
+      <CategoryRail
+        activeCategory={activeCategory}
+        onCategoryChange={handleCategoryChange}
       />
-      <ActionBar 
-        onActionPress={handleActionPress} 
-        currentCategory={activeCategory}
-      />
-      <CategoryGridScreen 
-        categoryKey={activeCategory}
-        query={searchQuery}
-      />
+      {/* Hide ActionBar for jobs category since EnhancedJobsScreen has its own tabs */}
+      {activeCategory !== 'jobs' && (
+        <ActionBar
+          onActionPress={handleActionPress}
+          currentCategory={activeCategory}
+          jobMode={undefined}
+        />
+      )}
+      {activeCategory === 'jobs' ? (
+        <EnhancedJobsScreen />
+      ) : (
+        <CategoryGridScreen
+          categoryKey={activeCategory}
+          query={searchQuery}
+          jobMode={activeCategory === 'jobs' ? jobMode : undefined}
+        />
+      )}
     </View>
   );
 };
@@ -66,7 +84,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.background.primary,
   },
   scrollContent: {
     flexGrow: 1,

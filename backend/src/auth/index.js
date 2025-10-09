@@ -1,4 +1,4 @@
-const { Pool } = require('pg');
+const logger = require('../utils/logger');
 const AuthService = require('./AuthService');
 const RBACService = require('./RBACService');
 const CaptchaService = require('./CaptchaService');
@@ -26,10 +26,29 @@ class AuthSystem {
     this.emailService = new EmailService(dbPool);
     this.oidcService = new OIDCService(dbPool);
     this.guestService = new GuestService(dbPool);
-    this.authMiddleware = new AuthMiddleware(this.authService, this.rbacService, this.mfaService, this.keyRotationService, this.guestService);
+    this.authMiddleware = new AuthMiddleware(
+      this.authService,
+      this.rbacService,
+      this.mfaService,
+      this.keyRotationService,
+      this.guestService,
+    );
     this.initializeProviders();
-    this.authController = new AuthController(this.authService, this.rbacService, this.captchaService, this.mfaService, this.emailService, this.oidcService, this.keyRotationService, this.googleOAuthProvider, this.magicLinkProvider);
-    this.guestController = new GuestController(this.guestService, this.authService);
+    this.authController = new AuthController(
+      this.authService,
+      this.rbacService,
+      this.captchaService,
+      this.mfaService,
+      this.emailService,
+      this.oidcService,
+      this.keyRotationService,
+      this.googleOAuthProvider,
+      this.magicLinkProvider,
+    );
+    this.guestController = new GuestController(
+      this.guestService,
+      this.authService,
+    );
   }
 
   initializeProviders() {
@@ -38,7 +57,7 @@ class AuthSystem {
       const recaptchaV2Provider = new ReCaptchaProvider({
         secretKey: process.env.RECAPTCHA_V2_SECRET_KEY,
         siteKey: process.env.RECAPTCHA_V2_SITE_KEY,
-        version: 'v2'
+        version: 'v2',
       });
       this.captchaService.registerProvider('recaptcha_v2', recaptchaV2Provider);
     }
@@ -48,7 +67,7 @@ class AuthSystem {
         secretKey: process.env.RECAPTCHA_V3_SECRET_KEY,
         siteKey: process.env.RECAPTCHA_V3_SITE_KEY,
         version: 'v3',
-        threshold: parseFloat(process.env.RECAPTCHA_V3_THRESHOLD) || 0.5
+        threshold: parseFloat(process.env.RECAPTCHA_V3_THRESHOLD) || 0.5,
       });
       this.captchaService.registerProvider('recaptcha_v3', recaptchaV3Provider);
     }
@@ -57,21 +76,28 @@ class AuthSystem {
     if (process.env.HCAPTCHA_SECRET_KEY) {
       const hcaptchaProvider = new HCaptchaProvider({
         secretKey: process.env.HCAPTCHA_SECRET_KEY,
-        siteKey: process.env.HCAPTCHA_SITE_KEY
+        siteKey: process.env.HCAPTCHA_SITE_KEY,
       });
       this.captchaService.registerProvider('hcaptcha', hcaptchaProvider);
     }
 
     // Initialize Google OAuth provider
-    if (process.env.GOOGLE_OAUTH_CLIENT_ID && process.env.GOOGLE_OAUTH_CLIENT_SECRET) {
+    if (
+      process.env.GOOGLE_OAUTH_CLIENT_ID &&
+      process.env.GOOGLE_OAUTH_CLIENT_SECRET
+    ) {
       this.googleOAuthProvider = new GoogleOAuthProvider({
         clientId: process.env.GOOGLE_OAUTH_CLIENT_ID,
         clientSecret: process.env.GOOGLE_OAUTH_CLIENT_SECRET,
-        redirectUri: process.env.GOOGLE_OAUTH_REDIRECT_URI || 'http://localhost:3001/auth/google/callback'
+        redirectUri:
+          process.env.GOOGLE_OAUTH_REDIRECT_URI ||
+          'http://localhost:3001/auth/google/callback',
       });
-      console.log('✅ Google OAuth provider initialized');
+      logger.info('✅ Google OAuth provider initialized');
     } else {
-      console.log('⚠️ Google OAuth provider not initialized - missing environment variables');
+      logger.info(
+        '⚠️ Google OAuth provider not initialized - missing environment variables',
+      );
     }
 
     // Initialize Magic Link provider
@@ -80,11 +106,14 @@ class AuthSystem {
         secretKey: process.env.MAGIC_LINK_SECRET,
         baseUrl: process.env.MAGIC_LINK_BASE_URL,
         frontendUrl: process.env.FRONTEND_URL || 'http://localhost:8081',
-        expirationTime: parseInt(process.env.MAGIC_LINK_EXPIRATION) || 15 * 60 * 1000 // 15 minutes
+        expirationTime:
+          parseInt(process.env.MAGIC_LINK_EXPIRATION, 10) || 15 * 60 * 1000, // 15 minutes
       });
-      console.log('✅ Magic Link provider initialized');
+      logger.info('✅ Magic Link provider initialized');
     } else {
-      console.log('⚠️ Magic Link provider not initialized - missing environment variables');
+      logger.info(
+        '⚠️ Magic Link provider not initialized - missing environment variables',
+      );
     }
   }
 
@@ -138,15 +167,19 @@ class AuthSystem {
     try {
       // Check database connection
       await this.db.query('SELECT 1');
-      
+
       // Check if required environment variables are set
       const requiredEnvVars = ['JWT_SECRET', 'JWT_REFRESH_SECRET'];
-      const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
-      
+      const missingEnvVars = requiredEnvVars.filter(
+        varName => !process.env[varName],
+      );
+
       if (missingEnvVars.length > 0) {
         return {
           status: 'unhealthy',
-          error: `Missing required environment variables: ${missingEnvVars.join(', ')}`
+          error: `Missing required environment variables: ${missingEnvVars.join(
+            ', ',
+          )}`,
         };
       }
 
@@ -160,13 +193,13 @@ class AuthSystem {
           mfa: 'operational',
           email: 'operational',
           oidc: 'operational',
-          keyRotation: 'operational'
-        }
+          keyRotation: 'operational',
+        },
       };
     } catch (error) {
       return {
         status: 'unhealthy',
-        error: error.message
+        error: error.message,
       };
     }
   }
@@ -176,13 +209,13 @@ class AuthSystem {
     try {
       // Clean up expired auth data
       await this.authService.cleanupExpiredData();
-      
+
       // Close database connection
       await this.db.end();
-      
-      console.log('Auth system cleanup completed');
+
+      logger.info('Auth system cleanup completed');
     } catch (error) {
-      console.error('Auth system cleanup error:', error);
+      logger.error('Auth system cleanup error:', error);
     }
   }
 }

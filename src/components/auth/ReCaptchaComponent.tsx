@@ -4,12 +4,13 @@ import {
   Text,
   TouchableOpacity,
   Modal,
-  WebView,
   ActivityIndicator,
   Alert,
   StyleSheet,
   Dimensions,
 } from 'react-native';
+import { debugLog, errorLog } from '../../utils/logger';
+import { WebView } from 'react-native-webview';
 import { configService } from '../../config/ConfigService';
 
 interface ReCaptchaComponentProps {
@@ -48,40 +49,43 @@ const ReCaptchaComponent: React.FC<ReCaptchaComponentProps> = ({
     setIsVisible(false);
   }, []);
 
-  const handleWebViewMessage = useCallback((event: any) => {
-    try {
-      const message: WebViewMessage = JSON.parse(event.nativeEvent.data);
-      
-      switch (message.type) {
-        case 'recaptcha-verify':
-          setIsVisible(false);
-          onVerify(message.data.token);
-          break;
-          
-        case 'recaptcha-error':
-          onError?.(message.data.error);
-          break;
-          
-        case 'recaptcha-expire':
-          onExpire?.();
-          break;
-          
-        case 'recaptcha-loaded':
-          setIsLoading(false);
-          break;
-          
-        default:
-          console.log('Unknown message type:', message.type);
+  const handleWebViewMessage = useCallback(
+    (event: any) => {
+      try {
+        const message: WebViewMessage = JSON.parse(event.nativeEvent.data);
+
+        switch (message.type) {
+          case 'recaptcha-verify':
+            setIsVisible(false);
+            onVerify(message.data.token);
+            break;
+
+          case 'recaptcha-error':
+            onError?.(message.data.error);
+            break;
+
+          case 'recaptcha-expire':
+            onExpire?.();
+            break;
+
+          case 'recaptcha-loaded':
+            setIsLoading(false);
+            break;
+
+          default:
+            debugLog('Unknown message type:', message.type);
+        }
+      } catch (error) {
+        errorLog('Error parsing WebView message:', error);
       }
-    } catch (error) {
-      console.error('Error parsing WebView message:', error);
-    }
-  }, [onVerify, onError, onExpire]);
+    },
+    [onVerify, onError, onExpire],
+  );
 
   const generateHTML = useCallback(() => {
     const config = configService.getConfig();
     const baseUrl = config.apiBaseUrl;
-    
+
     return `
       <!DOCTYPE html>
       <html>
@@ -141,7 +145,11 @@ const ReCaptchaComponent: React.FC<ReCaptchaComponentProps> = ({
         </head>
         <body>
           <div class="container">
-            ${testMode ? '<div class="test-mode">⚠️ TEST MODE - reCAPTCHA is disabled</div>' : ''}
+            ${
+              testMode
+                ? '<div class="test-mode">⚠️ TEST MODE - reCAPTCHA is disabled</div>'
+                : ''
+            }
             
             <div class="recaptcha-container">
               <div id="recaptcha-container"></div>
@@ -178,7 +186,7 @@ const ReCaptchaComponent: React.FC<ReCaptchaComponentProps> = ({
             }
             
             function onRecaptchaError(error) {
-              console.error('reCAPTCHA error:', error);
+              errorLog('reCAPTCHA error:', error);
               sendMessage('recaptcha-error', { error: error });
               showError('reCAPTCHA verification failed');
             }
@@ -213,7 +221,7 @@ const ReCaptchaComponent: React.FC<ReCaptchaComponentProps> = ({
                 sendMessage('recaptcha-loaded', {});
                 
               } catch (error) {
-                console.error('Error loading reCAPTCHA:', error);
+                errorLog('Error loading reCAPTCHA:', error);
                 showError('Failed to load reCAPTCHA');
               }
             }
@@ -245,7 +253,7 @@ const ReCaptchaComponent: React.FC<ReCaptchaComponentProps> = ({
                 try {
                   grecaptcha.reset(recaptchaWidgetId);
                 } catch (error) {
-                  console.error('Error resetting reCAPTCHA:', error);
+                  errorLog('Error resetting reCAPTCHA:', error);
                 }
               }
             });
@@ -276,7 +284,7 @@ const ReCaptchaComponent: React.FC<ReCaptchaComponentProps> = ({
         activeOpacity={0.8}
       >
         <Text style={styles.buttonText}>
-          {isLoading ? 'Loading...' : 'Verify I\'m human'}
+          {isLoading ? 'Loading...' : "Verify I'm human"}
         </Text>
       </TouchableOpacity>
 
@@ -288,10 +296,7 @@ const ReCaptchaComponent: React.FC<ReCaptchaComponentProps> = ({
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={handleClose}
-            >
+            <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
               <Text style={styles.closeButtonText}>✕</Text>
             </TouchableOpacity>
             <Text style={styles.modalTitle}>Security Verification</Text>
@@ -304,7 +309,7 @@ const ReCaptchaComponent: React.FC<ReCaptchaComponentProps> = ({
                 <Text style={styles.loadingText}>Loading verification...</Text>
               </View>
             )}
-            
+
             <WebView
               ref={webViewRef}
               source={{ html: generateHTML() }}

@@ -1,6 +1,6 @@
 import { apiService } from './api';
 import { LocalFavoritesService, LocalFavorite } from './LocalFavoritesService';
-import { debugLog } from '../utils/logger';
+import { debugLog, errorLog, warnLog } from '../utils/logger';
 
 export interface Favorite {
   id: string;
@@ -71,105 +71,125 @@ class FavoritesService {
   /**
    * Get user's favorites with pagination
    */
-  async getUserFavorites(limit: number = 50, offset: number = 0): Promise<FavoritesResponse> {
+  async getUserFavorites(
+    limit: number = 50,
+    offset: number = 0,
+  ): Promise<FavoritesResponse> {
     try {
       const isAuth = await this.isAuthenticated();
-      
+
       if (isAuth) {
         // Authenticated user - get from server
-        const response = await (apiService as any).request(`${this.baseUrl}?limit=${limit}&offset=${offset}`, {
-          method: 'GET',
-        });
+        const response = await (apiService as any).request(
+          `${this.baseUrl}?limit=${limit}&offset=${offset}`,
+          {
+            method: 'GET',
+          },
+        );
         return response as FavoritesResponse;
       } else {
         // Guest user - get from local storage
         const localFavorites = await LocalFavoritesService.getLocalFavorites();
         const paginatedFavorites = localFavorites.slice(offset, offset + limit);
-        
+
         // Convert LocalFavorite to Favorite format and enhance with current entity data
-        const favorites: Favorite[] = await Promise.all(paginatedFavorites.map(async (local) => {
-          try {
-            // Try to fetch current entity data to get updated images and info
-            const entityResponse = await (apiService as any).request(`/entities/${local.entity_id}`);
-            const entity = entityResponse.success ? (entityResponse.data.entity || entityResponse.data) : null;
-            
-            debugLog(`🖼️ Entity fetch for ${local.entity_name}:`, {
-              success: entityResponse.success,
-              hasEntity: !!entity,
-              hasImages: !!(entity?.images && entity.images.length > 0),
-              imageCount: entity?.images?.length || 0,
-              firstImageUrl: entity?.images?.[0]?.url || 'none'
-            });
-            
-            // Map entity types to match database
-            const entityTypeMap: { [key: string]: string } = {
-              'shul': 'synagogue',
-              'eatery': 'restaurant',
-              'synagogue': 'synagogue',
-              'restaurant': 'restaurant',
-              'mikvah': 'mikvah',
-              'store': 'store'
-            };
-            
-            const mappedEntityType = entityTypeMap[local.entity_type] || local.entity_type;
-            
-            return {
-              id: `local_${local.entity_id}`,
-              entity_id: local.entity_id,
-              entity_name: entity?.name || local.entity_name,
-              entity_type: entity?.entity_type || mappedEntityType,
-              description: entity?.description || local.description || null,
-              address: entity?.address || local.address || null,
-              city: entity?.city || local.city || null,
-              state: entity?.state || local.state || null,
-              rating: entity?.rating || local.rating || null,
-              review_count: entity?.review_count || local.review_count || null,
-              is_active: entity?.is_active ?? true,
-              // Use current entity images if available, otherwise fallback to stored image_url
-              image_url: (entity?.images && entity.images.length > 0) 
-                ? entity.images.find((img: any) => img.is_primary)?.url || entity.images[0]?.url
-                : local.image_url || null,
-              favorited_at: local.favorited_at,
-              category: entity?.category_name || local.category,
-              distance: null,
-              phone: entity?.phone || null,
-            };
-          } catch (error) {
-            console.warn(`Failed to fetch entity data for ${local.entity_id}:`, error);
-            
-            // Map entity types for fallback too
-            const entityTypeMap: { [key: string]: string } = {
-              'shul': 'synagogue',
-              'eatery': 'restaurant',
-              'synagogue': 'synagogue',
-              'restaurant': 'restaurant',
-              'mikvah': 'mikvah',
-              'store': 'store'
-            };
-            
-            const mappedEntityType = entityTypeMap[local.entity_type] || local.entity_type;
-            
-            // Fallback to local data if entity fetch fails
-            return {
-              id: `local_${local.entity_id}`,
-              entity_id: local.entity_id,
-              entity_name: local.entity_name,
-              entity_type: mappedEntityType,
-              description: local.description || null,
-              address: local.address || null,
-              city: local.city || null,
-              state: local.state || null,
-              rating: local.rating || null,
-              review_count: local.review_count || null,
-              is_active: true,
-              image_url: local.image_url || null,
-              favorited_at: local.favorited_at,
-              category: local.category,
-              distance: null,
-              phone: null,
-            };
-          }
-        }));
+        const favorites: Favorite[] = await Promise.all(
+          paginatedFavorites.map(async local => {
+            try {
+              // Try to fetch current entity data to get updated images and info
+              const entityResponse = await (apiService as any).request(
+                `/entities/${local.entity_id}`,
+              );
+              const entity = entityResponse.success
+                ? entityResponse.data.entity || entityResponse.data
+                : null;
+
+              // debugLog(`🖼️ Entity fetch for ${local.entity_name}:`, {
+              //   success: entityResponse.success,
+              //   hasEntity: !!entity,
+              //   hasImages: !!(entity?.images && entity.images.length > 0),
+              //   imageCount: entity?.images?.length || 0,
+              //   firstImageUrl: entity?.images?.[0]?.url || 'none'
+              // });
+
+              // Map entity types to match database
+              const entityTypeMap: { [key: string]: string } = {
+                shul: 'synagogue',
+                eatery: 'restaurant',
+                synagogue: 'synagogue',
+                restaurant: 'restaurant',
+                mikvah: 'mikvah',
+                store: 'store',
+              };
+
+              const mappedEntityType =
+                entityTypeMap[local.entity_type] || local.entity_type;
+
+              return {
+                id: `local_${local.entity_id}`,
+                entity_id: local.entity_id,
+                entity_name: entity?.name || local.entity_name,
+                entity_type: entity?.entity_type || mappedEntityType,
+                description: entity?.description || local.description || null,
+                address: entity?.address || local.address || null,
+                city: entity?.city || local.city || null,
+                state: entity?.state || local.state || null,
+                rating: entity?.rating || local.rating || null,
+                review_count:
+                  entity?.review_count || local.review_count || null,
+                is_active: entity?.is_active ?? true,
+                // Use current entity images if available, otherwise fallback to stored image_url
+                image_url:
+                  entity?.images && entity.images.length > 0
+                    ? entity.images.find((img: any) => img.is_primary)?.url ||
+                      entity.images[0]?.url
+                    : local.image_url || null,
+                favorited_at: local.favorited_at,
+                category: entity?.category_name || local.category,
+                distance: null,
+                phone: entity?.phone || null,
+              };
+            } catch (error) {
+              warnLog(
+                `Failed to fetch entity data for ${local.entity_id}:`,
+                error,
+              );
+
+              // Map entity types for fallback too
+              const entityTypeMap: { [key: string]: string } = {
+                shul: 'synagogue',
+                eatery: 'restaurant',
+                synagogue: 'synagogue',
+                restaurant: 'restaurant',
+                mikvah: 'mikvah',
+                store: 'store',
+              };
+
+              const mappedEntityType =
+                entityTypeMap[local.entity_type] || local.entity_type;
+
+              // Fallback to local data if entity fetch fails
+              return {
+                id: `local_${local.entity_id}`,
+                entity_id: local.entity_id,
+                entity_name: local.entity_name,
+                entity_type: mappedEntityType,
+                description: local.description || null,
+                address: local.address || null,
+                city: local.city || null,
+                state: local.state || null,
+                rating: local.rating || null,
+                review_count: local.review_count || null,
+                is_active: true,
+                image_url: local.image_url || null,
+                favorited_at: local.favorited_at,
+                category: local.category,
+                distance: null,
+                phone: null,
+              };
+            }
+          }),
+        );
 
         return {
           success: true,
@@ -178,11 +198,11 @@ class FavoritesService {
             total: localFavorites.length,
             limit,
             offset,
-          }
+          },
         };
       }
     } catch (error) {
-      console.error('Error fetching user favorites:', error);
+      errorLog('Error fetching user favorites:', error);
       throw error;
     }
   }
@@ -193,7 +213,7 @@ class FavoritesService {
   async addToFavorites(entityId: string, entityData?: any): Promise<any> {
     try {
       const isAuth = await this.isAuthenticated();
-      
+
       if (isAuth) {
         // Authenticated user - add to server
         const response = await (apiService as any).request(this.baseUrl, {
@@ -208,10 +228,11 @@ class FavoritesService {
           // For now, return an error asking for entity data
           return {
             success: false,
-            message: 'Please provide entity information when adding to favorites'
+            message:
+              'Please provide entity information when adding to favorites',
           };
         }
-        
+
         const success = await LocalFavoritesService.addLocalFavorite({
           entity_id: entityId,
           entity_name: entityData.entity_name || entityData.name || 'Unknown',
@@ -225,19 +246,21 @@ class FavoritesService {
           image_url: entityData.image_url,
           category: entityData.category || entityData.entity_type,
         });
-        
+
         return {
           success,
           data: {
-            message: success ? 'Added to local favorites' : 'Failed to add to favorites',
+            message: success
+              ? 'Added to local favorites'
+              : 'Failed to add to favorites',
             is_favorited: success,
             entity_id: entityId,
             favorited_at: new Date().toISOString(),
-          }
+          },
         };
       }
     } catch (error) {
-      console.error('Error adding to favorites:', error);
+      errorLog('Error adding to favorites:', error);
       throw error;
     }
   }
@@ -248,28 +271,35 @@ class FavoritesService {
   async removeFromFavorites(entityId: string): Promise<any> {
     try {
       const isAuth = await this.isAuthenticated();
-      
+
       if (isAuth) {
         // Authenticated user - remove from server
-        const response = await (apiService as any).request(`${this.baseUrl}/${entityId}`, {
-          method: 'DELETE',
-        });
+        const response = await (apiService as any).request(
+          `${this.baseUrl}/${entityId}`,
+          {
+            method: 'DELETE',
+          },
+        );
         return response;
       } else {
         // Guest user - remove from local storage
-        const success = await LocalFavoritesService.removeLocalFavorite(entityId);
-        
+        const success = await LocalFavoritesService.removeLocalFavorite(
+          entityId,
+        );
+
         return {
           success,
           data: {
-            message: success ? 'Removed from local favorites' : 'Failed to remove from favorites',
+            message: success
+              ? 'Removed from local favorites'
+              : 'Failed to remove from favorites',
             is_favorited: !success,
             entity_id: entityId,
-          }
+          },
         };
       }
     } catch (error) {
-      console.error('Error removing from favorites:', error);
+      errorLog('Error removing from favorites:', error);
       throw error;
     }
   }
@@ -280,28 +310,33 @@ class FavoritesService {
   async checkFavorite(entityId: string): Promise<FavoriteCheckResponse> {
     try {
       const isAuth = await this.isAuthenticated();
-      
+
       if (isAuth) {
         // Authenticated user - check on server
-        const response = await (apiService as any).request(`${this.baseUrl}/check/${entityId}`, {
-          method: 'GET',
-        });
+        const response = await (apiService as any).request(
+          `${this.baseUrl}/check/${entityId}`,
+          {
+            method: 'GET',
+          },
+        );
         return response as FavoriteCheckResponse;
       } else {
         // Guest user - check local storage
-        const isFavorited = await LocalFavoritesService.isLocalFavorite(entityId);
-        
+        const isFavorited = await LocalFavoritesService.isLocalFavorite(
+          entityId,
+        );
+
         return {
           success: true,
           data: {
             is_favorited: isFavorited,
             entity_id: entityId,
             favorited_at: isFavorited ? new Date().toISOString() : null,
-          }
+          },
         };
       }
     } catch (error) {
-      console.error('Error checking favorite status:', error);
+      errorLog('Error checking favorite status:', error);
       throw error;
     }
   }
@@ -309,31 +344,42 @@ class FavoritesService {
   /**
    * Toggle favorite status (add if not favorited, remove if favorited)
    */
-  async toggleFavorite(entityId: string, entityData?: any): Promise<FavoriteToggleResponse> {
+  async toggleFavorite(
+    entityId: string,
+    entityData?: any,
+  ): Promise<FavoriteToggleResponse> {
     try {
       const isAuth = await this.isAuthenticated();
-      
+
       if (isAuth) {
         // Authenticated user - toggle on server
-        const response = await (apiService as any).request(`${this.baseUrl}/toggle`, {
-          method: 'POST',
-          body: JSON.stringify({ entity_id: entityId }),
-        });
+        const response = await (apiService as any).request(
+          `${this.baseUrl}/toggle`,
+          {
+            method: 'POST',
+            body: JSON.stringify({ entity_id: entityId }),
+          },
+        );
         return response as FavoriteToggleResponse;
       } else {
         // Guest user - toggle in local storage
-        const isCurrentlyFavorited = await LocalFavoritesService.isLocalFavorite(entityId);
-        
+        const isCurrentlyFavorited =
+          await LocalFavoritesService.isLocalFavorite(entityId);
+
         if (isCurrentlyFavorited) {
           // Remove from local favorites
-          const success = await LocalFavoritesService.removeLocalFavorite(entityId);
+          const success = await LocalFavoritesService.removeLocalFavorite(
+            entityId,
+          );
           return {
             success,
             data: {
-              message: success ? 'Removed from local favorites' : 'Failed to remove from favorites',
+              message: success
+                ? 'Removed from local favorites'
+                : 'Failed to remove from favorites',
               is_favorited: false,
               entity_id: entityId,
-            }
+            },
           };
         } else {
           // Add to local favorites
@@ -341,13 +387,14 @@ class FavoritesService {
             return {
               success: false,
               data: {
-                message: 'Please provide entity information when adding to favorites',
+                message:
+                  'Please provide entity information when adding to favorites',
                 is_favorited: false,
-                entity_id: entityId
-              }
+                entity_id: entityId,
+              },
             };
           }
-          
+
           const success = await LocalFavoritesService.addLocalFavorite({
             entity_id: entityId,
             entity_name: entityData.entity_name || entityData.name || 'Unknown',
@@ -361,20 +408,22 @@ class FavoritesService {
             image_url: entityData.image_url,
             category: entityData.category || entityData.entity_type,
           });
-          
+
           return {
             success,
             data: {
-              message: success ? 'Added to local favorites' : 'Failed to add to favorites',
+              message: success
+                ? 'Added to local favorites'
+                : 'Failed to add to favorites',
               is_favorited: success,
               entity_id: entityId,
               favorited_at: success ? new Date().toISOString() : undefined,
-            }
+            },
           };
         }
       }
     } catch (error) {
-      console.error('Error toggling favorite:', error);
+      errorLog('Error toggling favorite:', error);
       throw error;
     }
   }
@@ -387,7 +436,7 @@ class FavoritesService {
       const response = await this.getUserFavorites(1, 0);
       return response.data.total;
     } catch (error) {
-      console.error('Error getting favorites count:', error);
+      errorLog('Error getting favorites count:', error);
       return 0;
     }
   }
@@ -395,13 +444,20 @@ class FavoritesService {
   /**
    * Migrate local favorites to server (call this when user creates account)
    */
-  async migrateLocalFavoritesToServer(): Promise<{ success: number; failed: number; errors: string[] }> {
+  async migrateLocalFavoritesToServer(): Promise<{
+    success: number;
+    failed: number;
+    errors: string[];
+  }> {
     try {
-      const result = await LocalFavoritesService.migrateLocalFavoritesToServer(this);
+      const result = await LocalFavoritesService.migrateLocalFavoritesToServer(
+        this,
+      );
       return result;
     } catch (error) {
-      console.error('Error during migration:', error);
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      errorLog('Error during migration:', error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       return { success: 0, failed: 0, errors: [errorMessage] };
     }
   }

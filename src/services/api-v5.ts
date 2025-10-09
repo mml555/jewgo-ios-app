@@ -1,5 +1,6 @@
 // API service for Jewgo V5 API
 import { configService } from '../config/ConfigService';
+import { debugLog, warnLog, errorLog } from '../utils/logger';
 
 export interface ApiResponse<T> {
   success: boolean;
@@ -185,11 +186,14 @@ class ApiV5Service {
 
   private async request<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
   ): Promise<ApiResponse<T>> {
     try {
       const url = `${this.baseUrl}${endpoint}`;
-      console.log('🌐 V5 API Request:', url);
+      // Only log V5 API requests very occasionally to reduce console noise
+      if (__DEV__ && Math.random() < 0.01) {
+        debugLog('🌐 V5 API Request:', url);
+      }
 
       const response = await fetch(url, {
         headers: this.getHeaders(),
@@ -199,10 +203,10 @@ class ApiV5Service {
       // Handle rate limiting
       if (response.status === 429) {
         const retryAfter = response.headers.get('Retry-After');
-        const errorMessage = retryAfter 
+        const errorMessage = retryAfter
           ? `Rate limit exceeded. Please try again in ${retryAfter} seconds.`
           : 'Rate limit exceeded. Please try again later.';
-        
+
         return {
           success: false,
           error: errorMessage,
@@ -215,7 +219,7 @@ class ApiV5Service {
         data = await response.json();
       } else {
         const text = await response.text();
-        console.warn('Non-JSON response received:', text);
+        warnLog('Non-JSON response received:', text);
         return {
           success: false,
           error: `Server returned non-JSON response: ${text.substring(0, 100)}`,
@@ -231,7 +235,7 @@ class ApiV5Service {
 
       return data;
     } catch (error) {
-      console.error('V5 API request failed:', error);
+      errorLog('V5 API request failed:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Network error',
@@ -240,35 +244,38 @@ class ApiV5Service {
   }
 
   // Health check
-  async healthCheck(): Promise<ApiResponse<{ status: string; timestamp: string }>> {
+  async healthCheck(): Promise<
+    ApiResponse<{ status: string; timestamp: string }>
+  > {
     const response = await fetch('https://api.jewgo.app/health');
     const text = await response.text();
-    
+
     return {
       success: text.includes('healthy'),
       data: {
         status: text.includes('healthy') ? 'healthy' : 'unhealthy',
-        timestamp: new Date().toISOString()
-      }
+        timestamp: new Date().toISOString(),
+      },
     };
   }
 
   // Entity Management API
   async getEntities<T extends Entity>(
     entityType: EntityType,
-    params?: SearchParams
+    params?: SearchParams,
   ): Promise<ApiResponse<{ entities: T[] }>> {
     const queryParams = new URLSearchParams();
-    
+
     if (params?.page) queryParams.append('page', params.page.toString());
     if (params?.limit) queryParams.append('limit', params.limit.toString());
     if (params?.query) queryParams.append('q', params.query);
     if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
     if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
     if (params?.latitude) queryParams.append('lat', params.latitude.toString());
-    if (params?.longitude) queryParams.append('lng', params.longitude.toString());
+    if (params?.longitude)
+      queryParams.append('lng', params.longitude.toString());
     if (params?.radius) queryParams.append('radius', params.radius.toString());
-    
+
     // Add filters
     if (params?.filters) {
       Object.entries(params.filters).forEach(([key, value]) => {
@@ -281,21 +288,23 @@ class ApiV5Service {
     const queryString = queryParams.toString();
     // Convert singular entity types to plural for the API endpoints
     const pluralEntityType = entityType + 's';
-    const endpoint = `/${pluralEntityType}${queryString ? `?${queryString}` : ''}`;
-    
+    const endpoint = `/${pluralEntityType}${
+      queryString ? `?${queryString}` : ''
+    }`;
+
     return this.request<{ entities: T[] }>(endpoint);
   }
 
   async getEntity<T extends Entity>(
     entityType: EntityType,
-    id: string
+    id: string,
   ): Promise<ApiResponse<{ entity: T }>> {
     return this.request<{ entity: T }>(`/${entityType}/${id}`);
   }
 
   async createEntity<T extends Entity>(
     entityType: EntityType,
-    data: Partial<T>
+    data: Partial<T>,
   ): Promise<ApiResponse<{ entity: T }>> {
     return this.request<{ entity: T }>(`/${entityType}`, {
       method: 'POST',
@@ -306,7 +315,7 @@ class ApiV5Service {
   async updateEntity<T extends Entity>(
     entityType: EntityType,
     id: string,
-    data: Partial<T>
+    data: Partial<T>,
   ): Promise<ApiResponse<{ entity: T }>> {
     return this.request<{ entity: T }>(`/${entityType}/${id}`, {
       method: 'PUT',
@@ -314,31 +323,40 @@ class ApiV5Service {
     });
   }
 
-  async deleteEntity(entityType: EntityType, id: string): Promise<ApiResponse<void>> {
+  async deleteEntity(
+    entityType: EntityType,
+    id: string,
+  ): Promise<ApiResponse<void>> {
     return this.request<void>(`/${entityType}/${id}`, {
       method: 'DELETE',
     });
   }
 
-  async trackEntityView(entityType: EntityType, id: string): Promise<ApiResponse<void>> {
+  async trackEntityView(
+    entityType: EntityType,
+    id: string,
+  ): Promise<ApiResponse<void>> {
     return this.request<void>(`/${entityType}/${id}/view`, {
       method: 'POST',
     });
   }
 
   // Search API
-  async search(params: SearchParams): Promise<ApiResponse<{ entities: Entity[] }>> {
+  async search(
+    params: SearchParams,
+  ): Promise<ApiResponse<{ entities: Entity[] }>> {
     const queryParams = new URLSearchParams();
-    
+
     if (params.query) queryParams.append('q', params.query);
     if (params.page) queryParams.append('page', params.page.toString());
     if (params.limit) queryParams.append('limit', params.limit.toString());
     if (params.sortBy) queryParams.append('sortBy', params.sortBy);
     if (params.sortOrder) queryParams.append('sortOrder', params.sortOrder);
     if (params.latitude) queryParams.append('lat', params.latitude.toString());
-    if (params.longitude) queryParams.append('lng', params.longitude.toString());
+    if (params.longitude)
+      queryParams.append('lng', params.longitude.toString());
     if (params.radius) queryParams.append('radius', params.radius.toString());
-    
+
     // Add filters
     if (params.filters) {
       Object.entries(params.filters).forEach(([key, value]) => {
@@ -350,25 +368,26 @@ class ApiV5Service {
 
     const queryString = queryParams.toString();
     const endpoint = `/search${queryString ? `?${queryString}` : ''}`;
-    
+
     return this.request<{ entities: Entity[] }>(endpoint);
   }
 
   async searchByEntityType(
     entityType: EntityType,
-    params: SearchParams
+    params: SearchParams,
   ): Promise<ApiResponse<{ entities: Entity[] }>> {
     const queryParams = new URLSearchParams();
-    
+
     if (params.query) queryParams.append('q', params.query);
     if (params.page) queryParams.append('page', params.page.toString());
     if (params.limit) queryParams.append('limit', params.limit.toString());
     if (params.sortBy) queryParams.append('sortBy', params.sortBy);
     if (params.sortOrder) queryParams.append('sortOrder', params.sortOrder);
     if (params.latitude) queryParams.append('lat', params.latitude.toString());
-    if (params.longitude) queryParams.append('lng', params.longitude.toString());
+    if (params.longitude)
+      queryParams.append('lng', params.longitude.toString());
     if (params.radius) queryParams.append('radius', params.radius.toString());
-    
+
     // Add filters
     if (params.filters) {
       Object.entries(params.filters).forEach(([key, value]) => {
@@ -379,13 +398,19 @@ class ApiV5Service {
     }
 
     const queryString = queryParams.toString();
-    const endpoint = `/search/${entityType}${queryString ? `?${queryString}` : ''}`;
-    
+    const endpoint = `/search/${entityType}${
+      queryString ? `?${queryString}` : ''
+    }`;
+
     return this.request<{ entities: Entity[] }>(endpoint);
   }
 
-  async getSearchSuggestions(query: string): Promise<ApiResponse<{ suggestions: string[] }>> {
-    return this.request<{ suggestions: string[] }>(`/search/suggest?q=${encodeURIComponent(query)}`);
+  async getSearchSuggestions(
+    query: string,
+  ): Promise<ApiResponse<{ suggestions: string[] }>> {
+    return this.request<{ suggestions: string[] }>(
+      `/search/suggest?q=${encodeURIComponent(query)}`,
+    );
   }
 
   async getSearchFilters(): Promise<ApiResponse<{ filters: any }>> {
@@ -404,10 +429,12 @@ class ApiV5Service {
       const queryParams = new URLSearchParams();
       if (params.page) queryParams.append('page', params.page.toString());
       if (params.limit) queryParams.append('limit', params.limit.toString());
-      
+
       const queryString = queryParams.toString();
-      const endpoint = `/reviews/entity/${params.entityId}${queryString ? `?${queryString}` : ''}`;
-      
+      const endpoint = `/reviews/entity/${params.entityId}${
+        queryString ? `?${queryString}` : ''
+      }`;
+
       return this.request<{ reviews: Review[] }>(endpoint);
     }
 
@@ -418,7 +445,7 @@ class ApiV5Service {
 
     const queryString = queryParams.toString();
     const endpoint = `/reviews${queryString ? `?${queryString}` : ''}`;
-    
+
     return this.request<{ reviews: Review[] }>(endpoint);
   }
 
@@ -434,22 +461,28 @@ class ApiV5Service {
     content?: string;
     userId: string;
   }): Promise<ApiResponse<{ review: Review }>> {
-    return this.request<{ review: Review }>(`/reviews/entity/${data.entityId}`, {
-      method: 'POST',
-      body: JSON.stringify({
-        rating: data.rating,
-        title: data.title,
-        content: data.content,
-        userId: data.userId
-      }),
-    });
+    return this.request<{ review: Review }>(
+      `/reviews/entity/${data.entityId}`,
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          rating: data.rating,
+          title: data.title,
+          content: data.content,
+          userId: data.userId,
+        }),
+      },
+    );
   }
 
-  async updateReview(id: string, data: {
-    rating?: number;
-    title?: string;
-    content?: string;
-  }): Promise<ApiResponse<{ review: Review }>> {
+  async updateReview(
+    id: string,
+    data: {
+      rating?: number;
+      title?: string;
+      content?: string;
+    },
+  ): Promise<ApiResponse<{ review: Review }>> {
     return this.request<{ review: Review }>(`/reviews/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
@@ -464,21 +497,28 @@ class ApiV5Service {
 
   async getEntityReviewStats(
     entityType: EntityType,
-    entityId: string
-  ): Promise<ApiResponse<{
-    totalReviews: number;
-    averageRating: number;
-    ratingDistribution: { [rating: number]: number };
-  }>> {
+    entityId: string,
+  ): Promise<
+    ApiResponse<{
+      totalReviews: number;
+      averageRating: number;
+      ratingDistribution: { [rating: number]: number };
+    }>
+  > {
     return this.request(`/reviews/${entityType}/${entityId}/stats`);
   }
 
   // Authentication API (simplified for frontend)
-  async login(email: string, password: string): Promise<ApiResponse<{
-    accessToken: string;
-    refreshToken: string;
-    user: any;
-  }>> {
+  async login(
+    email: string,
+    password: string,
+  ): Promise<
+    ApiResponse<{
+      accessToken: string;
+      refreshToken: string;
+      user: any;
+    }>
+  > {
     return this.request('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
@@ -490,11 +530,13 @@ class ApiV5Service {
     password: string;
     firstName: string;
     lastName: string;
-  }): Promise<ApiResponse<{
-    accessToken: string;
-    refreshToken: string;
-    user: any;
-  }>> {
+  }): Promise<
+    ApiResponse<{
+      accessToken: string;
+      refreshToken: string;
+      user: any;
+    }>
+  > {
     return this.request('/auth/register', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -507,10 +549,12 @@ class ApiV5Service {
     });
   }
 
-  async refreshToken(refreshToken: string): Promise<ApiResponse<{
-    accessToken: string;
-    refreshToken: string;
-  }>> {
+  async refreshToken(refreshToken: string): Promise<
+    ApiResponse<{
+      accessToken: string;
+      refreshToken: string;
+    }>
+  > {
     return this.request('/auth/refresh', {
       method: 'POST',
       body: JSON.stringify({ refreshToken }),

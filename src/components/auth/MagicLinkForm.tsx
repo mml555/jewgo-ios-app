@@ -8,6 +8,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import { debugLog, errorLog } from '../../utils/logger';
 import { magicLinkService } from '../../services/MagicLinkService';
 import { Colors } from '../../styles/designSystem';
 
@@ -41,12 +42,12 @@ const MagicLinkForm: React.FC<MagicLinkFormProps> = ({
       setError('Email is required');
       return false;
     }
-    
+
     if (!magicLinkService.isValidEmail(email)) {
       setError('Please enter a valid email address');
       return false;
     }
-    
+
     setError('');
     return true;
   }, []);
@@ -55,7 +56,7 @@ const MagicLinkForm: React.FC<MagicLinkFormProps> = ({
     if (isLoading || disabled) return;
 
     const trimmedEmail = email.trim().toLowerCase();
-    
+
     if (!validateEmail(trimmedEmail)) {
       return;
     }
@@ -64,37 +65,44 @@ const MagicLinkForm: React.FC<MagicLinkFormProps> = ({
       setIsLoading(true);
       setError('');
 
-      console.log(`📧 Sending magic link to: ${trimmedEmail} for purpose: ${purpose}`);
+      debugLog(
+        `📧 Sending magic link to: ${trimmedEmail} for purpose: ${purpose}`,
+      );
 
-      const result = await magicLinkService.sendMagicLink(trimmedEmail, purpose);
-      
-      console.log('✅ Magic link sent successfully');
-      
+      const result = await magicLinkService.sendMagicLink(
+        trimmedEmail,
+        purpose,
+      );
+
+      debugLog('✅ Magic link sent successfully');
+
       setIsSent(true);
       setExpiresAt(result.expiresAt);
-      
+
       if (onSuccess) {
         onSuccess(result.message, result.expiresAt);
       } else {
         Alert.alert(
           'Magic Link Sent! 📧',
-          `We've sent a magic link to ${trimmedEmail}. Please check your email and click the link to ${purpose === 'login' ? 'sign in' : 'complete your registration'}.`,
+          `We've sent a magic link to ${trimmedEmail}. Please check your email and click the link to ${
+            purpose === 'login' ? 'sign in' : 'complete your registration'
+          }.`,
           [
             {
               text: 'Open Email App',
               onPress: () => magicLinkService.openEmailApp(),
             },
-            { text: 'OK' }
-          ]
+            { text: 'OK' },
+          ],
         );
       }
+    } catch (catchError: any) {
+      errorLog('❌ Magic link sending error:', catchError);
 
-    } catch (error: any) {
-      console.error('❌ Magic link sending error:', error);
-      
-      const errorMessage = error.message || 'Failed to send magic link. Please try again.';
+      const errorMessage =
+        catchError.message || 'Failed to send magic link. Please try again.';
       setError(errorMessage);
-      
+
       if (onError) {
         onError(errorMessage);
       } else {
@@ -105,21 +113,26 @@ const MagicLinkForm: React.FC<MagicLinkFormProps> = ({
     }
   }, [email, purpose, isLoading, disabled, validateEmail, onSuccess, onError]);
 
-  const handleEmailChange = useCallback((text: string) => {
-    setEmail(text);
-    if (error) {
-      setError('');
-    }
-    if (isSent) {
-      setIsSent(false);
-    }
-  }, [error, isSent]);
+  const handleEmailChange = useCallback(
+    (text: string) => {
+      setEmail(text);
+      if (error) {
+        setError('');
+      }
+      if (isSent) {
+        setIsSent(false);
+      }
+    },
+    [error, isSent],
+  );
 
   const getButtonText = () => {
     if (isLoading) return 'Sending...';
     if (isSent) return 'Resend Magic Link';
     if (buttonText) return buttonText;
-    return purpose === 'register' ? 'Send Registration Link' : 'Send Magic Link';
+    return purpose === 'register'
+      ? 'Send Registration Link'
+      : 'Send Magic Link';
   };
 
   const getPlaceholder = () => {
@@ -129,7 +142,7 @@ const MagicLinkForm: React.FC<MagicLinkFormProps> = ({
 
   const getExpirationText = () => {
     if (!isSent || !expiresAt) return '';
-    
+
     const timeLeft = magicLinkService.formatExpirationTime(expiresAt);
     return `Link expires in ${timeLeft}`;
   };
@@ -154,11 +167,9 @@ const MagicLinkForm: React.FC<MagicLinkFormProps> = ({
           textContentType="emailAddress"
           autoComplete="email"
         />
-        
-        {error ? (
-          <Text style={styles.errorText}>{error}</Text>
-        ) : null}
-        
+
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
         {isSent && expiresAt ? (
           <Text style={styles.successText}>{getExpirationText()}</Text>
         ) : null}
@@ -184,7 +195,9 @@ const MagicLinkForm: React.FC<MagicLinkFormProps> = ({
         <View style={styles.instructionsContainer}>
           <Text style={styles.instructionsTitle}>📧 Check Your Email</Text>
           <Text style={styles.instructionsText}>
-            We've sent a magic link to {email.trim()}. Click the link in your email to {purpose === 'login' ? 'sign in' : 'complete your registration'}.
+            We've sent a magic link to {email.trim()}. Click the link in your
+            email to{' '}
+            {purpose === 'login' ? 'sign in' : 'complete your registration'}.
           </Text>
           <TouchableOpacity
             style={styles.openEmailButton}
@@ -208,7 +221,7 @@ const styles = StyleSheet.create({
   },
   emailInput: {
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: Colors.border.primary,
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 12,

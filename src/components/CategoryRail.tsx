@@ -29,7 +29,6 @@ const CATEGORIES: Category[] = [
   { id: 'eatery', name: 'Eatery', icon: '🍽️', iconComponent: EateryIcon },
   { id: 'shul', name: 'Shul', icon: '🕍' },
   { id: 'stores', name: 'Stores', icon: '🏪', iconComponent: StoreIcon },
-  { id: 'shuk', name: 'Shuk', icon: '🥬' },
   { id: 'shtetl', name: 'Shtetl', icon: '🏘️' },
   { id: 'events', name: 'Events', icon: '🎉', iconComponent: HeartIcon },
   { id: 'jobs', name: 'Jobs', icon: '💼' },
@@ -49,13 +48,10 @@ const CategoryRail: React.FC<CategoryRailProps> = ({
   const renderCategoryChip = useCallback(
     ({ item }: { item: Category }) => {
       const isActive = activeCategory === item.id;
-      
+
       return (
         <TouchableOpacity
-          style={[
-            styles.chip,
-            isActive && styles.chipActive,
-          ]}
+          style={[styles.chip, isActive && styles.chipActive]}
           onPress={() => onCategoryChange(item.id)}
           accessible={true}
           accessibilityRole="button"
@@ -65,28 +61,31 @@ const CategoryRail: React.FC<CategoryRailProps> = ({
         >
           <View style={styles.iconContainer}>
             {item.iconComponent ? (
-              <item.iconComponent size={24} color={isActive ? '#FFFFFF' : '#666666'} />
+              <item.iconComponent
+                size={24}
+                color={isActive ? '#FFFFFF' : '#666666'}
+              />
             ) : (
               <Text style={styles.chipIcon}>{item.icon}</Text>
             )}
           </View>
-          <Text style={[
-            styles.chipText,
-            isActive && styles.chipTextActive,
-          ]}>
+          <Text style={[styles.chipText, isActive && styles.chipTextActive]}>
             {item.name}
           </Text>
         </TouchableOpacity>
       );
     },
-    [activeCategory, onCategoryChange]
+    [activeCategory, onCategoryChange],
   );
 
   // Memoize the key extractor
   const keyExtractor = useCallback((item: Category) => item.id, []);
 
   // Memoize the item separator
-  const ItemSeparator = useCallback(() => <View style={styles.separator} />, []);
+  const ItemSeparator = useCallback(
+    () => <View style={styles.separator} />,
+    [],
+  );
 
   // Calculate snap interval for smooth scrolling
   const snapToInterval = useMemo(() => CHIP_WIDTH + CHIP_SPACING, []);

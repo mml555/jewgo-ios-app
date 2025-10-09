@@ -1,5 +1,5 @@
 const express = require('express');
-const AuthMiddleware = require('../auth/AuthMiddleware');
+const logger = require('../utils/logger');
 
 function createRBACRoutes(rbacService, authMiddleware) {
   const router = express.Router();
@@ -18,13 +18,13 @@ function createRBACRoutes(rbacService, authMiddleware) {
       const roles = await rbacService.getAllRoles();
       res.json({
         success: true,
-        roles
+        roles,
       });
     } catch (error) {
-      console.error('Get roles error:', error);
+      logger.error('Get roles error:', error);
       res.status(500).json({
         error: 'Failed to get roles',
-        code: 'GET_ROLES_ERROR'
+        code: 'GET_ROLES_ERROR',
       });
     }
   });
@@ -34,23 +34,23 @@ function createRBACRoutes(rbacService, authMiddleware) {
     try {
       const { roleId } = req.params;
       const role = await rbacService.getRole(roleId);
-      
+
       if (!role) {
         return res.status(404).json({
           error: 'Role not found',
-          code: 'ROLE_NOT_FOUND'
+          code: 'ROLE_NOT_FOUND',
         });
       }
 
       res.json({
         success: true,
-        role
+        role,
       });
     } catch (error) {
-      console.error('Get role error:', error);
+      logger.error('Get role error:', error);
       res.status(500).json({
         error: 'Failed to get role',
-        code: 'GET_ROLE_ERROR'
+        code: 'GET_ROLE_ERROR',
       });
     }
   });
@@ -63,33 +63,34 @@ function createRBACRoutes(rbacService, authMiddleware) {
       if (!name) {
         return res.status(400).json({
           error: 'Role name is required',
-          code: 'MISSING_ROLE_NAME'
+          code: 'MISSING_ROLE_NAME',
         });
       }
 
       const role = await rbacService.createRole({
         name,
         description,
-        permissions: permissions || []
+        permissions: permissions || [],
       });
 
       res.status(201).json({
         success: true,
-        role
+        role,
       });
     } catch (error) {
-      console.error('Create role error:', error);
-      
-      if (error.code === '23505') { // Unique constraint violation
+      logger.error('Create role error:', error);
+
+      if (error.code === '23505') {
+        // Unique constraint violation
         return res.status(409).json({
           error: 'Role name already exists',
-          code: 'ROLE_EXISTS'
+          code: 'ROLE_EXISTS',
         });
       }
 
       res.status(500).json({
         error: 'Failed to create role',
-        code: 'CREATE_ROLE_ERROR'
+        code: 'CREATE_ROLE_ERROR',
       });
     }
   });
@@ -102,26 +103,26 @@ function createRBACRoutes(rbacService, authMiddleware) {
 
       const role = await rbacService.updateRole(roleId, {
         name,
-        description
+        description,
       });
 
       res.json({
         success: true,
-        role
+        role,
       });
     } catch (error) {
-      console.error('Update role error:', error);
-      
+      logger.error('Update role error:', error);
+
       if (error.message === 'Role not found or is a system role') {
         return res.status(404).json({
           error: error.message,
-          code: 'ROLE_NOT_FOUND_OR_SYSTEM'
+          code: 'ROLE_NOT_FOUND_OR_SYSTEM',
         });
       }
 
       res.status(500).json({
         error: 'Failed to update role',
-        code: 'UPDATE_ROLE_ERROR'
+        code: 'UPDATE_ROLE_ERROR',
       });
     }
   });
@@ -135,21 +136,21 @@ function createRBACRoutes(rbacService, authMiddleware) {
       res.json({
         success: true,
         message: 'Role deleted successfully',
-        role
+        role,
       });
     } catch (error) {
-      console.error('Delete role error:', error);
-      
+      logger.error('Delete role error:', error);
+
       if (error.message === 'Role not found or is a system role') {
         return res.status(404).json({
           error: error.message,
-          code: 'ROLE_NOT_FOUND_OR_SYSTEM'
+          code: 'ROLE_NOT_FOUND_OR_SYSTEM',
         });
       }
 
       res.status(500).json({
         error: 'Failed to delete role',
-        code: 'DELETE_ROLE_ERROR'
+        code: 'DELETE_ROLE_ERROR',
       });
     }
   });
@@ -164,13 +165,13 @@ function createRBACRoutes(rbacService, authMiddleware) {
       const permissions = await rbacService.getAllPermissions();
       res.json({
         success: true,
-        permissions
+        permissions,
       });
     } catch (error) {
-      console.error('Get permissions error:', error);
+      logger.error('Get permissions error:', error);
       res.status(500).json({
         error: 'Failed to get permissions',
-        code: 'GET_PERMISSIONS_ERROR'
+        code: 'GET_PERMISSIONS_ERROR',
       });
     }
   });
@@ -183,33 +184,34 @@ function createRBACRoutes(rbacService, authMiddleware) {
       if (!name) {
         return res.status(400).json({
           error: 'Permission name is required',
-          code: 'MISSING_PERMISSION_NAME'
+          code: 'MISSING_PERMISSION_NAME',
         });
       }
 
       const permission = await rbacService.createPermission({
         name,
         description,
-        resource
+        resource,
       });
 
       res.status(201).json({
         success: true,
-        permission
+        permission,
       });
     } catch (error) {
-      console.error('Create permission error:', error);
-      
-      if (error.code === '23505') { // Unique constraint violation
+      logger.error('Create permission error:', error);
+
+      if (error.code === '23505') {
+        // Unique constraint violation
         return res.status(409).json({
           error: 'Permission name already exists',
-          code: 'PERMISSION_EXISTS'
+          code: 'PERMISSION_EXISTS',
         });
       }
 
       res.status(500).json({
         error: 'Failed to create permission',
-        code: 'CREATE_PERMISSION_ERROR'
+        code: 'CREATE_PERMISSION_ERROR',
       });
     }
   });
@@ -227,7 +229,7 @@ function createRBACRoutes(rbacService, authMiddleware) {
       if (!permissions || !Array.isArray(permissions)) {
         return res.status(400).json({
           error: 'Permissions array is required',
-          code: 'MISSING_PERMISSIONS'
+          code: 'MISSING_PERMISSIONS',
         });
       }
 
@@ -235,21 +237,21 @@ function createRBACRoutes(rbacService, authMiddleware) {
 
       res.json({
         success: true,
-        message: 'Permissions assigned to role successfully'
+        message: 'Permissions assigned to role successfully',
       });
     } catch (error) {
-      console.error('Assign permissions error:', error);
-      
+      logger.error('Assign permissions error:', error);
+
       if (error.message.includes('not found')) {
         return res.status(404).json({
           error: error.message,
-          code: 'PERMISSIONS_NOT_FOUND'
+          code: 'PERMISSIONS_NOT_FOUND',
         });
       }
 
       res.status(500).json({
         error: 'Failed to assign permissions',
-        code: 'ASSIGN_PERMISSIONS_ERROR'
+        code: 'ASSIGN_PERMISSIONS_ERROR',
       });
     }
   });
@@ -263,7 +265,7 @@ function createRBACRoutes(rbacService, authMiddleware) {
       if (!permissions || !Array.isArray(permissions)) {
         return res.status(400).json({
           error: 'Permissions array is required',
-          code: 'MISSING_PERMISSIONS'
+          code: 'MISSING_PERMISSIONS',
         });
       }
 
@@ -271,13 +273,13 @@ function createRBACRoutes(rbacService, authMiddleware) {
 
       res.json({
         success: true,
-        message: 'Permissions removed from role successfully'
+        message: 'Permissions removed from role successfully',
       });
     } catch (error) {
-      console.error('Remove permissions error:', error);
+      logger.error('Remove permissions error:', error);
       res.status(500).json({
         error: 'Failed to remove permissions',
-        code: 'REMOVE_PERMISSIONS_ERROR'
+        code: 'REMOVE_PERMISSIONS_ERROR',
       });
     }
   });
@@ -295,7 +297,7 @@ function createRBACRoutes(rbacService, authMiddleware) {
       if (!role) {
         return res.status(400).json({
           error: 'Role name is required',
-          code: 'MISSING_ROLE'
+          code: 'MISSING_ROLE',
         });
       }
 
@@ -304,34 +306,34 @@ function createRBACRoutes(rbacService, authMiddleware) {
         role,
         scope,
         expiresAt ? new Date(expiresAt) : null,
-        req.user.id // assigned by current admin
+        req.user.id, // assigned by current admin
       );
 
       res.status(201).json({
         success: true,
         message: 'Role assigned to user successfully',
-        assignment
+        assignment,
       });
     } catch (error) {
-      console.error('Assign role error:', error);
-      
+      logger.error('Assign role error:', error);
+
       if (error.message.includes('not found')) {
         return res.status(404).json({
           error: error.message,
-          code: 'ROLE_OR_USER_NOT_FOUND'
+          code: 'ROLE_OR_USER_NOT_FOUND',
         });
       }
 
       if (error.message.includes('already has this role')) {
         return res.status(409).json({
           error: error.message,
-          code: 'ROLE_ALREADY_ASSIGNED'
+          code: 'ROLE_ALREADY_ASSIGNED',
         });
       }
 
       res.status(500).json({
         error: 'Failed to assign role',
-        code: 'ASSIGN_ROLE_ERROR'
+        code: 'ASSIGN_ROLE_ERROR',
       });
     }
   });
@@ -345,29 +347,33 @@ function createRBACRoutes(rbacService, authMiddleware) {
       if (!role) {
         return res.status(400).json({
           error: 'Role name is required',
-          code: 'MISSING_ROLE'
+          code: 'MISSING_ROLE',
         });
       }
 
-      const assignment = await rbacService.removeRoleFromUser(userId, role, scope);
+      const assignment = await rbacService.removeRoleFromUser(
+        userId,
+        role,
+        scope,
+      );
 
       if (!assignment) {
         return res.status(404).json({
           error: 'Role assignment not found',
-          code: 'ASSIGNMENT_NOT_FOUND'
+          code: 'ASSIGNMENT_NOT_FOUND',
         });
       }
 
       res.json({
         success: true,
         message: 'Role removed from user successfully',
-        assignment
+        assignment,
       });
     } catch (error) {
-      console.error('Remove role error:', error);
+      logger.error('Remove role error:', error);
       res.status(500).json({
         error: 'Failed to remove role',
-        code: 'REMOVE_ROLE_ERROR'
+        code: 'REMOVE_ROLE_ERROR',
       });
     }
   });
@@ -380,13 +386,13 @@ function createRBACRoutes(rbacService, authMiddleware) {
 
       res.json({
         success: true,
-        assignments
+        assignments,
       });
     } catch (error) {
-      console.error('Get user roles error:', error);
+      logger.error('Get user roles error:', error);
       res.status(500).json({
         error: 'Failed to get user roles',
-        code: 'GET_USER_ROLES_ERROR'
+        code: 'GET_USER_ROLES_ERROR',
       });
     }
   });
@@ -401,13 +407,13 @@ function createRBACRoutes(rbacService, authMiddleware) {
       const stats = await rbacService.getRoleStats();
       res.json({
         success: true,
-        stats
+        stats,
       });
     } catch (error) {
-      console.error('Get role stats error:', error);
+      logger.error('Get role stats error:', error);
       res.status(500).json({
         error: 'Failed to get role statistics',
-        code: 'GET_ROLE_STATS_ERROR'
+        code: 'GET_ROLE_STATS_ERROR',
       });
     }
   });
@@ -418,13 +424,13 @@ function createRBACRoutes(rbacService, authMiddleware) {
       const stats = await rbacService.getPermissionUsage();
       res.json({
         success: true,
-        stats
+        stats,
       });
     } catch (error) {
-      console.error('Get permission stats error:', error);
+      logger.error('Get permission stats error:', error);
       res.status(500).json({
         error: 'Failed to get permission statistics',
-        code: 'GET_PERMISSION_STATS_ERROR'
+        code: 'GET_PERMISSION_STATS_ERROR',
       });
     }
   });
@@ -438,16 +444,16 @@ function createRBACRoutes(rbacService, authMiddleware) {
     res.status(404).json({
       error: 'RBAC endpoint not found',
       code: 'ENDPOINT_NOT_FOUND',
-      path: req.originalUrl
+      path: req.originalUrl,
     });
   });
 
   // Error handler
   router.use((error, req, res, next) => {
-    console.error('RBAC route error:', error);
+    logger.error('RBAC route error:', error);
     res.status(500).json({
       error: 'Internal server error',
-      code: 'INTERNAL_ERROR'
+      code: 'INTERNAL_ERROR',
     });
   });
 

@@ -1,567 +1,696 @@
-const { Pool } = require('pg');
-const pool = require('../database/connection');
+const db = require('../database/connection');
+const logger = require('../utils/logger');
 
 class JobsController {
-  // Get all jobs with filtering
-  static async getAllJobs(req, res) {
+  // ============================================================================
+  // HELPER METHODS
+  // ============================================================================
+
+  static async getLocationData(zipCode) {
+    // Use a geocoding service (Google Maps, HERE, etc.)
+    // For now, returning placeholder. Replace with actual geocoding API
+    return {
+      city: null,
+      state: null,
+      latitude: null,
+      longitude: null,
+    };
+  }
+
+  static async calculateDistance(lat1, lon1, lat2, lon2) {
+    const R = 3959; // Earth's radius in miles
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  }
+
+  // ============================================================================
+  // JOB LISTINGS - CREATE
+  // ============================================================================
+
+  static async createJobListing(req, res) {
+    const client = await db.connect();
+    try {
+      const userId = req.user.id;
+      const {
+        jobTitle,
+        industryId,
+        jobTypeId,
+        experienceLevelId,
+        compensationStructureId,
+        salaryMin,
+        salaryMax,
+        hourlyRateMin,
+        hourlyRateMax,
+        currency,
+        showSalary,
+        zipCode,
+        isRemote,
+        isHybrid,
+        description,
+        requirements,
+        benefits,
+        responsibilities,
+        skills,
+        ctaLink,
+        contactEmail,
+        contactPhone,
+        companyName,
+        companyWebsite,
+        companyLogoUrl,
+      } = req.body;
+
+      // Validate required fields
+      if (
+        !jobTitle ||
+        !industryId ||
+        !jobTypeId ||
+        !compensationStructureId ||
+        !zipCode ||
+        !description
+      ) {
+        return res.status(400).json({
+          error: 'Missing required fields',
+          code: 'MISSING_FIELDS',
+        });
+      }
+
+      await client.query('BEGIN');
+
+      // Check user's active job listing count (max 2)
+      const countResult = await client.query(
+        'SELECT COUNT(*) FROM jobs WHERE poster_id = $1 AND is_active = $2',
+        [userId, true],
+      );
+
+      if (parseInt(countResult.rows[0].count, 10) >= 2) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({
+          error: 'Maximum of 2 active job listings per account',
+          code: 'LISTING_LIMIT_EXCEEDED',
+        });
+      }
+
+      // Get location data
+      const locationData = await this.getLocationData(zipCode);
+
+      // Create job listing
+      const result = await client.query(
+        `INSERT INTO jobs (
+          poster_id, title, company_name, job_type, compensation_type,
+          compensation_min, compensation_max, compensation_currency,
+          zip_code, city, state, latitude, longitude,
+          is_remote, location_type, description, requirements, benefits,
+          tags, application_url, contact_email, contact_phone
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
+        RETURNING *`,
+        [
+          userId,
+          jobTitle,
+          companyName,
+          jobTypeId || 'full-time',
+          compensationStructureId || 'salary',
+          salaryMin,
+          salaryMax,
+          currency || 'USD',
+          zipCode,
+          locationData.city,
+          locationData.state,
+          locationData.latitude,
+          locationData.longitude,
+          isRemote || false,
+          isRemote ? 'remote' : 'on-site',
+          description,
+          requirements,
+          benefits,
+          JSON.stringify(skills || []),
+          ctaLink,
+          contactEmail,
+          contactPhone,
+        ],
+      );
+
+      await client.query('COMMIT');
+
+      logger.info(
+        `Job listing created: ${result.rows[0].id} by user ${userId}`,
+      );
+
+      res.status(201).json({
+        success: true,
+        jobListing: result.rows[0],
+      });
+    } catch (error) {
+      await client.query('ROLLBACK');
+      logger.error('Error creating job listing:', error);
+      res.status(500).json({ error: error.message, code: 'JOB_CREATE_ERROR' });
+    } finally {
+      client.release();
+    }
+  }
+
+  // ============================================================================
+  // JOB LISTINGS - GET ALL
+  // ============================================================================
+
+  static async getJobListings(req, res) {
     try {
       const {
-        city,
-        state,
+        industry,
         jobType,
-        locationType,
-        isRemote,
-        category,
-        isUrgent,
-        isActive,
-        compensationType,
-        minCompensation,
-        maxCompensation,
         experienceLevel,
-        jewishOrganization,
-        kosherEnvironment,
-        shabbatObservant,
-        limit = 50,
-        offset = 0,
-        sortBy = 'posted_date',
-        sortOrder = 'DESC'
+        compensationStructure,
+        isRemote,
+        isHybrid,
+        salaryMin,
+        salaryMax,
+        search,
+        lat,
+        lng,
+        radius = 25,
+        page = 1,
+        limit = 20,
+        sortBy = 'created_at',
+        sortOrder = 'DESC',
       } = req.query;
 
       let query = `
         SELECT 
           j.*,
-          u.first_name || ' ' || u.last_name as poster_name,
-          u.email as poster_email
+          u.first_name as employer_first_name,
+          u.last_name as employer_last_name,
+          u.email as employer_email,
+          (SELECT COUNT(*) FROM job_applications WHERE job_id = j.id) as total_applications
         FROM jobs j
         LEFT JOIN users u ON j.poster_id = u.id
-        WHERE 1=1
+        WHERE j.is_active = true AND (j.expires_date IS NULL OR j.expires_date > NOW())
       `;
+
       const params = [];
       let paramCount = 0;
 
       // Add filters
-      if (city) {
+      if (industry) {
         paramCount++;
-        query += ` AND j.city ILIKE $${paramCount}`;
-        params.push(`%${city}%`);
+        query += ` AND j.category = $${paramCount}`;
+        params.push(industry);
       }
-      
-      if (state) {
-        paramCount++;
-        query += ` AND j.state ILIKE $${paramCount}`;
-        params.push(`%${state}%`);
-      }
-      
+
       if (jobType) {
         paramCount++;
         query += ` AND j.job_type = $${paramCount}`;
         params.push(jobType);
       }
-      
-      if (locationType) {
-        paramCount++;
-        query += ` AND j.location_type = $${paramCount}`;
-        params.push(locationType);
-      }
-      
-      if (isRemote !== undefined) {
-        paramCount++;
-        query += ` AND j.is_remote = $${paramCount}`;
-        params.push(isRemote === 'true');
-      }
-      
-      if (category) {
-        paramCount++;
-        query += ` AND j.category = $${paramCount}`;
-        params.push(category);
-      }
-      
-      if (isUrgent !== undefined) {
-        paramCount++;
-        query += ` AND j.is_urgent = $${paramCount}`;
-        params.push(isUrgent === 'true');
-      }
-      
-      if (isActive !== undefined) {
-        paramCount++;
-        query += ` AND j.is_active = $${paramCount}`;
-        params.push(isActive === 'true');
-      } else {
-        // By default, only show active jobs
-        query += ` AND j.is_active = true`;
-      }
-      
-      if (compensationType) {
-        paramCount++;
-        query += ` AND j.compensation_type = $${paramCount}`;
-        params.push(compensationType);
-      }
-      
-      if (minCompensation) {
-        paramCount++;
-        query += ` AND j.compensation_min >= $${paramCount}`;
-        params.push(parseFloat(minCompensation));
-      }
-      
-      if (maxCompensation) {
-        paramCount++;
-        query += ` AND j.compensation_max <= $${paramCount}`;
-        params.push(parseFloat(maxCompensation));
-      }
-      
+
       if (experienceLevel) {
         paramCount++;
         query += ` AND j.experience_level = $${paramCount}`;
         params.push(experienceLevel);
       }
-      
-      if (jewishOrganization !== undefined) {
+
+      if (compensationStructure) {
         paramCount++;
-        query += ` AND j.jewish_organization = $${paramCount}`;
-        params.push(jewishOrganization === 'true');
+        query += ` AND j.compensation_type = $${paramCount}`;
+        params.push(compensationStructure);
       }
-      
-      if (kosherEnvironment !== undefined) {
-        paramCount++;
-        query += ` AND j.kosher_environment = $${paramCount}`;
-        params.push(kosherEnvironment === 'true');
+
+      if (isRemote === 'true') {
+        query += ` AND j.is_remote = true`;
       }
-      
-      if (shabbatObservant !== undefined) {
+
+      if (isHybrid === 'true') {
+        query += ` AND j.location_type = 'hybrid'`;
+      }
+
+      if (salaryMin) {
         paramCount++;
-        query += ` AND j.shabbat_observant = $${paramCount}`;
-        params.push(shabbatObservant === 'true');
+        query += ` AND (j.compensation_max IS NULL OR j.compensation_max >= $${paramCount})`;
+        params.push(parseInt(salaryMin, 10));
+      }
+
+      if (salaryMax) {
+        paramCount++;
+        query += ` AND (j.compensation_min IS NULL OR j.compensation_min <= $${paramCount})`;
+        params.push(parseInt(salaryMax, 10));
+      }
+
+      if (search) {
+        paramCount++;
+        query += ` AND (
+          to_tsvector('english', j.title || ' ' || j.description) @@ plainto_tsquery('english', $${paramCount})
+          OR j.title ILIKE $${paramCount + 1}
+          OR j.company_name ILIKE $${paramCount + 1}
+        )`;
+        params.push(search, `%${search}%`);
+        paramCount++;
+      }
+
+      // Location-based filtering
+      if (lat && lng && radius) {
+        paramCount++;
+        query += ` AND (
+          j.is_remote = true OR
+          (
+            j.latitude IS NOT NULL AND j.longitude IS NOT NULL AND
+            (3959 * acos(cos(radians($${paramCount})) * cos(radians(j.latitude)) * 
+            cos(radians(j.longitude) - radians($${paramCount + 1})) + 
+            sin(radians($${paramCount})) * sin(radians(j.latitude)))) <= $${
+          paramCount + 2
+        }
+          )
+        )`;
+        params.push(parseFloat(lat), parseFloat(lng), parseInt(radius, 10));
+        paramCount += 2;
       }
 
       // Add sorting
-      const validSortColumns = ['posted_date', 'title', 'compensation_min', 'created_at', 'view_count'];
-      const validSortOrders = ['ASC', 'DESC'];
-      const sortColumn = validSortColumns.includes(sortBy) ? sortBy : 'posted_date';
-      const sortDirection = validSortOrders.includes(sortOrder.toUpperCase()) ? sortOrder.toUpperCase() : 'DESC';
-      
-      query += ` ORDER BY j.${sortColumn} ${sortDirection}`;
+      const validSortColumns = [
+        'created_at',
+        'title',
+        'compensation_max',
+        'view_count',
+        'application_count',
+      ];
+      const sortColumn = validSortColumns.includes(sortBy)
+        ? sortBy
+        : 'created_at';
+      const validSortOrder = sortOrder.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+
+      query += ` ORDER BY j.${sortColumn} ${validSortOrder}`;
 
       // Add pagination
       paramCount++;
       query += ` LIMIT $${paramCount}`;
-      params.push(parseInt(limit));
-      
+      params.push(parseInt(limit, 10));
+
       paramCount++;
       query += ` OFFSET $${paramCount}`;
-      params.push(parseInt(offset));
+      params.push((parseInt(page, 10) - 1) * parseInt(limit, 10));
 
-      const result = await pool.query(query, params);
+      const result = await db.query(query, params);
+
+      // Get total count for pagination
+      let countQuery = `
+        SELECT COUNT(*) FROM jobs j
+        WHERE j.is_active = true AND (j.expires_date IS NULL OR j.expires_date > NOW())
+      `;
+
+      const countResult = await db.query(countQuery);
 
       res.json({
-        success: true,
-        data: result.rows,
-        count: result.rows.length,
-        limit: parseInt(limit),
-        offset: parseInt(offset)
+        jobListings: result.rows,
+        pagination: {
+          page: parseInt(page, 10),
+          limit: parseInt(limit, 10),
+          total: parseInt(countResult.rows[0].count, 10),
+          totalPages: Math.ceil(
+            parseInt(countResult.rows[0].count, 10) / parseInt(limit, 10),
+          ),
+        },
       });
     } catch (error) {
-      console.error('Error fetching jobs:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to fetch jobs',
-        message: error.message
-      });
+      logger.error('Error getting job listings:', error);
+      res.status(500).json({ error: error.message, code: 'JOB_FETCH_ERROR' });
     }
   }
 
-  // Get single job by ID
-  static async getJobById(req, res) {
+  // ============================================================================
+  // JOB LISTINGS - GET BY ID
+  // ============================================================================
+
+  static async getJobListingById(req, res) {
     try {
       const { id } = req.params;
+      const userId = req.user?.id;
 
-      const query = `
-        SELECT 
+      const result = await db.query(
+        `SELECT 
           j.*,
-          u.first_name || ' ' || u.last_name as poster_name,
-          u.email as poster_email,
-          u.phone as poster_phone
+          u.first_name as employer_first_name,
+          u.last_name as employer_last_name,
+          u.email as employer_email,
+          (SELECT COUNT(*) FROM job_applications WHERE job_id = j.id) as total_applications,
+          ${
+            userId
+              ? `(SELECT COUNT(*) > 0 FROM saved_jobs WHERE user_id = $2 AND job_id = j.id) as is_saved,`
+              : 'false as is_saved,'
+          }
+          ${
+            userId
+              ? `(SELECT COUNT(*) > 0 FROM job_applications WHERE applicant_id = $2 AND job_id = j.id) as has_applied`
+              : 'false as has_applied'
+          }
         FROM jobs j
         LEFT JOIN users u ON j.poster_id = u.id
-        WHERE j.id = $1
-      `;
-
-      const result = await pool.query(query, [id]);
+        WHERE j.id = $1`,
+        userId ? [id, userId] : [id],
+      );
 
       if (result.rows.length === 0) {
-        return res.status(404).json({
-          success: false,
-          error: 'Job not found'
-        });
+        return res
+          .status(404)
+          .json({ error: 'Job listing not found', code: 'JOB_NOT_FOUND' });
       }
 
       // Increment view count
-      await pool.query(
+      await db.query(
         'UPDATE jobs SET view_count = view_count + 1 WHERE id = $1',
-        [id]
+        [id],
       );
 
-      res.json({
-        success: true,
-        data: result.rows[0]
-      });
+      res.json({ jobListing: result.rows[0] });
     } catch (error) {
-      console.error('Error fetching job:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to fetch job',
-        message: error.message
-      });
+      logger.error('Error getting job listing:', error);
+      res.status(500).json({ error: error.message, code: 'JOB_FETCH_ERROR' });
     }
   }
 
-  // Create new job
-  static async createJob(req, res) {
-    try {
-      const {
-        title,
-        description,
-        company_name,
-        poster_id,
-        location_type = 'on-site',
-        is_remote = false,
-        city,
-        state,
-        zip_code,
-        address,
-        latitude,
-        longitude,
-        compensation_type = 'hourly',
-        compensation_min,
-        compensation_max,
-        compensation_currency = 'USD',
-        compensation_display,
-        job_type = 'full-time',
-        category,
-        tags = [],
-        requirements = [],
-        qualifications = [],
-        experience_level,
-        benefits = [],
-        schedule,
-        start_date,
-        contact_email,
-        contact_phone,
-        application_url,
-        kosher_environment = false,
-        shabbat_observant = false,
-        jewish_organization = false,
-        is_urgent = false,
-        expires_date
-      } = req.body;
+  // ============================================================================
+  // JOB LISTINGS - UPDATE
+  // ============================================================================
 
-      // Validate required fields
-      if (!title || !description || !poster_id) {
-        return res.status(400).json({
-          success: false,
-          error: 'Missing required fields: title, description, poster_id'
-        });
-      }
-
-      const query = `
-        INSERT INTO jobs (
-          title, description, company_name, poster_id,
-          location_type, is_remote, city, state, zip_code, address,
-          latitude, longitude,
-          compensation_type, compensation_min, compensation_max,
-          compensation_currency, compensation_display,
-          job_type, category, tags,
-          requirements, qualifications, experience_level,
-          benefits, schedule, start_date,
-          contact_email, contact_phone, application_url,
-          kosher_environment, shabbat_observant, jewish_organization,
-          is_urgent, expires_date
-        )
-        VALUES (
-          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-          $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
-          $21, $22, $23, $24, $25, $26, $27, $28, $29, $30,
-          $31, $32, $33, $34
-        )
-        RETURNING *
-      `;
-
-      const values = [
-        title, description, company_name, poster_id,
-        location_type, is_remote, city, state, zip_code, address,
-        latitude, longitude,
-        compensation_type, compensation_min, compensation_max,
-        compensation_currency, compensation_display,
-        job_type, category, tags,
-        requirements, qualifications, experience_level,
-        benefits, schedule, start_date,
-        contact_email, contact_phone, application_url,
-        kosher_environment, shabbat_observant, jewish_organization,
-        is_urgent, expires_date
-      ];
-
-      const result = await pool.query(query, values);
-
-      res.status(201).json({
-        success: true,
-        data: result.rows[0],
-        message: 'Job created successfully'
-      });
-    } catch (error) {
-      console.error('Error creating job:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to create job',
-        message: error.message
-      });
-    }
-  }
-
-  // Update job
-  static async updateJob(req, res) {
+  static async updateJobListing(req, res) {
+    const client = await db.connect();
     try {
       const { id } = req.params;
-      const updateFields = req.body;
+      const userId = req.user.id;
+      const updates = req.body;
 
-      // Build dynamic update query
+      await client.query('BEGIN');
+
+      // Verify ownership
+      const ownerCheck = await client.query(
+        'SELECT poster_id FROM jobs WHERE id = $1',
+        [id],
+      );
+
+      if (ownerCheck.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return res
+          .status(404)
+          .json({ error: 'Job listing not found', code: 'JOB_NOT_FOUND' });
+      }
+
+      if (ownerCheck.rows[0].poster_id !== userId) {
+        await client.query('ROLLBACK');
+        return res
+          .status(403)
+          .json({ error: 'Not authorized', code: 'NOT_AUTHORIZED' });
+      }
+
+      // Build update query
       const allowedFields = [
-        'title', 'description', 'company_name',
-        'location_type', 'is_remote', 'city', 'state', 'zip_code', 'address',
-        'latitude', 'longitude',
-        'compensation_type', 'compensation_min', 'compensation_max',
-        'compensation_currency', 'compensation_display',
-        'job_type', 'category', 'tags',
-        'requirements', 'qualifications', 'experience_level',
-        'benefits', 'schedule', 'start_date',
-        'contact_email', 'contact_phone', 'application_url',
-        'kosher_environment', 'shabbat_observant', 'jewish_organization',
-        'is_active', 'is_urgent', 'is_featured', 'expires_date'
+        'title',
+        'company_name',
+        'job_type',
+        'compensation_type',
+        'compensation_min',
+        'compensation_max',
+        'is_remote',
+        'location_type',
+        'description',
+        'requirements',
+        'benefits',
+        'tags',
+        'application_url',
+        'contact_email',
+        'contact_phone',
+        'is_active',
       ];
 
-      const updates = [];
-      const values = [];
+      const updateFields = [];
+      const updateValues = [];
       let paramCount = 0;
 
-      Object.keys(updateFields).forEach(field => {
-        if (allowedFields.includes(field)) {
+      Object.keys(updates).forEach(key => {
+        if (allowedFields.includes(key)) {
           paramCount++;
-          updates.push(`${field} = $${paramCount}`);
-          values.push(updateFields[field]);
+          updateFields.push(`${key} = $${paramCount}`);
+          updateValues.push(updates[key]);
         }
       });
 
-      if (updates.length === 0) {
-        return res.status(400).json({
-          success: false,
-          error: 'No valid fields to update'
-        });
+      if (updateFields.length === 0) {
+        await client.query('ROLLBACK');
+        return res
+          .status(400)
+          .json({ error: 'No valid fields to update', code: 'NO_UPDATES' });
       }
 
       paramCount++;
-      values.push(id);
+      updateValues.push(id);
 
       const query = `
-        UPDATE jobs
-        SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP
+        UPDATE jobs 
+        SET ${updateFields.join(', ')}, updated_at = NOW()
         WHERE id = $${paramCount}
         RETURNING *
       `;
 
-      const result = await pool.query(query, values);
+      const result = await client.query(query, updateValues);
 
-      if (result.rows.length === 0) {
-        return res.status(404).json({
-          success: false,
-          error: 'Job not found'
-        });
-      }
+      await client.query('COMMIT');
+
+      logger.info(`Job listing updated: ${id} by user ${userId}`);
 
       res.json({
         success: true,
-        data: result.rows[0],
-        message: 'Job updated successfully'
+        jobListing: result.rows[0],
       });
     } catch (error) {
-      console.error('Error updating job:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to update job',
-        message: error.message
-      });
+      await client.query('ROLLBACK');
+      logger.error('Error updating job listing:', error);
+      res.status(500).json({ error: error.message, code: 'JOB_UPDATE_ERROR' });
+    } finally {
+      client.release();
     }
   }
 
-  // Delete job
-  static async deleteJob(req, res) {
+  // ============================================================================
+  // JOB LISTINGS - DELETE
+  // ============================================================================
+
+  static async deleteJobListing(req, res) {
     try {
       const { id } = req.params;
+      const userId = req.user.id;
 
-      const result = await pool.query(
-        'DELETE FROM jobs WHERE id = $1 RETURNING id',
-        [id]
+      // Verify ownership
+      const ownerCheck = await db.query(
+        'SELECT poster_id FROM jobs WHERE id = $1',
+        [id],
       );
 
-      if (result.rows.length === 0) {
-        return res.status(404).json({
-          success: false,
-          error: 'Job not found'
-        });
+      if (ownerCheck.rows.length === 0) {
+        return res
+          .status(404)
+          .json({ error: 'Job listing not found', code: 'JOB_NOT_FOUND' });
       }
 
-      res.json({
-        success: true,
-        message: 'Job deleted successfully'
-      });
+      if (ownerCheck.rows[0].poster_id !== userId) {
+        return res
+          .status(403)
+          .json({ error: 'Not authorized', code: 'NOT_AUTHORIZED' });
+      }
+
+      // Soft delete by setting is_active to false
+      await db.query(
+        'UPDATE jobs SET is_active = $1, updated_at = NOW() WHERE id = $2',
+        [false, id],
+      );
+
+      logger.info(`Job listing deleted: ${id} by user ${userId}`);
+
+      res.json({ success: true, message: 'Job listing deleted successfully' });
     } catch (error) {
-      console.error('Error deleting job:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to delete job',
-        message: error.message
-      });
+      logger.error('Error deleting job listing:', error);
+      res.status(500).json({ error: error.message, code: 'JOB_DELETE_ERROR' });
     }
   }
 
-  // Get job categories
-  static async getJobCategories(req, res) {
-    try {
-      const query = `
-        SELECT DISTINCT category, COUNT(*) as count
-        FROM jobs
-        WHERE category IS NOT NULL AND is_active = true
-        GROUP BY category
-        ORDER BY count DESC, category ASC
-      `;
+  // ============================================================================
+  // JOB LISTINGS - REPOST
+  // ============================================================================
 
-      const result = await pool.query(query);
-
-      res.json({
-        success: true,
-        data: result.rows
-      });
-    } catch (error) {
-      console.error('Error fetching job categories:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to fetch job categories',
-        message: error.message
-      });
-    }
-  }
-
-  // Apply for a job
-  static async applyForJob(req, res) {
+  static async repostJobListing(req, res) {
+    const client = await db.connect();
     try {
       const { id } = req.params;
-      const { applicant_id, cover_letter, resume_url } = req.body;
+      const userId = req.user.id;
 
-      if (!applicant_id) {
-        return res.status(400).json({
-          success: false,
-          error: 'applicant_id is required'
-        });
-      }
+      await client.query('BEGIN');
 
-      // Check if job exists and is active
-      const jobCheck = await pool.query(
-        'SELECT id, is_active FROM jobs WHERE id = $1',
-        [id]
+      // Verify ownership and status
+      const jobCheck = await client.query(
+        'SELECT * FROM jobs WHERE id = $1 AND poster_id = $2',
+        [id, userId],
       );
 
       if (jobCheck.rows.length === 0) {
-        return res.status(404).json({
-          success: false,
-          error: 'Job not found'
-        });
+        await client.query('ROLLBACK');
+        return res
+          .status(404)
+          .json({ error: 'Job listing not found', code: 'JOB_NOT_FOUND' });
       }
 
-      if (!jobCheck.rows[0].is_active) {
+      const job = jobCheck.rows[0];
+
+      if (job.is_active === true) {
+        await client.query('ROLLBACK');
+        return res
+          .status(400)
+          .json({
+            error: 'Job listing is already active',
+            code: 'JOB_ALREADY_ACTIVE',
+          });
+      }
+
+      // Check listing limit
+      const countResult = await client.query(
+        'SELECT COUNT(*) FROM jobs WHERE poster_id = $1 AND is_active = $2',
+        [userId, true],
+      );
+
+      if (parseInt(countResult.rows[0].count, 10) >= 2) {
+        await client.query('ROLLBACK');
         return res.status(400).json({
-          success: false,
-          error: 'This job is no longer accepting applications'
+          error: 'Maximum of 2 active job listings per account',
+          code: 'LISTING_LIMIT_EXCEEDED',
         });
       }
 
-      const query = `
-        INSERT INTO job_applications (job_id, applicant_id, cover_letter, resume_url)
-        VALUES ($1, $2, $3, $4)
-        RETURNING *
-      `;
+      // Reactivate the job with new expiration date
+      const result = await client.query(
+        `UPDATE jobs 
+         SET is_active = true, 
+             expires_date = NOW() + INTERVAL '14 days',
+             updated_at = NOW()
+         WHERE id = $1
+         RETURNING *`,
+        [id],
+      );
 
-      const result = await pool.query(query, [id, applicant_id, cover_letter, resume_url]);
+      await client.query('COMMIT');
 
-      res.status(201).json({
-        success: true,
-        data: result.rows[0],
-        message: 'Application submitted successfully'
-      });
-    } catch (error) {
-      if (error.code === '23505') { // Unique constraint violation
-        return res.status(400).json({
-          success: false,
-          error: 'You have already applied for this job'
-        });
-      }
-      
-      console.error('Error applying for job:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to submit application',
-        message: error.message
-      });
-    }
-  }
-
-  // Get applications for a job
-  static async getJobApplications(req, res) {
-    try {
-      const { id } = req.params;
-      const { status, limit = 50, offset = 0 } = req.query;
-
-      let query = `
-        SELECT 
-          a.*,
-          u.first_name || ' ' || u.last_name as applicant_name,
-          u.email as applicant_email,
-          u.phone as applicant_phone
-        FROM job_applications a
-        LEFT JOIN users u ON a.applicant_id = u.id
-        WHERE a.job_id = $1
-      `;
-      const params = [id];
-      let paramCount = 1;
-
-      if (status) {
-        paramCount++;
-        query += ` AND a.status = $${paramCount}`;
-        params.push(status);
-      }
-
-      query += ` ORDER BY a.applied_at DESC`;
-
-      paramCount++;
-      query += ` LIMIT $${paramCount}`;
-      params.push(parseInt(limit));
-
-      paramCount++;
-      query += ` OFFSET $${paramCount}`;
-      params.push(parseInt(offset));
-
-      const result = await pool.query(query, params);
+      logger.info(`Job listing reposted: ${id} by user ${userId}`);
 
       res.json({
         success: true,
-        data: result.rows,
-        count: result.rows.length
+        jobListing: result.rows[0],
       });
     } catch (error) {
-      console.error('Error fetching job applications:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to fetch applications',
-        message: error.message
-      });
+      await client.query('ROLLBACK');
+      logger.error('Error reposting job listing:', error);
+      res.status(500).json({ error: error.message, code: 'JOB_REPOST_ERROR' });
+    } finally {
+      client.release();
     }
   }
+
+  // ============================================================================
+  // JOB LISTINGS - MARK AS FILLED
+  // ============================================================================
+
+  static async markJobAsFilled(req, res) {
+    try {
+      const { id } = req.params;
+      const userId = req.user.id;
+
+      // Verify ownership
+      const ownerCheck = await db.query(
+        'SELECT poster_id FROM jobs WHERE id = $1',
+        [id],
+      );
+
+      if (ownerCheck.rows.length === 0) {
+        return res
+          .status(404)
+          .json({ error: 'Job listing not found', code: 'JOB_NOT_FOUND' });
+      }
+
+      if (ownerCheck.rows[0].poster_id !== userId) {
+        return res
+          .status(403)
+          .json({ error: 'Not authorized', code: 'NOT_AUTHORIZED' });
+      }
+
+      const result = await db.query(
+        `UPDATE jobs 
+         SET is_active = false, updated_at = NOW()
+         WHERE id = $1
+         RETURNING *`,
+        [id],
+      );
+
+      logger.info(`Job listing marked as filled: ${id} by user ${userId}`);
+
+      res.json({
+        success: true,
+        jobListing: result.rows[0],
+      });
+    } catch (error) {
+      logger.error('Error marking job as filled:', error);
+      res.status(500).json({ error: error.message, code: 'JOB_UPDATE_ERROR' });
+    }
+  }
+
+  // ============================================================================
+  // JOB LISTINGS - GET MY LISTINGS
+  // ============================================================================
+
+  static async getMyJobListings(req, res) {
+    try {
+      const userId = req.user.id;
+      const { is_active, page = 1, limit = 20 } = req.query;
+
+      let query = `
+        SELECT 
+          j.*,
+          (SELECT COUNT(*) FROM job_applications WHERE job_id = j.id) as total_applications,
+          (SELECT COUNT(*) FROM job_applications WHERE job_id = j.id AND status = 'hired') as hired_count
+        FROM jobs j
+        WHERE j.poster_id = $1
+      `;
+
+      const params = [userId];
+      let paramCount = 1;
+
+      if (is_active !== undefined) {
+        paramCount++;
+        query += ` AND j.is_active = $${paramCount}`;
+        params.push(is_active === 'true');
+      }
+
+      query += ` ORDER BY j.created_at DESC`;
+
+      // Add pagination
+      paramCount++;
+      query += ` LIMIT $${paramCount}`;
+      params.push(parseInt(limit, 10));
+
+      paramCount++;
+      query += ` OFFSET $${paramCount}`;
+      params.push((parseInt(page, 10) - 1) * parseInt(limit, 10));
+
+      const result = await db.query(query, params);
+
+      res.json({ jobListings: result.rows });
+    } catch (error) {
+      logger.error('Error getting my job listings:', error);
+      res.status(500).json({ error: error.message, code: 'JOB_FETCH_ERROR' });
+    }
+  }
+
+  // ============================================================================
+  // CONTINUE IN NEXT FILE DUE TO SIZE...
+  // ============================================================================
 }
 
 module.exports = JobsController;

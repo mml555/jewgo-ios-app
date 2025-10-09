@@ -1,8 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { TouchableOpacity, Text, ActivityIndicator, Alert } from 'react-native';
-import { Colors, Typography, Spacing, BorderRadius } from '../styles/designSystem';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+} from '../styles/designSystem';
 import { useFavorites } from '../hooks/useFavorites';
 import HeartIcon from './HeartIcon';
+import { debugLog, errorLog } from '../utils/logger';
 
 interface FavoriteButtonProps {
   entityId: string;
@@ -42,23 +48,25 @@ const FavoriteButton: React.FC<FavoriteButtonProps> = ({
     try {
       setLoading(true);
       const success = await toggleFavorite(entityId, entityData);
-      
+
       if (success) {
         const newStatus = !currentStatus;
         setCurrentStatus(newStatus);
         onToggle?.(newStatus);
-        
+
         // Show feedback to user
-        const action = newStatus ? 'Added to favorites' : 'Removed from favorites';
+        const action = newStatus
+          ? 'Added to favorites'
+          : 'Removed from favorites';
         if (entityName) {
           // Could show a toast here instead of alert
-          console.log(`${action}: ${entityName}`);
+          debugLog(`${action}: ${entityName}`);
         }
       } else {
         Alert.alert('Error', 'Failed to update favorites. Please try again.');
       }
     } catch (error) {
-      console.error('Error toggling favorite:', error);
+      errorLog('Error toggling favorite:', error);
       Alert.alert('Error', 'Failed to update favorites. Please try again.');
     } finally {
       setLoading(false);
@@ -131,25 +139,29 @@ const FavoriteButton: React.FC<FavoriteButtonProps> = ({
       hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
     >
       {loading ? (
-        <ActivityIndicator 
-          size="small" 
-          color={isFavoritedStatus ? Colors.white : Colors.textSecondary} 
+        <ActivityIndicator
+          size="small"
+          color={isFavoritedStatus ? Colors.white : Colors.textSecondary}
         />
       ) : (
         <>
-          <HeartIcon 
+          <HeartIcon
             size={sizeStyles.icon.fontSize}
             color={isFavoritedStatus ? Colors.white : Colors.textSecondary}
             filled={isFavoritedStatus}
           />
           {showText && (
-            <Text style={[
-              sizeStyles.text,
-              {
-                color: isFavoritedStatus ? Colors.white : Colors.textSecondary,
-                marginTop: Spacing.xs,
-              }
-            ]}>
+            <Text
+              style={[
+                sizeStyles.text,
+                {
+                  color: isFavoritedStatus
+                    ? Colors.white
+                    : Colors.textSecondary,
+                  marginTop: Spacing.xs,
+                },
+              ]}
+            >
               {isFavoritedStatus ? 'Favorited' : 'Favorite'}
             </Text>
           )}
@@ -163,7 +175,7 @@ const styles = {
   button: {
     justifyContent: 'center' as const,
     alignItems: 'center' as const,
-    ...BorderRadius.md,
+    borderRadius: BorderRadius.md,
   },
 };
 

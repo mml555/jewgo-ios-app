@@ -10,13 +10,24 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Colors, Typography, Spacing, BorderRadius, Shadows, TouchTargets } from '../styles/designSystem';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  Shadows,
+  TouchTargets,
+} from '../styles/designSystem';
 
 // Types
 interface WriteReviewModalProps {
   visible: boolean;
   onClose: () => void;
-  onSubmit: (review: { rating: number; title: string; content: string }) => Promise<void>;
+  onSubmit: (review: {
+    rating: number;
+    title: string;
+    content: string;
+  }) => Promise<void>;
   loading?: boolean;
 }
 
@@ -34,7 +45,7 @@ const WriteReviewModal: React.FC<WriteReviewModalProps> = ({
 
   const handleSubmit = async () => {
     if (!newReview.content.trim()) return;
-    
+
     try {
       await onSubmit(newReview);
       // Reset form after successful submission
@@ -59,7 +70,7 @@ const WriteReviewModal: React.FC<WriteReviewModalProps> = ({
       <SafeAreaView style={styles.modalContainer}>
         <View style={styles.modalHeader}>
           <Text style={styles.modalTitle}>Write a Review</Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.closeButton}
             onPress={handleClose}
             activeOpacity={0.7}
@@ -68,29 +79,36 @@ const WriteReviewModal: React.FC<WriteReviewModalProps> = ({
           </TouchableOpacity>
         </View>
 
-        <ScrollView 
-          style={styles.writeReviewContainer} 
+        <ScrollView
+          style={styles.writeReviewContainer}
           contentContainerStyle={styles.writeReviewContainerContent}
           showsVerticalScrollIndicator={false}
         >
           {/* Rating Selection */}
           <View style={styles.ratingSection}>
-            <Text style={styles.ratingLabel}>How would you rate this place?</Text>
+            <Text style={styles.ratingLabel}>
+              How would you rate this place?
+            </Text>
             <View style={styles.ratingButtons}>
-              {[1, 2, 3, 4, 5].map((rating) => (
+              {[1, 2, 3, 4, 5].map(rating => (
                 <TouchableOpacity
                   key={rating}
                   style={[
                     styles.ratingButton,
-                    newReview.rating >= rating && styles.ratingButtonActive
+                    newReview.rating >= rating && styles.ratingButtonActive,
                   ]}
                   onPress={() => setNewReview(prev => ({ ...prev, rating }))}
                   activeOpacity={0.7}
                 >
-                  <Text style={[
-                    styles.ratingButtonTextModal,
-                    newReview.rating >= rating && styles.ratingButtonTextActive
-                  ]}>★</Text>
+                  <Text
+                    style={[
+                      styles.ratingButtonTextModal,
+                      newReview.rating >= rating &&
+                        styles.ratingButtonTextActive,
+                    ]}
+                  >
+                    ★
+                  </Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -102,7 +120,9 @@ const WriteReviewModal: React.FC<WriteReviewModalProps> = ({
             <TextInput
               style={styles.textInput}
               value={newReview.title}
-              onChangeText={(text) => setNewReview(prev => ({ ...prev, title: text }))}
+              onChangeText={text =>
+                setNewReview(prev => ({ ...prev, title: text }))
+              }
               placeholder="Give your review a catchy title..."
               placeholderTextColor={Colors.textTertiary}
               maxLength={255}
@@ -115,7 +135,9 @@ const WriteReviewModal: React.FC<WriteReviewModalProps> = ({
             <TextInput
               style={[styles.textInput, styles.textArea]}
               value={newReview.content}
-              onChangeText={(text) => setNewReview(prev => ({ ...prev, content: text }))}
+              onChangeText={text =>
+                setNewReview(prev => ({ ...prev, content: text }))
+              }
               placeholder="Share your experience..."
               placeholderTextColor={Colors.textTertiary}
               multiline
@@ -126,11 +148,12 @@ const WriteReviewModal: React.FC<WriteReviewModalProps> = ({
           </View>
 
           {/* Submit Button */}
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[
               styles.submitButton,
-              (!newReview.content.trim() || loading) && styles.submitButtonDisabled
-            ]} 
+              (!newReview.content.trim() || loading) &&
+                styles.submitButtonDisabled,
+            ]}
             onPress={handleSubmit}
             disabled={!newReview.content.trim() || loading}
             activeOpacity={0.7}
@@ -150,7 +173,7 @@ const WriteReviewModal: React.FC<WriteReviewModalProps> = ({
 const styles = StyleSheet.create({
   modalContainer: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.background.primary,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -232,7 +255,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: Colors.border.primary,
     ...Typography.styles.body,
     color: Colors.textPrimary,
     fontFamily: 'Nunito-Regular',

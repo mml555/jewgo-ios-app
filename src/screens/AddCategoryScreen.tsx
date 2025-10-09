@@ -13,8 +13,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../contexts/AuthContext';
+import { debugLog, errorLog } from '../utils/logger';
 import { TouchTargets, Spacing } from '../styles/designSystem';
-import { useResponsiveDimensions, useKeyboardAwareLayout, getResponsiveLayout } from '../utils/deviceAdaptation';
+import {
+  useResponsiveDimensions,
+  useKeyboardAwareLayout,
+  getResponsiveLayout,
+} from '../utils/deviceAdaptation';
 import { KeyboardManager } from '../utils/keyboardManager';
 import { hapticNavigation, hapticSuccess } from '../utils/hapticFeedback';
 import { useFormAutoSave } from '../hooks/useFormAutoSave';
@@ -45,22 +50,22 @@ export interface ListingFormData {
   business_email: string;
   website: string;
   listing_type: 'Eatery' | 'Catering' | 'Food Truck';
-  
+
   // Conditional Owner Information (if is_owner_submission = true)
   owner_name: string;
   owner_email: string;
   owner_phone: string;
-  
+
   // Step 2: Kosher Certification
   kosher_category: 'Meat' | 'Dairy' | 'Pareve';
   certifying_agency: string;
   custom_certifying_agency: string;
-  
+
   // Conditional Kosher Details
   is_cholov_yisroel: boolean;
   is_pas_yisroel: boolean;
   cholov_stam: boolean;
-  
+
   // Step 3: Business Details
   short_description: string;
   description: string;
@@ -75,24 +80,24 @@ export interface ListingFormData {
   years_in_business: number;
   business_license: string;
   tax_id: string;
-  
+
   // Service Options
   delivery_available: boolean;
   takeout_available: boolean;
   catering_available: boolean;
-  
+
   // Social Media Links
   google_listing_url: string;
   instagram_link: string;
   facebook_link: string;
   tiktok_link: string;
-  
+
   // Step 4: Images
   business_images: string[];
-  
+
   // Step 5: Review & Submit
   finalReview: boolean;
-  
+
   // Additional System Fields (auto-populated)
   user_email: string;
   status: string;
@@ -100,12 +105,12 @@ export interface ListingFormData {
   submission_date: string;
   created_at: string;
   updated_at: string;
-  
+
   // Contact Preferences (optional)
   preferred_contact_method: 'Email' | 'Phone' | 'Text' | 'Any';
   preferred_contact_time: 'Morning' | 'Afternoon' | 'Evening';
   contact_notes: string;
-  
+
   // Legacy fields for backward compatibility
   category: string;
   zipCode: string;
@@ -127,7 +132,12 @@ export interface ListingFormData {
     hasTakeout: boolean;
     hasOutdoorSeating: boolean;
   };
-  kosherLevel: 'glatt' | 'chalav-yisrael' | 'pas-yisrael' | 'regular' | 'not-kosher';
+  kosherLevel:
+    | 'glatt'
+    | 'chalav-yisrael'
+    | 'pas-yisrael'
+    | 'regular'
+    | 'not-kosher';
   priceRange: '$' | '$$' | '$$$' | '$$$$';
   specialFeatures: string[];
   photos: string[];
@@ -142,57 +152,87 @@ const defaultFormData: ListingFormData = {
   business_email: '',
   website: '',
   listing_type: 'Eatery',
-  
+
   // Conditional Owner Information
   owner_name: '',
   owner_email: '',
   owner_phone: '',
-  
+
   // Step 2: Kosher Certification
   kosher_category: 'Pareve',
   certifying_agency: '',
   custom_certifying_agency: '',
-  
+
   // Conditional Kosher Details
   is_cholov_yisroel: false,
   is_pas_yisroel: false,
   cholov_stam: false,
-  
+
   // Step 3: Business Details
   short_description: '',
   description: '',
   hours_of_operation: '',
   business_hours: [
-    { day: 'Monday', openTime: '11:00 AM', closeTime: '10:00 PM', isClosed: false },
-    { day: 'Tuesday', openTime: '11:00 AM', closeTime: '10:00 PM', isClosed: false },
-    { day: 'Wednesday', openTime: '11:00 AM', closeTime: '10:00 PM', isClosed: false },
-    { day: 'Thursday', openTime: '11:00 AM', closeTime: '10:00 PM', isClosed: false },
-    { day: 'Friday', openTime: '11:00 AM', closeTime: '3:00 PM', isClosed: false },
+    {
+      day: 'Monday',
+      openTime: '11:00 AM',
+      closeTime: '10:00 PM',
+      isClosed: false,
+    },
+    {
+      day: 'Tuesday',
+      openTime: '11:00 AM',
+      closeTime: '10:00 PM',
+      isClosed: false,
+    },
+    {
+      day: 'Wednesday',
+      openTime: '11:00 AM',
+      closeTime: '10:00 PM',
+      isClosed: false,
+    },
+    {
+      day: 'Thursday',
+      openTime: '11:00 AM',
+      closeTime: '10:00 PM',
+      isClosed: false,
+    },
+    {
+      day: 'Friday',
+      openTime: '11:00 AM',
+      closeTime: '3:00 PM',
+      isClosed: false,
+    },
     { day: 'Saturday', openTime: '', closeTime: '', isClosed: true },
-    { day: 'Sunday', openTime: '12:00 PM', closeTime: '10:00 PM', isClosed: false },
+    {
+      day: 'Sunday',
+      openTime: '12:00 PM',
+      closeTime: '10:00 PM',
+      isClosed: false,
+    },
   ],
   seating_capacity: 0,
   years_in_business: 0,
   business_license: '',
   tax_id: '',
-  
+
   // Service Options
   delivery_available: false,
   takeout_available: false,
   catering_available: false,
-  
+
   // Social Media Links
   google_listing_url: '',
   instagram_link: '',
   facebook_link: '',
   tiktok_link: '',
-  
+
   // Step 4: Images
   business_images: [],
-  
+
   // Step 5: Review & Submit
   finalReview: false,
-  
+
   // Additional System Fields (auto-populated)
   user_email: '',
   status: 'pending',
@@ -200,12 +240,12 @@ const defaultFormData: ListingFormData = {
   submission_date: '',
   created_at: '',
   updated_at: '',
-  
+
   // Contact Preferences
   preferred_contact_method: 'Email',
   preferred_contact_time: 'Morning',
   contact_notes: '',
-  
+
   // Legacy fields for backward compatibility
   category: '',
   zipCode: '',
@@ -240,22 +280,24 @@ const AddCategoryScreen: React.FC = () => {
   const route = useRoute();
   const insets = useSafeAreaInsets();
   const { isAuthenticated, checkPermission, user } = useAuth();
-  
+
   // Responsive design hooks
   const dimensions = useResponsiveDimensions();
   const keyboardLayout = useKeyboardAwareLayout();
   const responsiveLayout = getResponsiveLayout();
-  
+
   // Initialize API service
   const apiV5Service = new ApiV5Service();
-  
+
   const [currentPage, setCurrentPage] = useState(1);
   const [formData, setFormData] = useState<ListingFormData>(defaultFormData);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const [showExitConfirmation, setShowExitConfirmation] = useState(false);
   const [showSuccessCelebration, setShowSuccessCelebration] = useState(false);
-  const [analyticsSessionId, setAnalyticsSessionId] = useState<string | null>(null);
+  const [analyticsSessionId, setAnalyticsSessionId] = useState<string | null>(
+    null,
+  );
 
   const category = (route.params as any)?.category || 'Place';
   const totalPages = 5;
@@ -276,7 +318,12 @@ const AddCategoryScreen: React.FC = () => {
     clearSavedData,
     // getSaveHistory,
     // restoreFromHistory,
-  } = useFormAutoSave(formData, currentPage, currentPage === totalPages && isSubmitting, { enabled: false });
+  } = useFormAutoSave(
+    formData,
+    currentPage,
+    currentPage === totalPages && isSubmitting,
+    { enabled: false },
+  );
 
   // Check authentication and permissions
   useEffect(() => {
@@ -286,8 +333,11 @@ const AddCategoryScreen: React.FC = () => {
         'Please log in to add a new listing.',
         [
           { text: 'Cancel', onPress: () => navigation.goBack() },
-          { text: 'Login', onPress: () => navigation.navigate('Auth' as never) }
-        ]
+          {
+            text: 'Login',
+            onPress: () => navigation.navigate('Auth' as never),
+          },
+        ],
       );
       return;
     }
@@ -296,7 +346,7 @@ const AddCategoryScreen: React.FC = () => {
       Alert.alert(
         'Access Denied',
         'You do not have permission to create listings.',
-        [{ text: 'OK', onPress: () => navigation.goBack() }]
+        [{ text: 'OK', onPress: () => navigation.goBack() }],
       );
       return;
     }
@@ -335,7 +385,7 @@ const AddCategoryScreen: React.FC = () => {
             fieldName,
             'validation_failed',
             errorMessage,
-            currentPage
+            currentPage,
           );
         }
       });
@@ -343,25 +393,28 @@ const AddCategoryScreen: React.FC = () => {
   }, [fieldErrors, analyticsSessionId, currentPage, analyticsService]);
 
   // Handle step navigation
-  const handleStepNavigation = useCallback(async (stepNumber: number) => {
-    if (stepNumber === currentPage) return;
-    
-    // If going forward, validate current step
-    if (stepNumber > currentPage) {
-      const stepValidation = validateStep(currentPage);
-      if (!stepValidation.isValid) {
-        Alert.alert(
-          'Please Complete Current Step',
-          'Please fix any errors in the current step before proceeding.',
-          [{ text: 'OK' }]
-        );
-        return;
+  const handleStepNavigation = useCallback(
+    async (stepNumber: number) => {
+      if (stepNumber === currentPage) return;
+
+      // If going forward, validate current step
+      if (stepNumber > currentPage) {
+        const stepValidation = validateStep(currentPage);
+        if (!stepValidation.isValid) {
+          Alert.alert(
+            'Please Complete Current Step',
+            'Please fix any errors in the current step before proceeding.',
+            [{ text: 'OK' }],
+          );
+          return;
+        }
       }
-    }
-    
-    await saveNow();
-    setCurrentPage(stepNumber);
-  }, [currentPage, validateStep, saveNow]);
+
+      await saveNow();
+      setCurrentPage(stepNumber);
+    },
+    [currentPage, validateStep, saveNow],
+  );
 
   // Prepare steps for progress indicator
   const formSteps = [
@@ -372,7 +425,9 @@ const AddCategoryScreen: React.FC = () => {
       isCompleted: currentPage > 1,
       isValid: isStepValid(1),
       isCurrent: currentPage === 1,
-      hasErrors: stepResults[1] ? Object.keys(stepResults[1].errors).length > 0 : false,
+      hasErrors: stepResults[1]
+        ? Object.keys(stepResults[1].errors).length > 0
+        : false,
       completionPercentage: stepResults[1]?.completionPercentage || 0,
     },
     {
@@ -382,7 +437,9 @@ const AddCategoryScreen: React.FC = () => {
       isCompleted: currentPage > 2,
       isValid: isStepValid(2),
       isCurrent: currentPage === 2,
-      hasErrors: stepResults[2] ? Object.keys(stepResults[2].errors).length > 0 : false,
+      hasErrors: stepResults[2]
+        ? Object.keys(stepResults[2].errors).length > 0
+        : false,
       completionPercentage: stepResults[2]?.completionPercentage || 0,
     },
     {
@@ -392,7 +449,9 @@ const AddCategoryScreen: React.FC = () => {
       isCompleted: currentPage > 3,
       isValid: isStepValid(3),
       isCurrent: currentPage === 3,
-      hasErrors: stepResults[3] ? Object.keys(stepResults[3].errors).length > 0 : false,
+      hasErrors: stepResults[3]
+        ? Object.keys(stepResults[3].errors).length > 0
+        : false,
       completionPercentage: stepResults[3]?.completionPercentage || 0,
     },
     {
@@ -402,7 +461,9 @@ const AddCategoryScreen: React.FC = () => {
       isCompleted: currentPage > 4,
       isValid: isStepValid(4),
       isCurrent: currentPage === 4,
-      hasErrors: stepResults[4] ? Object.keys(stepResults[4].errors).length > 0 : false,
+      hasErrors: stepResults[4]
+        ? Object.keys(stepResults[4].errors).length > 0
+        : false,
       completionPercentage: stepResults[4]?.completionPercentage || 0,
     },
     {
@@ -422,9 +483,11 @@ const AddCategoryScreen: React.FC = () => {
     const initializeForm = async () => {
       try {
         // Start analytics session
-        const sessionId = await analyticsService.startFormSession('add_eatery_form');
+        const sessionId = await analyticsService.startFormSession(
+          'add_eatery_form',
+        );
         setAnalyticsSessionId(sessionId);
-        
+
         // Set form context for crash reporting
         crashService.setFormContext({
           sessionId,
@@ -446,24 +509,45 @@ const AddCategoryScreen: React.FC = () => {
           setIsInitialized(true);
         }
       } catch (error) {
-        console.error('Error initializing form:', error);
-        await crashService.reportError(error as Error, 'javascript_error', 'medium', {
-          context: 'form_initialization',
-          hasSavedData,
-        });
+        errorLog('Error initializing form:', error);
+        await crashService.reportError(
+          error as Error,
+          'javascript_error',
+          'medium',
+          {
+            context: 'form_initialization',
+            hasSavedData,
+          },
+        );
         setIsInitialized(true);
       }
     };
 
     initializeForm();
-  }, [hasSavedData, loadSavedData, clearSavedData, lastSaved, analyticsService, crashService]);
+  }, [
+    hasSavedData,
+    loadSavedData,
+    clearSavedData,
+    lastSaved,
+    analyticsService,
+    crashService,
+  ]);
 
   // Track step changes for analytics
   useEffect(() => {
     if (analyticsSessionId && isInitialized) {
-      const stepNames = ['Basic Info', 'Kosher Info', 'Business Details', 'Photos', 'Review'];
-      analyticsService.trackStepNavigation(currentPage, stepNames[currentPage - 1] || 'Unknown');
-      
+      const stepNames = [
+        'Basic Info',
+        'Kosher Info',
+        'Business Details',
+        'Photos',
+        'Review',
+      ];
+      analyticsService.trackStepNavigation(
+        currentPage,
+        stepNames[currentPage - 1] || 'Unknown',
+      );
+
       // Update crash reporting context
       crashService.setFormContext({
         sessionId: analyticsSessionId,
@@ -473,21 +557,32 @@ const AddCategoryScreen: React.FC = () => {
         lastAction: `navigated_to_step_${currentPage}`,
       });
     }
-  }, [currentPage, analyticsSessionId, isInitialized, formData, analyticsService, crashService]);
+  }, [
+    currentPage,
+    analyticsSessionId,
+    isInitialized,
+    formData,
+    analyticsService,
+    crashService,
+  ]);
 
   const handleGoBack = useCallback(async () => {
     // Dismiss keyboard first
     KeyboardManager.dismiss();
-    
+
     // Add haptic feedback for navigation
     hapticNavigation();
-    
+
     if (currentPage === 1) {
       // Check if there's unsaved data before leaving
-      const hasChanges = hasSavedData || Object.keys(formData).some(key => 
-        formData[key as keyof ListingFormData] !== defaultFormData[key as keyof ListingFormData]
-      );
-      
+      const hasChanges =
+        hasSavedData ||
+        Object.keys(formData).some(
+          key =>
+            formData[key as keyof ListingFormData] !==
+            defaultFormData[key as keyof ListingFormData],
+        );
+
       if (hasChanges) {
         setShowExitConfirmation(true);
       } else {
@@ -501,29 +596,37 @@ const AddCategoryScreen: React.FC = () => {
       await saveNow(); // Save current progress
       setCurrentPage(prev => prev - 1);
     }
-  }, [currentPage, navigation, hasSavedData, formData, saveNow, analyticsSessionId, analyticsService]);
+  }, [
+    currentPage,
+    navigation,
+    hasSavedData,
+    formData,
+    saveNow,
+    analyticsSessionId,
+    analyticsService,
+  ]);
 
   // Handle exit confirmation
   const handleExitConfirm = useCallback(async () => {
     setShowExitConfirmation(false);
     await saveNow();
-    
+
     // Track form abandonment with save
     if (analyticsSessionId) {
       await analyticsService.trackFormAbandonment(currentPage);
     }
-    
+
     navigation.goBack();
   }, [saveNow, navigation, analyticsSessionId, currentPage, analyticsService]);
 
   const handleExitDiscard = useCallback(async () => {
     setShowExitConfirmation(false);
-    
+
     // Track form abandonment without save
     if (analyticsSessionId) {
       await analyticsService.trackFormAbandonment(currentPage);
     }
-    
+
     navigation.goBack();
   }, [navigation, analyticsSessionId, currentPage, analyticsService]);
 
@@ -531,100 +634,117 @@ const AddCategoryScreen: React.FC = () => {
   //   setShowExitConfirmation(false);
   // }, []);
 
-  const handleFormDataChange = useCallback((newData: Partial<ListingFormData>) => {
-    setFormData(prev => ({ ...prev, ...newData }));
-  }, []);
+  const handleFormDataChange = useCallback(
+    (newData: Partial<ListingFormData>) => {
+      setFormData(prev => ({ ...prev, ...newData }));
+    },
+    [],
+  );
 
   // Helper function to generate detailed error message
-  const generateValidationErrorMessage = useCallback((stepValidation: any, stepNumber: number) => {
-    const stepFieldErrors = stepValidation.errors || {};
-    const errorFields = Object.keys(stepFieldErrors);
-    
-    if (errorFields.length === 0) {
-      return 'Please complete all required fields before continuing.';
-    }
-    
-    // Map field names to user-friendly labels
-    const fieldLabels: { [key: string]: string } = {
-      name: 'Business Name',
-      address: 'Business Address',
-      phone: 'Business Phone',
-      business_email: 'Business Email',
-      website: 'Website',
-      listing_type: 'Listing Type',
-      owner_name: 'Owner Name',
-      owner_email: 'Owner Email',
-      owner_phone: 'Owner Phone',
-      kosher_category: 'Kosher Category',
-      certifying_agency: 'Certifying Agency',
-      business_hours: 'Business Hours',
-      seating_capacity: 'Seating Capacity',
-      price_range: 'Price Range',
-      cuisine_type: 'Cuisine Type',
-      special_dietary_options: 'Special Dietary Options',
-      amenities: 'Amenities',
-      parking_info: 'Parking Information',
-      accessibility_info: 'Accessibility Information',
-      delivery_info: 'Delivery Information',
-      takeout_info: 'Takeout Information',
-      catering_info: 'Catering Information',
-      private_events: 'Private Events Information',
-      description: 'Business Description',
-      photos: 'Business Photos'
-    };
-    
-    // Map step numbers to step names
-    const stepNames: { [key: number]: string } = {
-      1: 'Basic Information',
-      2: 'Kosher Certification',
-      3: 'Hours & Services',
-      4: 'Kosher & Pricing',
-      5: 'Additional Details'
-    };
-    
-    const missingFields = errorFields.map(field => fieldLabels[field] || field);
-    const stepName = stepNames[stepNumber] || `Step ${stepNumber}`;
-    
-    if (missingFields.length === 1) {
-      return `In ${stepName}, please complete the required field: ${missingFields[0]}`;
-    } else if (missingFields.length <= 3) {
-      return `In ${stepName}, please complete the required fields: ${missingFields.join(', ')}`;
-    } else {
-      return `In ${stepName}, please complete the required fields: ${missingFields.slice(0, 2).join(', ')} and ${missingFields.length - 2} more`;
-    }
-  }, []);
+  const generateValidationErrorMessage = useCallback(
+    (stepValidation: any, stepNumber: number) => {
+      const stepFieldErrors = stepValidation.errors || {};
+      const errorFields = Object.keys(stepFieldErrors);
+
+      if (errorFields.length === 0) {
+        return 'Please complete all required fields before continuing.';
+      }
+
+      // Map field names to user-friendly labels
+      const fieldLabels: { [key: string]: string } = {
+        name: 'Business Name',
+        address: 'Business Address',
+        phone: 'Business Phone',
+        business_email: 'Business Email',
+        website: 'Website',
+        listing_type: 'Listing Type',
+        owner_name: 'Owner Name',
+        owner_email: 'Owner Email',
+        owner_phone: 'Owner Phone',
+        kosher_category: 'Kosher Category',
+        certifying_agency: 'Certifying Agency',
+        business_hours: 'Business Hours',
+        seating_capacity: 'Seating Capacity',
+        price_range: 'Price Range',
+        cuisine_type: 'Cuisine Type',
+        special_dietary_options: 'Special Dietary Options',
+        amenities: 'Amenities',
+        parking_info: 'Parking Information',
+        accessibility_info: 'Accessibility Information',
+        delivery_info: 'Delivery Information',
+        takeout_info: 'Takeout Information',
+        catering_info: 'Catering Information',
+        private_events: 'Private Events Information',
+        description: 'Business Description',
+        photos: 'Business Photos',
+      };
+
+      // Map step numbers to step names
+      const stepNames: { [key: number]: string } = {
+        1: 'Basic Information',
+        2: 'Kosher Certification',
+        3: 'Hours & Services',
+        4: 'Kosher & Pricing',
+        5: 'Additional Details',
+      };
+
+      const missingFields = errorFields.map(
+        field => fieldLabels[field] || field,
+      );
+      const stepName = stepNames[stepNumber] || `Step ${stepNumber}`;
+
+      if (missingFields.length === 1) {
+        return `In ${stepName}, please complete the required field: ${missingFields[0]}`;
+      } else if (missingFields.length <= 3) {
+        return `In ${stepName}, please complete the required fields: ${missingFields.join(
+          ', ',
+        )}`;
+      } else {
+        return `In ${stepName}, please complete the required fields: ${missingFields
+          .slice(0, 2)
+          .join(', ')} and ${missingFields.length - 2} more`;
+      }
+    },
+    [],
+  );
 
   // Save before navigation with validation
   const handleNext = useCallback(async () => {
     // Dismiss keyboard first
     KeyboardManager.dismiss();
-    
+
     if (currentPage < totalPages) {
       // Validate current step before proceeding
       const stepValidation = validateStep(currentPage);
-      
+
       if (!stepValidation.isValid) {
-        const errorMessage = generateValidationErrorMessage(stepValidation, currentPage);
-        Alert.alert(
-          'Required Fields Missing',
-          errorMessage,
-          [{ text: 'OK' }]
+        const errorMessage = generateValidationErrorMessage(
+          stepValidation,
+          currentPage,
         );
+        Alert.alert('Required Fields Missing', errorMessage, [{ text: 'OK' }]);
         return;
       }
-      
+
       // Add haptic feedback for navigation
       hapticNavigation();
-      
+
       await saveNow(); // Save current progress
       setCurrentPage(prev => prev + 1);
     }
-  }, [currentPage, totalPages, saveNow, validateStep, generateValidationErrorMessage]);
+  }, [
+    currentPage,
+    totalPages,
+    saveNow,
+    validateStep,
+    generateValidationErrorMessage,
+  ]);
 
   const handleSubmit = useCallback(async () => {
     // Final form validation
     const formValidation = validateForm();
-    
+
     if (!formValidation.isValid) {
       // Track validation errors at submission
       if (analyticsSessionId) {
@@ -633,115 +753,130 @@ const AddCategoryScreen: React.FC = () => {
             'form_submission',
             'submission_validation_failed',
             error,
-            currentPage
+            currentPage,
           );
         });
       }
-      
+
       Alert.alert(
         'Form Incomplete',
-        `Please fix the following issues before submitting:\n\n${formValidation.overallErrors.join('\n')}`,
-        [{ text: 'OK' }]
+        `Please fix the following issues before submitting:\n\n${formValidation.overallErrors.join(
+          '\n',
+        )}`,
+        [{ text: 'OK' }],
       );
       return;
     }
-    
-    setIsSubmitting(true);
-    
-      // Transform form data to API format
-      const services = [];
-      if (formData.delivery_available) services.push('delivery');
-      if (formData.takeout_available) services.push('takeout');
-      if (formData.catering_available) services.push('catering');
-      
-      // Map kosher category to valid enum values
-      const kosherLevelMap: Record<string, string> = {
-        'Meat': 'glatt',
-        'Dairy': 'chalav_yisrael',
-        'Pareve': 'glatt'
-      };
 
-      const apiData = {
-        entityType: 'restaurant',
-        name: formData.name,
-        description: formData.short_description,
-        longDescription: formData.description,
-        ownerId: user?.id || null, // Use authenticated user's ID
-        address: formData.address,
-        city: formData.city || '',
-        state: formData.state || '',
-        zipCode: formData.zip_code || '',
-        phone: formData.phone,
-        email: formData.business_email,
-        website: formData.website,
-        facebookUrl: formData.facebook_link,
-        instagramUrl: formData.instagram_link,
-        whatsappUrl: formData.whatsapp_url,
-        tiktokUrl: formData.tiktok_link,
-        latitude: formData.latitude || 0,
-        longitude: formData.longitude || 0,
-        kosherLevel: kosherLevelMap[formData.kosher_category] || 'glatt',
-        kosherCertification: formData.certifying_agency === 'Other' ? formData.custom_certifying_agency : formData.certifying_agency,
-        kosherCertificateNumber: '',
-        kosherExpiresAt: null,
-        denomination: null,
-        storeType: null,
-        services: services
-      };
-    
+    setIsSubmitting(true);
+
+    // Transform form data to API format
+    const services = [];
+    if (formData.delivery_available) services.push('delivery');
+    if (formData.takeout_available) services.push('takeout');
+    if (formData.catering_available) services.push('catering');
+
+    // Map kosher category to valid enum values
+    const kosherLevelMap: Record<string, string> = {
+      Meat: 'glatt',
+      Dairy: 'chalav_yisrael',
+      Pareve: 'glatt',
+    };
+
+    const apiData = {
+      entityType: 'restaurant',
+      name: formData.name,
+      description: formData.short_description,
+      longDescription: formData.description,
+      ownerId: user?.id || null, // Use authenticated user's ID
+      address: formData.address,
+      city: (formData as any).city || '',
+      state: (formData as any).state || '',
+      zipCode: (formData as any).zip_code || formData.zipCode || '',
+      phone: formData.phone,
+      email: formData.business_email,
+      website: formData.website,
+      facebookUrl: formData.facebook_link,
+      instagramUrl: formData.instagram_link,
+      whatsappUrl: (formData as any).whatsapp_url,
+      tiktokUrl: formData.tiktok_link,
+      latitude: (formData as any).latitude || 0,
+      longitude: (formData as any).longitude || 0,
+      kosherLevel: kosherLevelMap[formData.kosher_category] || 'glatt',
+      kosherCertification:
+        formData.certifying_agency === 'Other'
+          ? formData.custom_certifying_agency
+          : formData.certifying_agency,
+      kosherCertificateNumber: '',
+      kosherExpiresAt: null,
+      denomination: null,
+      storeType: null,
+      services: services,
+    };
+
     try {
       // Save final form data
       await saveNow();
 
-      console.log('Submitting eatery listing to API:', apiData);
-      
+      debugLog('Submitting eatery listing to API:', apiData);
+
       // Call the actual API using the entities endpoint
-      const response = await apiV5Service.request<{ entity: any }>('/entities', {
+      const response = await (apiV5Service as any).request('/entities', {
         method: 'POST',
         body: JSON.stringify(apiData),
       });
-      
+
       if (!response.success) {
-        throw new Error(response.error || 'Failed to create restaurant listing');
+        throw new Error(
+          response.error || 'Failed to create restaurant listing',
+        );
       }
-      
-      console.log('Successfully created restaurant:', response.data);
-      
+
+      debugLog('Successfully created restaurant:', response.data);
+
       // Track successful form submission
       if (analyticsSessionId) {
         await analyticsService.trackFormSubmission(undefined, apiData);
       }
-      
+
       // Clear saved data after successful submission
       await clearSavedData();
-      
+
       // Clear crash reporting context
       crashService.clearFormContext();
-      
+
       // Add haptic feedback for success
       hapticSuccess();
-      
+
       // Show success celebration
       setShowSuccessCelebration(true);
     } catch (error) {
-      console.error('Error submitting listing:', error);
-      
+      errorLog('Error submitting listing:', error);
+
       // Report submission error
       await crashService.reportError(error as Error, 'network_error', 'high', {
         context: 'form_submission',
         formData: apiData,
         step: currentPage,
       });
-      
-      Alert.alert(
-        'Error',
-        'Failed to submit listing. Please try again.',
-        [{ text: 'OK' }]
-      );
+
+      Alert.alert('Error', 'Failed to submit listing. Please try again.', [
+        { text: 'OK' },
+      ]);
     } finally {
       setIsSubmitting(false);
     }
-  }, [formData, saveNow, clearSavedData, validateForm, analyticsSessionId, currentPage, analyticsService, apiV5Service, crashService]);
+  }, [
+    formData,
+    saveNow,
+    clearSavedData,
+    validateForm,
+    analyticsSessionId,
+    currentPage,
+    analyticsService,
+    apiV5Service,
+    crashService,
+  ]);
 
   const renderProgressBar = () => (
     <EnhancedProgressIndicator
@@ -756,23 +891,25 @@ const AddCategoryScreen: React.FC = () => {
       orientation="horizontal"
       containerStyle={[
         styles.enhancedProgressContainer,
-        { paddingHorizontal: responsiveLayout.containerPadding }
+        { paddingHorizontal: responsiveLayout.containerPadding },
       ]}
     />
   );
 
   const renderHeader = () => (
-    <View style={[
-      styles.header, 
-      { paddingTop: insets.top },
-      dimensions.isSmallScreen && styles.headerCompact
-    ]}>
-      <TouchableOpacity 
-        onPress={handleGoBack} 
+    <View
+      style={[
+        styles.header,
+        { paddingTop: insets.top },
+        dimensions.isSmallScreen && styles.headerCompact,
+      ]}
+    >
+      <TouchableOpacity
+        onPress={handleGoBack}
         style={[
           styles.backButton,
-          { minHeight: TouchTargets.minimum, minWidth: TouchTargets.minimum }
-        ]} 
+          { minHeight: TouchTargets.minimum, minWidth: TouchTargets.minimum },
+        ]}
         activeOpacity={0.7}
         accessibilityRole="button"
         accessibilityLabel="Go back"
@@ -781,16 +918,20 @@ const AddCategoryScreen: React.FC = () => {
         <Text style={styles.backButtonText}>←</Text>
       </TouchableOpacity>
       <View style={styles.headerContent}>
-        <Text style={[
-          styles.headerTitle,
-          dimensions.isSmallScreen && styles.headerTitleSmall
-        ]}>
+        <Text
+          style={[
+            styles.headerTitle,
+            dimensions.isSmallScreen && styles.headerTitleSmall,
+          ]}
+        >
           Add {category}
         </Text>
-        <Text style={[
-          styles.headerSubtitle,
-          dimensions.isSmallScreen && styles.headerSubtitleSmall
-        ]}>
+        <Text
+          style={[
+            styles.headerSubtitle,
+            dimensions.isSmallScreen && styles.headerSubtitleSmall,
+          ]}
+        >
           {currentPage === 1 && 'Business Ownership & Basic Info'}
           {currentPage === 2 && 'Kosher Certification'}
           {currentPage === 3 && 'Business Details'}
@@ -838,44 +979,53 @@ const AddCategoryScreen: React.FC = () => {
   };
 
   const renderFooter = () => (
-    <View style={[
-      styles.footer, 
-      { 
-        paddingBottom: Math.max(insets.bottom, responsiveLayout.containerPadding),
-        paddingHorizontal: responsiveLayout.containerPadding,
-      }
-    ]}>
+    <View
+      style={[
+        styles.footer,
+        {
+          paddingBottom: Math.max(
+            insets.bottom,
+            responsiveLayout.containerPadding,
+          ),
+          paddingHorizontal: responsiveLayout.containerPadding,
+        },
+      ]}
+    >
       {currentPage < totalPages ? (
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[
             styles.nextButton,
-            { 
+            {
               minHeight: responsiveLayout.buttonHeight,
               paddingHorizontal: responsiveLayout.containerPadding,
-            }
-          ]} 
-          onPress={handleNext} 
+            },
+          ]}
+          onPress={handleNext}
           activeOpacity={0.8}
           accessibilityRole="button"
-          accessibilityLabel={currentPage === 4 ? 'Review and submit' : 'Next step'}
+          accessibilityLabel={
+            currentPage === 4 ? 'Review and submit' : 'Next step'
+          }
           accessibilityHint="Continue to next form step"
         >
-          <Text style={[
-            styles.nextButtonText,
-            dimensions.isSmallScreen && styles.nextButtonTextSmall
-          ]}>
+          <Text
+            style={[
+              styles.nextButtonText,
+              dimensions.isSmallScreen && styles.nextButtonTextSmall,
+            ]}
+          >
             {currentPage === 4 ? 'Review & Submit' : 'Next →'}
           </Text>
         </TouchableOpacity>
       ) : (
         <TouchableOpacity
           style={[
-            styles.submitButton, 
+            styles.submitButton,
             isSubmitting && styles.submitButtonDisabled,
-            { 
+            {
               minHeight: responsiveLayout.buttonHeight,
               paddingHorizontal: responsiveLayout.containerPadding,
-            }
+            },
           ]}
           onPress={handleSubmit}
           disabled={isSubmitting}
@@ -885,10 +1035,12 @@ const AddCategoryScreen: React.FC = () => {
           accessibilityHint="Submit your business listing for review"
           accessibilityState={{ disabled: isSubmitting }}
         >
-          <Text style={[
-            styles.submitButtonText,
-            dimensions.isSmallScreen && styles.submitButtonTextSmall
-          ]}>
+          <Text
+            style={[
+              styles.submitButtonText,
+              dimensions.isSmallScreen && styles.submitButtonTextSmall,
+            ]}
+          >
             {isSubmitting ? 'Submitting...' : 'Submit Listing 🚀'}
           </Text>
         </TouchableOpacity>
@@ -908,40 +1060,41 @@ const AddCategoryScreen: React.FC = () => {
   }
 
   return (
-    <SafeAreaView style={[
-      styles.container,
-      dimensions.landscape && styles.containerLandscape
-    ]}>
+    <SafeAreaView
+      style={[
+        styles.container,
+        dimensions.landscape && styles.containerLandscape,
+      ]}
+    >
       {renderHeader()}
       {renderProgressBar()}
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         style={[
           styles.keyboardAvoidingView,
-          { 
+          {
             maxHeight: keyboardLayout.availableHeight,
-          }
+          },
         ]}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 
-          (insets.top + 100) : // Header height + progress bar
-          20
+        keyboardVerticalOffset={
+          Platform.OS === 'ios'
+            ? insets.top + 100 // Header height + progress bar
+            : 20
         }
       >
         <ScrollView
           style={styles.scrollContainer}
           contentContainerStyle={[
             styles.content,
-            { 
+            {
               paddingHorizontal: responsiveLayout.containerPadding,
               paddingBottom: responsiveLayout.formSpacing * 2,
-            }
+            },
           ]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="interactive"
           removeClippedSubviews={true}
-          maxToRenderPerBatch={1}
-          windowSize={3}
         >
           {renderCurrentPage()}
         </ScrollView>
@@ -966,12 +1119,10 @@ const AddCategoryScreen: React.FC = () => {
         visible={showSuccessCelebration}
         title="Success!"
         message="Your eatery listing has been submitted for review. It will appear in the app within 24 hours."
-        buttonText="Done"
-        onClose={() => {
+        onComplete={() => {
           setShowSuccessCelebration(false);
           navigation.goBack();
         }}
-        showConfetti={true}
       />
     </SafeAreaView>
   );

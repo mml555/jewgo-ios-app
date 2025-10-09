@@ -9,38 +9,48 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import JewgoLogo from './JewgoLogo';
-import { Colors, Typography, Spacing, BorderRadius, Shadows, TouchTargets } from '../styles/designSystem';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  Shadows,
+  TouchTargets,
+} from '../styles/designSystem';
 
 interface TopBarProps {
   onQueryChange: (query: string) => void;
   debounceMs?: number;
 }
 
-const TopBar: React.FC<TopBarProps> = ({ 
-  onQueryChange, 
-  debounceMs = 250 
-}) => {
+const TopBar: React.FC<TopBarProps> = ({ onQueryChange, debounceMs = 250 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const insets = useSafeAreaInsets();
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Debounced search function
-  const debouncedSearch = useCallback((query: string) => {
-    if (debounceTimeoutRef.current) {
-      clearTimeout(debounceTimeoutRef.current);
-    }
-    
-    debounceTimeoutRef.current = setTimeout(() => {
-      onQueryChange(query);
-    }, debounceMs);
-  }, [onQueryChange, debounceMs]);
+  const debouncedSearch = useCallback(
+    (query: string) => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+
+      debounceTimeoutRef.current = setTimeout(() => {
+        onQueryChange(query);
+      }, debounceMs);
+    },
+    [onQueryChange, debounceMs],
+  );
 
   // Handle search input change
-  const handleSearchChange = useCallback((text: string) => {
-    setSearchQuery(text);
-    debouncedSearch(text);
-  }, [debouncedSearch]);
+  const handleSearchChange = useCallback(
+    (text: string) => {
+      setSearchQuery(text);
+      debouncedSearch(text);
+    },
+    [debouncedSearch],
+  );
 
   // Handle clear button press
   const handleClearPress = useCallback(() => {
@@ -65,13 +75,7 @@ const TopBar: React.FC<TopBarProps> = ({
       <View style={styles.content}>
         {/* Logo */}
         <View style={styles.logoContainer}>
-          <JewgoLogo 
-            width={32} 
-            height={32} 
-            color="#a5ffc6"
-            accessible={true} 
-            accessibilityLabel="Jewgo logo"
-          />
+          <JewgoLogo width={32} height={32} color="#a5ffc6" />
         </View>
 
         {/* Search Input */}
@@ -90,11 +94,11 @@ const TopBar: React.FC<TopBarProps> = ({
             returnKeyType="search"
             clearButtonMode="never" // We'll handle clear button ourselves
             accessible={true}
-            accessibilityRole="searchbox"
+            accessibilityRole="search"
             accessibilityLabel="Search input"
             accessibilityHint="Enter text to search for places and events"
           />
-          
+
           {/* Clear Button */}
           {searchQuery.length > 0 && (
             <TouchableOpacity
@@ -119,7 +123,7 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: Colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: Colors.border.primary,
     ...Shadows.sm,
   },
   content: {

@@ -97,34 +97,34 @@ export interface Entity {
   phone?: string;
   email?: string;
   website?: string;
-  
+
   // Location data (PostGIS)
   location?: {
     type: 'Point';
     coordinates: [number, number]; // [longitude, latitude]
   };
-  
+
   // Ratings and reviews (denormalized for performance)
   rating: number;
   reviewCount: number;
-  
+
   // Status flags
   isVerified: boolean;
   isActive: boolean;
-  
+
   // Kosher information (Restaurant-specific)
   kosherLevelId?: string;
   kosherLevel?: KosherLevel;
   kosherCertification?: string;
   kosherCertificateNumber?: string;
   kosherExpiresAt?: string;
-  
+
   // Entity-specific fields
   denominationId?: string;
   denomination?: Denomination; // for synagogues
   storeTypeId?: string;
   storeType?: StoreType; // for stores
-  
+
   // Timestamps
   createdAt: string;
   updatedAt: string;
@@ -132,7 +132,7 @@ export interface Entity {
 
 // Legacy entity types for backward compatibility
 export interface Restaurant extends Entity {
-  entityType: { key: 'restaurant' };
+  entityType?: EntityType & { key: 'restaurant' };
   kosherLevel?: KosherLevel;
   kosherCertification?: string;
   kosherCertificateNumber?: string;
@@ -144,7 +144,7 @@ export interface Restaurant extends Entity {
 }
 
 export interface Synagogue extends Entity {
-  entityType: { key: 'synagogue' };
+  entityType?: EntityType & { key: 'synagogue' };
   denomination?: Denomination;
   businessHours: BusinessHours[];
   images: string[];
@@ -153,7 +153,7 @@ export interface Synagogue extends Entity {
 }
 
 export interface Mikvah extends Entity {
-  entityType: { key: 'mikvah' };
+  entityType?: EntityType & { key: 'mikvah' };
   businessHours: BusinessHours[];
   images: string[];
   socialLinks: SocialLink[];
@@ -161,7 +161,7 @@ export interface Mikvah extends Entity {
 }
 
 export interface Store extends Entity {
-  entityType: { key: 'store' };
+  entityType?: EntityType & { key: 'store' };
   storeType?: StoreType;
   kosherLevel?: KosherLevel;
   kosherCertification?: string;

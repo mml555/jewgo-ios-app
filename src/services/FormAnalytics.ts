@@ -1,7 +1,16 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { errorLog } from '../utils/logger';
 
 export interface FormAnalyticsEvent {
-  eventType: 'form_started' | 'step_completed' | 'step_abandoned' | 'validation_error' | 'form_submitted' | 'form_abandoned' | 'recovery_action' | 'auto_save_triggered';
+  eventType:
+    | 'form_started'
+    | 'step_completed'
+    | 'step_abandoned'
+    | 'validation_error'
+    | 'form_submitted'
+    | 'form_abandoned'
+    | 'recovery_action'
+    | 'auto_save_triggered';
   timestamp: number;
   sessionId: string;
   userId?: string;
@@ -41,8 +50,16 @@ export interface FormMetrics {
   completionRate: number;
   averageCompletionTime: number;
   averageTimePerStep: Record<number, number>;
-  commonAbandonmentPoints: Array<{ step: number; count: number; percentage: number }>;
-  commonValidationErrors: Array<{ field: string; error: string; count: number }>;
+  commonAbandonmentPoints: Array<{
+    step: number;
+    count: number;
+    percentage: number;
+  }>;
+  commonValidationErrors: Array<{
+    field: string;
+    error: string;
+    count: number;
+  }>;
   recoverySuccessRate: number;
   autoSaveFrequency: number;
 }
@@ -71,7 +88,7 @@ class FormAnalyticsService {
   async startFormSession(formType: string, userId?: string): Promise<string> {
     const sessionId = this.generateSessionId();
     const startTime = Date.now();
-    
+
     this.currentSession = {
       sessionId,
       formType,
@@ -106,7 +123,11 @@ class FormAnalyticsService {
   }
 
   // Track step navigation
-  async trackStepNavigation(stepNumber: number, stepName: string, userId?: string): Promise<void> {
+  async trackStepNavigation(
+    stepNumber: number,
+    stepName: string,
+    userId?: string,
+  ): Promise<void> {
     if (!this.currentSession) return;
 
     const now = Date.now();
@@ -114,8 +135,9 @@ class FormAnalyticsService {
 
     // Update previous step time
     if (this.currentSession.currentStep > 0) {
-      this.currentSession.stepTimes[this.currentSession.currentStep] = 
-        (this.currentSession.stepTimes[this.currentSession.currentStep] || 0) + timeSpentOnPreviousStep;
+      this.currentSession.stepTimes[this.currentSession.currentStep] =
+        (this.currentSession.stepTimes[this.currentSession.currentStep] || 0) +
+        timeSpentOnPreviousStep;
     }
 
     // Track step completion for previous step
@@ -133,7 +155,10 @@ class FormAnalyticsService {
 
     // Update session
     this.currentSession.currentStep = stepNumber;
-    this.currentSession.maxStepReached = Math.max(this.currentSession.maxStepReached, stepNumber);
+    this.currentSession.maxStepReached = Math.max(
+      this.currentSession.maxStepReached,
+      stepNumber,
+    );
     this.stepStartTime = now;
 
     await this.saveCurrentSession();
@@ -141,11 +166,11 @@ class FormAnalyticsService {
 
   // Track validation errors
   async trackValidationError(
-    fieldName: string, 
-    errorType: string, 
-    errorMessage: string, 
+    fieldName: string,
+    errorType: string,
+    errorMessage: string,
     stepNumber: number,
-    userId?: string
+    userId?: string,
   ): Promise<void> {
     if (!this.currentSession) return;
 
@@ -170,10 +195,10 @@ class FormAnalyticsService {
 
   // Track recovery actions (user fixing errors)
   async trackRecoveryAction(
-    action: string, 
-    stepNumber: number, 
+    action: string,
+    stepNumber: number,
     fieldName?: string,
-    userId?: string
+    userId?: string,
   ): Promise<void> {
     if (!this.currentSession) return;
 
@@ -217,10 +242,11 @@ class FormAnalyticsService {
 
     const now = Date.now();
     const timeSpentOnLastStep = now - this.stepStartTime;
-    
+
     // Update last step time
-    this.currentSession.stepTimes[this.currentSession.currentStep] = 
-      (this.currentSession.stepTimes[this.currentSession.currentStep] || 0) + timeSpentOnLastStep;
+    this.currentSession.stepTimes[this.currentSession.currentStep] =
+      (this.currentSession.stepTimes[this.currentSession.currentStep] || 0) +
+      timeSpentOnLastStep;
 
     this.currentSession.endTime = now;
     this.currentSession.completionStatus = 'completed';
@@ -241,13 +267,16 @@ class FormAnalyticsService {
   }
 
   // Track form abandonment
-  async trackFormAbandonment(stepNumber: number, userId?: string): Promise<void> {
+  async trackFormAbandonment(
+    stepNumber: number,
+    userId?: string,
+  ): Promise<void> {
     if (!this.currentSession) return;
 
     const now = Date.now();
     const timeSpentOnCurrentStep = now - this.stepStartTime;
 
-    this.currentSession.stepTimes[stepNumber] = 
+    this.currentSession.stepTimes[stepNumber] =
       (this.currentSession.stepTimes[stepNumber] || 0) + timeSpentOnCurrentStep;
 
     this.currentSession.endTime = now;
@@ -277,21 +306,30 @@ class FormAnalyticsService {
   async calculateFormMetrics(formType?: string): Promise<FormMetrics> {
     const events = await this.getStoredEvents();
     const sessions = await this.getStoredSessions();
-    
-    const filteredSessions = formType 
+
+    const filteredSessions = formType
       ? sessions.filter(s => s.formType === formType)
       : sessions;
 
     const totalSessions = filteredSessions.length;
-    const completedSessions = filteredSessions.filter(s => s.completionStatus === 'completed').length;
-    const abandonedSessions = filteredSessions.filter(s => s.completionStatus === 'abandoned').length;
-    
-    const completionRate = totalSessions > 0 ? (completedSessions / totalSessions) * 100 : 0;
-    
-    const completedSessionsData = filteredSessions.filter(s => s.completionStatus === 'completed');
-    const averageCompletionTime = completedSessionsData.length > 0
-      ? completedSessionsData.reduce((sum, s) => sum + s.totalTimeSpent, 0) / completedSessionsData.length
-      : 0;
+    const completedSessions = filteredSessions.filter(
+      s => s.completionStatus === 'completed',
+    ).length;
+    const abandonedSessions = filteredSessions.filter(
+      s => s.completionStatus === 'abandoned',
+    ).length;
+
+    const completionRate =
+      totalSessions > 0 ? (completedSessions / totalSessions) * 100 : 0;
+
+    const completedSessionsData = filteredSessions.filter(
+      s => s.completionStatus === 'completed',
+    );
+    const averageCompletionTime =
+      completedSessionsData.length > 0
+        ? completedSessionsData.reduce((sum, s) => sum + s.totalTimeSpent, 0) /
+          completedSessionsData.length
+        : 0;
 
     // Calculate average time per step
     const averageTimePerStep: Record<number, number> = {};
@@ -299,10 +337,11 @@ class FormAnalyticsService {
       const stepTimes = filteredSessions
         .map(s => s.stepTimes[step] || 0)
         .filter(time => time > 0);
-      
-      averageTimePerStep[step] = stepTimes.length > 0
-        ? stepTimes.reduce((sum, time) => sum + time, 0) / stepTimes.length
-        : 0;
+
+      averageTimePerStep[step] =
+        stepTimes.length > 0
+          ? stepTimes.reduce((sum, time) => sum + time, 0) / stepTimes.length
+          : 0;
     }
 
     // Find common abandonment points
@@ -310,12 +349,13 @@ class FormAnalyticsService {
     filteredSessions
       .filter(s => s.completionStatus === 'abandoned')
       .forEach(s => {
-        abandonmentCounts[s.currentStep] = (abandonmentCounts[s.currentStep] || 0) + 1;
+        abandonmentCounts[s.currentStep] =
+          (abandonmentCounts[s.currentStep] || 0) + 1;
       });
 
     const commonAbandonmentPoints = Object.entries(abandonmentCounts)
       .map(([step, count]) => ({
-        step: parseInt(step),
+        step: parseInt(step, 10),
         count,
         percentage: (count / abandonedSessions) * 100,
       }))
@@ -329,7 +369,8 @@ class FormAnalyticsService {
         const { fieldName, errorMessage } = e.errorDetails!;
         const key = `${fieldName}:${errorMessage}`;
         if (!errorCounts[fieldName]) errorCounts[fieldName] = {};
-        errorCounts[fieldName][errorMessage] = (errorCounts[fieldName][errorMessage] || 0) + 1;
+        errorCounts[fieldName][errorMessage] =
+          (errorCounts[fieldName][errorMessage] || 0) + 1;
       });
 
     const commonValidationErrors = Object.entries(errorCounts)
@@ -338,19 +379,30 @@ class FormAnalyticsService {
           field,
           error,
           count,
-        }))
+        })),
       )
       .sort((a, b) => b.count - a.count)
       .slice(0, 10); // Top 10 errors
 
     // Calculate recovery success rate
-    const totalErrors = filteredSessions.reduce((sum, s) => sum + s.validationErrors, 0);
-    const totalRecoveries = filteredSessions.reduce((sum, s) => sum + s.recoveryActions, 0);
-    const recoverySuccessRate = totalErrors > 0 ? (totalRecoveries / totalErrors) * 100 : 0;
+    const totalErrors = filteredSessions.reduce(
+      (sum, s) => sum + s.validationErrors,
+      0,
+    );
+    const totalRecoveries = filteredSessions.reduce(
+      (sum, s) => sum + s.recoveryActions,
+      0,
+    );
+    const recoverySuccessRate =
+      totalErrors > 0 ? (totalRecoveries / totalErrors) * 100 : 0;
 
     // Calculate auto-save frequency
-    const totalAutoSaves = filteredSessions.reduce((sum, s) => sum + s.autoSaves, 0);
-    const autoSaveFrequency = totalSessions > 0 ? totalAutoSaves / totalSessions : 0;
+    const totalAutoSaves = filteredSessions.reduce(
+      (sum, s) => sum + s.autoSaves,
+      0,
+    );
+    const autoSaveFrequency =
+      totalSessions > 0 ? totalAutoSaves / totalSessions : 0;
 
     return {
       totalSessions,
@@ -379,7 +431,7 @@ class FormAnalyticsService {
   }> {
     const overview = await this.calculateFormMetrics();
     const sessions = await this.getStoredSessions();
-    
+
     const recentSessions = sessions
       .sort((a, b) => b.startTime - a.startTime)
       .slice(0, 10);
@@ -389,15 +441,25 @@ class FormAnalyticsService {
     const todayTimestamp = today.getTime();
 
     const todaySessions = sessions.filter(s => s.startTime >= todayTimestamp);
-    const todayCompletions = todaySessions.filter(s => s.completionStatus === 'completed').length;
-    const todayAbandonments = todaySessions.filter(s => s.completionStatus === 'abandoned').length;
-    
-    const activeSessions = sessions.filter(s => s.completionStatus === 'in_progress').length;
-    
-    const completedTodaySessions = todaySessions.filter(s => s.completionStatus === 'completed');
-    const averageSessionTime = completedTodaySessions.length > 0
-      ? completedTodaySessions.reduce((sum, s) => sum + s.totalTimeSpent, 0) / completedTodaySessions.length
-      : 0;
+    const todayCompletions = todaySessions.filter(
+      s => s.completionStatus === 'completed',
+    ).length;
+    const todayAbandonments = todaySessions.filter(
+      s => s.completionStatus === 'abandoned',
+    ).length;
+
+    const activeSessions = sessions.filter(
+      s => s.completionStatus === 'in_progress',
+    ).length;
+
+    const completedTodaySessions = todaySessions.filter(
+      s => s.completionStatus === 'completed',
+    );
+    const averageSessionTime =
+      completedTodaySessions.length > 0
+        ? completedTodaySessions.reduce((sum, s) => sum + s.totalTimeSpent, 0) /
+          completedTodaySessions.length
+        : 0;
 
     return {
       overview,
@@ -416,15 +478,15 @@ class FormAnalyticsService {
     try {
       const events = await this.getStoredEvents();
       events.push(event);
-      
+
       // Keep only the most recent events to prevent storage bloat
       if (events.length > this.MAX_EVENTS) {
         events.splice(0, events.length - this.MAX_EVENTS);
       }
-      
+
       await AsyncStorage.setItem(this.STORAGE_KEY, JSON.stringify(events));
     } catch (error) {
-      console.error('Error tracking analytics event:', error);
+      errorLog('Error tracking analytics event:', error);
     }
   }
 
@@ -433,30 +495,35 @@ class FormAnalyticsService {
       const stored = await AsyncStorage.getItem(this.STORAGE_KEY);
       return stored ? JSON.parse(stored) : [];
     } catch (error) {
-      console.error('Error retrieving analytics events:', error);
+      errorLog('Error retrieving analytics events:', error);
       return [];
     }
   }
 
   private async saveCurrentSession(): Promise<void> {
     if (!this.currentSession) return;
-    
+
     try {
-      await AsyncStorage.setItem(this.SESSION_KEY, JSON.stringify(this.currentSession));
-      
+      await AsyncStorage.setItem(
+        this.SESSION_KEY,
+        JSON.stringify(this.currentSession),
+      );
+
       // Also save to sessions history
       const sessions = await this.getStoredSessions();
-      const existingIndex = sessions.findIndex(s => s.sessionId === this.currentSession!.sessionId);
-      
+      const existingIndex = sessions.findIndex(
+        s => s.sessionId === this.currentSession!.sessionId,
+      );
+
       if (existingIndex >= 0) {
         sessions[existingIndex] = this.currentSession;
       } else {
         sessions.push(this.currentSession);
       }
-      
+
       await AsyncStorage.setItem('@form_sessions', JSON.stringify(sessions));
     } catch (error) {
-      console.error('Error saving current session:', error);
+      errorLog('Error saving current session:', error);
     }
   }
 
@@ -465,7 +532,7 @@ class FormAnalyticsService {
       const stored = await AsyncStorage.getItem('@form_sessions');
       return stored ? JSON.parse(stored) : [];
     } catch (error) {
-      console.error('Error retrieving sessions:', error);
+      errorLog('Error retrieving sessions:', error);
       return [];
     }
   }
@@ -476,13 +543,13 @@ class FormAnalyticsService {
       this.currentSession = null;
       this.stepStartTime = 0;
     } catch (error) {
-      console.error('Error ending session:', error);
+      errorLog('Error ending session:', error);
     }
   }
 
   private sanitizeFormData(formData: any): any {
     if (!formData) return null;
-    
+
     // Remove sensitive information before storing
     const sanitized = { ...formData };
     delete sanitized.owner_email;
@@ -491,7 +558,7 @@ class FormAnalyticsService {
     delete sanitized.phone;
     delete sanitized.tax_id;
     delete sanitized.business_license;
-    
+
     return sanitized;
   }
 
@@ -505,7 +572,7 @@ class FormAnalyticsService {
         return this.currentSession;
       }
     } catch (error) {
-      console.error('Error restoring session:', error);
+      errorLog('Error restoring session:', error);
     }
     return null;
   }
@@ -521,7 +588,7 @@ class FormAnalyticsService {
       this.currentSession = null;
       this.stepStartTime = 0;
     } catch (error) {
-      console.error('Error clearing analytics data:', error);
+      errorLog('Error clearing analytics data:', error);
     }
   }
 }

@@ -13,18 +13,26 @@ import {
   Image,
   Dimensions,
 } from 'react-native';
+import { debugLog, errorLog } from '../../utils/logger';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigation } from '@react-navigation/native';
 import ReCaptchaComponent from '../../components/auth/ReCaptchaComponent';
 import GoogleSignInButton from '../../components/auth/GoogleSignInButton';
 import MagicLinkForm from '../../components/auth/MagicLinkForm';
 import { configService } from '../../config/ConfigService';
-import { Colors, Typography, Spacing, BorderRadius, Shadows, TouchTargets } from '../../styles/designSystem';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  Shadows,
+  TouchTargets,
+} from '../../styles/designSystem';
 
 const LoginScreen: React.FC = () => {
   const { login, createGuestSession, isLoading } = useAuth();
   const navigation = useNavigation();
-  
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
@@ -34,7 +42,8 @@ const LoginScreen: React.FC = () => {
   const [showMagicLink, setShowMagicLink] = useState(false);
 
   const config = configService.getConfig();
-  const recaptchaSiteKey = config.recaptchaSiteKey || '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI'; // Test key
+  const recaptchaSiteKey =
+    config.recaptchaSiteKey || '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI'; // Test key
 
   const validateForm = useCallback(() => {
     const newErrors: Record<string, string> = {};
@@ -69,8 +78,8 @@ const LoginScreen: React.FC = () => {
 
       // Navigation will be handled by the auth state change
     } catch (error: any) {
-      console.error('Login error:', error);
-      
+      errorLog('Login error:', error);
+
       if (error.message?.includes('CAPTCHA')) {
         setCaptchaRequired(true);
         setShowCaptcha(true);
@@ -78,7 +87,7 @@ const LoginScreen: React.FC = () => {
         Alert.alert(
           'Login Failed',
           error.message || 'An error occurred during login. Please try again.',
-          [{ text: 'OK' }]
+          [{ text: 'OK' }],
         );
       }
     }
@@ -91,12 +100,10 @@ const LoginScreen: React.FC = () => {
   }, []);
 
   const handleCaptchaError = useCallback((error: string) => {
-    console.error('CAPTCHA error:', error);
-    Alert.alert(
-      'Verification Failed',
-      'Please try the verification again.',
-      [{ text: 'OK' }]
-    );
+    errorLog('CAPTCHA error:', error);
+    Alert.alert('Verification Failed', 'Please try the verification again.', [
+      { text: 'OK' },
+    ]);
   }, []);
 
   const handleCaptchaExpire = useCallback(() => {
@@ -104,7 +111,7 @@ const LoginScreen: React.FC = () => {
     Alert.alert(
       'Verification Expired',
       'Please complete the verification again.',
-      [{ text: 'OK' }]
+      [{ text: 'OK' }],
     );
   }, []);
 
@@ -117,11 +124,11 @@ const LoginScreen: React.FC = () => {
       await createGuestSession();
       // Navigation will be handled by the auth state change
     } catch (error: any) {
-      console.error('Guest login error:', error);
+      errorLog('Guest login error:', error);
       Alert.alert(
         'Guest Session Failed',
         error.message || 'Failed to create guest session. Please try again.',
-        [{ text: 'OK' }]
+        [{ text: 'OK' }],
       );
     }
   }, [createGuestSession]);
@@ -131,22 +138,25 @@ const LoginScreen: React.FC = () => {
   }, [navigation]);
 
   const handleGoogleSignInSuccess = useCallback((user: any) => {
-    console.log('✅ Google Sign-In successful:', user.email);
+    debugLog('✅ Google Sign-In successful:', user.email);
     // Navigation will be handled by the auth state change
   }, []);
 
   const handleGoogleSignInError = useCallback((error: string) => {
-    console.error('❌ Google Sign-In error:', error);
+    errorLog('❌ Google Sign-In error:', error);
     Alert.alert('Google Sign-In Failed', error, [{ text: 'OK' }]);
   }, []);
 
-  const handleMagicLinkSuccess = useCallback((message: string, expiresAt: string) => {
-    console.log('✅ Magic link sent successfully');
-    // The MagicLinkForm component will handle showing the success message
-  }, []);
+  const handleMagicLinkSuccess = useCallback(
+    (message: string, expiresAt: string) => {
+      debugLog('✅ Magic link sent successfully');
+      // The MagicLinkForm component will handle showing the success message
+    },
+    [],
+  );
 
   const handleMagicLinkError = useCallback((error: string) => {
-    console.error('❌ Magic link error:', error);
+    errorLog('❌ Magic link error:', error);
     Alert.alert('Magic Link Failed', error, [{ text: 'OK' }]);
   }, []);
 
@@ -188,7 +198,10 @@ const LoginScreen: React.FC = () => {
               <Text style={styles.title}>Sign in</Text>
               <Text style={styles.subtitle}>
                 New user?{' '}
-                <TouchableOpacity onPress={navigateToRegister} disabled={isLoading}>
+                <TouchableOpacity
+                  onPress={navigateToRegister}
+                  disabled={isLoading}
+                >
                   <Text style={styles.linkText}>Create an account</Text>
                 </TouchableOpacity>
               </Text>
@@ -204,10 +217,7 @@ const LoginScreen: React.FC = () => {
                     <Text style={styles.iconText}>✉</Text>
                   </View>
                   <TextInput
-                    style={[
-                      styles.input,
-                      errors.email && styles.inputError
-                    ]}
+                    style={[styles.input, errors.email && styles.inputError]}
                     value={email}
                     onChangeText={setEmail}
                     placeholder="Email Address"
@@ -230,10 +240,7 @@ const LoginScreen: React.FC = () => {
                     <Text style={styles.iconText}>🔒</Text>
                   </View>
                   <TextInput
-                    style={[
-                      styles.input,
-                      errors.password && styles.inputError
-                    ]}
+                    style={[styles.input, errors.password && styles.inputError]}
                     value={password}
                     onChangeText={setPassword}
                     placeholder="Password"
@@ -276,7 +283,10 @@ const LoginScreen: React.FC = () => {
 
               {/* Login Button */}
               <TouchableOpacity
-                style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
+                style={[
+                  styles.loginButton,
+                  isLoading && styles.loginButtonDisabled,
+                ]}
                 onPress={handleLogin}
                 disabled={isLoading}
                 activeOpacity={0.8}
@@ -294,7 +304,9 @@ const LoginScreen: React.FC = () => {
                 onPress={toggleMagicLink}
                 disabled={isLoading}
               >
-                <Text style={styles.magicLinkToggleText}>Use Magic Link Instead</Text>
+                <Text style={styles.magicLinkToggleText}>
+                  Use Magic Link Instead
+                </Text>
               </TouchableOpacity>
             </>
           ) : (
@@ -314,7 +326,9 @@ const LoginScreen: React.FC = () => {
                 onPress={toggleMagicLink}
                 disabled={isLoading}
               >
-                <Text style={styles.magicLinkToggleText}>Use Password Instead</Text>
+                <Text style={styles.magicLinkToggleText}>
+                  Use Password Instead
+                </Text>
               </TouchableOpacity>
             </>
           )}
@@ -328,7 +342,9 @@ const LoginScreen: React.FC = () => {
 
           {/* Social Media Text */}
           <View style={styles.socialHeader}>
-            <Text style={styles.socialHeaderText}>Join With Your Favourite Social Media Account</Text>
+            <Text style={styles.socialHeaderText}>
+              Join With Your Favourite Social Media Account
+            </Text>
           </View>
 
           {/* Social Login Buttons */}
@@ -351,13 +367,18 @@ const LoginScreen: React.FC = () => {
             <TouchableOpacity
               style={[styles.socialButton, styles.appleButton]}
               onPress={() => {
-                Alert.alert('Coming Soon', 'Apple Sign-In will be available soon!');
+                Alert.alert(
+                  'Coming Soon',
+                  'Apple Sign-In will be available soon!',
+                );
               }}
               disabled={isLoading}
             >
               <View style={styles.socialButtonContent}>
                 <Text style={styles.appleIcon}>🍎</Text>
-                <Text style={[styles.socialButtonText, styles.appleButtonText]}>Apple</Text>
+                <Text style={[styles.socialButtonText, styles.appleButtonText]}>
+                  Apple
+                </Text>
               </View>
             </TouchableOpacity>
           </View>
@@ -391,7 +412,7 @@ const { width } = Dimensions.get('window');
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.jewgoLightGray,
+    backgroundColor: Colors.background.secondary,
   },
   scrollContent: {
     flexGrow: 1,
@@ -441,7 +462,7 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: 20,
-    color: Colors.jewgoJetBlack,
+    color: Colors.black,
     fontWeight: '600',
   },
   headerContent: {
@@ -451,18 +472,18 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: Colors.jewgoJetBlack,
+    color: Colors.black,
     marginBottom: Spacing.sm,
     fontFamily: Typography.fontFamilyBold,
   },
   subtitle: {
     fontSize: 14,
-    color: Colors.jewgoJetBlack,
+    color: Colors.black,
     textAlign: 'center',
     fontFamily: Typography.fontFamily,
   },
   linkText: {
-    color: Colors.jewgoJetBlack,
+    color: Colors.black,
     fontWeight: '600',
     textDecorationLine: 'underline',
   },
@@ -487,7 +508,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 16,
-    color: Colors.jewgoJetBlack,
+    color: Colors.black,
     fontFamily: Typography.fontFamily,
     paddingVertical: Spacing.sm,
   },
@@ -518,7 +539,7 @@ const styles = StyleSheet.create({
   },
   forgotPasswordText: {
     fontSize: 14,
-    color: Colors.jewgoJetBlack,
+    color: Colors.black,
     fontWeight: '500',
     fontFamily: Typography.fontFamily,
   },
@@ -546,7 +567,7 @@ const styles = StyleSheet.create({
   },
   magicLinkToggleText: {
     fontSize: 14,
-    color: Colors.jewgoJetBlack,
+    color: Colors.black,
     fontWeight: '500',
     fontFamily: Typography.fontFamily,
   },
@@ -576,7 +597,7 @@ const styles = StyleSheet.create({
   },
   socialHeaderText: {
     fontSize: 14,
-    color: Colors.jewgoJetBlack,
+    color: Colors.black,
     fontWeight: '500',
     textAlign: 'center',
     fontFamily: Typography.fontFamily,
@@ -590,7 +611,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.white,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: Colors.border.primary,
     borderRadius: BorderRadius.lg,
     paddingVertical: Spacing.sm,
     alignItems: 'center',
@@ -608,7 +629,7 @@ const styles = StyleSheet.create({
   googleIcon: {
     fontSize: 16,
     fontWeight: '600',
-    color: Colors.jewgoJetBlack,
+    color: Colors.black,
     marginRight: Spacing.xs,
   },
   appleIcon: {
@@ -618,7 +639,7 @@ const styles = StyleSheet.create({
   socialButtonText: {
     fontSize: 14,
     fontWeight: '500',
-    color: Colors.jewgoJetBlack,
+    color: Colors.black,
     fontFamily: Typography.fontFamily,
   },
   appleButtonText: {
@@ -636,7 +657,7 @@ const styles = StyleSheet.create({
     fontFamily: Typography.fontFamily,
   },
   termsLink: {
-    color: Colors.jewgoJetBlack,
+    color: Colors.black,
     textDecorationLine: 'underline',
   },
   guestButton: {

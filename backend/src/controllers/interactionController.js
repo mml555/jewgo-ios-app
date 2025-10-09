@@ -1,38 +1,38 @@
 const { query } = require('../database/connection');
+const logger = require('../utils/logger');
 
 class InteractionController {
   // Track user interaction (view, like, share)
   static async trackInteraction(req, res) {
     try {
       const { entityId, interactionType } = req.body;
-      const { user, guestSession } = req;
+      const { user } = req;
 
       // Validate interaction type
       const validTypes = ['view', 'like', 'share', 'favorite'];
       if (!validTypes.includes(interactionType)) {
         return res.status(400).json({
           success: false,
-          error: 'Invalid interaction type'
+          error: 'Invalid interaction type',
         });
       }
 
       // Get user/guest info
       let userId = null;
       let guestSessionId = null;
-      
+
       if (user) {
-        console.log('🔍 DEBUG: User object:', user);
         if (user.type === 'guest') {
           // Guest user - extract session ID and remove "guest_" prefix if present
           guestSessionId = user.sessionId;
-          console.log('🔍 DEBUG: Original guestSessionId:', guestSessionId);
           if (guestSessionId && guestSessionId.startsWith('guest_')) {
             guestSessionId = guestSessionId.replace('guest_', '');
           }
-          console.log('🔍 DEBUG: Cleaned guestSessionId:', guestSessionId);
+          logger.debug('Guest interaction tracked', { guestSessionId });
         } else {
           // Regular user
           userId = user.id;
+          logger.debug('User interaction tracked', { userId });
         }
       }
       const ipAddress = req.ip || req.connection.remoteAddress;
@@ -48,19 +48,23 @@ class InteractionController {
             (guest_session_id = $4 AND $4 IS NOT NULL)
           )
         `;
-        
-        const existing = await query(existingQuery, [entityId, interactionType, userId, guestSessionId]);
-        
+
+        const existing = await query(existingQuery, [
+          entityId,
+          interactionType,
+          userId,
+          guestSessionId,
+        ]);
+
         if (existing.rows.length > 0) {
           // Remove existing interaction (toggle off)
-          await query(
-            'DELETE FROM entity_interactions WHERE id = $1',
-            [existing.rows[0].id]
-          );
-          
+          await query('DELETE FROM entity_interactions WHERE id = $1', [
+            existing.rows[0].id,
+          ]);
+
           return res.json({
             success: true,
-            data: { action: 'removed', interactionType }
+            data: { action: 'removed', interactionType },
           });
         }
       }
@@ -75,24 +79,27 @@ class InteractionController {
       `;
 
       const result = await query(insertQuery, [
-        entityId, userId, guestSessionId, interactionType, 
-        ipAddress, userAgent
+        entityId,
+        userId,
+        guestSessionId,
+        interactionType,
+        ipAddress,
+        userAgent,
       ]);
 
       res.status(201).json({
         success: true,
-        data: { 
-          action: 'added', 
+        data: {
+          action: 'added',
           interactionType,
-          interaction: result.rows[0]
-        }
+          interaction: result.rows[0],
+        },
       });
-
     } catch (error) {
-      console.error('Track interaction error:', error);
+      logger.error('Track interaction error:', error);
       res.status(500).json({
         success: false,
-        error: 'Failed to track interaction'
+        error: 'Failed to track interaction',
       });
     }
   }
@@ -101,11 +108,11 @@ class InteractionController {
   static async getUserInteractions(req, res) {
     try {
       const { entityId } = req.params;
-      const { user, guestSession } = req;
+      const { user } = req;
 
       let userId = null;
       let guestSessionId = null;
-      
+
       if (user) {
         if (user.type === 'guest') {
           // Guest user - extract session ID and remove "guest_" prefix if present
@@ -130,7 +137,11 @@ class InteractionController {
         ORDER BY created_at DESC
       `;
 
-      const result = await query(getUserInteractionsQuery, [entityId, userId, guestSessionId]);
+      const result = await query(getUserInteractionsQuery, [
+        entityId,
+        userId,
+        guestSessionId,
+      ]);
 
       const interactions = {};
       result.rows.forEach(row => {
@@ -139,14 +150,13 @@ class InteractionController {
 
       res.json({
         success: true,
-        data: { interactions }
+        data: { interactions },
       });
-
     } catch (error) {
-      console.error('Get user interactions error:', error);
+      logger.error('Get user interactions error:', error);
       res.status(500).json({
         success: false,
-        error: 'Failed to get user interactions'
+        error: 'Failed to get user interactions',
       });
     }
   }
@@ -171,20 +181,19 @@ class InteractionController {
       if (result.rows.length === 0) {
         return res.status(404).json({
           success: false,
-          error: 'Entity not found'
+          error: 'Entity not found',
         });
       }
 
       res.json({
         success: true,
-        data: { counts: result.rows[0] }
+        data: { counts: result.rows[0] },
       });
-
     } catch (error) {
-      console.error('Get interaction counts error:', error);
+      logger.error('Get interaction counts error:', error);
       res.status(500).json({
         success: false,
-        error: 'Failed to get interaction counts'
+        error: 'Failed to get interaction counts',
       });
     }
   }

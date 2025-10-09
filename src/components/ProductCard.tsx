@@ -8,7 +8,14 @@ import {
   Dimensions,
 } from 'react-native';
 import { Product } from '../types/shtetl';
-import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../styles/designSystem';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  Shadows,
+  TouchTargets,
+} from '../styles/designSystem';
 
 interface ProductCardProps {
   product: Product;
@@ -16,7 +23,7 @@ interface ProductCardProps {
 }
 
 const { width: screenWidth } = Dimensions.get('window');
-const CARD_WIDTH = (screenWidth - (Spacing.lg * 3)) / 2;
+const CARD_WIDTH = (screenWidth - Spacing.lg * 3) / 2;
 
 const ProductCard: React.FC<ProductCardProps> = ({ product, onPress }) => {
   const handlePress = () => {
@@ -40,7 +47,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onPress }) => {
         </View>
       );
     }
-    
+
     if (product.stockQuantity <= 5) {
       return (
         <View style={styles.lowStockBadge}>
@@ -48,13 +55,13 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onPress }) => {
         </View>
       );
     }
-    
+
     return null;
   };
 
   const renderKosherBadge = () => {
     if (!product.isKosher) return null;
-    
+
     return (
       <View style={styles.kosherBadge}>
         <Text style={styles.kosherText}>K</Text>
@@ -73,7 +80,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onPress }) => {
     >
       <View style={styles.imageContainer}>
         {product.images.length > 0 ? (
-          <Image source={{ uri: product.images[0] }} style={styles.productImage} />
+          <Image
+            source={{ uri: product.images[0] }}
+            style={styles.productImage}
+          />
         ) : (
           <View style={styles.placeholderImage}>
             <Text style={styles.placeholderText}>📦</Text>
@@ -87,17 +97,17 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onPress }) => {
         <Text style={styles.productName} numberOfLines={2}>
           {product.name}
         </Text>
-        
+
         <Text style={styles.price}>
           {formatPrice(product.price, product.currency)}
         </Text>
-        
+
         {product.description && (
           <Text style={styles.description} numberOfLines={2}>
             {product.description}
           </Text>
         )}
-        
+
         {product.tags.length > 0 && (
           <View style={styles.tagsContainer}>
             {product.tags.slice(0, 2).map((tag, index) => (
@@ -106,16 +116,16 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onPress }) => {
               </View>
             ))}
             {product.tags.length > 2 && (
-              <Text style={styles.moreTagsText}>+{product.tags.length - 2}</Text>
+              <Text style={styles.moreTagsText}>
+                +{product.tags.length - 2}
+              </Text>
             )}
           </View>
         )}
-        
+
         <View style={styles.footer}>
           <Text style={styles.category}>{product.category}</Text>
-          {product.sku && (
-            <Text style={styles.sku}>SKU: {product.sku}</Text>
-          )}
+          {product.sku && <Text style={styles.sku}>SKU: {product.sku}</Text>}
         </View>
       </View>
     </TouchableOpacity>
@@ -157,8 +167,8 @@ const styles = StyleSheet.create({
     left: Spacing.sm,
     backgroundColor: Colors.primary.main,
     borderRadius: BorderRadius.full,
-    width: 24,
-    height: 24,
+    width: TouchTargets.minimum,
+    height: TouchTargets.minimum,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -204,13 +214,13 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xs,
   },
   price: {
-    ...Typography.h3,
+    ...Typography.styles.h3,
     color: Colors.primary.main,
     fontWeight: '700',
     marginBottom: Spacing.sm,
   },
   description: {
-    ...Typography.body2,
+    ...Typography.styles.body2,
     color: Colors.gray600,
     marginBottom: Spacing.sm,
   },
@@ -228,11 +238,11 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xs,
   },
   tagText: {
-    ...Typography.caption,
+    ...Typography.styles.caption,
     color: Colors.gray700,
   },
   moreTagsText: {
-    ...Typography.caption,
+    ...Typography.styles.caption,
     color: Colors.gray500,
     alignSelf: 'center',
   },
@@ -242,15 +252,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   category: {
-    ...Typography.caption,
+    ...Typography.styles.caption,
     color: Colors.gray600,
     textTransform: 'capitalize',
   },
   sku: {
-    ...Typography.caption,
+    ...Typography.styles.caption,
     color: Colors.gray500,
   },
 });
 
 export default ProductCard;
-

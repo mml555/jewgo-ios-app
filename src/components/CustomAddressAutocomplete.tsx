@@ -1,7 +1,18 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { View, Text, TextInput, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Modal, Dimensions } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  ActivityIndicator,
+  Modal,
+  Dimensions,
+} from 'react-native';
 import { Colors, Typography, BorderRadius } from '../styles/designSystem';
 import { GOOGLE_PLACES_CONFIG } from '../config/googlePlaces';
+import { debugLog, errorLog, warnLog } from '../utils/logger';
 
 const { height: screenHeight } = Dimensions.get('window');
 
@@ -40,7 +51,7 @@ const CustomAddressAutocomplete: React.FC<CustomAddressAutocompleteProps> = ({
   value,
   onChangeText,
   onAddressVerified,
-  placeholder = "Enter full address (street, city, state, zip)",
+  placeholder = 'Enter full address (street, city, state, zip)',
   error = false,
   style,
 }) => {
@@ -48,51 +59,66 @@ const CustomAddressAutocomplete: React.FC<CustomAddressAutocompleteProps> = ({
   const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [inputLayout, setInputLayout] = useState({ x: 0, y: 0, width: 0, height: 0 });
+  const [inputLayout, setInputLayout] = useState({
+    x: 0,
+    y: 0,
+    width: 0,
+    height: 0,
+  });
   const [isVerifying, setIsVerifying] = useState(false);
   const inputRef = useRef<TextInput>(null);
-  const [verifiedAddress, setVerifiedAddress] = useState<AddressDetails | null>(null);
+  const [verifiedAddress, setVerifiedAddress] = useState<AddressDetails | null>(
+    null,
+  );
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
+  const focusTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const blurTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const layoutTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchSuggestions = useCallback(async (query: string) => {
-    console.log('🔍 Fetching suggestions for:', query);
-    
+    if (__DEV__) {
+      debugLog('🔍 Fetching suggestions for:', query);
+    }
+
     if (!query || query.length < 2) {
-      console.log('❌ Query too short, clearing suggestions');
       setSuggestions([]);
       setShowSuggestions(false);
       return;
     }
 
-    if (!GOOGLE_PLACES_CONFIG.key || GOOGLE_PLACES_CONFIG.key === 'YOUR_GOOGLE_PLACES_API_KEY_HERE') {
-      console.warn('⚠️ Google Places API key not configured');
+    if (
+      !GOOGLE_PLACES_CONFIG.key ||
+      GOOGLE_PLACES_CONFIG.key === 'YOUR_GOOGLE_PLACES_API_KEY_HERE'
+    ) {
+      warnLog('⚠️ Google Places API key not configured');
       return;
     }
 
-    console.log('🌐 Making API request with key:', GOOGLE_PLACES_CONFIG.key.substring(0, 10) + '...');
     setIsLoading(true);
-    
+
     try {
-      const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(query)}&key=${GOOGLE_PLACES_CONFIG.key}&components=country:us&types=address`;
-      console.log('📡 Request URL:', url);
-      
+      const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(
+        query,
+      )}&key=${GOOGLE_PLACES_CONFIG.key}&components=country:us&types=address`;
+
       const response = await fetch(url);
-      console.log('📡 Response status:', response.status);
-      
       const data = await response.json();
-      console.log('📡 API Response:', data);
-      
+
       if (data.status === 'OK' && data.predictions) {
-        console.log('✅ Got suggestions:', data.predictions.length);
+        if (__DEV__) {
+          debugLog('✅ Got suggestions:', data.predictions.length);
+        }
         setSuggestions(data.predictions);
         setShowSuggestions(true);
       } else {
-        console.log('❌ API Error:', data.status, data.error_message);
+        if (__DEV__) {
+          debugLog('❌ API Error:', data.status, data.error_message);
+        }
         setSuggestions([]);
         setShowSuggestions(false);
       }
     } catch (error) {
-      console.error('💥 Error fetching address suggestions:', error);
+      errorLog('💥 Error fetching address suggestions:', error);
       setSuggestions([]);
       setShowSuggestions(false);
     } finally {
@@ -100,148 +126,204 @@ const CustomAddressAutocomplete: React.FC<CustomAddressAutocompleteProps> = ({
     }
   }, []);
 
-  const verifyAddress = useCallback(async (placeId: string): Promise<AddressDetails | null> => {
-    console.log('🔍 Verifying address for place_id:', placeId);
-    
-    if (!GOOGLE_PLACES_CONFIG.key || GOOGLE_PLACES_CONFIG.key === 'YOUR_GOOGLE_PLACES_API_KEY_HERE') {
-      console.warn('⚠️ Google Places API key not configured for address verification');
-      return null;
-    }
+  const verifyAddress = useCallback(
+    async (placeId: string): Promise<AddressDetails | null> => {
+      debugLog('🔍 Verifying address for place_id:', placeId);
 
-    setIsVerifying(true);
-    try {
-      const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&key=${GOOGLE_PLACES_CONFIG.key}&fields=formatted_address,place_id,geometry,address_components`;
-      console.log('📡 Verification URL:', url);
-      
-      const response = await fetch(url);
-      const data = await response.json();
-      console.log('📡 Verification Response:', data);
-      
-      if (data.status === 'OK' && data.result) {
-        console.log('✅ Address verified successfully');
-        return data.result as AddressDetails;
-      } else {
-        console.log('❌ Address verification failed:', data.status, data.error_message);
+      if (
+        !GOOGLE_PLACES_CONFIG.key ||
+        GOOGLE_PLACES_CONFIG.key === 'YOUR_GOOGLE_PLACES_API_KEY_HERE'
+      ) {
+        warnLog(
+          '⚠️ Google Places API key not configured for address verification',
+        );
         return null;
       }
-    } catch (error) {
-      console.error('💥 Error verifying address:', error);
-      return null;
-    } finally {
-      setIsVerifying(false);
-    }
-  }, []);
 
-  const handleTextChange = useCallback((text: string) => {
-    console.log('📝 Text changed:', text);
-    onChangeText(text);
-    
-    // Clear previous debounce
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-    }
-    
-    // Set new debounce
-    debounceRef.current = setTimeout(() => {
-      console.log('⏰ Debounce timeout, fetching suggestions for:', text);
-      fetchSuggestions(text);
-    }, 300);
-  }, [onChangeText, fetchSuggestions]);
+      setIsVerifying(true);
+      try {
+        const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&key=${GOOGLE_PLACES_CONFIG.key}&fields=formatted_address,place_id,geometry,address_components`;
+        debugLog('📡 Verification URL:', url);
 
-  const handleSuggestionPress = useCallback(async (suggestion: AddressSuggestion) => {
-    console.log('👆 Suggestion pressed:', suggestion);
-    const address = suggestion.description || suggestion.formatted_address || '';
-    console.log('📍 Selected address:', address);
-    
-    // Update the input text immediately
-    onChangeText(address);
-    setShowSuggestions(false);
-    setSuggestions([]);
-    
-    // Verify the address
-    if (suggestion.place_id) {
-      const verifiedAddress = await verifyAddress(suggestion.place_id);
-      if (verifiedAddress) {
-        setVerifiedAddress(verifiedAddress);
-        // Call the callback with verified address details
-        if (onAddressVerified) {
-          onAddressVerified(verifiedAddress);
+        const response = await fetch(url);
+        const data = await response.json();
+        debugLog('📡 Verification Response:', data);
+
+        if (data.status === 'OK' && data.result) {
+          debugLog('✅ Address verified successfully');
+          return data.result as AddressDetails;
+        } else {
+          debugLog(
+            '❌ Address verification failed:',
+            data.status,
+            data.error_message,
+          );
+          return null;
+        }
+      } catch (error) {
+        errorLog('💥 Error verifying address:', error);
+        return null;
+      } finally {
+        setIsVerifying(false);
+      }
+    },
+    [],
+  );
+
+  const handleTextChange = useCallback(
+    (text: string) => {
+      debugLog('📝 Text changed:', text);
+      onChangeText(text);
+
+      // Clear previous debounce
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+
+      // Set new debounce
+      debounceRef.current = setTimeout(() => {
+        debugLog('⏰ Debounce timeout, fetching suggestions for:', text);
+        fetchSuggestions(text);
+      }, 300);
+    },
+    [onChangeText, fetchSuggestions],
+  );
+
+  const handleSuggestionPress = useCallback(
+    async (suggestion: AddressSuggestion) => {
+      debugLog('👆 Suggestion pressed:', suggestion);
+      const address =
+        suggestion.description || suggestion.formatted_address || '';
+      debugLog('📍 Selected address:', address);
+
+      // Update the input text immediately
+      onChangeText(address);
+      setShowSuggestions(false);
+      setSuggestions([]);
+
+      // Verify the address
+      if (suggestion.place_id) {
+        const verifiedAddress = await verifyAddress(suggestion.place_id);
+        if (verifiedAddress) {
+          setVerifiedAddress(verifiedAddress);
+          // Call the callback with verified address details
+          if (onAddressVerified) {
+            onAddressVerified(verifiedAddress);
+          }
         }
       }
-    }
-  }, [onChangeText, verifyAddress, onAddressVerified]);
+    },
+    [onChangeText, verifyAddress, onAddressVerified],
+  );
 
   const handleFocus = useCallback(() => {
-    console.log('🎯 Input focused, current suggestions:', suggestions.length);
+    debugLog('🎯 Input focused, current suggestions:', suggestions.length);
     setIsFocused(true);
     if (suggestions.length > 0) {
-      console.log('👁️ Showing existing suggestions');
+      debugLog('👁️ Showing existing suggestions');
       setShowSuggestions(true);
     }
-    
+
+    // Clear any existing focus timeout
+    if (focusTimeoutRef.current) {
+      clearTimeout(focusTimeoutRef.current);
+    }
+
     // Re-measure the input position when focused
-    setTimeout(() => {
+    focusTimeoutRef.current = setTimeout(() => {
       inputRef.current?.measureInWindow((fx, fy, fwidth, fheight) => {
-        console.log('🎯 Re-measured on focus:', { fx, fy, fwidth, fheight });
+        debugLog('🎯 Re-measured on focus:', { fx, fy, fwidth, fheight });
         if (fx > 0 || fy > 0 || fwidth > 0 || fheight > 0) {
           setInputLayout({ x: fx, y: fy, width: fwidth, height: fheight });
         }
       });
+      focusTimeoutRef.current = null;
     }, 50);
   }, [suggestions.length]);
 
   const handleBlur = useCallback(() => {
     setIsFocused(false);
+
+    // Clear any existing blur timeout
+    if (blurTimeoutRef.current) {
+      clearTimeout(blurTimeoutRef.current);
+    }
+
     // Delay hiding suggestions to allow for selection
-    setTimeout(() => {
+    blurTimeoutRef.current = setTimeout(() => {
       setShowSuggestions(false);
+      blurTimeoutRef.current = null;
     }, 200);
   }, []);
 
   const handleLayout = useCallback((event: any) => {
     const { x, y, width, height } = event.nativeEvent.layout;
-    console.log('📐 Layout event:', { x, y, width, height });
-    
+    // debugLog('📐 Layout event:', { x, y, width, height });
+
+    // Clear any existing layout timeout
+    if (layoutTimeoutRef.current) {
+      clearTimeout(layoutTimeoutRef.current);
+    }
+
     // Use a small delay to ensure the component is fully rendered
-    setTimeout(() => {
+    layoutTimeoutRef.current = setTimeout(() => {
       inputRef.current?.measureInWindow((fx, fy, fwidth, fheight) => {
-        console.log('📏 Measured in window:', { fx, fy, fwidth, fheight });
-        
+        // debugLog('📏 Measured in window:', { fx, fy, fwidth, fheight });
+
         // If measureInWindow returns zeros, use the layout data as fallback
         if (fx === 0 && fy === 0 && fwidth === 0 && fheight === 0) {
-          console.log('⚠️ measureInWindow returned zeros, using layout data as fallback');
+          // debugLog('⚠️ measureInWindow returned zeros, using layout data as fallback');
           setInputLayout({ x: x, y: y, width: width, height: height });
         } else {
           setInputLayout({ x: fx, y: fy, width: fwidth, height: fheight });
         }
       });
+      layoutTimeoutRef.current = null;
     }, 100);
   }, []);
 
-  // Cleanup debounce on unmount
+  // Cleanup all timeouts on unmount
   useEffect(() => {
     return () => {
       if (debounceRef.current) {
         clearTimeout(debounceRef.current);
       }
+      if (focusTimeoutRef.current) {
+        clearTimeout(focusTimeoutRef.current);
+      }
+      if (blurTimeoutRef.current) {
+        clearTimeout(blurTimeoutRef.current);
+      }
+      if (layoutTimeoutRef.current) {
+        clearTimeout(layoutTimeoutRef.current);
+      }
     };
   }, []);
 
-  const renderSuggestion = useCallback(({ item }: { item: AddressSuggestion }) => (
-    <TouchableOpacity
-      style={styles.suggestionItem}
-      onPress={() => handleSuggestionPress(item)}
-    >
-      <Text style={styles.suggestionText}>{item.description}</Text>
-    </TouchableOpacity>
-  ), [handleSuggestionPress]);
+  const renderSuggestion = useCallback(
+    ({ item }: { item: AddressSuggestion }) => (
+      <TouchableOpacity
+        style={styles.suggestionItem}
+        onPress={() => handleSuggestionPress(item)}
+      >
+        <Text style={styles.suggestionText}>{item.description}</Text>
+      </TouchableOpacity>
+    ),
+    [handleSuggestionPress],
+  );
 
   // Check if API key is properly configured
-  if (!GOOGLE_PLACES_CONFIG.key || GOOGLE_PLACES_CONFIG.key === 'YOUR_GOOGLE_PLACES_API_KEY_HERE') {
+  if (
+    !GOOGLE_PLACES_CONFIG.key ||
+    GOOGLE_PLACES_CONFIG.key === 'YOUR_GOOGLE_PLACES_API_KEY_HERE'
+  ) {
     return (
       <View style={[styles.container, style]}>
         <TextInput
-          style={[styles.input, { borderColor: error ? Colors.error : Colors.gray300 }]}
+          style={[
+            styles.input,
+            { borderColor: error ? Colors.error : Colors.gray300 },
+          ]}
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
@@ -262,7 +344,13 @@ const CustomAddressAutocomplete: React.FC<CustomAddressAutocompleteProps> = ({
         ref={inputRef}
         style={[
           styles.input,
-          { borderColor: error ? Colors.error : (isFocused ? Colors.primary.main : Colors.gray300) }
+          {
+            borderColor: error
+              ? Colors.error
+              : isFocused
+              ? Colors.primary.main
+              : Colors.gray300,
+          },
         ]}
         value={value}
         onChangeText={handleTextChange}
@@ -289,13 +377,13 @@ const CustomAddressAutocomplete: React.FC<CustomAddressAutocompleteProps> = ({
           <Text style={styles.verifiedText}>✓</Text>
         </View>
       )}
-      
+
       {isLoading && (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="small" color={Colors.primary.main} />
         </View>
       )}
-      
+
       {/* Debug button - remove in production */}
       {/* Suggestions Dropdown with Full Screen Overlay */}
       <Modal
@@ -315,37 +403,44 @@ const CustomAddressAutocomplete: React.FC<CustomAddressAutocompleteProps> = ({
               {
                 position: 'absolute',
                 // Use fallback positioning if layout data is invalid
-                top: (inputLayout.y > 0 && inputLayout.height > 0) 
-                  ? inputLayout.y + inputLayout.height + 10 
-                  : 100, // Fallback position
+                top:
+                  inputLayout.y > 0 && inputLayout.height > 0
+                    ? inputLayout.y + inputLayout.height + 10
+                    : 100, // Fallback position
                 left: inputLayout.x > 0 ? inputLayout.x : 20, // Fallback left position
                 width: inputLayout.width > 0 ? inputLayout.width : 300, // Fallback width
                 maxHeight: 200, // Limit height to prevent going off-screen
-              }
+              },
             ]}
             onLayout={() => {
-              console.log('🎯 Suggestions container rendered with data:', suggestions.length);
-              console.log('🎯 Dropdown positioned below input with full screen overlay:', {
-                top: inputLayout.y + inputLayout.height + 10,
-                left: inputLayout.x,
-                width: inputLayout.width,
-                inputLayout,
-                positioning: 'BELOW_INPUT_WITH_MORE_SPACING'
-              });
-              console.log('🎯 DEBUG: Input layout details:', {
+              debugLog(
+                '🎯 Suggestions container rendered with data:',
+                suggestions.length,
+              );
+              debugLog(
+                '🎯 Dropdown positioned below input with full screen overlay:',
+                {
+                  top: inputLayout.y + inputLayout.height + 10,
+                  left: inputLayout.x,
+                  width: inputLayout.width,
+                  inputLayout,
+                  positioning: 'BELOW_INPUT_WITH_MORE_SPACING',
+                },
+              );
+              debugLog('🎯 DEBUG: Input layout details:', {
                 inputX: inputLayout.x,
                 inputY: inputLayout.y,
                 inputWidth: inputLayout.width,
                 inputHeight: inputLayout.height,
                 calculatedTop: inputLayout.y + inputLayout.height + 10,
-                calculatedLeft: inputLayout.x
+                calculatedLeft: inputLayout.x,
               });
             }}
           >
             <FlatList
               data={suggestions}
               renderItem={renderSuggestion}
-              keyExtractor={(item) => item.place_id}
+              keyExtractor={item => item.place_id}
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
               bounces={false}
@@ -369,8 +464,6 @@ const styles = StyleSheet.create({
     maxHeight: 50, // Mobile-optimized max height
     paddingHorizontal: 8, // Mobile-optimized padding
     paddingVertical: 8, // Mobile-optimized padding
-    fontSize: 16, // Standard mobile font size
-    color: Colors.textPrimary,
     backgroundColor: Colors.white,
     borderWidth: 1,
     borderRadius: BorderRadius.sm,

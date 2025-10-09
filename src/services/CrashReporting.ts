@@ -1,10 +1,16 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
+import { errorLog, warnLog } from '../utils/logger';
 
 export interface CrashReport {
   id: string;
   timestamp: number;
-  errorType: 'javascript_error' | 'form_validation_error' | 'network_error' | 'storage_error' | 'performance_issue';
+  errorType:
+    | 'javascript_error'
+    | 'form_validation_error'
+    | 'network_error'
+    | 'storage_error'
+    | 'performance_issue';
   severity: 'low' | 'medium' | 'high' | 'critical';
   message: string;
   stack?: string;
@@ -70,7 +76,13 @@ class CrashReportingService {
   // Set current form context for better error reporting
   setFormContext(context: CrashReport['formContext']): void {
     this.formContext = context;
-    this.addBreadcrumb('form', `Form context updated: ${context.formType} step ${context.currentStep}`, 'info');
+    if (context) {
+      this.addBreadcrumb(
+        'form',
+        `Form context updated: ${context.formType} step ${context.currentStep}`,
+        'info',
+      );
+    }
   }
 
   // Clear form context when form is completed or abandoned
@@ -81,10 +93,10 @@ class CrashReportingService {
 
   // Add breadcrumb for tracking user actions
   addBreadcrumb(
-    category: string, 
-    message: string, 
+    category: string,
+    message: string,
     level: 'info' | 'warning' | 'error' = 'info',
-    data?: any
+    data?: any,
   ): void {
     const breadcrumb = {
       timestamp: Date.now(),
@@ -107,7 +119,7 @@ class CrashReportingService {
     error: Error,
     errorType: CrashReport['errorType'] = 'javascript_error',
     severity: CrashReport['severity'] = 'medium',
-    additionalContext?: any
+    additionalContext?: any,
   ): Promise<void> {
     const report: CrashReport = {
       id: this.generateReportId(),
@@ -116,7 +128,7 @@ class CrashReportingService {
       severity,
       message: error.message,
       stack: error.stack,
-      formContext: this.formContext,
+      formContext: this.formContext || undefined,
       deviceInfo: await this.getDeviceInfo(),
       appInfo: this.getAppInfo(),
       userInfo: await this.getUserInfo(),
@@ -148,10 +160,12 @@ class CrashReportingService {
     fieldName: string,
     errorMessage: string,
     formData: any,
-    stepNumber: number
+    stepNumber: number,
   ): Promise<void> {
-    const error = new Error(`Form validation error in field '${fieldName}': ${errorMessage}`);
-    
+    const error = new Error(
+      `Form validation error in field '${fieldName}': ${errorMessage}`,
+    );
+
     await this.reportError(error, 'form_validation_error', 'low', {
       fieldName,
       stepNumber,
@@ -165,10 +179,12 @@ class CrashReportingService {
     url: string,
     method: string,
     statusCode?: number,
-    responseText?: string
+    responseText?: string,
   ): Promise<void> {
-    const error = new Error(`Network error: ${method} ${url} - Status: ${statusCode || 'Unknown'}`);
-    
+    const error = new Error(
+      `Network error: ${method} ${url} - Status: ${statusCode || 'Unknown'}`,
+    );
+
     await this.reportError(error, 'network_error', 'medium', {
       url,
       method,
@@ -178,9 +194,15 @@ class CrashReportingService {
   }
 
   // Report storage errors
-  async reportStorageError(operation: string, key: string, error: Error): Promise<void> {
-    const storageError = new Error(`Storage error during ${operation} for key '${key}': ${error.message}`);
-    
+  async reportStorageError(
+    operation: string,
+    key: string,
+    error: Error,
+  ): Promise<void> {
+    const storageError = new Error(
+      `Storage error during ${operation} for key '${key}': ${error.message}`,
+    );
+
     await this.reportError(storageError, 'storage_error', 'high', {
       operation,
       key,
@@ -190,8 +212,10 @@ class CrashReportingService {
 
   // Report performance issues
   async reportPerformanceIssue(issue: PerformanceIssue): Promise<void> {
-    const error = new Error(`Performance issue: ${issue.type} - Expected: ${issue.threshold}, Actual: ${issue.actualValue}`);
-    
+    const error = new Error(
+      `Performance issue: ${issue.type} - Expected: ${issue.threshold}, Actual: ${issue.actualValue}`,
+    );
+
     await this.reportError(error, 'performance_issue', 'medium', {
       performanceIssue: issue,
     });
@@ -203,7 +227,7 @@ class CrashReportingService {
       const stored = await AsyncStorage.getItem(this.STORAGE_KEY);
       return stored ? JSON.parse(stored) : [];
     } catch (error) {
-      console.error('Error retrieving crash reports:', error);
+      errorLog('Error retrieving crash reports:', error);
       return [];
     }
   }
@@ -214,21 +238,30 @@ class CrashReportingService {
     reportsByType: Record<string, number>;
     reportsBySeverity: Record<string, number>;
     recentReports: CrashReport[];
-    topErrors: Array<{ message: string; count: number; lastOccurrence: number }>;
+    topErrors: Array<{
+      message: string;
+      count: number;
+      lastOccurrence: number;
+    }>;
   }> {
     const reports = await this.getStoredReports();
-    
+
     const reportsByType: Record<string, number> = {};
     const reportsBySeverity: Record<string, number> = {};
-    const errorCounts: Record<string, { count: number; lastOccurrence: number }> = {};
+    const errorCounts: Record<
+      string,
+      { count: number; lastOccurrence: number }
+    > = {};
 
     reports.forEach(report => {
       // Count by type
-      reportsByType[report.errorType] = (reportsByType[report.errorType] || 0) + 1;
-      
+      reportsByType[report.errorType] =
+        (reportsByType[report.errorType] || 0) + 1;
+
       // Count by severity
-      reportsBySeverity[report.severity] = (reportsBySeverity[report.severity] || 0) + 1;
-      
+      reportsBySeverity[report.severity] =
+        (reportsBySeverity[report.severity] || 0) + 1;
+
       // Count error messages
       const errorKey = report.message.substring(0, 100); // First 100 chars
       if (!errorCounts[errorKey]) {
@@ -237,7 +270,7 @@ class CrashReportingService {
       errorCounts[errorKey].count++;
       errorCounts[errorKey].lastOccurrence = Math.max(
         errorCounts[errorKey].lastOccurrence,
-        report.timestamp
+        report.timestamp,
       );
     });
 
@@ -267,27 +300,32 @@ class CrashReportingService {
   async clearOldReports(olderThanDays: number = 30): Promise<void> {
     try {
       const reports = await this.getStoredReports();
-      const cutoffTime = Date.now() - (olderThanDays * 24 * 60 * 60 * 1000);
-      
-      const recentReports = reports.filter(report => report.timestamp > cutoffTime);
-      
-      await AsyncStorage.setItem(this.STORAGE_KEY, JSON.stringify(recentReports));
+      const cutoffTime = Date.now() - olderThanDays * 24 * 60 * 60 * 1000;
+
+      const recentReports = reports.filter(
+        report => report.timestamp > cutoffTime,
+      );
+
+      await AsyncStorage.setItem(
+        this.STORAGE_KEY,
+        JSON.stringify(recentReports),
+      );
     } catch (error) {
-      console.error('Error clearing old reports:', error);
+      errorLog('Error clearing old reports:', error);
     }
   }
 
   // Private helper methods
   private setupGlobalErrorHandler(): void {
     const originalHandler = ErrorUtils.getGlobalHandler();
-    
+
     ErrorUtils.setGlobalHandler((error, isFatal) => {
       this.reportError(
         error,
         'javascript_error',
-        isFatal ? 'critical' : 'high'
-      ).catch(console.error);
-      
+        isFatal ? 'critical' : 'high',
+      ).catch(error => errorLog('Error in catch block:', error));
+
       // Call original handler
       if (originalHandler) {
         originalHandler(error, isFatal);
@@ -307,7 +345,7 @@ class CrashReportingService {
 
   private async getDeviceInfo(): Promise<CrashReport['deviceInfo']> {
     const { width, height } = require('react-native').Dimensions.get('window');
-    
+
     return {
       platform: Platform.OS,
       version: Platform.Version.toString(),
@@ -328,8 +366,11 @@ class CrashReportingService {
   private async getUserInfo(): Promise<CrashReport['userInfo']> {
     // In a real app, this would come from authentication context
     return {
-      sessionDuration: Date.now() - (this.formContext?.sessionId ? 
-        parseInt(this.formContext.sessionId.split('_')[1]) : Date.now()),
+      sessionDuration:
+        Date.now() -
+        (this.formContext?.sessionId
+          ? parseInt(this.formContext.sessionId.split('_')[1], 10)
+          : Date.now()),
     };
   }
 
@@ -337,15 +378,15 @@ class CrashReportingService {
     try {
       const reports = await this.getStoredReports();
       reports.push(report);
-      
+
       // Keep only the most recent reports
       if (reports.length > this.MAX_STORED_REPORTS) {
         reports.splice(0, reports.length - this.MAX_STORED_REPORTS);
       }
-      
+
       await AsyncStorage.setItem(this.STORAGE_KEY, JSON.stringify(reports));
     } catch (error) {
-      console.error('Error storing crash report:', error);
+      errorLog('Error storing crash report:', error);
     }
   }
 
@@ -354,7 +395,7 @@ class CrashReportingService {
       // In a real app, this would send to your crash reporting service
       // For now, we'll just log it
       if (__DEV__) {
-        console.warn('Crash Report:', {
+        warnLog('Crash Report:', {
           id: report.id,
           type: report.errorType,
           severity: report.severity,
@@ -362,7 +403,7 @@ class CrashReportingService {
           formContext: report.formContext,
         });
       }
-      
+
       // Example implementation:
       // await fetch('https://your-crash-reporting-endpoint.com/reports', {
       //   method: 'POST',
@@ -370,7 +411,7 @@ class CrashReportingService {
       //   body: JSON.stringify(report),
       // });
     } catch (error) {
-      console.error('Error sending crash report to server:', error);
+      errorLog('Error sending crash report to server:', error);
     }
   }
 }

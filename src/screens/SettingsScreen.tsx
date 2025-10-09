@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,8 @@ import {
   SafeAreaView,
   Alert,
 } from 'react-native';
-import { Spacing, Shadows } from '../styles/designSystem';
+import { Spacing, Shadows, Colors } from '../styles/designSystem';
+import { debugLog } from '../utils/logger';
 
 const SettingsScreen: React.FC = () => {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
@@ -16,45 +17,37 @@ const SettingsScreen: React.FC = () => {
   const [locationEnabled, setLocationEnabled] = useState(false);
 
   const handleLogout = () => {
-    Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out?',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
+    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
+      {
+        text: 'Cancel',
+        style: 'cancel',
+      },
+      {
+        text: 'Sign Out',
+        style: 'destructive',
+        onPress: () => {
+          // Handle logout logic here
+          debugLog('User signed out');
         },
-        {
-          text: 'Sign Out',
-          style: 'destructive',
-          onPress: () => {
-            // Handle logout logic here
-            console.log('User signed out');
-          },
-        },
-      ],
-    );
+      },
+    ]);
   };
 
   const handleClearCache = () => {
-    Alert.alert(
-      'Clear Cache',
-      'This will clear all cached data. Continue?',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
+    Alert.alert('Clear Cache', 'This will clear all cached data. Continue?', [
+      {
+        text: 'Cancel',
+        style: 'cancel',
+      },
+      {
+        text: 'Clear',
+        style: 'destructive',
+        onPress: () => {
+          // Handle cache clearing logic here
+          debugLog('Cache cleared');
         },
-        {
-          text: 'Clear',
-          style: 'destructive',
-          onPress: () => {
-            // Handle cache clearing logic here
-            console.log('Cache cleared');
-          },
-        },
-      ],
-    );
+      },
+    ]);
   };
 
   return (
@@ -62,7 +55,7 @@ const SettingsScreen: React.FC = () => {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Preferences</Text>
-          
+
           <View style={styles.settingItem}>
             <View style={styles.settingInfo}>
               <Text style={styles.settingTitle}>Push Notifications</Text>
@@ -73,7 +66,7 @@ const SettingsScreen: React.FC = () => {
             <TouchableOpacity
               style={[
                 styles.checkbox,
-                notificationsEnabled && styles.checkboxChecked
+                notificationsEnabled && styles.checkboxChecked,
               ]}
               onPress={() => setNotificationsEnabled(!notificationsEnabled)}
               activeOpacity={0.7}
@@ -81,9 +74,7 @@ const SettingsScreen: React.FC = () => {
               accessibilityState={{ checked: notificationsEnabled }}
               accessibilityLabel="Toggle notifications"
             >
-              {notificationsEnabled && (
-                <Text style={styles.checkmark}>✓</Text>
-              )}
+              {notificationsEnabled && <Text style={styles.checkmark}>✓</Text>}
             </TouchableOpacity>
           </View>
 
@@ -97,7 +88,7 @@ const SettingsScreen: React.FC = () => {
             <TouchableOpacity
               style={[
                 styles.checkbox,
-                darkModeEnabled && styles.checkboxChecked
+                darkModeEnabled && styles.checkboxChecked,
               ]}
               onPress={() => setDarkModeEnabled(!darkModeEnabled)}
               activeOpacity={0.7}
@@ -105,9 +96,7 @@ const SettingsScreen: React.FC = () => {
               accessibilityState={{ checked: darkModeEnabled }}
               accessibilityLabel="Toggle dark mode"
             >
-              {darkModeEnabled && (
-                <Text style={styles.checkmark}>✓</Text>
-              )}
+              {darkModeEnabled && <Text style={styles.checkmark}>✓</Text>}
             </TouchableOpacity>
           </View>
 
@@ -121,7 +110,7 @@ const SettingsScreen: React.FC = () => {
             <TouchableOpacity
               style={[
                 styles.checkbox,
-                locationEnabled && styles.checkboxChecked
+                locationEnabled && styles.checkboxChecked,
               ]}
               onPress={() => setLocationEnabled(!locationEnabled)}
               activeOpacity={0.7}
@@ -129,16 +118,14 @@ const SettingsScreen: React.FC = () => {
               accessibilityState={{ checked: locationEnabled }}
               accessibilityLabel="Toggle location services"
             >
-              {locationEnabled && (
-                <Text style={styles.checkmark}>✓</Text>
-              )}
+              {locationEnabled && <Text style={styles.checkmark}>✓</Text>}
             </TouchableOpacity>
           </View>
         </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Account</Text>
-          
+
           <TouchableOpacity style={styles.settingItem}>
             <View style={styles.settingInfo}>
               <Text style={styles.settingTitle}>Edit Profile</Text>
@@ -172,7 +159,7 @@ const SettingsScreen: React.FC = () => {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Support</Text>
-          
+
           <TouchableOpacity style={styles.settingItem}>
             <View style={styles.settingInfo}>
               <Text style={styles.settingTitle}>Help Center</Text>
@@ -193,7 +180,10 @@ const SettingsScreen: React.FC = () => {
             <Text style={styles.arrow}>›</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.settingItem} onPress={handleClearCache}>
+          <TouchableOpacity
+            style={styles.settingItem}
+            onPress={handleClearCache}
+          >
             <View style={styles.settingInfo}>
               <Text style={styles.settingTitle}>Clear Cache</Text>
               <Text style={styles.settingDescription}>
@@ -206,13 +196,11 @@ const SettingsScreen: React.FC = () => {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>About</Text>
-          
+
           <View style={styles.settingItem}>
             <View style={styles.settingInfo}>
               <Text style={styles.settingTitle}>App Version</Text>
-              <Text style={styles.settingDescription}>
-                Version 1.0.0
-              </Text>
+              <Text style={styles.settingDescription}>Version 1.0.0</Text>
             </View>
           </View>
 
@@ -317,8 +305,8 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   checkboxChecked: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
+    borderColor: Colors.primary.main,
   },
   checkmark: {
     color: 'white',

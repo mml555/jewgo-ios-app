@@ -22,11 +22,13 @@ class Logger {
   private messageCount: number = 0;
   private messageBuffer: string[] = [];
 
-  constructor(config: LoggerConfig = {
-    level: __DEV__ ? LogLevel.DEBUG : LogLevel.WARN,
-    enableConsole: __DEV__,
-    maxMessages: 1000
-  }) {
+  constructor(
+    config: LoggerConfig = {
+      level: __DEV__ ? LogLevel.DEBUG : LogLevel.WARN,
+      enableConsole: __DEV__,
+      maxMessages: 1000,
+    },
+  ) {
     this.config = config;
   }
 
@@ -34,31 +36,47 @@ class Logger {
     return level >= this.config.level && this.config.enableConsole;
   }
 
-  private formatMessage(level: string, message: string, ...args: any[]): string {
+  private formatMessage(
+    level: string,
+    message: string,
+    ...args: any[]
+  ): string {
     const timestamp = new Date().toISOString();
     const formattedMessage = `[${timestamp}] [${level}] ${message}`;
-    
+
     // Add arguments if present
     if (args.length > 0) {
-      return `${formattedMessage} ${args.map(arg => 
-        typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
-      ).join(' ')}`;
+      return `${formattedMessage} ${args
+        .map(arg =>
+          typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg),
+        )
+        .join(' ')}`;
     }
-    
+
     return formattedMessage;
   }
 
-  private log(level: LogLevel, levelName: string, message: string, ...args: any[]): void {
+  private log(
+    level: LogLevel,
+    levelName: string,
+    message: string,
+    ...args: any[]
+  ): void {
     if (!this.shouldLog(level)) return;
 
     // Prevent message overflow
-    if (this.config.maxMessages && this.messageCount >= this.config.maxMessages) {
-      console.warn(`[Logger] Maximum message limit (${this.config.maxMessages}) reached. Further logs will be discarded.`);
+    if (
+      this.config.maxMessages &&
+      this.messageCount >= this.config.maxMessages
+    ) {
+      console.warn(
+        `[Logger] Maximum message limit (${this.config.maxMessages}) reached. Further logs will be discarded.`,
+      );
       return;
     }
 
     const formattedMessage = this.formatMessage(levelName, message, ...args);
-    
+
     // Add to buffer for potential file logging
     if (this.config.maxMessages) {
       this.messageBuffer.push(formattedMessage);
@@ -103,8 +121,16 @@ class Logger {
   }
 
   // Specialized logging methods for common use cases
-  apiCall(method: string, url: string, status?: number, duration?: number): void {
-    this.info(`API ${method} ${url}`, { status, duration: duration ? `${duration}ms` : undefined });
+  apiCall(
+    method: string,
+    url: string,
+    status?: number,
+    duration?: number,
+  ): void {
+    this.info(`API ${method} ${url}`, {
+      status,
+      duration: duration ? `${duration}ms` : undefined,
+    });
   }
 
   navigation(from: string, to: string, params?: any): void {
@@ -123,7 +149,7 @@ class Logger {
   getStats(): { messageCount: number; bufferSize: number } {
     return {
       messageCount: this.messageCount,
-      bufferSize: this.messageBuffer.length
+      bufferSize: this.messageBuffer.length,
     };
   }
 
@@ -143,17 +169,13 @@ export const logNavigation = logger.navigation.bind(logger);
 export const logUserAction = logger.userAction.bind(logger);
 export const logPerformance = logger.performance.bind(logger);
 
-// Conditional logging helpers
+// Direct logging helpers - no double filtering
 export const debugLog = (message: string, ...args: any[]) => {
-  if (__DEV__) {
-    logger.debug(message, ...args);
-  }
+  logger.debug(message, ...args);
 };
 
 export const infoLog = (message: string, ...args: any[]) => {
-  if (__DEV__) {
-    logger.info(message, ...args);
-  }
+  logger.info(message, ...args);
 };
 
 export const warnLog = (message: string, ...args: any[]) => {

@@ -1,9 +1,29 @@
 import React, { useCallback, useState, useMemo, memo, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, RefreshControl, TextInput, FlatList, Animated, ImageStyle, ScrollView } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
+  RefreshControl,
+  TextInput,
+  FlatList,
+  Animated,
+  ImageStyle,
+  ScrollView,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
-import { Colors, Typography, Spacing, BorderRadius, Shadows, TouchTargets } from '../styles/designSystem';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  Shadows,
+  TouchTargets,
+} from '../styles/designSystem';
 import type { RootStackParamList } from '../types/navigation';
 import { useFavorites } from '../hooks/useFavorites';
 import { Favorite } from '../services/FavoritesService';
@@ -11,6 +31,7 @@ import { CategoryItem } from '../hooks/useCategoryData';
 import CategoryCard, { CategoryCardWithMemo } from '../components/CategoryCard';
 import JobCard from '../components/JobCard';
 import HeartIcon from '../components/HeartIcon';
+import { debugLog, warnLog } from '../utils/logger';
 
 type NavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -34,62 +55,67 @@ const FavoritesScreen: React.FC = () => {
   } = useFavorites();
 
   // Convert Favorite objects to CategoryItem objects for compatibility with CategoryCard
-  const convertFavoriteToCategoryItem = useCallback((favorite: Favorite): CategoryItem => {
-    // Use actual image URL from database, or create category-appropriate placeholder
-    let imageUrl = favorite.image_url;
-    
-    if (!imageUrl) {
-      // Create category-appropriate placeholder based on entity type
-      const categoryEmojis = {
-        restaurant: '🍽️',
-        synagogue: '🕍',
-        mikvah: '💧',
-        store: '🏪',
-        jobs: '💼',
-        // Handle legacy entity types
-        shul: '🕍',
-        eatery: '🍽️'
+  const convertFavoriteToCategoryItem = useCallback(
+    (favorite: Favorite): CategoryItem => {
+      // Use actual image URL from database, or create category-appropriate placeholder
+      let imageUrl = favorite.image_url;
+
+      if (!imageUrl) {
+        // Create category-appropriate placeholder based on entity type
+        const categoryEmojis = {
+          restaurant: '🍽️',
+          synagogue: '🕍',
+          mikvah: '💧',
+          store: '🏪',
+          jobs: '💼',
+          // Handle legacy entity types
+          shul: '🕍',
+          eatery: '🍽️',
+        };
+
+        const emoji = (categoryEmojis as any)[favorite.entity_type] || '🏢';
+        imageUrl = `https://via.placeholder.com/300x200/f1f1f1/666666?text=${emoji}+${encodeURIComponent(
+          favorite.entity_name,
+        )}`;
+      }
+
+      debugLog('🖼️ Converting favorite to CategoryItem:', {
+        id: favorite.entity_id,
+        title: favorite.entity_name,
+        originalImageUrl: favorite.image_url,
+        finalImageUrl: imageUrl,
+        hasImage: !!favorite.image_url,
+        entityType: favorite.entity_type,
+      });
+
+      return {
+        id: favorite.entity_id,
+        title: favorite.entity_name,
+        description: favorite.description || '',
+        imageUrl: imageUrl,
+        image_url: imageUrl, // Keep both for compatibility
+        rating: favorite.rating || undefined,
+        review_count: favorite.review_count || undefined,
+        price: undefined, // Not available in Favorite interface
+        city: favorite.city || undefined,
+        state: favorite.state || undefined,
+        zip_code: undefined, // Not available in Favorite interface
+        latitude: undefined, // Not available in Favorite interface
+        longitude: undefined, // Not available in Favorite interface
+        address: favorite.address || undefined,
+        category: favorite.category,
+        entity_type: favorite.entity_type,
+        isOpen: undefined, // Not available in Favorite interface
+        openWeekends: undefined, // Not available in Favorite interface
+        hasParking: undefined, // Not available in Favorite interface
+        hasWifi: undefined, // Not available in Favorite interface
+        hasAccessibility: undefined, // Not available in Favorite interface
+        hasDelivery: undefined, // Not available in Favorite interface
+        kosherLevel: undefined, // Not available in Favorite interface
       };
-      
-      const emoji = categoryEmojis[favorite.entity_type] || '🏢';
-      imageUrl = `https://via.placeholder.com/300x200/f1f1f1/666666?text=${emoji}+${encodeURIComponent(favorite.entity_name)}`;
-    }
-    
-    console.log('🖼️ Converting favorite to CategoryItem:', {
-      id: favorite.entity_id,
-      title: favorite.entity_name,
-      originalImageUrl: favorite.image_url,
-      finalImageUrl: imageUrl,
-      hasImage: !!favorite.image_url,
-      entityType: favorite.entity_type
-    });
-    
-    return {
-      id: favorite.entity_id,
-      title: favorite.entity_name,
-      description: favorite.description || '',
-      imageUrl: imageUrl,
-      image_url: imageUrl, // Keep both for compatibility
-      rating: favorite.rating,
-      review_count: favorite.review_count,
-      price: undefined, // Not available in Favorite interface
-      city: favorite.city,
-      state: favorite.state,
-      zip_code: undefined, // Not available in Favorite interface
-      latitude: undefined, // Not available in Favorite interface
-      longitude: undefined, // Not available in Favorite interface
-      address: favorite.address,
-      category: favorite.category,
-      entity_type: favorite.entity_type,
-      isOpen: undefined, // Not available in Favorite interface
-      openWeekends: undefined, // Not available in Favorite interface
-      hasParking: undefined, // Not available in Favorite interface
-      hasWifi: undefined, // Not available in Favorite interface
-      hasAccessibility: undefined, // Not available in Favorite interface
-      hasDelivery: undefined, // Not available in Favorite interface
-      kosherLevel: undefined, // Not available in Favorite interface
-    };
-  }, []);
+    },
+    [],
+  );
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<FilterType>('all');
@@ -101,9 +127,9 @@ const FavoritesScreen: React.FC = () => {
   // Analytics tracking
   const trackScreenEvent = (event: string, data?: any) => {
     try {
-      console.log(`📊 Favorites Screen Analytics: ${event}`, data);
+      debugLog(`📊 Favorites Screen Analytics: ${event}`, data);
     } catch (error) {
-      console.warn('Failed to track screen analytics event:', error);
+      warnLog('Failed to track screen analytics event:', error);
     }
   };
 
@@ -111,70 +137,117 @@ const FavoritesScreen: React.FC = () => {
   useEffect(() => {
     trackScreenEvent('favorites_screen_viewed', {
       total_favorites: favoritesCount,
-      has_favorites: favoritesCount > 0
+      has_favorites: favoritesCount > 0,
     });
   }, [favoritesCount]);
 
-
   // Move all hooks before early returns to avoid hooks rule violations
-  const handleItemPress = useCallback((item: CategoryItem) => {
-    if (selectionMode) {
-      // Toggle selection
-      setSelectedItems(prev => {
-        const newSet = new Set(prev);
-        if (newSet.has(item.id)) {
-          newSet.delete(item.id);
-        } else {
-          newSet.add(item.id);
-        }
-        return newSet;
-      });
-    } else {
-      // Navigate to the listing detail screen
-      navigation.navigate('ListingDetail', { 
-        itemId: item.id,
-        categoryKey: item.entity_type
-      });
-    }
-  }, [navigation, selectionMode]);
+  const handleItemPress = useCallback(
+    (item: CategoryItem) => {
+      if (selectionMode) {
+        // Toggle selection
+        setSelectedItems(prev => {
+          const newSet = new Set(prev);
+          if (newSet.has(item.id)) {
+            newSet.delete(item.id);
+          } else {
+            newSet.add(item.id);
+          }
+          return newSet;
+        });
+      } else {
+        // Navigate to the listing detail screen
+        (navigation as any).navigate('ListingDetail', {
+          itemId: item.id,
+          categoryKey: item.entity_type || 'restaurant',
+        });
+      }
+    },
+    [navigation, selectionMode],
+  );
 
-
-  const handleLongPress = useCallback((item: CategoryItem) => {
-    if (!selectionMode) {
-      setSelectionMode(true);
-      setSelectedItems(new Set([item.id]));
-    }
-  }, [selectionMode]);
+  const handleLongPress = useCallback(
+    (item: CategoryItem) => {
+      if (!selectionMode) {
+        setSelectionMode(true);
+        setSelectedItems(new Set([item.id]));
+      }
+    },
+    [selectionMode],
+  );
 
   // Handle favorite toggle from CategoryCard
-  const handleFavoriteToggle = useCallback(async (entityId: string, isFavorited: boolean) => {
-    console.log('🔄 Favorite toggled in CategoryCard:', { entityId, isFavorited });
-    
-    if (!isFavorited) {
-      // If item was removed from favorites, refresh the list
-      console.log('🔄 Item removed from favorites, refreshing list...');
-      await refreshFavorites();
-    } else {
-      // If item was added to favorites, we don't need to refresh since it's not in our list yet
-      console.log('🔄 Item added to favorites, no refresh needed');
-    }
-  }, [refreshFavorites]);
+  const handleFavoriteToggle = useCallback(
+    async (entityId: string, isFavorited: boolean) => {
+      debugLog('🔄 Favorite toggled in CategoryCard:', {
+        entityId,
+        isFavorited,
+      });
 
-  console.log('🔄 FavoritesScreen render - handleFavoriteToggle function:', !!handleFavoriteToggle);
+      if (!isFavorited) {
+        // If item was removed from favorites, refresh the list
+        debugLog('🔄 Item removed from favorites, refreshing list...');
+        await refreshFavorites();
+      } else {
+        // If item was added to favorites, we don't need to refresh since it's not in our list yet
+        debugLog('🔄 Item added to favorites, no refresh needed');
+      }
+    },
+    [refreshFavorites],
+  );
 
-  const renderFavoriteItem = useCallback(({ item }: { item: CategoryItem }) => {
-    const isSelected = selectedItems.has(item.id);
-    
-    console.log('🔄 Rendering CategoryCard with onFavoriteToggle:', !!handleFavoriteToggle);
-    
-    // Use JobCard for jobs category, CategoryCard for all others
-    if (item.entity_type === 'jobs') {
+  debugLog(
+    '🔄 FavoritesScreen render - handleFavoriteToggle function:',
+    !!handleFavoriteToggle,
+  );
+
+  const renderFavoriteItem = useCallback(
+    ({ item }: { item: CategoryItem }) => {
+      const isSelected = selectedItems.has(item.id);
+
+      debugLog(
+        '🔄 Rendering CategoryCard with onFavoriteToggle:',
+        !!handleFavoriteToggle,
+      );
+
+      // Use JobCard for jobs category, CategoryCard for all others
+      if (item.entity_type === 'jobs') {
+        return (
+          <TouchableOpacity
+            style={[
+              styles.gridItemContainer,
+              selectionMode && styles.gridItemSelectable,
+              isSelected && styles.gridItemSelected,
+            ]}
+            onPress={() => handleItemPress(item)}
+            onLongPress={() => handleLongPress(item)}
+            activeOpacity={0.7}
+          >
+            {selectionMode && (
+              <View style={styles.selectionIndicator}>
+                <View
+                  style={[
+                    styles.selectionCircle,
+                    isSelected && styles.selectionCircleSelected,
+                  ]}
+                >
+                  {isSelected && (
+                    <Text style={styles.selectionCheckmark}>✓</Text>
+                  )}
+                </View>
+              </View>
+            )}
+            <JobCard item={item} categoryKey={item.entity_type} />
+          </TouchableOpacity>
+        );
+      }
+
       return (
         <TouchableOpacity
           style={[
             styles.gridItemContainer,
             selectionMode && styles.gridItemSelectable,
-            isSelected && styles.gridItemSelected
+            isSelected && styles.gridItemSelected,
           ]}
           onPress={() => handleItemPress(item)}
           onLongPress={() => handleLongPress(item)}
@@ -182,57 +255,37 @@ const FavoritesScreen: React.FC = () => {
         >
           {selectionMode && (
             <View style={styles.selectionIndicator}>
-              <View style={[
-                styles.selectionCircle,
-                isSelected && styles.selectionCircleSelected
-              ]}>
-                {isSelected && (
-                  <Text style={styles.selectionCheckmark}>✓</Text>
-                )}
+              <View
+                style={[
+                  styles.selectionCircle,
+                  isSelected && styles.selectionCircleSelected,
+                ]}
+              >
+                {isSelected && <Text style={styles.selectionCheckmark}>✓</Text>}
               </View>
             </View>
           )}
-          <JobCard item={item} categoryKey={item.entity_type} />
+          <CategoryCard
+            item={item}
+            categoryKey={item.entity_type || 'restaurant'}
+            onFavoriteToggle={handleFavoriteToggle}
+            isInitiallyFavorited={true}
+          />
         </TouchableOpacity>
       );
-    }
-    
-    return (
-      <TouchableOpacity
-        style={[
-          styles.gridItemContainer,
-          selectionMode && styles.gridItemSelectable,
-          isSelected && styles.gridItemSelected
-        ]}
-        onPress={() => handleItemPress(item)}
-        onLongPress={() => handleLongPress(item)}
-        activeOpacity={0.7}
-      >
-        {selectionMode && (
-          <View style={styles.selectionIndicator}>
-            <View style={[
-              styles.selectionCircle,
-              isSelected && styles.selectionCircleSelected
-            ]}>
-              {isSelected && (
-                <Text style={styles.selectionCheckmark}>✓</Text>
-              )}
-            </View>
-          </View>
-        )}
-        <CategoryCard 
-          item={item} 
-          categoryKey={item.entity_type} 
-          onFavoriteToggle={handleFavoriteToggle} 
-          isInitiallyFavorited={true} 
-        />
-      </TouchableOpacity>
-    );
-  }, [selectedItems, selectionMode, handleItemPress, handleLongPress, handleFavoriteToggle]);
+    },
+    [
+      selectedItems,
+      selectionMode,
+      handleItemPress,
+      handleLongPress,
+      handleFavoriteToggle,
+    ],
+  );
 
   const renderFooter = useCallback(() => {
     if (!loadingMore) return null;
-    
+
     return (
       <View style={styles.loadingMoreContainer}>
         <ActivityIndicator size="small" color={Colors.primary.main} />
@@ -253,11 +306,12 @@ const FavoritesScreen: React.FC = () => {
     // Apply search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(fav => 
-        fav.entity_name.toLowerCase().includes(query) ||
-        fav.description?.toLowerCase().includes(query) ||
-        fav.city?.toLowerCase().includes(query) ||
-        fav.category.toLowerCase().includes(query)
+      filtered = filtered.filter(
+        fav =>
+          fav.entity_name.toLowerCase().includes(query) ||
+          fav.description?.toLowerCase().includes(query) ||
+          fav.city?.toLowerCase().includes(query) ||
+          fav.category.toLowerCase().includes(query),
       );
     }
 
@@ -277,20 +331,29 @@ const FavoritesScreen: React.FC = () => {
           return a.category.localeCompare(b.category);
         case 'date_added':
         default:
-          return new Date(b.favorited_at).getTime() - new Date(a.favorited_at).getTime();
+          return (
+            new Date(b.favorited_at).getTime() -
+            new Date(a.favorited_at).getTime()
+          );
       }
     });
 
     // Convert to CategoryItem format for compatibility with CategoryCard
     return filtered.map(convertFavoriteToCategoryItem);
-  }, [favorites, searchQuery, filterType, sortType, convertFavoriteToCategoryItem]);
+  }, [
+    favorites,
+    searchQuery,
+    filterType,
+    sortType,
+    convertFavoriteToCategoryItem,
+  ]);
 
   // Track search changes
   useEffect(() => {
     if (searchQuery.trim()) {
       trackScreenEvent('favorites_searched', {
         query: searchQuery,
-        results_count: filteredAndSortedFavorites?.length || 0
+        results_count: filteredAndSortedFavorites?.length || 0,
       });
     }
   }, [searchQuery, filteredAndSortedFavorites?.length]);
@@ -300,7 +363,7 @@ const FavoritesScreen: React.FC = () => {
     if (filterType !== 'all') {
       trackScreenEvent('favorites_filtered', {
         filter_type: filterType,
-        results_count: filteredAndSortedFavorites?.length || 0
+        results_count: filteredAndSortedFavorites?.length || 0,
       });
     }
   }, [filterType, filteredAndSortedFavorites?.length]);
@@ -309,14 +372,16 @@ const FavoritesScreen: React.FC = () => {
   useEffect(() => {
     trackScreenEvent('favorites_sorted', {
       sort_type: sortType,
-      results_count: filteredAndSortedFavorites.length
+      results_count: filteredAndSortedFavorites.length,
     });
   }, [sortType, filteredAndSortedFavorites?.length]);
 
   // Calculate average rating
-  const averageRating = favorites.length > 0 
-    ? favorites.reduce((sum, fav) => sum + (fav.rating || 0), 0) / favorites.length 
-    : 0;
+  const averageRating =
+    favorites.length > 0
+      ? favorites.reduce((sum, fav) => sum + (fav.rating || 0), 0) /
+        favorites.length
+      : 0;
 
   // Get unique entity types for filter options
   const entityTypes = useMemo(() => {
@@ -325,7 +390,7 @@ const FavoritesScreen: React.FC = () => {
     return types.map(type => ({
       value: type as FilterType,
       label: type.charAt(0).toUpperCase() + type.slice(1),
-      count: favorites.filter(fav => fav.entity_type === type).length
+      count: favorites.filter(fav => fav.entity_type === type).length,
     }));
   }, [favorites]);
 
@@ -333,8 +398,12 @@ const FavoritesScreen: React.FC = () => {
   const handleBulkDelete = useCallback(async () => {
     if (selectedItems.size === 0) return;
 
-    const selectedFavorites = favorites.filter(fav => selectedItems.has(fav.id));
-    const favoriteNames = selectedFavorites.map(fav => fav.entity_name).join(', ');
+    const selectedFavorites = favorites.filter(fav =>
+      selectedItems.has(fav.id),
+    );
+    const favoriteNames = selectedFavorites
+      .map(fav => fav.entity_name)
+      .join(', ');
 
     Alert.alert(
       'Remove from Favorites',
@@ -352,7 +421,7 @@ const FavoritesScreen: React.FC = () => {
             let failCount = 0;
 
             for (const item of selectedFavorites) {
-            const success = await removeFromFavorites(item.entity_id);
+              const success = await removeFromFavorites(item.entity_id);
               if (success) {
                 successCount++;
               } else {
@@ -367,20 +436,23 @@ const FavoritesScreen: React.FC = () => {
             trackScreenEvent('favorites_bulk_deleted', {
               total_selected: selectedItems.size,
               success_count: successCount,
-              fail_count: failCount
+              fail_count: failCount,
             });
 
             if (failCount > 0) {
               Alert.alert(
                 'Partial Success',
-                `Removed ${successCount} favorites. ${failCount} failed to remove.`
+                `Removed ${successCount} favorites. ${failCount} failed to remove.`,
               );
             } else {
-              Alert.alert('Success', `Successfully removed ${successCount} favorites.`);
+              Alert.alert(
+                'Success',
+                `Successfully removed ${successCount} favorites.`,
+              );
             }
           },
         },
-      ]
+      ],
     );
   }, [selectedItems, favorites, removeFromFavorites]);
 
@@ -388,7 +460,9 @@ const FavoritesScreen: React.FC = () => {
     if (selectedItems.size === (filteredAndSortedFavorites?.length || 0)) {
       setSelectedItems(new Set());
     } else {
-      setSelectedItems(new Set((filteredAndSortedFavorites || []).map(item => item.id)));
+      setSelectedItems(
+        new Set((filteredAndSortedFavorites || []).map(item => item.id)),
+      );
     }
   }, [selectedItems.size, filteredAndSortedFavorites]);
 
@@ -397,27 +471,32 @@ const FavoritesScreen: React.FC = () => {
     setSelectedItems(new Set());
   }, []);
 
-  const renderEmptyState = useCallback(() => (
-    <View style={styles.emptyState}>
-      <HeartIcon size={64} color={Colors.textSecondary} filled={true} />
-      <Text style={styles.emptyTitle}>
-        {searchQuery || filterType !== 'all' ? 'No matching favorites' : 'No Favorites Yet'}
-      </Text>
-      <Text style={styles.emptyDescription}>
-        {searchQuery || filterType !== 'all' 
-          ? 'Try adjusting your search or filter criteria.'
-          : 'Start exploring and add your favorite places to see them here.'}
-      </Text>
-      {!searchQuery && filterType === 'all' && (
-        <TouchableOpacity 
-          style={styles.exploreButton} 
-          onPress={() => navigation.navigate('MainTabs')}
-        >
-          <Text style={styles.exploreButtonText}>Explore Now</Text>
-        </TouchableOpacity>
-      )}
-    </View>
-  ), [searchQuery, filterType, navigation]);
+  const renderEmptyState = useCallback(
+    () => (
+      <View style={styles.emptyState}>
+        <HeartIcon size={64} color={Colors.textSecondary} filled={true} />
+        <Text style={styles.emptyTitle}>
+          {searchQuery || filterType !== 'all'
+            ? 'No matching favorites'
+            : 'No Favorites Yet'}
+        </Text>
+        <Text style={styles.emptyDescription}>
+          {searchQuery || filterType !== 'all'
+            ? 'Try adjusting your search or filter criteria.'
+            : 'Start exploring and add your favorite places to see them here.'}
+        </Text>
+        {!searchQuery && filterType === 'all' && (
+          <TouchableOpacity
+            style={styles.exploreButton}
+            onPress={() => (navigation as any).navigate('MainTabs')}
+          >
+            <Text style={styles.exploreButtonText}>Explore Now</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    ),
+    [searchQuery, filterType, navigation],
+  );
 
   if (loading && favorites.length === 0) {
     return (
@@ -445,14 +524,13 @@ const FavoritesScreen: React.FC = () => {
     );
   }
 
-
   return (
     <SafeAreaView style={styles.container}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>Favorites</Text>
-          <Text style={styles.subtitle}>Your saved places and events</Text>
-        
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.title}>Favorites</Text>
+        <Text style={styles.subtitle}>Your saved places and events</Text>
+
         {!selectionMode && (
           <TouchableOpacity
             style={styles.selectButton}
@@ -472,17 +550,19 @@ const FavoritesScreen: React.FC = () => {
           >
             <Text style={styles.selectionHeaderButtonText}>Cancel</Text>
           </TouchableOpacity>
-          
+
           <Text style={styles.selectionHeaderTitle}>
             {selectedItems.size} selected
           </Text>
-          
+
           <TouchableOpacity
             style={styles.selectionHeaderButton}
             onPress={handleSelectAll}
           >
             <Text style={styles.selectionHeaderButtonText}>
-              {selectedItems.size === (filteredAndSortedFavorites?.length || 0) ? 'Deselect All' : 'Select All'}
+              {selectedItems.size === (filteredAndSortedFavorites?.length || 0)
+                ? 'Deselect All'
+                : 'Select All'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -514,27 +594,43 @@ const FavoritesScreen: React.FC = () => {
             <Text style={styles.filterLabel}>Type</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               <TouchableOpacity
-                style={[styles.filterChip, filterType === 'all' && styles.filterChipActive]}
+                style={[
+                  styles.filterChip,
+                  filterType === 'all' && styles.filterChipActive,
+                ]}
                 onPress={() => setFilterType('all')}
               >
-                <Text style={[styles.filterChipText, filterType === 'all' && styles.filterChipTextActive]}>
+                <Text
+                  style={[
+                    styles.filterChipText,
+                    filterType === 'all' && styles.filterChipTextActive,
+                  ]}
+                >
                   All ({favoritesCount})
                 </Text>
               </TouchableOpacity>
-              {entityTypes.map((type) => (
+              {entityTypes.map(type => (
                 <TouchableOpacity
                   key={type.value}
-                  style={[styles.filterChip, filterType === type.value && styles.filterChipActive]}
+                  style={[
+                    styles.filterChip,
+                    filterType === type.value && styles.filterChipActive,
+                  ]}
                   onPress={() => setFilterType(type.value)}
                 >
-                  <Text style={[styles.filterChipText, filterType === type.value && styles.filterChipTextActive]}>
+                  <Text
+                    style={[
+                      styles.filterChipText,
+                      filterType === type.value && styles.filterChipTextActive,
+                    ]}
+                  >
                     {type.label} ({type.count})
                   </Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
-        </View>
-          
+          </View>
+
           <View style={styles.filterSection}>
             <Text style={styles.filterLabel}>Sort by</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -542,14 +638,22 @@ const FavoritesScreen: React.FC = () => {
                 { value: 'date_added', label: 'Recently Added' },
                 { value: 'name', label: 'Name' },
                 { value: 'rating', label: 'Rating' },
-                { value: 'category', label: 'Category' }
-              ].map((sort) => (
+                { value: 'category', label: 'Category' },
+              ].map(sort => (
                 <TouchableOpacity
                   key={sort.value}
-                  style={[styles.filterChip, sortType === sort.value && styles.filterChipActive]}
+                  style={[
+                    styles.filterChip,
+                    sortType === sort.value && styles.filterChipActive,
+                  ]}
                   onPress={() => setSortType(sort.value as SortType)}
                 >
-                  <Text style={[styles.filterChipText, sortType === sort.value && styles.filterChipTextActive]}>
+                  <Text
+                    style={[
+                      styles.filterChipText,
+                      sortType === sort.value && styles.filterChipTextActive,
+                    ]}
+                  >
                     {sort.label}
                   </Text>
                 </TouchableOpacity>
@@ -573,27 +677,29 @@ const FavoritesScreen: React.FC = () => {
         </View>
       )}
 
-        {/* Stats */}
-        <View style={styles.statsContainer}>
-          <View style={styles.statItem}>
-            <Text style={styles.statNumber}>{favoritesCount}</Text>
+      {/* Stats */}
+      <View style={styles.statsContainer}>
+        <View style={styles.statItem}>
+          <Text style={styles.statNumber}>{favoritesCount}</Text>
           <Text style={styles.statLabel}>Total Saved</Text>
-          </View>
-          <View style={styles.statItem}>
-          <Text style={styles.statNumber}>{filteredAndSortedFavorites?.length || 0}</Text>
-          <Text style={styles.statLabel}>Showing</Text>
-          </View>
-          <View style={styles.statItem}>
-            <Text style={styles.statNumber}>{averageRating.toFixed(1)}</Text>
-            <Text style={styles.statLabel}>Avg Rating</Text>
-          </View>
         </View>
+        <View style={styles.statItem}>
+          <Text style={styles.statNumber}>
+            {filteredAndSortedFavorites?.length || 0}
+          </Text>
+          <Text style={styles.statLabel}>Showing</Text>
+        </View>
+        <View style={styles.statItem}>
+          <Text style={styles.statNumber}>{averageRating.toFixed(1)}</Text>
+          <Text style={styles.statLabel}>Avg Rating</Text>
+        </View>
+      </View>
 
-        {/* Favorites List */}
+      {/* Favorites List */}
       <FlatList
         data={filteredAndSortedFavorites}
         renderItem={renderFavoriteItem}
-        keyExtractor={(item) => item.id}
+        keyExtractor={item => item.id}
         numColumns={2}
         columnWrapperStyle={styles.row}
         style={styles.listContainer}

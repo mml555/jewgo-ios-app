@@ -10,7 +10,10 @@ import {
   PanResponder,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import HelpContentService, { HelpContent, TooltipContent } from '../services/HelpContent';
+import HelpContentService, {
+  HelpContent,
+  TooltipContent,
+} from '../services/HelpContent';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -30,24 +33,45 @@ interface HelpModalProps {
   fieldName: string;
 }
 
-const HelpModal: React.FC<HelpModalProps> = ({ visible, onClose, content, fieldName }) => {
+const HelpModal: React.FC<HelpModalProps> = ({
+  visible,
+  onClose,
+  content,
+  fieldName,
+}) => {
   const slideAnim = useRef(new Animated.Value(screenHeight)).current;
+  const activeAnimation = useRef<Animated.CompositeAnimation | null>(null);
 
   React.useEffect(() => {
+    // Stop any existing animation
+    if (activeAnimation.current) {
+      activeAnimation.current.stop();
+    }
+
     if (visible) {
-      Animated.spring(slideAnim, {
+      activeAnimation.current = Animated.spring(slideAnim, {
         toValue: 0,
         useNativeDriver: true,
         tension: 100,
         friction: 8,
-      }).start();
+      });
+      activeAnimation.current.start();
     } else {
-      Animated.timing(slideAnim, {
+      activeAnimation.current = Animated.timing(slideAnim, {
         toValue: screenHeight,
         duration: 300,
         useNativeDriver: true,
-      }).start();
+      });
+      activeAnimation.current.start();
     }
+
+    // Cleanup on unmount
+    return () => {
+      if (activeAnimation.current) {
+        activeAnimation.current.stop();
+        activeAnimation.current = null;
+      }
+    };
   }, [visible, slideAnim]);
 
   const panResponder = PanResponder.create({
@@ -79,12 +103,12 @@ const HelpModal: React.FC<HelpModalProps> = ({ visible, onClose, content, fieldN
       onRequestClose={onClose}
     >
       <View style={styles.modalOverlay}>
-        <TouchableOpacity 
-          style={styles.modalBackground} 
-          activeOpacity={1} 
+        <TouchableOpacity
+          style={styles.modalBackground}
+          activeOpacity={1}
           onPress={onClose}
         />
-        
+
         <Animated.View
           style={[
             styles.modalContent,
@@ -97,7 +121,7 @@ const HelpModal: React.FC<HelpModalProps> = ({ visible, onClose, content, fieldN
           <SafeAreaView style={styles.modalInner}>
             {/* Handle bar for swipe gesture */}
             <View style={styles.handleBar} />
-            
+
             {/* Header */}
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>{content.title}</Text>
@@ -166,11 +190,14 @@ const HelpTooltip: React.FC<HelpTooltipProps> = ({
 
   const tooltipContent = helpService.getTooltip(fieldName);
   const helpContent = helpService.getFieldHelp(fieldName);
-  const progressiveContent = helpService.getProgressiveHelp(fieldName, interactionCount);
+  const progressiveContent = helpService.getProgressiveHelp(
+    fieldName,
+    interactionCount,
+  );
 
   const handleLongPress = () => {
     if (disabled || !showOnLongPress) return;
-    
+
     if (helpContent) {
       setShowModal(true);
     } else if (tooltipContent) {
@@ -181,7 +208,7 @@ const HelpTooltip: React.FC<HelpTooltipProps> = ({
 
   const handlePress = () => {
     if (disabled || !showOnPress) return;
-    
+
     if (progressiveContent) {
       if (interactionCount >= 3 && helpContent) {
         setShowModal(true);
@@ -214,21 +241,26 @@ const HelpTooltip: React.FC<HelpTooltipProps> = ({
 
       {/* Quick tooltip */}
       {tooltipVisible && tooltipContent && (
-        <View style={[
-          styles.tooltip,
-          tooltipContent.placement === 'top' && styles.tooltipTop,
-          tooltipContent.placement === 'bottom' && styles.tooltipBottom,
-          tooltipContent.placement === 'left' && styles.tooltipLeft,
-          tooltipContent.placement === 'right' && styles.tooltipRight,
-        ]}>
+        <View
+          style={[
+            styles.tooltip,
+            tooltipContent.placement === 'top' && styles.tooltipTop,
+            tooltipContent.placement === 'bottom' && styles.tooltipBottom,
+            tooltipContent.placement === 'left' && styles.tooltipLeft,
+            tooltipContent.placement === 'right' && styles.tooltipRight,
+          ]}
+        >
           <Text style={styles.tooltipText}>{tooltipContent.text}</Text>
-          <View style={[
-            styles.tooltipArrow,
-            tooltipContent.placement === 'top' && styles.tooltipArrowTop,
-            tooltipContent.placement === 'bottom' && styles.tooltipArrowBottom,
-            tooltipContent.placement === 'left' && styles.tooltipArrowLeft,
-            tooltipContent.placement === 'right' && styles.tooltipArrowRight,
-          ]} />
+          <View
+            style={[
+              styles.tooltipArrow,
+              tooltipContent.placement === 'top' && styles.tooltipArrowTop,
+              tooltipContent.placement === 'bottom' &&
+                styles.tooltipArrowBottom,
+              tooltipContent.placement === 'left' && styles.tooltipArrowLeft,
+              tooltipContent.placement === 'right' && styles.tooltipArrowRight,
+            ]}
+          />
         </View>
       )}
 
@@ -252,7 +284,7 @@ const styles = StyleSheet.create({
   touchableArea: {
     flex: 1,
   },
-  
+
   // Tooltip styles
   tooltip: {
     position: 'absolute',

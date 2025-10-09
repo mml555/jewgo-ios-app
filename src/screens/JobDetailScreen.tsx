@@ -13,8 +13,15 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { debugLog, errorLog } from '../utils/logger';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../styles/designSystem';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  Shadows,
+} from '../styles/designSystem';
 import HeartIcon from '../components/HeartIcon';
 import { useFavorites } from '../hooks/useFavorites';
 import { apiService } from '../services/api';
@@ -26,7 +33,10 @@ type RootStackParamList = {
 };
 
 type JobDetailScreenRouteProp = RouteProp<RootStackParamList, 'JobDetail'>;
-type JobDetailScreenNavigationProp = StackNavigationProp<RootStackParamList, 'JobDetail'>;
+type JobDetailScreenNavigationProp = StackNavigationProp<
+  RootStackParamList,
+  'JobDetail'
+>;
 
 interface JobDetailScreenProps {
   navigation: JobDetailScreenNavigationProp;
@@ -41,7 +51,7 @@ interface JobDetails {
   company_id?: string;
   poster_name?: string;
   poster_email?: string;
-  
+
   // Location
   location_type: 'on-site' | 'remote' | 'hybrid';
   is_remote: boolean;
@@ -51,16 +61,27 @@ interface JobDetails {
   address?: string;
   latitude?: number;
   longitude?: number;
-  
+
   // Compensation
-  compensation_type: 'hourly' | 'salary' | 'commission' | 'stipend' | 'volunteer';
+  compensation_type:
+    | 'hourly'
+    | 'salary'
+    | 'commission'
+    | 'stipend'
+    | 'volunteer';
   compensation_min?: number;
   compensation_max?: number;
   compensation_currency?: string;
   compensation_display?: string;
-  
+
   // Job details
-  job_type: 'part-time' | 'full-time' | 'contract' | 'seasonal' | 'internship' | 'volunteer';
+  job_type:
+    | 'part-time'
+    | 'full-time'
+    | 'contract'
+    | 'seasonal'
+    | 'internship'
+    | 'volunteer';
   category?: string;
   tags: string[];
   requirements: string[];
@@ -69,24 +90,24 @@ interface JobDetails {
   benefits: string[];
   schedule?: string;
   start_date?: string;
-  
+
   // Contact
   contact_email?: string;
   contact_phone?: string;
   application_url?: string;
-  
+
   // Jewish community
   kosher_environment: boolean;
   shabbat_observant: boolean;
   jewish_organization: boolean;
-  
+
   // Status
   is_active: boolean;
   is_urgent: boolean;
   is_featured: boolean;
   posted_date: string;
   expires_date?: string;
-  
+
   // Metrics
   view_count: number;
   application_count: number;
@@ -101,7 +122,11 @@ interface SectionHeaderProps {
   count?: number;
 }
 
-const SectionHeader: React.FC<SectionHeaderProps> = ({ icon, title, count }) => (
+const SectionHeader: React.FC<SectionHeaderProps> = ({
+  icon,
+  title,
+  count,
+}) => (
   <View style={styles.sectionHeader}>
     <Text style={styles.sectionIcon}>{icon}</Text>
     <Text style={styles.sectionTitle}>{title}</Text>
@@ -113,7 +138,10 @@ const SectionHeader: React.FC<SectionHeaderProps> = ({ icon, title, count }) => 
   </View>
 );
 
-const JobDetailScreen: React.FC<JobDetailScreenProps> = ({ navigation, route }) => {
+const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
+  navigation,
+  route,
+}) => {
   const { jobId } = route.params;
   const [job, setJob] = useState<JobDetails | null>(null);
   const [loading, setLoading] = useState(true);
@@ -160,7 +188,7 @@ const JobDetailScreen: React.FC<JobDetailScreenProps> = ({ navigation, route }) 
     const posted = new Date(dateString);
     const diffTime = now.getTime() - posted.getTime();
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays === 0) return 'today';
     if (diffDays === 1) return '1 day ago';
     if (diffDays < 7) return `${diffDays} days ago`;
@@ -176,23 +204,24 @@ const JobDetailScreen: React.FC<JobDetailScreenProps> = ({ navigation, route }) 
   const loadJobDetails = async () => {
     try {
       setLoading(true);
-      
+
       // Try to fetch from API first
       try {
         const response = await apiService.getJobDetails(jobId);
         if (response.success && response.data) {
-          setJob(response.data);
+          setJob(response.data as any);
           return;
         }
       } catch (error) {
-        console.log('API call failed, using mock data:', error);
+        debugLog('API call failed, using mock data:', error);
       }
-      
+
       // Fallback to mock data
       const mockJob: JobDetails = {
         id: jobId,
         title: 'Software Developer - EdTech',
-        description: 'Jewish educational technology company seeking full-stack developer to build innovative learning platforms. Work on apps and websites that make Jewish education accessible and engaging. Tech stack: React, Node.js, PostgreSQL. Hybrid work with flexible Shabbat observant schedule.',
+        description:
+          'Jewish educational technology company seeking full-stack developer to build innovative learning platforms. Work on apps and websites that make Jewish education accessible and engaging. Tech stack: React, Node.js, PostgreSQL. Hybrid work with flexible Shabbat observant schedule.',
         company_name: 'Torah Tech Solutions',
         poster_name: 'Sarah Cohen',
         location_type: 'hybrid',
@@ -201,7 +230,7 @@ const JobDetailScreen: React.FC<JobDetailScreenProps> = ({ navigation, route }) 
         state: 'NJ',
         address: '123 Torah Lane, Teaneck, NJ 07666',
         latitude: 40.8976,
-        longitude: -74.0160,
+        longitude: -74.016,
         compensation_type: 'salary',
         compensation_min: 80000,
         compensation_max: 110000,
@@ -213,12 +242,12 @@ const JobDetailScreen: React.FC<JobDetailScreenProps> = ({ navigation, route }) 
         requirements: [
           '3+ years development experience',
           'React and Node.js proficiency',
-          'Portfolio of work'
+          'Portfolio of work',
         ],
         qualifications: [
           'EdTech experience',
           'Mobile development',
-          'UI/UX skills'
+          'UI/UX skills',
         ],
         experience_level: 'mid',
         benefits: [
@@ -226,7 +255,7 @@ const JobDetailScreen: React.FC<JobDetailScreenProps> = ({ navigation, route }) 
           '401k matching',
           'Flexible hours',
           'Shabbat-friendly',
-          'Remote work options'
+          'Remote work options',
         ],
         schedule: 'Flexible 40 hours, Sunday-Thursday primarily',
         start_date: '2025-11-01',
@@ -240,12 +269,12 @@ const JobDetailScreen: React.FC<JobDetailScreenProps> = ({ navigation, route }) 
         is_featured: false,
         posted_date: '2025-09-30T00:00:00Z',
         view_count: 45,
-        application_count: 8
+        application_count: 8,
       };
-      
+
       setJob(mockJob);
     } catch (error) {
-      console.error('Error loading job details:', error);
+      errorLog('Error loading job details:', error);
       Alert.alert('Error', 'Failed to load job details');
     } finally {
       setLoading(false);
@@ -254,7 +283,7 @@ const JobDetailScreen: React.FC<JobDetailScreenProps> = ({ navigation, route }) 
 
   const handleApply = async () => {
     if (!job) return;
-    
+
     setApplying(true);
     try {
       if (job.application_url) {
@@ -273,12 +302,14 @@ const JobDetailScreen: React.FC<JobDetailScreenProps> = ({ navigation, route }) 
         // Show contact info
         Alert.alert(
           'Contact Information',
-          `Phone: ${job.contact_phone || 'Not provided'}\nEmail: ${job.contact_email || 'Not provided'}`,
-          [{ text: 'OK' }]
+          `Phone: ${job.contact_phone || 'Not provided'}\nEmail: ${
+            job.contact_email || 'Not provided'
+          }`,
+          [{ text: 'OK' }],
         );
       }
     } catch (error) {
-      console.error('Error applying:', error);
+      errorLog('Error applying:', error);
       Alert.alert('Error', 'Failed to open application');
     } finally {
       setApplying(false);
@@ -287,20 +318,22 @@ const JobDetailScreen: React.FC<JobDetailScreenProps> = ({ navigation, route }) 
 
   const handleShare = async () => {
     if (!job) return;
-    
+
     try {
       await Share.share({
-        message: `Check out this job: ${job.title} at ${job.company_name || 'Company'}`,
+        message: `Check out this job: ${job.title} at ${
+          job.company_name || 'Company'
+        }`,
         url: `jewgo://job/${job.id}`, // Deep link to job
       });
     } catch (error) {
-      console.error('Error sharing:', error);
+      errorLog('Error sharing:', error);
     }
   };
 
   const handleFavorite = async () => {
     if (!job) return;
-    
+
     try {
       await toggleFavorite(job.id, {
         entity_name: job.title,
@@ -315,7 +348,7 @@ const JobDetailScreen: React.FC<JobDetailScreenProps> = ({ navigation, route }) 
         category: 'Jobs',
       });
     } catch (error) {
-      console.error('Error toggling favorite:', error);
+      errorLog('Error toggling favorite:', error);
     }
   };
 
@@ -325,30 +358,39 @@ const JobDetailScreen: React.FC<JobDetailScreenProps> = ({ navigation, route }) 
       'What would you like to report about this job listing?',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Incorrect Information', onPress: () => submitReport('incorrect_info') },
-        { text: 'Inappropriate Content', onPress: () => submitReport('inappropriate') },
+        {
+          text: 'Incorrect Information',
+          onPress: () => submitReport('incorrect_info'),
+        },
+        {
+          text: 'Inappropriate Content',
+          onPress: () => submitReport('inappropriate'),
+        },
         { text: 'Fraudulent Listing', onPress: () => submitReport('fraud') },
-        { text: 'Other', onPress: () => submitReport('other') }
-      ]
+        { text: 'Other', onPress: () => submitReport('other') },
+      ],
     );
   };
 
   const submitReport = (reason: string) => {
     // TODO: Implement report submission to backend
-    Alert.alert('Report Submitted', 'Thank you for your feedback. We will review this job listing.');
+    Alert.alert(
+      'Report Submitted',
+      'Thank you for your feedback. We will review this job listing.',
+    );
   };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
-      day: 'numeric'
+      day: 'numeric',
     });
   };
 
   const getLocationText = () => {
     if (!job) return '';
-    
+
     if (job.is_remote || job.location_type === 'remote') {
       return 'Remote';
     } else if (job.location_type === 'hybrid') {
@@ -361,19 +403,21 @@ const JobDetailScreen: React.FC<JobDetailScreenProps> = ({ navigation, route }) 
 
   const getCompensationText = () => {
     if (!job) return '';
-    
+
     if (job.compensation_display) {
       return job.compensation_display;
     }
-    
+
     if (job.compensation_min && job.compensation_max) {
       if (job.compensation_type === 'hourly') {
         return `$${job.compensation_min}-$${job.compensation_max}/hr`;
       } else if (job.compensation_type === 'salary') {
-        return `$${Math.floor(job.compensation_min / 1000)}K-$${Math.floor(job.compensation_max / 1000)}K`;
+        return `$${Math.floor(job.compensation_min / 1000)}K-$${Math.floor(
+          job.compensation_max / 1000,
+        )}K`;
       }
     }
-    
+
     if (job.compensation_min) {
       if (job.compensation_type === 'hourly') {
         return `$${job.compensation_min}/hr`;
@@ -381,7 +425,7 @@ const JobDetailScreen: React.FC<JobDetailScreenProps> = ({ navigation, route }) 
         return `$${Math.floor(job.compensation_min / 1000)}K+`;
       }
     }
-    
+
     return 'Compensation TBD';
   };
 
@@ -404,7 +448,7 @@ const JobDetailScreen: React.FC<JobDetailScreenProps> = ({ navigation, route }) 
           <Text style={styles.errorDescription}>
             This job may have been removed or is no longer available.
           </Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.retryButton}
             onPress={() => navigation.goBack()}
             activeOpacity={0.7}
@@ -429,17 +473,20 @@ const JobDetailScreen: React.FC<JobDetailScreenProps> = ({ navigation, route }) 
         onFavoritePress={handleFavorite}
         centerContent={{
           type: 'view_count',
-          count: job.view_count || 0
+          count: job.view_count || 0,
         }}
         rightContent={{
           type: 'share_favorite',
           shareCount: 0, // Jobs don't track shares separately
-          likeCount: 0,  // Jobs don't track likes separately
-          isFavorited: isFavorited(job.id)
+          likeCount: 0, // Jobs don't track likes separately
+          isFavorited: isFavorited(job.id),
         }}
       />
 
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Content */}
         <View style={styles.content}>
           {/* Title Section */}
@@ -454,7 +501,9 @@ const JobDetailScreen: React.FC<JobDetailScreenProps> = ({ navigation, route }) 
 
           {/* Company Info */}
           <View style={styles.companyInfo}>
-            <Text style={styles.companyName}>{job.company_name || 'Company'}</Text>
+            <Text style={styles.companyName}>
+              {job.company_name || 'Company'}
+            </Text>
             {job.jewish_organization && (
               <View style={styles.verifiedBadge}>
                 <Text style={styles.verifiedText}>✓ Jewish Org</Text>
@@ -467,23 +516,19 @@ const JobDetailScreen: React.FC<JobDetailScreenProps> = ({ navigation, route }) 
             <Text style={styles.quickFactsTitle}>⚡ Quick Overview</Text>
             <View style={styles.quickFactsRow}>
               <Text style={styles.quickFact}>
-                💼 {job.job_type.charAt(0).toUpperCase() + job.job_type.slice(1).replace('-', ' ')}
+                💼{' '}
+                {job.job_type.charAt(0).toUpperCase() +
+                  job.job_type.slice(1).replace('-', ' ')}
               </Text>
               <Text style={styles.quickFactDot}>•</Text>
-              <Text style={styles.quickFact}>
-                📍 {getLocationText()}
-              </Text>
+              <Text style={styles.quickFact}>📍 {getLocationText()}</Text>
             </View>
             <View style={styles.quickFactsRow}>
-              <Text style={styles.quickFact}>
-                💰 {getCompensationText()}
-              </Text>
+              <Text style={styles.quickFact}>💰 {getCompensationText()}</Text>
               {job.shabbat_observant && (
                 <>
                   <Text style={styles.quickFactDot}>•</Text>
-                  <Text style={styles.quickFact}>
-                    🕯️ Shabbat Friendly
-                  </Text>
+                  <Text style={styles.quickFact}>🕯️ Shabbat Friendly</Text>
                 </>
               )}
             </View>
@@ -535,24 +580,27 @@ const JobDetailScreen: React.FC<JobDetailScreenProps> = ({ navigation, route }) 
             <View style={styles.infoItem}>
               <Text style={styles.infoLabel}>⏰ Type</Text>
               <Text style={styles.infoValue}>
-                {job.job_type.charAt(0).toUpperCase() + job.job_type.slice(1).replace('-', ' ')}
+                {job.job_type.charAt(0).toUpperCase() +
+                  job.job_type.slice(1).replace('-', ' ')}
               </Text>
             </View>
             {job.start_date && (
               <View style={styles.infoItem}>
                 <Text style={styles.infoLabel}>📅 Start Date</Text>
-                <Text style={styles.infoValue}>{formatDate(job.start_date)}</Text>
+                <Text style={styles.infoValue}>
+                  {formatDate(job.start_date)}
+                </Text>
               </View>
             )}
           </View>
 
           {/* Apply and Save Buttons */}
           <View style={styles.actionButtons}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[
                 styles.applyButton,
                 applying && styles.applyButtonDisabled,
-                pressedButtons.has('apply') && styles.applyButtonPressed
+                pressedButtons.has('apply') && styles.applyButtonPressed,
               ]}
               onPress={handleApply}
               onPressIn={() => handlePressIn('apply')}
@@ -564,17 +612,20 @@ const JobDetailScreen: React.FC<JobDetailScreenProps> = ({ navigation, route }) 
                 <ActivityIndicator color={Colors.white} size="small" />
               ) : (
                 <Text style={styles.applyButtonText}>
-                  🚀 {job.application_url ? 'Apply Now' : 
-                   job.contact_email ? 'Contact via Email' : 
-                   'Get Contact Info'}
+                  🚀{' '}
+                  {job.application_url
+                    ? 'Apply Now'
+                    : job.contact_email
+                    ? 'Contact via Email'
+                    : 'Get Contact Info'}
                 </Text>
               )}
             </TouchableOpacity>
-            
-            <TouchableOpacity 
+
+            <TouchableOpacity
               style={[
                 styles.saveButton,
-                pressedButtons.has('save') && styles.saveButtonPressed
+                pressedButtons.has('save') && styles.saveButtonPressed,
               ]}
               onPress={handleFavorite}
               onPressIn={() => handlePressIn('save')}
@@ -601,7 +652,11 @@ const JobDetailScreen: React.FC<JobDetailScreenProps> = ({ navigation, route }) 
             <>
               <View style={styles.divider} />
               <View style={styles.listContainer}>
-                <SectionHeader icon="✅" title="Requirements" count={job.requirements.length} />
+                <SectionHeader
+                  icon="✅"
+                  title="Requirements"
+                  count={job.requirements.length}
+                />
                 {job.requirements.map((req, index) => (
                   <View key={index} style={styles.bulletPoint}>
                     <Text style={styles.bullet}>•</Text>
@@ -617,7 +672,11 @@ const JobDetailScreen: React.FC<JobDetailScreenProps> = ({ navigation, route }) 
             <>
               <View style={styles.divider} />
               <View style={styles.listContainer}>
-                <SectionHeader icon="🌟" title="Preferred Qualifications" count={job.qualifications.length} />
+                <SectionHeader
+                  icon="🌟"
+                  title="Preferred Qualifications"
+                  count={job.qualifications.length}
+                />
                 {job.qualifications.map((qual, index) => (
                   <View key={index} style={styles.bulletPoint}>
                     <Text style={styles.bullet}>•</Text>
@@ -633,7 +692,11 @@ const JobDetailScreen: React.FC<JobDetailScreenProps> = ({ navigation, route }) 
             <>
               <View style={styles.divider} />
               <View style={styles.listContainer}>
-                <SectionHeader icon="🎁" title="Benefits & Perks" count={job.benefits.length} />
+                <SectionHeader
+                  icon="🎁"
+                  title="Benefits & Perks"
+                  count={job.benefits.length}
+                />
                 {job.benefits.map((benefit, index) => (
                   <View key={index} style={styles.bulletPoint}>
                     <Text style={styles.bullet}>✓</Text>
@@ -653,12 +716,16 @@ const JobDetailScreen: React.FC<JobDetailScreenProps> = ({ navigation, route }) 
                 <View style={styles.jewishBadges}>
                   {job.kosher_environment && (
                     <View style={styles.jewishBadge}>
-                      <Text style={styles.jewishBadgeText}>🍽️ Kosher Environment</Text>
+                      <Text style={styles.jewishBadgeText}>
+                        🍽️ Kosher Environment
+                      </Text>
                     </View>
                   )}
                   {job.shabbat_observant && (
                     <View style={styles.jewishBadge}>
-                      <Text style={styles.jewishBadgeText}>🕯️ Shabbat Observant</Text>
+                      <Text style={styles.jewishBadgeText}>
+                        🕯️ Shabbat Observant
+                      </Text>
                     </View>
                   )}
                 </View>
@@ -690,7 +757,7 @@ const JobDetailScreen: React.FC<JobDetailScreenProps> = ({ navigation, route }) 
             </Text>
             {job.expires_date && (
               <Text style={styles.metadataText}>
-                 • Expires {formatDate(job.expires_date)}
+                • Expires {formatDate(job.expires_date)}
               </Text>
             )}
             <Text style={styles.metadataText}>
@@ -706,7 +773,7 @@ const JobDetailScreen: React.FC<JobDetailScreenProps> = ({ navigation, route }) 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.background.primary,
   },
   loadingContainer: {
     flex: 1,
@@ -857,16 +924,16 @@ const styles = StyleSheet.create({
   },
   // Deadline Card
   deadlineCard: {
-    backgroundColor: Colors.warning.light,
+    backgroundColor: Colors.warningLight,
     padding: Spacing.sm,
     borderRadius: BorderRadius.md,
     marginBottom: Spacing.md,
     borderLeftWidth: 4,
-    borderLeftColor: Colors.warning.main,
+    borderLeftColor: Colors.warning,
   },
   deadlineText: {
     ...Typography.styles.body,
-    color: Colors.warning.dark,
+    color: Colors.warning,
     fontWeight: '600',
     fontSize: 14,
     textAlign: 'center',
@@ -975,16 +1042,10 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: Colors.border,
+    backgroundColor: Colors.border.primary,
     marginVertical: Spacing.md,
   },
   descriptionContainer: {
-    marginBottom: Spacing.md,
-  },
-  sectionTitle: {
-    ...Typography.styles.h3,
-    color: Colors.textPrimary,
-    fontWeight: '600',
     marginBottom: Spacing.md,
   },
   description: {
@@ -1057,7 +1118,7 @@ const styles = StyleSheet.create({
     marginTop: Spacing.md,
     paddingTop: Spacing.md,
     borderTopWidth: 1,
-    borderTopColor: Colors.border,
+    borderTopColor: Colors.border.primary,
   },
   metadataText: {
     ...Typography.styles.caption,

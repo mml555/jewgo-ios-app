@@ -13,26 +13,34 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigation } from '@react-navigation/native';
+import { errorLog } from '../utils/logger';
 import SpecialsIcon from '../components/SpecialsIcon';
 import HeartIcon from '../components/HeartIcon';
 import DatabaseDashboardButton from '../components/DatabaseDashboardButton';
-import { Colors, Typography, Spacing, BorderRadius, Shadows, TouchTargets } from '../styles/designSystem';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  Shadows,
+  TouchTargets,
+} from '../styles/designSystem';
 import shtetlService from '../services/ShtetlService';
 import { ShtetlStore } from '../types/shtetl';
 
 const ProfileScreen: React.FC = () => {
-  const { 
-    user, 
-    guestUser, 
-    isAuthenticated, 
-    isGuestAuthenticated, 
-    logout, 
+  const {
+    user,
+    guestUser,
+    isAuthenticated,
+    isGuestAuthenticated,
+    logout,
     revokeGuestSession,
     getActiveSessions,
-    isLoading 
+    isLoading,
   } = useAuth();
   const navigation = useNavigation();
-  
+
   const [sessions, setSessions] = useState<any[]>([]);
   const [statsLoading, setStatsLoading] = useState(false);
   const [userStats, setUserStats] = useState({
@@ -65,7 +73,10 @@ const ProfileScreen: React.FC = () => {
 
   const getDisplayName = () => {
     if (user?.email) {
-      return user.email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+      return user.email
+        .split('@')[0]
+        .replace(/[._]/g, ' ')
+        .replace(/\b\w/g, l => l.toUpperCase());
     }
     if (guestUser) {
       return 'Guest User';
@@ -86,15 +97,15 @@ const ProfileScreen: React.FC = () => {
 
   const loadUserData = async () => {
     if (!isAuthenticated && !isGuestAuthenticated) return;
-    
+
     try {
       setStatsLoading(true);
-      
+
       if (isAuthenticated) {
         // Load user sessions
         const activeSessions = await getActiveSessions();
         setSessions(activeSessions);
-        
+
         // TODO: Load user stats from API
         // For now, using placeholder data
         setUserStats({
@@ -104,7 +115,7 @@ const ProfileScreen: React.FC = () => {
         });
       }
     } catch (error) {
-      console.error('Error loading user data:', error);
+      errorLog('Error loading user data:', error);
     } finally {
       setStatsLoading(false);
     }
@@ -113,12 +124,12 @@ const ProfileScreen: React.FC = () => {
   const handleEditProfile = () => {
     if (isGuestAuthenticated) {
       Alert.alert(
-        'Guest User', 
+        'Guest User',
         'Create an account to edit your profile and access more features.',
         [
           { text: 'Cancel', style: 'cancel' },
-          { text: 'Create Account', onPress: () => logout() }
-        ]
+          { text: 'Create Account', onPress: () => logout() },
+        ],
       );
       return;
     }
@@ -127,14 +138,10 @@ const ProfileScreen: React.FC = () => {
 
   const handleFavorites = () => {
     if (isGuestAuthenticated) {
-      Alert.alert(
-        'Guest User', 
-        'Create an account to save favorites.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Create Account', onPress: () => logout() }
-        ]
-      );
+      Alert.alert('Guest User', 'Create an account to save favorites.', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Create Account', onPress: () => logout() },
+      ]);
       return;
     }
     navigation.navigate('Favorites' as never);
@@ -143,12 +150,12 @@ const ProfileScreen: React.FC = () => {
   const handleReviews = () => {
     if (isGuestAuthenticated) {
       Alert.alert(
-        'Guest User', 
+        'Guest User',
         'Create an account to write and manage reviews.',
         [
           { text: 'Cancel', style: 'cancel' },
-          { text: 'Create Account', onPress: () => logout() }
-        ]
+          { text: 'Create Account', onPress: () => logout() },
+        ],
       );
       return;
     }
@@ -156,7 +163,7 @@ const ProfileScreen: React.FC = () => {
   };
 
   const handleSettings = () => {
-    Alert.alert('Settings', 'App settings coming soon!');
+    navigation.navigate('Settings' as never);
   };
 
   const loadStores = useCallback(async () => {
@@ -191,13 +198,79 @@ const ProfileScreen: React.FC = () => {
         setStoresError(response.error || 'Unable to load stores.');
       }
     } catch (error) {
-      console.error('Error loading stores:', error);
+      errorLog('Error loading stores:', error);
       setStoresError('Unable to load stores. Showing sample data.');
       // Create sample stores with names for demo
       setStores([
-        { id: 'demo-store', name: 'Demo Store', description: 'Sample store for demonstration', ownerId: 'demo', ownerName: 'Demo Owner', address: '123 Demo St', city: 'Demo City', state: 'DC', zipCode: '12345', isActive: true, isVerified: false, rating: 4.5, reviewCount: 10, productCount: 5, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), storeType: 'general', category: 'shuk', deliveryAvailable: true, pickupAvailable: true, shippingAvailable: false },
-        { id: 'sample-store-1', name: 'Sample Store 1', description: 'Another sample store', ownerId: 'demo', ownerName: 'Demo Owner', address: '456 Sample Ave', city: 'Sample City', state: 'DC', zipCode: '12346', isActive: true, isVerified: true, rating: 4.2, reviewCount: 8, productCount: 3, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), storeType: 'food', category: 'shuk', deliveryAvailable: false, pickupAvailable: true, shippingAvailable: true },
-        { id: 'sample-store-2', name: 'Sample Store 2', description: 'Third sample store', ownerId: 'demo', ownerName: 'Demo Owner', address: '789 Example Blvd', city: 'Example City', state: 'DC', zipCode: '12347', isActive: true, isVerified: false, rating: 4.8, reviewCount: 15, productCount: 7, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), storeType: 'clothing', category: 'shtetl', deliveryAvailable: true, pickupAvailable: false, shippingAvailable: true }
+        {
+          id: 'demo-store',
+          name: 'Demo Store',
+          description: 'Sample store for demonstration',
+          ownerId: 'demo',
+          ownerName: 'Demo Owner',
+          address: '123 Demo St',
+          city: 'Demo City',
+          state: 'DC',
+          zipCode: '12345',
+          isActive: true,
+          isVerified: false,
+          rating: 4.5,
+          reviewCount: 10,
+          productCount: 5,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          storeType: 'general',
+          category: 'shtetl',
+          deliveryAvailable: true,
+          pickupAvailable: true,
+          shippingAvailable: false,
+        },
+        {
+          id: 'sample-store-1',
+          name: 'Sample Store 1',
+          description: 'Another sample store',
+          ownerId: 'demo',
+          ownerName: 'Demo Owner',
+          address: '456 Sample Ave',
+          city: 'Sample City',
+          state: 'DC',
+          zipCode: '12346',
+          isActive: true,
+          isVerified: true,
+          rating: 4.2,
+          reviewCount: 8,
+          productCount: 3,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          storeType: 'food',
+          category: 'shtetl',
+          deliveryAvailable: false,
+          pickupAvailable: true,
+          shippingAvailable: true,
+        },
+        {
+          id: 'sample-store-2',
+          name: 'Sample Store 2',
+          description: 'Third sample store',
+          ownerId: 'demo',
+          ownerName: 'Demo Owner',
+          address: '789 Example Blvd',
+          city: 'Example City',
+          state: 'DC',
+          zipCode: '12347',
+          isActive: true,
+          isVerified: false,
+          rating: 4.8,
+          reviewCount: 15,
+          productCount: 7,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          storeType: 'clothing',
+          category: 'shtetl',
+          deliveryAvailable: true,
+          pickupAvailable: false,
+          shippingAvailable: true,
+        },
       ]);
     } finally {
       setStoresLoading(false);
@@ -210,7 +283,10 @@ const ProfileScreen: React.FC = () => {
 
   const handleDashboard = () => {
     if (storesLoading) {
-      Alert.alert('Loading Stores', 'Store dashboards are still loading. Please try again in a moment.');
+      Alert.alert(
+        'Loading Stores',
+        'Store dashboards are still loading. Please try again in a moment.',
+      );
       return;
     }
 
@@ -231,7 +307,9 @@ const ProfileScreen: React.FC = () => {
   const handleNavigateToProducts = () => {
     if (!selectedStoreId) return;
     setShowStoreActions(false);
-    navigation.navigate('ProductManagement' as never, { storeId: selectedStoreId } as never);
+    (navigation as any).navigate('ProductManagement', {
+      storeId: selectedStoreId,
+    });
   };
 
   // Check if the selected store should have a product dashboard
@@ -239,10 +317,10 @@ const ProfileScreen: React.FC = () => {
     if (!selectedStoreId) return false;
     const selectedStore = stores.find(store => store.id === selectedStoreId);
     if (!selectedStore) return false;
-    
-    // Show product dashboard for both 'shtetl' and 'shuk' category stores
+
+    // Show product dashboard for 'shtetl' category stores
     // Other categories should not see the product dashboard
-    return selectedStore.category === 'shtetl' || selectedStore.category === 'shuk';
+    return selectedStore.category === 'shtetl';
   };
 
   // Check if the selected store should have a specials dashboard
@@ -250,22 +328,22 @@ const ProfileScreen: React.FC = () => {
     if (!selectedStoreId) return false;
     const selectedStore = stores.find(store => store.id === selectedStoreId);
     if (!selectedStore) return false;
-    
-    // Hide specials dashboard for 'shtetl' and 'shuk' category stores
+
+    // Hide specials dashboard for 'shtetl' category stores
     // Show specials dashboard for all other categories
-    return selectedStore.category !== 'shtetl' && selectedStore.category !== 'shuk';
+    return selectedStore.category !== 'shtetl';
   };
 
   const handleNavigateToStoreEdit = () => {
     if (!selectedStoreId) return;
     setShowStoreActions(false);
-    navigation.navigate('EditStore' as never, { storeId: selectedStoreId } as never);
+    (navigation as any).navigate('EditStore', { storeId: selectedStoreId });
   };
 
   const handleNavigateToSpecials = () => {
     if (!selectedStoreId) return;
     setShowStoreActions(false);
-    navigation.navigate('StoreSpecials' as never, { storeId: selectedStoreId } as never);
+    (navigation as any).navigate('StoreSpecials', { storeId: selectedStoreId });
   };
 
   const handleNotifications = () => {
@@ -289,16 +367,21 @@ const ProfileScreen: React.FC = () => {
       Alert.alert('Guest Session', 'You are currently using a guest session.');
       return;
     }
-    
+
     if (sessions.length > 0) {
-      const sessionList = sessions.map((session, index) => 
-        `${index + 1}. ${session.platform || 'Unknown'} - ${new Date(session.createdAt).toLocaleDateString()}`
-      ).join('\n');
-      
+      const sessionList = sessions
+        .map(
+          (session, index) =>
+            `${index + 1}. ${session.platform || 'Unknown'} - ${new Date(
+              session.createdAt,
+            ).toLocaleDateString()}`,
+        )
+        .join('\n');
+
       Alert.alert(
-        'Active Sessions', 
+        'Active Sessions',
         `You have ${sessions.length} active session(s):\n\n${sessionList}`,
-        [{ text: 'OK' }]
+        [{ text: 'OK' }],
       );
     } else {
       Alert.alert('Sessions', 'No active sessions found.');
@@ -308,14 +391,14 @@ const ProfileScreen: React.FC = () => {
   const handleLogout = () => {
     const isGuest = isGuestAuthenticated;
     const title = isGuest ? 'End Guest Session' : 'Sign Out';
-    const message = isGuest 
-      ? 'Are you sure you want to end your guest session?' 
+    const message = isGuest
+      ? 'Are you sure you want to end your guest session?'
       : 'Are you sure you want to sign out?';
-    
+
     Alert.alert(title, message, [
       { text: 'Cancel', style: 'cancel' },
-      { 
-        text: isGuest ? 'End Session' : 'Sign Out', 
+      {
+        text: isGuest ? 'End Session' : 'Sign Out',
         style: 'destructive',
         onPress: async () => {
           try {
@@ -325,25 +408,36 @@ const ProfileScreen: React.FC = () => {
               await logout();
             }
           } catch (error) {
-            console.error('Logout error:', error);
+            errorLog('Logout error:', error);
             Alert.alert('Error', 'Failed to sign out. Please try again.');
           }
-        }
+        },
       },
     ]);
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Profile Header */}
         <View style={styles.profileHeader}>
           <View style={styles.avatarContainer}>
-            <View style={[styles.avatar, isGuestAuthenticated && styles.guestAvatar]}>
+            <View
+              style={[
+                styles.avatar,
+                isGuestAuthenticated && styles.guestAvatar,
+              ]}
+            >
               <Text style={styles.avatarText}>{getUserInitials()}</Text>
             </View>
             {!isGuestAuthenticated && (
-              <TouchableOpacity style={styles.editAvatarButton} onPress={handleEditProfile}>
+              <TouchableOpacity
+                style={styles.editAvatarButton}
+                onPress={handleEditProfile}
+              >
                 <Text style={styles.editAvatarIcon}>📷</Text>
               </TouchableOpacity>
             )}
@@ -354,9 +448,16 @@ const ProfileScreen: React.FC = () => {
           </Text>
           {user?.status && (
             <View style={styles.statusContainer}>
-              <View style={[styles.statusDot, user.status === 'active' && styles.statusActive]} />
+              <View
+                style={[
+                  styles.statusDot,
+                  user.status === 'active' && styles.statusActive,
+                ]}
+              />
               <Text style={styles.statusText}>
-                {user.status === 'active' ? 'Verified Account' : 'Pending Verification'}
+                {user.status === 'active'
+                  ? 'Verified Account'
+                  : 'Pending Verification'}
               </Text>
             </View>
           )}
@@ -366,12 +467,14 @@ const ProfileScreen: React.FC = () => {
             </View>
           )}
           <Text style={styles.memberSince}>
-            {isGuestAuthenticated ? 'Guest Session' : `Member since ${getMemberSince()}`}
+            {isGuestAuthenticated
+              ? 'Guest Session'
+              : `Member since ${getMemberSince()}`}
           </Text>
-          
+
           {/* Upgrade prompt for guests */}
           {isGuestAuthenticated && (
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.upgradeButton}
               onPress={() => {
                 // For guests, we need to logout and go back to auth flow
@@ -401,7 +504,15 @@ const ProfileScreen: React.FC = () => {
             )}
             <Text style={styles.statLabel}>Reviews</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.statItem} onPress={() => Alert.alert('Entities', `You have ${userStats.entities} business listings.`)}>
+          <TouchableOpacity
+            style={styles.statItem}
+            onPress={() =>
+              Alert.alert(
+                'Entities',
+                `You have ${userStats.entities} business listings.`,
+              )
+            }
+          >
             {statsLoading ? (
               <ActivityIndicator size="small" color={Colors.primary.main} />
             ) : (
@@ -413,19 +524,31 @@ const ProfileScreen: React.FC = () => {
 
         {/* Quick Actions */}
         <View style={styles.quickActionsContainer}>
-          <TouchableOpacity style={styles.quickActionButton} onPress={handleFavorites}>
+          <TouchableOpacity
+            style={styles.quickActionButton}
+            onPress={handleFavorites}
+          >
             <HeartIcon size={24} color="#666" filled={true} />
             <Text style={styles.quickActionText}>Favorites</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.quickActionButton} onPress={handleReviews}>
+          <TouchableOpacity
+            style={styles.quickActionButton}
+            onPress={handleReviews}
+          >
             <SpecialsIcon size={24} color="#666" />
             <Text style={styles.quickActionText}>Reviews</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.quickActionButton} onPress={handleEditProfile}>
+          <TouchableOpacity
+            style={styles.quickActionButton}
+            onPress={handleEditProfile}
+          >
             <Text style={styles.quickActionIcon}>✏️</Text>
             <Text style={styles.quickActionText}>Edit Profile</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.quickActionButton} onPress={handleDashboard}>
+          <TouchableOpacity
+            style={styles.quickActionButton}
+            onPress={handleDashboard}
+          >
             <Text style={styles.quickActionIcon}>📊</Text>
             <Text style={styles.quickActionText}>Dashboard</Text>
           </TouchableOpacity>
@@ -434,7 +557,7 @@ const ProfileScreen: React.FC = () => {
         {/* Menu Container */}
         <View style={styles.menuContainer}>
           <Text style={styles.sectionTitle}>Account</Text>
-          
+
           <TouchableOpacity style={styles.menuItem} onPress={handleEditProfile}>
             <Text style={styles.menuIcon}>👤</Text>
             <Text style={styles.menuText}>
@@ -449,8 +572,8 @@ const ProfileScreen: React.FC = () => {
             <Text style={styles.menuArrow}>›</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={styles.menuItem} 
+          <TouchableOpacity
+            style={styles.menuItem}
             onPress={() => navigation.navigate('DatabaseDashboard' as never)}
           >
             <Text style={styles.menuIcon}>🗄️</Text>
@@ -461,12 +584,17 @@ const ProfileScreen: React.FC = () => {
           {isAuthenticated && (
             <TouchableOpacity style={styles.menuItem} onPress={handleSessions}>
               <Text style={styles.menuIcon}>📱</Text>
-              <Text style={styles.menuText}>Active Sessions ({sessions.length})</Text>
+              <Text style={styles.menuText}>
+                Active Sessions ({sessions.length})
+              </Text>
               <Text style={styles.menuArrow}>›</Text>
             </TouchableOpacity>
           )}
 
-          <TouchableOpacity style={styles.menuItem} onPress={handleNotifications}>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={handleNotifications}
+          >
             <Text style={styles.menuIcon}>🔔</Text>
             <Text style={styles.menuText}>Notifications</Text>
             <Text style={styles.menuArrow}>›</Text>
@@ -482,7 +610,10 @@ const ProfileScreen: React.FC = () => {
         <View style={styles.menuContainer}>
           <View style={styles.storeHeader}>
             <Text style={styles.sectionTitle}>Store Dashboards</Text>
-            <TouchableOpacity style={styles.storeRefreshButton} onPress={loadStores}>
+            <TouchableOpacity
+              style={styles.storeRefreshButton}
+              onPress={loadStores}
+            >
               <Text style={styles.storeRefreshText}>Refresh</Text>
             </TouchableOpacity>
           </View>
@@ -506,7 +637,9 @@ const ProfileScreen: React.FC = () => {
                 <Text style={styles.menuIcon}>🏪</Text>
                 <View style={styles.storeItemContent}>
                   <Text style={styles.menuText}>{store.name}</Text>
-                  <Text style={styles.storeIdValue}>{store.storeType} • {store.city}, {store.state}</Text>
+                  <Text style={styles.storeIdValue}>
+                    {store.storeType} • {store.city}, {store.state}
+                  </Text>
                 </View>
                 <Text style={styles.menuArrow}>›</Text>
               </TouchableOpacity>
@@ -514,7 +647,8 @@ const ProfileScreen: React.FC = () => {
           ) : (
             <View style={styles.storeEmptyState}>
               <Text style={styles.storeEmptyText}>
-                {storesError || 'No stores found. Create a store to view dashboards.'}
+                {storesError ||
+                  'No stores found. Create a store to view dashboards.'}
               </Text>
             </View>
           )}
@@ -524,22 +658,24 @@ const ProfileScreen: React.FC = () => {
         {isGuestAuthenticated && (
           <View style={styles.menuContainer}>
             <Text style={styles.sectionTitle}>Guest Limitations</Text>
-            
+
             <View style={styles.limitationItem}>
               <Text style={styles.limitationIcon}>❌</Text>
-              <Text style={styles.limitationText}>Cannot create business listings</Text>
+              <Text style={styles.limitationText}>
+                Cannot create business listings
+              </Text>
             </View>
-            
+
             <View style={styles.limitationItem}>
               <Text style={styles.limitationIcon}>❌</Text>
               <Text style={styles.limitationText}>Cannot write reviews</Text>
             </View>
-            
+
             <View style={styles.limitationItem}>
               <Text style={styles.limitationIcon}>❌</Text>
               <Text style={styles.limitationText}>Cannot save favorites</Text>
             </View>
-            
+
             <View style={styles.limitationItem}>
               <Text style={styles.limitationIcon}>✅</Text>
               <Text style={styles.limitationText}>Can browse all content</Text>
@@ -549,7 +685,7 @@ const ProfileScreen: React.FC = () => {
 
         <View style={styles.menuContainer}>
           <Text style={styles.sectionTitle}>Preferences</Text>
-          
+
           <TouchableOpacity style={styles.menuItem} onPress={handleSettings}>
             <Text style={styles.menuIcon}>⚙️</Text>
             <Text style={styles.menuText}>App Settings</Text>
@@ -593,7 +729,9 @@ const ProfileScreen: React.FC = () => {
                 >
                   <View style={styles.storeModalItemContent}>
                     <Text style={styles.storeModalItemText}>{store.name}</Text>
-                    <Text style={styles.storeModalItemSubtext}>{store.storeType} • {store.city}, {store.state}</Text>
+                    <Text style={styles.storeModalItemSubtext}>
+                      {store.storeType} • {store.city}, {store.state}
+                    </Text>
                   </View>
                   <Text style={styles.storeModalItemArrow}>›</Text>
                 </TouchableOpacity>
@@ -622,31 +760,46 @@ const ProfileScreen: React.FC = () => {
             <Text style={styles.storeModalSubtitle}>{selectedStoreId}</Text>
 
             {shouldShowProductDashboard() && (
-              <TouchableOpacity style={styles.storeActionButton} onPress={handleNavigateToProducts}>
+              <TouchableOpacity
+                style={styles.storeActionButton}
+                onPress={handleNavigateToProducts}
+              >
                 <Text style={styles.storeActionEmoji}>🛒</Text>
                 <View style={styles.storeActionTextContainer}>
                   <Text style={styles.storeActionTitle}>Product Dashboard</Text>
-                  <Text style={styles.storeActionSubtitle}>Review products, edit inventory, and manage visibility</Text>
+                  <Text style={styles.storeActionSubtitle}>
+                    Review products, edit inventory, and manage visibility
+                  </Text>
                 </View>
                 <Text style={styles.storeActionArrow}>›</Text>
               </TouchableOpacity>
             )}
 
-            <TouchableOpacity style={styles.storeActionButton} onPress={handleNavigateToStoreEdit}>
+            <TouchableOpacity
+              style={styles.storeActionButton}
+              onPress={handleNavigateToStoreEdit}
+            >
               <Text style={styles.storeActionEmoji}>🏪</Text>
               <View style={styles.storeActionTextContainer}>
                 <Text style={styles.storeActionTitle}>Edit Store Profile</Text>
-                <Text style={styles.storeActionSubtitle}>Update contact details, services, and branding</Text>
+                <Text style={styles.storeActionSubtitle}>
+                  Update contact details, services, and branding
+                </Text>
               </View>
               <Text style={styles.storeActionArrow}>›</Text>
             </TouchableOpacity>
 
             {shouldShowSpecialsDashboard() && (
-              <TouchableOpacity style={styles.storeActionButton} onPress={handleNavigateToSpecials}>
+              <TouchableOpacity
+                style={styles.storeActionButton}
+                onPress={handleNavigateToSpecials}
+              >
                 <Text style={styles.storeActionEmoji}>🔥</Text>
                 <View style={styles.storeActionTextContainer}>
                   <Text style={styles.storeActionTitle}>Manage Specials</Text>
-                  <Text style={styles.storeActionSubtitle}>Edit promotions, adjust priority, and control availability</Text>
+                  <Text style={styles.storeActionSubtitle}>
+                    Edit promotions, adjust priority, and control availability
+                  </Text>
                 </View>
                 <Text style={styles.storeActionArrow}>›</Text>
               </TouchableOpacity>

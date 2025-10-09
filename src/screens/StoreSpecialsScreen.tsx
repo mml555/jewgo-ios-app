@@ -9,9 +9,16 @@ import {
   Alert,
   RefreshControl,
 } from 'react-native';
+import { errorLog } from '../utils/logger';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../styles/designSystem';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  Shadows,
+} from '../styles/designSystem';
 import { specialsService } from '../services/SpecialsService';
 import shtetlService from '../services/ShtetlService';
 import { Special } from '../types/specials';
@@ -32,48 +39,57 @@ const StoreSpecialsScreen: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadData = useCallback(async (showSpinner: boolean = true) => {
-    if (showSpinner) {
-      setLoading(true);
-    } else {
-      setRefreshing(true);
-    }
-    setError(null);
-
-    try {
-      const [storeResponse, specialsResponse] = await Promise.all([
-        shtetlService.getStore(storeId),
-        specialsService.searchSpecials({ business_id: storeId }),
-      ]);
-
-      if (storeResponse.success && storeResponse.data?.store) {
-        setStore(storeResponse.data.store);
-      }
-
-      if (specialsResponse.success && specialsResponse.data?.specials) {
-        setSpecials(specialsResponse.data.specials);
+  const loadData = useCallback(
+    async (showSpinner: boolean = true) => {
+      if (showSpinner) {
+        setLoading(true);
       } else {
-        setError(specialsResponse.error || 'Failed to load specials.');
+        setRefreshing(true);
       }
-    } catch (err) {
-      console.error('Error loading store specials:', err);
-      setError('Unable to load specials for this store.');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [storeId]);
+      setError(null);
+
+      try {
+        const [storeResponse, specialsResponse] = await Promise.all([
+          shtetlService.getStore(storeId),
+          specialsService.searchSpecials({ business_id: storeId }),
+        ]);
+
+        if (storeResponse.success && storeResponse.data?.store) {
+          setStore(storeResponse.data.store);
+        }
+
+        if (specialsResponse.success && specialsResponse.data?.specials) {
+          setSpecials(specialsResponse.data.specials);
+        } else {
+          setError(specialsResponse.error || 'Failed to load specials.');
+        }
+      } catch (err) {
+        errorLog('Error loading store specials:', err);
+        setError('Unable to load specials for this store.');
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [storeId],
+  );
 
   useEffect(() => {
     loadData();
   }, [loadData]);
 
-  const handleEditSpecial = useCallback((special: Special) => {
-    navigation.navigate('EditSpecial', { specialId: special.id, storeId });
-  }, [navigation, storeId]);
+  const handleEditSpecial = useCallback(
+    (special: Special) => {
+      (navigation as any).navigate('EditSpecial', {
+        specialId: special.id,
+        storeId,
+      });
+    },
+    [navigation, storeId],
+  );
 
   const handleCreateSpecial = useCallback(() => {
-    navigation.navigate('EditSpecial', { storeId });
+    (navigation as any).navigate('EditSpecial', { storeId });
   }, [navigation, storeId]);
 
   const handleToggleActive = useCallback(async (special: Special) => {
@@ -83,25 +99,36 @@ const StoreSpecialsScreen: React.FC = () => {
       });
 
       if (response.success) {
-        setSpecials(prev => prev.map(item => (item.id === special.id ? { ...item, isEnabled: !special.isEnabled } : item)));
+        setSpecials(prev =>
+          prev.map(item =>
+            item.id === special.id
+              ? { ...item, isEnabled: !special.isEnabled }
+              : item,
+          ),
+        );
       } else {
         Alert.alert('Error', response.error || 'Failed to update special.');
       }
     } catch (error) {
-      console.error('Error toggling special:', error);
+      errorLog('Error toggling special:', error);
       Alert.alert('Error', 'Unable to update special.');
     }
   }, []);
 
   const renderHeader = () => (
     <View style={styles.header}>
-      <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+      <TouchableOpacity
+        style={styles.backButton}
+        onPress={() => navigation.goBack()}
+      >
         <Text style={styles.backButtonText}>← Back</Text>
       </TouchableOpacity>
       <View style={styles.headerContent}>
         <Text style={styles.title}>Manage Specials</Text>
         <Text style={styles.subtitle}>
-          {store ? `Editing specials for ${store.name}` : 'Update your store promotions'}
+          {store
+            ? `Editing specials for ${store.name}`
+            : 'Update your store promotions'}
         </Text>
       </View>
       <TouchableOpacity style={styles.reloadButton} onPress={() => loadData()}>
@@ -111,21 +138,34 @@ const StoreSpecialsScreen: React.FC = () => {
   );
 
   const renderSpecialCard = (special: Special) => {
-    const validityLabel = special.validUntil ? new Date(special.validUntil).toLocaleDateString() : 'N/A';
+    const validityLabel = special.validUntil
+      ? new Date(special.validUntil).toLocaleDateString()
+      : 'N/A';
 
     return (
       <View key={special.id} style={styles.specialCard}>
         <View style={styles.specialHeader}>
           <View style={styles.specialBadge}>
-            <Text style={styles.specialBadgeText}>{special.discountLabel || 'Special'}</Text>
+            <Text style={styles.specialBadgeText}>
+              {special.discountLabel || 'Special'}
+            </Text>
           </View>
-          <View style={[styles.statusPill, special.isEnabled ? styles.statusEnabled : styles.statusDisabled]}>
-            <Text style={styles.statusText}>{special.isEnabled ? 'Active' : 'Paused'}</Text>
+          <View
+            style={[
+              styles.statusPill,
+              special.isEnabled ? styles.statusEnabled : styles.statusDisabled,
+            ]}
+          >
+            <Text style={styles.statusText}>
+              {special.isEnabled ? 'Active' : 'Paused'}
+            </Text>
           </View>
         </View>
 
         <Text style={styles.specialTitle}>{special.title}</Text>
-        {special.subtitle ? <Text style={styles.specialSubtitle}>{special.subtitle}</Text> : null}
+        {special.subtitle ? (
+          <Text style={styles.specialSubtitle}>{special.subtitle}</Text>
+        ) : null}
 
         <View style={styles.specialMetaRow}>
           <Text style={styles.specialMetaLabel}>Valid Until:</Text>
@@ -138,16 +178,26 @@ const StoreSpecialsScreen: React.FC = () => {
         {special.maxClaimsTotal ? (
           <View style={styles.specialMetaRow}>
             <Text style={styles.specialMetaLabel}>Max Claims:</Text>
-            <Text style={styles.specialMetaValue}>{special.maxClaimsTotal}</Text>
+            <Text style={styles.specialMetaValue}>
+              {special.maxClaimsTotal}
+            </Text>
           </View>
         ) : null}
 
         <View style={styles.actionRow}>
-          <TouchableOpacity style={[styles.actionButton, styles.editButton]} onPress={() => handleEditSpecial(special)}>
+          <TouchableOpacity
+            style={[styles.actionButton, styles.editButton]}
+            onPress={() => handleEditSpecial(special)}
+          >
             <Text style={styles.actionButtonText}>Edit</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.actionButton, styles.toggleButton]} onPress={() => handleToggleActive(special)}>
-            <Text style={styles.actionButtonText}>{special.isEnabled ? 'Pause' : 'Activate'}</Text>
+          <TouchableOpacity
+            style={[styles.actionButton, styles.toggleButton]}
+            onPress={() => handleToggleActive(special)}
+          >
+            <Text style={styles.actionButtonText}>
+              {special.isEnabled ? 'Pause' : 'Activate'}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -169,7 +219,10 @@ const StoreSpecialsScreen: React.FC = () => {
         <Text style={styles.errorEmoji}>⚠️</Text>
         <Text style={styles.errorTitle}>Something went wrong</Text>
         <Text style={styles.errorDescription}>{error}</Text>
-        <TouchableOpacity style={styles.reloadButtonAlt} onPress={() => loadData()}>
+        <TouchableOpacity
+          style={styles.reloadButtonAlt}
+          onPress={() => loadData()}
+        >
           <Text style={styles.reloadButtonAltText}>Try Again</Text>
         </TouchableOpacity>
       </SafeAreaView>
@@ -180,7 +233,14 @@ const StoreSpecialsScreen: React.FC = () => {
     <SafeAreaView style={styles.container}>
       <ScrollView
         style={styles.scroll}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadData(false)} colors={[Colors.primary.main]} tintColor={Colors.primary.main} />}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => loadData(false)}
+            colors={[Colors.primary.main]}
+            tintColor={Colors.primary.main}
+          />
+        }
       >
         {renderHeader()}
 
@@ -188,16 +248,28 @@ const StoreSpecialsScreen: React.FC = () => {
           <View style={styles.emptyState}>
             <Text style={styles.emptyEmoji}>🛍️</Text>
             <Text style={styles.emptyTitle}>No specials yet</Text>
-            <Text style={styles.emptyDescription}>Create a special for this store to start promoting deals.</Text>
-            <TouchableOpacity style={styles.createButton} onPress={handleCreateSpecial}>
-              <Text style={styles.createButtonText}>+ Create Your First Special</Text>
+            <Text style={styles.emptyDescription}>
+              Create a special for this store to start promoting deals.
+            </Text>
+            <TouchableOpacity
+              style={styles.createButton}
+              onPress={handleCreateSpecial}
+            >
+              <Text style={styles.createButtonText}>
+                + Create Your First Special
+              </Text>
             </TouchableOpacity>
           </View>
         ) : (
           <>
             {specials.map(renderSpecialCard)}
-            <TouchableOpacity style={styles.addMoreButton} onPress={handleCreateSpecial}>
-              <Text style={styles.addMoreButtonText}>+ Add Another Special</Text>
+            <TouchableOpacity
+              style={styles.addMoreButton}
+              onPress={handleCreateSpecial}
+            >
+              <Text style={styles.addMoreButtonText}>
+                + Add Another Special
+              </Text>
             </TouchableOpacity>
           </>
         )}
@@ -339,7 +411,7 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.sm,
   },
   specialBadgeText: {
-    ...Typography.caption,
+    ...Typography.styles.caption,
     color: Colors.white,
     fontWeight: '600',
   },
@@ -349,23 +421,23 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.sm,
   },
   statusEnabled: {
-    backgroundColor: Colors.success.light,
+    backgroundColor: Colors.successLight,
   },
   statusDisabled: {
-    backgroundColor: Colors.warning.light,
+    backgroundColor: Colors.warningLight,
   },
   statusText: {
-    ...Typography.caption,
+    ...Typography.styles.caption,
     fontWeight: '500',
   },
   specialTitle: {
-    ...Typography.h3,
+    ...Typography.styles.h3,
     color: Colors.gray900,
     fontWeight: '600',
     marginBottom: Spacing.xs,
   },
   specialSubtitle: {
-    ...Typography.body1,
+    ...Typography.styles.body1,
     color: Colors.gray600,
     marginBottom: Spacing.md,
   },
@@ -375,11 +447,11 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xs,
   },
   specialMetaLabel: {
-    ...Typography.body2,
+    ...Typography.styles.body2,
     color: Colors.gray600,
   },
   specialMetaValue: {
-    ...Typography.body2,
+    ...Typography.styles.body2,
     color: Colors.gray900,
     fontWeight: '500',
   },
@@ -402,7 +474,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary.light,
   },
   actionButtonText: {
-    ...Typography.body2,
+    ...Typography.styles.body2,
     fontWeight: '500',
   },
   errorEmoji: {
@@ -410,14 +482,14 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
   },
   errorTitle: {
-    ...Typography.h3,
+    ...Typography.styles.h3,
     color: Colors.gray900,
     fontWeight: '600',
     marginBottom: Spacing.sm,
     textAlign: 'center',
   },
   errorDescription: {
-    ...Typography.body1,
+    ...Typography.styles.body1,
     color: Colors.gray600,
     textAlign: 'center',
     marginBottom: Spacing.xl,

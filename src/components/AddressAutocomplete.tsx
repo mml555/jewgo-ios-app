@@ -3,6 +3,7 @@ import { View, Text, TextInput, StyleSheet, Alert } from 'react-native';
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import { Colors, Typography, BorderRadius } from '../styles/designSystem';
 import { GOOGLE_PLACES_CONFIG } from '../config/googlePlaces';
+import { debugLog, errorLog } from '../utils/logger';
 
 interface AddressAutocompleteProps {
   value: string;
@@ -15,41 +16,50 @@ interface AddressAutocompleteProps {
 const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
   value,
   onChangeText,
-  placeholder = "Enter full address (street, city, state, zip)",
+  placeholder = 'Enter full address (street, city, state, zip)',
   error = false,
   style,
 }) => {
   const [isFocused, setIsFocused] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handlePress = useCallback((data: any, details: any = null) => {
-    try {
-      // Extract the formatted address
-      const address = data?.description || data?.formatted_address || '';
-      if (address) {
-        onChangeText(address);
+  const handlePress = useCallback(
+    (data: any, details: any = null) => {
+      try {
+        // Extract the formatted address
+        const address = data?.description || data?.formatted_address || '';
+        if (address) {
+          onChangeText(address);
+        }
+      } catch (err) {
+        errorLog('Error handling address selection:', err);
       }
-    } catch (err) {
-      console.error('Error handling address selection:', err);
-    }
-  }, [onChangeText]);
+    },
+    [onChangeText],
+  );
 
   const handleFail = useCallback((error: any) => {
-    console.log('Google Places Autocomplete Error:', error);
+    errorLog('Google Places Autocomplete Error:', error);
     setIsLoading(false);
   }, []);
 
   const handleNotFound = useCallback(() => {
-    console.log('No results found');
+    debugLog('No results found');
     setIsLoading(false);
   }, []);
 
   // Check if API key is properly configured
-  if (!GOOGLE_PLACES_CONFIG.key || GOOGLE_PLACES_CONFIG.key === 'YOUR_GOOGLE_PLACES_API_KEY_HERE') {
+  if (
+    !GOOGLE_PLACES_CONFIG.key ||
+    GOOGLE_PLACES_CONFIG.key === 'YOUR_GOOGLE_PLACES_API_KEY_HERE'
+  ) {
     return (
       <View style={[styles.container, style]}>
         <TextInput
-          style={[styles.input, { borderColor: error ? Colors.error : Colors.gray300 }]}
+          style={[
+            styles.input,
+            { borderColor: error ? Colors.error : Colors.gray300 },
+          ]}
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
@@ -78,7 +88,11 @@ const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
         styles={{
           textInput: {
             ...styles.input,
-            borderColor: error ? Colors.error : (isFocused ? Colors.primary.main : Colors.gray300),
+            borderColor: error
+              ? Colors.error
+              : isFocused
+              ? Colors.primary.main
+              : Colors.gray300,
           },
           listView: {
             position: 'absolute',
@@ -130,7 +144,7 @@ const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
         onFail={handleFail}
         onNotFound={handleNotFound}
         onTimeout={() => {
-          console.log('Request timeout');
+          debugLog('Request timeout');
           setIsLoading(false);
         }}
         // Remove requestUrl to use default behavior
@@ -152,8 +166,6 @@ const styles = StyleSheet.create({
     height: 48,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    fontSize: 16,
-    color: Colors.textPrimary,
     backgroundColor: Colors.white,
     borderWidth: 1,
     borderRadius: BorderRadius.md,

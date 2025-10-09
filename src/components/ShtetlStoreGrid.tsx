@@ -12,7 +12,12 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import ShtetlStoreCard from './ShtetlStoreCard';
 import { ShtetlStore } from '../types/shtetl';
-import { Colors, Typography, Spacing, BorderRadius } from '../styles/designSystem';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+} from '../styles/designSystem';
 
 interface ShtetlStoreGridProps {
   stores: ShtetlStore[];
@@ -26,7 +31,7 @@ interface ShtetlStoreGridProps {
 }
 
 const { width: screenWidth } = Dimensions.get('window');
-const CARD_WIDTH = (screenWidth - (Spacing.lg * 3)) / 2;
+const CARD_WIDTH = (screenWidth - Spacing.lg * 3) / 2;
 
 const ShtetlStoreGrid: React.FC<ShtetlStoreGridProps> = ({
   stores,
@@ -40,24 +45,27 @@ const ShtetlStoreGrid: React.FC<ShtetlStoreGridProps> = ({
 }) => {
   const navigation = useNavigation();
 
-  const handleStorePress = useCallback((store: ShtetlStore) => {
-    if (onStorePress) {
-      onStorePress(store);
-    } else {
-      navigation.navigate('StoreDetail', { storeId: store.id });
-    }
-  }, [onStorePress, navigation]);
+  const handleStorePress = useCallback(
+    (store: ShtetlStore) => {
+      if (onStorePress) {
+        onStorePress(store);
+      } else {
+        (navigation as any).navigate('StoreDetail', { storeId: store.id });
+      }
+    },
+    [onStorePress, navigation],
+  );
 
-  const renderStore = useCallback(({ item }: { item: ShtetlStore }) => (
-    <ShtetlStoreCard
-      store={item}
-      onPress={handleStorePress}
-    />
-  ), [handleStorePress]);
+  const renderStore = useCallback(
+    ({ item }: { item: ShtetlStore }) => (
+      <ShtetlStoreCard store={item} onPress={handleStorePress} />
+    ),
+    [handleStorePress],
+  );
 
   const renderEmpty = useCallback(() => {
     if (loading) return null;
-    
+
     return (
       <View style={styles.emptyContainer}>
         <Text style={styles.emptyEmoji}>🏪</Text>
@@ -74,7 +82,7 @@ const ShtetlStoreGrid: React.FC<ShtetlStoreGridProps> = ({
 
   const renderFooter = useCallback(() => {
     if (!loading && !refreshing) return null;
-    
+
     return (
       <View style={styles.footerContainer}>
         <ActivityIndicator size="small" color={Colors.primary.main} />
@@ -85,7 +93,7 @@ const ShtetlStoreGrid: React.FC<ShtetlStoreGridProps> = ({
 
   const renderError = useCallback(() => {
     if (!error) return null;
-    
+
     return (
       <View style={styles.errorContainer}>
         <Text style={styles.errorEmoji}>⚠️</Text>
@@ -102,22 +110,27 @@ const ShtetlStoreGrid: React.FC<ShtetlStoreGridProps> = ({
 
   const keyExtractor = useCallback((item: ShtetlStore) => item.id, []);
 
-  const getItemLayout = useCallback((data: any, index: number) => ({
-    length: CARD_WIDTH + Spacing.md,
-    offset: (CARD_WIDTH + Spacing.md) * Math.floor(index / 2),
-    index,
-  }), []);
+  const getItemLayout = useCallback(
+    (data: any, index: number) => ({
+      length: CARD_WIDTH + Spacing.md,
+      offset: (CARD_WIDTH + Spacing.md) * Math.floor(index / 2),
+      index,
+    }),
+    [],
+  );
 
-  const refreshControl = useMemo(() => (
-    onRefresh ? (
-      <RefreshControl
-        refreshing={refreshing}
-        onRefresh={onRefresh}
-        colors={[Colors.primary.main]}
-        tintColor={Colors.primary.main}
-      />
-    ) : undefined
-  ), [refreshing, onRefresh]);
+  const refreshControl = useMemo(
+    () =>
+      onRefresh ? (
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          colors={[Colors.primary.main]}
+          tintColor={Colors.primary.main}
+        />
+      ) : undefined,
+    [refreshing, onRefresh],
+  );
 
   const handleEndReached = useCallback(() => {
     if (hasMore && !loading && !refreshing && onLoadMore) {
@@ -187,7 +200,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   emptyDescription: {
-    ...Typography.body1,
+    ...Typography.styles.body1,
     color: Colors.gray600,
     textAlign: 'center',
     marginBottom: Spacing.lg,
@@ -210,7 +223,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.lg,
   },
   loadingText: {
-    ...Typography.body2,
+    ...Typography.styles.body2,
     color: Colors.gray600,
     marginLeft: Spacing.sm,
   },
@@ -232,7 +245,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   errorDescription: {
-    ...Typography.body1,
+    ...Typography.styles.body1,
     color: Colors.gray600,
     textAlign: 'center',
     marginBottom: Spacing.lg,
@@ -250,4 +263,3 @@ const styles = StyleSheet.create({
 });
 
 export default ShtetlStoreGrid;
-

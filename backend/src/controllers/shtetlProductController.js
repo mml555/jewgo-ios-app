@@ -1,5 +1,5 @@
-const { Pool } = require('pg');
 const pool = require('../database/connection');
+const logger = require('../utils/logger');
 
 class ShtetlProductController {
   // Get all products for a store
@@ -16,7 +16,7 @@ class ShtetlProductController {
         limit = 50,
         offset = 0,
         sortBy = 'created_at',
-        sortOrder = 'DESC'
+        sortOrder = 'DESC',
       } = req.query;
 
       let query = `
@@ -34,31 +34,31 @@ class ShtetlProductController {
         query += ` AND p.category = $${paramCount}`;
         params.push(category);
       }
-      
+
       if (isActive !== undefined) {
         paramCount++;
         query += ` AND p.is_active = $${paramCount}`;
         params.push(isActive === 'true');
       }
-      
+
       if (isKosher !== undefined) {
         paramCount++;
         query += ` AND p.is_kosher = $${paramCount}`;
         params.push(isKosher === 'true');
       }
-      
+
       if (minPrice) {
         paramCount++;
         query += ` AND p.price >= $${paramCount}`;
         params.push(parseFloat(minPrice));
       }
-      
+
       if (maxPrice) {
         paramCount++;
         query += ` AND p.price <= $${paramCount}`;
         params.push(parseFloat(maxPrice));
       }
-      
+
       if (inStock !== undefined) {
         if (inStock === 'true') {
           query += ` AND p.stock_quantity > 0`;
@@ -68,39 +68,47 @@ class ShtetlProductController {
       }
 
       // Add ordering
-      const validSortColumns = ['name', 'price', 'created_at', 'updated_at', 'stock_quantity'];
-      const sortColumn = validSortColumns.includes(sortBy) ? `p.${sortBy}` : 'p.created_at';
+      const validSortColumns = [
+        'name',
+        'price',
+        'created_at',
+        'updated_at',
+        'stock_quantity',
+      ];
+      const sortColumn = validSortColumns.includes(sortBy)
+        ? `p.${sortBy}`
+        : 'p.created_at';
       const orderDirection = sortOrder.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
       query += ` ORDER BY ${sortColumn} ${orderDirection}`;
 
       // Add pagination
       paramCount++;
       query += ` LIMIT $${paramCount}`;
-      params.push(parseInt(limit));
-      
+      params.push(parseInt(limit, 10));
+
       paramCount++;
       query += ` OFFSET $${paramCount}`;
-      params.push(parseInt(offset));
+      params.push(parseInt(offset, 10));
 
       const result = await pool.query(query, params);
-      
+
       res.json({
         success: true,
         data: {
           products: result.rows,
           pagination: {
-            limit: parseInt(limit),
-            offset: parseInt(offset),
-            total: result.rowCount
-          }
-        }
+            limit: parseInt(limit, 10),
+            offset: parseInt(offset, 10),
+            total: result.rowCount,
+          },
+        },
       });
     } catch (error) {
-      console.error('Error fetching store products:', error);
+      logger.error('Error fetching store products:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to fetch products',
-        message: error.message
+        message: error.message,
       });
     }
   }
@@ -109,35 +117,35 @@ class ShtetlProductController {
   static async getProductById(req, res) {
     try {
       const { id } = req.params;
-      
+
       const query = `
         SELECT p.*, s.name as store_name, s.owner_id
         FROM shtetl_products p
         LEFT JOIN shtetl_stores s ON p.store_id = s.id
         WHERE p.id = $1
       `;
-      
+
       const result = await pool.query(query, [id]);
-      
+
       if (result.rows.length === 0) {
         return res.status(404).json({
           success: false,
-          error: 'Product not found'
+          error: 'Product not found',
         });
       }
-      
+
       res.json({
         success: true,
         data: {
-          product: result.rows[0]
-        }
+          product: result.rows[0],
+        },
       });
     } catch (error) {
-      console.error('Error fetching product:', error);
+      logger.error('Error fetching product:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to fetch product',
-        message: error.message
+        message: error.message,
       });
     }
   }
@@ -159,36 +167,36 @@ class ShtetlProductController {
         dimensions,
         isKosher = false,
         kosherCertification,
-        tags = []
+        tags = [],
       } = req.body;
-      
+
       const ownerId = req.user?.id || req.guest?.id;
-      
+
       if (!ownerId) {
         return res.status(401).json({
           success: false,
-          error: 'Authentication required'
+          error: 'Authentication required',
         });
       }
-      
+
       // Check if user owns the store
       const ownershipQuery = 'SELECT owner_id FROM shtetl_stores WHERE id = $1';
       const ownershipResult = await pool.query(ownershipQuery, [storeId]);
-      
+
       if (ownershipResult.rows.length === 0) {
         return res.status(404).json({
           success: false,
-          error: 'Store not found'
+          error: 'Store not found',
         });
       }
-      
+
       if (ownershipResult.rows[0].owner_id !== ownerId) {
         return res.status(403).json({
           success: false,
-          error: 'Not authorized to add products to this store'
+          error: 'Not authorized to add products to this store',
         });
       }
-      
+
       const query = `
         INSERT INTO shtetl_products (
           store_id, name, description, price, currency, category,
@@ -197,28 +205,38 @@ class ShtetlProductController {
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
         RETURNING *
       `;
-      
+
       const values = [
-        storeId, name, description, price, currency, category,
-        JSON.stringify(images), stockQuantity, sku, weight, 
+        storeId,
+        name,
+        description,
+        price,
+        currency,
+        category,
+        JSON.stringify(images),
+        stockQuantity,
+        sku,
+        weight,
         dimensions ? JSON.stringify(dimensions) : null,
-        isKosher, kosherCertification, tags
+        isKosher,
+        kosherCertification,
+        tags,
       ];
-      
+
       const result = await pool.query(query, values);
-      
+
       res.status(201).json({
         success: true,
         data: {
-          product: result.rows[0]
-        }
+          product: result.rows[0],
+        },
       });
     } catch (error) {
-      console.error('Error creating product:', error);
+      logger.error('Error creating product:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to create product',
-        message: error.message
+        message: error.message,
       });
     }
   }
@@ -229,14 +247,14 @@ class ShtetlProductController {
       const { id } = req.params;
       const updateData = req.body;
       const ownerId = req.user?.id || req.guest?.id;
-      
+
       if (!ownerId) {
         return res.status(401).json({
           success: false,
-          error: 'Authentication required'
+          error: 'Authentication required',
         });
       }
-      
+
       // Check if user owns the store that contains this product
       const ownershipQuery = `
         SELECT s.owner_id 
@@ -245,73 +263,73 @@ class ShtetlProductController {
         WHERE p.id = $1
       `;
       const ownershipResult = await pool.query(ownershipQuery, [id]);
-      
+
       if (ownershipResult.rows.length === 0) {
         return res.status(404).json({
           success: false,
-          error: 'Product not found'
+          error: 'Product not found',
         });
       }
-      
+
       if (ownershipResult.rows[0].owner_id !== ownerId) {
         return res.status(403).json({
           success: false,
-          error: 'Not authorized to update this product'
+          error: 'Not authorized to update this product',
         });
       }
-      
+
       // Build dynamic update query
       const updateFields = [];
       const values = [];
       let paramCount = 0;
-      
+
       Object.keys(updateData).forEach(key => {
         if (updateData[key] !== undefined) {
           paramCount++;
           let value = updateData[key];
-          
+
           // Handle JSON fields
           if (key === 'images' || key === 'dimensions') {
             value = JSON.stringify(value);
           }
-          
+
           updateFields.push(`${key} = $${paramCount}`);
           values.push(value);
         }
       });
-      
+
       if (updateFields.length === 0) {
         return res.status(400).json({
           success: false,
-          error: 'No fields to update'
+          error: 'No fields to update',
         });
       }
-      
+
       paramCount++;
       updateFields.push(`updated_at = CURRENT_TIMESTAMP`);
       values.push(id);
-      
+
       const query = `
         UPDATE shtetl_products 
         SET ${updateFields.join(', ')}
         WHERE id = $${paramCount}
         RETURNING *
       `;
-      
+
       const result = await pool.query(query, values);
-      
+
       res.json({
         success: true,
         data: {
-          product: result.rows[0]
-        }
+          product: result.rows[0],
+        },
       });
     } catch (error) {
-      console.error('Error updating product:', error);
+      logger.error('Error updating product:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to update product',
-        message: error.message
+        message: error.message,
       });
     }
   }
@@ -321,14 +339,14 @@ class ShtetlProductController {
     try {
       const { id } = req.params;
       const ownerId = req.user?.id || req.guest?.id;
-      
+
       if (!ownerId) {
         return res.status(401).json({
           success: false,
-          error: 'Authentication required'
+          error: 'Authentication required',
         });
       }
-      
+
       // Check if user owns the store that contains this product
       const ownershipQuery = `
         SELECT s.owner_id 
@@ -337,35 +355,36 @@ class ShtetlProductController {
         WHERE p.id = $1
       `;
       const ownershipResult = await pool.query(ownershipQuery, [id]);
-      
+
       if (ownershipResult.rows.length === 0) {
         return res.status(404).json({
           success: false,
-          error: 'Product not found'
+          error: 'Product not found',
         });
       }
-      
+
       if (ownershipResult.rows[0].owner_id !== ownerId) {
         return res.status(403).json({
           success: false,
-          error: 'Not authorized to delete this product'
+          error: 'Not authorized to delete this product',
         });
       }
-      
+
       // Soft delete by setting is_active to false
-      const query = 'UPDATE shtetl_products SET is_active = false WHERE id = $1';
+      const query =
+        'UPDATE shtetl_products SET is_active = false WHERE id = $1';
       await pool.query(query, [id]);
-      
+
       res.json({
         success: true,
-        message: 'Product deleted successfully'
+        message: 'Product deleted successfully',
       });
     } catch (error) {
-      console.error('Error deleting product:', error);
+      logger.error('Error deleting product:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to delete product',
-        message: error.message
+        message: error.message,
       });
     }
   }
@@ -387,13 +406,13 @@ class ShtetlProductController {
         limit = 50,
         offset = 0,
         sortBy = 'created_at',
-        sortOrder = 'DESC'
+        sortOrder = 'DESC',
       } = req.query;
 
       if (!q || q.trim().length === 0) {
         return res.status(400).json({
           success: false,
-          error: 'Search query is required'
+          error: 'Search query is required',
         });
       }
 
@@ -425,35 +444,37 @@ class ShtetlProductController {
         query += ` AND p.category = $${paramCount}`;
         params.push(category);
       }
-      
+
       if (storeType) {
         paramCount++;
         query += ` AND s.store_type = $${paramCount}`;
         params.push(storeType);
       }
-      
+
       if (kosherLevel) {
         paramCount++;
         query += ` AND s.kosher_level = $${paramCount}`;
         params.push(kosherLevel);
       }
-      
+
       if (isKosher !== undefined) {
-        query += ` AND p.is_kosher = ${isKosher === 'true'}`;
+        paramCount++;
+        query += ` AND p.is_kosher = $${paramCount}`;
+        params.push(isKosher === 'true');
       }
-      
+
       if (minPrice) {
         paramCount++;
         query += ` AND p.price >= $${paramCount}`;
         params.push(parseFloat(minPrice));
       }
-      
+
       if (maxPrice) {
         paramCount++;
         query += ` AND p.price <= $${paramCount}`;
         params.push(parseFloat(maxPrice));
       }
-      
+
       if (inStock !== undefined) {
         if (inStock === 'true') {
           query += ` AND p.stock_quantity > 0`;
@@ -461,13 +482,13 @@ class ShtetlProductController {
           query += ` AND p.stock_quantity = 0`;
         }
       }
-      
+
       if (city) {
         paramCount++;
         query += ` AND s.city ILIKE $${paramCount}`;
         params.push(`%${city}%`);
       }
-      
+
       if (state) {
         paramCount++;
         query += ` AND s.state ILIKE $${paramCount}`;
@@ -476,43 +497,44 @@ class ShtetlProductController {
 
       // Add ordering
       const validSortColumns = ['name', 'price', 'created_at', 'store_rating'];
-      const sortColumn = validSortColumns.includes(sortBy) ? `p.${sortBy}` : 'p.created_at';
+      const sortColumn = validSortColumns.includes(sortBy)
+        ? `p.${sortBy}`
+        : 'p.created_at';
       const orderDirection = sortOrder.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
       query += ` ORDER BY ${sortColumn} ${orderDirection}`;
 
       // Add pagination
       paramCount++;
       query += ` LIMIT $${paramCount}`;
-      params.push(parseInt(limit));
-      
+      params.push(parseInt(limit, 10));
+
       paramCount++;
       query += ` OFFSET $${paramCount}`;
-      params.push(parseInt(offset));
+      params.push(parseInt(offset, 10));
 
       const result = await pool.query(query, params);
-      
+
       res.json({
         success: true,
         data: {
           products: result.rows,
           query: q,
           pagination: {
-            limit: parseInt(limit),
-            offset: parseInt(offset),
-            total: result.rowCount
-          }
-        }
+            limit: parseInt(limit, 10),
+            offset: parseInt(offset, 10),
+            total: result.rowCount,
+          },
+        },
       });
     } catch (error) {
-      console.error('Error searching products:', error);
+      logger.error('Error searching products:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to search products',
-        message: error.message
+        message: error.message,
       });
     }
   }
 }
 
 module.exports = ShtetlProductController;
-

@@ -13,7 +13,14 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../styles/designSystem';
+import { errorLog } from '../utils/logger';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  Shadows,
+} from '../styles/designSystem';
 import shtetlService from '../services/ShtetlService';
 import { CreateStoreForm, ShtetlStore } from '../types/shtetl';
 
@@ -62,7 +69,9 @@ const EditStoreScreen: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState<CreateStoreForm>(EMPTY_FORM);
-  const [errors, setErrors] = useState<Partial<Record<keyof CreateStoreForm, string>>>({});
+  const [errors, setErrors] = useState<
+    Partial<Record<keyof CreateStoreForm, string>>
+  >({});
 
   const loadStore = useCallback(async () => {
     try {
@@ -92,7 +101,7 @@ const EditStoreScreen: React.FC = () => {
         Alert.alert('Error', response.error || 'Failed to load store data.');
       }
     } catch (error) {
-      console.error('Error loading store data:', error);
+      errorLog('Error loading store data:', error);
       Alert.alert('Error', 'Unable to load store details. Please try again.');
     } finally {
       setLoading(false);
@@ -103,12 +112,15 @@ const EditStoreScreen: React.FC = () => {
     loadStore();
   }, [loadStore]);
 
-  const handleInputChange = useCallback((field: keyof CreateStoreForm, value: string | boolean | undefined) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: undefined }));
-    }
-  }, [errors]);
+  const handleInputChange = useCallback(
+    (field: keyof CreateStoreForm, value: string | boolean | undefined) => {
+      setFormData(prev => ({ ...prev, [field]: value }));
+      if (errors[field]) {
+        setErrors(prev => ({ ...prev, [field]: undefined }));
+      }
+    },
+    [errors],
+  );
 
   const validateForm = useCallback((): boolean => {
     const newErrors: Partial<Record<keyof CreateStoreForm, string>> = {};
@@ -151,7 +163,10 @@ const EditStoreScreen: React.FC = () => {
 
   const handleSave = useCallback(async () => {
     if (!validateForm()) {
-      Alert.alert('Validation Error', 'Please fix the fields highlighted below.');
+      Alert.alert(
+        'Validation Error',
+        'Please fix the fields highlighted below.',
+      );
       return;
     }
 
@@ -159,12 +174,16 @@ const EditStoreScreen: React.FC = () => {
     try {
       const response = await shtetlService.updateStore(storeId, formData);
       if (response.success) {
-        Alert.alert('Store Updated', 'Your store details have been saved successfully.', [{ text: 'OK', onPress: () => navigation.goBack() }]);
+        Alert.alert(
+          'Store Updated',
+          'Your store details have been saved successfully.',
+          [{ text: 'OK', onPress: () => navigation.goBack() }],
+        );
       } else {
         Alert.alert('Error', response.error || 'Failed to update store.');
       }
     } catch (error) {
-      console.error('Error updating store:', error);
+      errorLog('Error updating store:', error);
       Alert.alert('Error', 'Unable to update store. Please try again later.');
     } finally {
       setSaving(false);
@@ -177,13 +196,22 @@ const EditStoreScreen: React.FC = () => {
     options: {
       placeholder?: string;
       multiline?: boolean;
-      keyboardType?: 'default' | 'email-address' | 'phone-pad' | 'url' | 'numeric';
-    } = {}
+      keyboardType?:
+        | 'default'
+        | 'email-address'
+        | 'phone-pad'
+        | 'url'
+        | 'numeric';
+    } = {},
   ) => (
     <View style={styles.inputContainer}>
       <Text style={styles.inputLabel}>{label}</Text>
       <TextInput
-        style={[styles.input, options.multiline && styles.inputMultiline, errors[field] && styles.inputError]}
+        style={[
+          styles.input,
+          options.multiline && styles.inputMultiline,
+          errors[field] && styles.inputError,
+        ]}
         placeholder={options.placeholder}
         value={(formData[field] as string) || ''}
         onChangeText={text => handleInputChange(field, text)}
@@ -213,7 +241,10 @@ const EditStoreScreen: React.FC = () => {
       >
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.header}>
-            <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+            >
               <Text style={styles.backButtonText}>← Back</Text>
             </TouchableOpacity>
             <View style={styles.headerContent}>
@@ -234,8 +265,13 @@ const EditStoreScreen: React.FC = () => {
           </View>
 
           <View style={styles.card}>
-            {renderTextInput('Store Name *', 'name', { placeholder: 'Your store name' })}
-            {renderTextInput('Description *', 'description', { placeholder: 'Tell customers about your store', multiline: true })}
+            {renderTextInput('Store Name *', 'name', {
+              placeholder: 'Your store name',
+            })}
+            {renderTextInput('Description *', 'description', {
+              placeholder: 'Tell customers about your store',
+              multiline: true,
+            })}
 
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Store Type *</Text>
@@ -243,11 +279,23 @@ const EditStoreScreen: React.FC = () => {
                 {storeTypes.map(type => (
                   <TouchableOpacity
                     key={type.key}
-                    style={[styles.typeOption, formData.storeType === type.key && styles.typeOptionSelected]}
+                    style={[
+                      styles.typeOption,
+                      formData.storeType === type.key &&
+                        styles.typeOptionSelected,
+                    ]}
                     onPress={() => handleInputChange('storeType', type.key)}
                   >
                     <Text style={styles.typeEmoji}>{type.emoji}</Text>
-                    <Text style={[styles.typeLabel, formData.storeType === type.key && styles.typeLabelSelected]}>{type.label}</Text>
+                    <Text
+                      style={[
+                        styles.typeLabel,
+                        formData.storeType === type.key &&
+                          styles.typeLabelSelected,
+                      ]}
+                    >
+                      {type.label}
+                    </Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -255,13 +303,27 @@ const EditStoreScreen: React.FC = () => {
 
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Store Details</Text>
-              {renderTextInput('Address *', 'address', { placeholder: '123 Main Street' })}
+              {renderTextInput('Address *', 'address', {
+                placeholder: '123 Main Street',
+              })}
               {renderTextInput('City *', 'city', { placeholder: 'City' })}
               {renderTextInput('State *', 'state', { placeholder: 'State' })}
-              {renderTextInput('ZIP Code *', 'zipCode', { placeholder: 'ZIP', keyboardType: 'numeric' })}
-              {renderTextInput('Phone', 'phone', { placeholder: '(555) 123-4567', keyboardType: 'phone-pad' })}
-              {renderTextInput('Email', 'email', { placeholder: 'contact@example.com', keyboardType: 'email-address' })}
-              {renderTextInput('Website', 'website', { placeholder: 'https://example.com', keyboardType: 'url' })}
+              {renderTextInput('ZIP Code *', 'zipCode', {
+                placeholder: 'ZIP',
+                keyboardType: 'numeric',
+              })}
+              {renderTextInput('Phone', 'phone', {
+                placeholder: '(555) 123-4567',
+                keyboardType: 'phone-pad',
+              })}
+              {renderTextInput('Email', 'email', {
+                placeholder: 'contact@example.com',
+                keyboardType: 'email-address',
+              })}
+              {renderTextInput('Website', 'website', {
+                placeholder: 'https://example.com',
+                keyboardType: 'url',
+              })}
             </View>
 
             <View style={styles.section}>
@@ -270,10 +332,29 @@ const EditStoreScreen: React.FC = () => {
                 {kosherLevels.map(level => (
                   <TouchableOpacity
                     key={level.key}
-                    style={[styles.kosherOption, formData.kosherLevel === level.key && styles.kosherOptionSelected]}
-                    onPress={() => handleInputChange('kosherLevel', formData.kosherLevel === level.key ? undefined : level.key)}
+                    style={[
+                      styles.kosherOption,
+                      formData.kosherLevel === level.key &&
+                        styles.kosherOptionSelected,
+                    ]}
+                    onPress={() =>
+                      handleInputChange(
+                        'kosherLevel',
+                        formData.kosherLevel === level.key
+                          ? undefined
+                          : level.key,
+                      )
+                    }
                   >
-                    <Text style={[styles.kosherLabel, formData.kosherLevel === level.key && styles.kosherLabelSelected]}>{level.label}</Text>
+                    <Text
+                      style={[
+                        styles.kosherLabel,
+                        formData.kosherLevel === level.key &&
+                          styles.kosherLabelSelected,
+                      ]}
+                    >
+                      {level.label}
+                    </Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -286,9 +367,14 @@ const EditStoreScreen: React.FC = () => {
                 <TouchableOpacity
                   style={[
                     styles.checkbox,
-                    formData.deliveryAvailable && styles.checkboxChecked
+                    formData.deliveryAvailable && styles.checkboxChecked,
                   ]}
-                  onPress={() => handleInputChange('deliveryAvailable', !formData.deliveryAvailable)}
+                  onPress={() =>
+                    handleInputChange(
+                      'deliveryAvailable',
+                      !formData.deliveryAvailable,
+                    )
+                  }
                   activeOpacity={0.7}
                   accessibilityRole="checkbox"
                   accessibilityState={{ checked: formData.deliveryAvailable }}
@@ -304,9 +390,14 @@ const EditStoreScreen: React.FC = () => {
                 <TouchableOpacity
                   style={[
                     styles.checkbox,
-                    formData.pickupAvailable && styles.checkboxChecked
+                    formData.pickupAvailable && styles.checkboxChecked,
                   ]}
-                  onPress={() => handleInputChange('pickupAvailable', !formData.pickupAvailable)}
+                  onPress={() =>
+                    handleInputChange(
+                      'pickupAvailable',
+                      !formData.pickupAvailable,
+                    )
+                  }
                   activeOpacity={0.7}
                   accessibilityRole="checkbox"
                   accessibilityState={{ checked: formData.pickupAvailable }}
@@ -322,9 +413,14 @@ const EditStoreScreen: React.FC = () => {
                 <TouchableOpacity
                   style={[
                     styles.checkbox,
-                    formData.shippingAvailable && styles.checkboxChecked
+                    formData.shippingAvailable && styles.checkboxChecked,
                   ]}
-                  onPress={() => handleInputChange('shippingAvailable', !formData.shippingAvailable)}
+                  onPress={() =>
+                    handleInputChange(
+                      'shippingAvailable',
+                      !formData.shippingAvailable,
+                    )
+                  }
                   activeOpacity={0.7}
                   accessibilityRole="checkbox"
                   accessibilityState={{ checked: formData.shippingAvailable }}
@@ -361,7 +457,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
   },
   loadingText: {
-    ...Typography.body1,
+    ...Typography.styles.body1,
     color: Colors.gray600,
     marginTop: Spacing.md,
   },
@@ -380,7 +476,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
   },
   backButtonText: {
-    ...Typography.body1,
+    ...Typography.styles.body1,
     color: Colors.primary.main,
     fontWeight: '600',
   },
@@ -395,7 +491,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xs,
   },
   subtitle: {
-    ...Typography.body1,
+    ...Typography.styles.body1,
     color: Colors.gray600,
   },
   saveButton: {
@@ -425,7 +521,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
   },
   sectionTitle: {
-    ...Typography.h3,
+    ...Typography.styles.h3,
     color: Colors.gray900,
     marginBottom: Spacing.md,
   },
@@ -433,7 +529,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   inputLabel: {
-    ...Typography.caption,
+    ...Typography.styles.caption,
     color: Colors.gray600,
     marginBottom: Spacing.xs,
   },
@@ -453,7 +549,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.error,
   },
   errorText: {
-    ...Typography.caption,
+    ...Typography.styles.caption,
     color: Colors.error,
     marginTop: Spacing.xs,
   },
@@ -481,7 +577,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   typeLabel: {
-    ...Typography.body2,
+    ...Typography.styles.body2,
     color: Colors.gray900,
     textAlign: 'center',
   },
@@ -508,7 +604,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary.light,
   },
   kosherLabel: {
-    ...Typography.body2,
+    ...Typography.styles.body2,
     color: Colors.gray900,
   },
   kosherLabelSelected: {
@@ -522,7 +618,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.sm,
   },
   serviceLabel: {
-    ...Typography.body1,
+    ...Typography.styles.body1,
     color: Colors.gray900,
   },
   checkbox: {
@@ -536,8 +632,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   checkboxChecked: {
-    backgroundColor: Colors.accent,
-    borderColor: Colors.accent,
+    backgroundColor: Colors.primary.main,
+    borderColor: Colors.primary.main,
   },
   checkmark: {
     color: Colors.background.primary,

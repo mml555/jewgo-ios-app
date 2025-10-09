@@ -8,31 +8,56 @@ import {
   ScrollView,
   Alert,
 } from 'react-native';
-import { Spacing, Shadows } from '../styles/designSystem';
-import { filterOptionsService, CategoryFilterOptions } from '../services/FilterOptionsService';
+import { errorLog } from '../utils/logger';
+import { Spacing, Shadows, TouchTargets } from '../styles/designSystem';
+import {
+  filterOptionsService,
+  CategoryFilterOptions,
+} from '../services/FilterOptionsService';
 
 export interface FilterOptions {
   // Distance filters
   maxDistance: number; // in miles
   showOpenNow: boolean;
-  
+
   // Rating filters
   minRating: number;
-  
+
   // Category-specific filters
-  kosherLevel: 'any' | 'glatt' | 'chalav-yisrael' | 'pas-yisrael' | 'mehadrin' | 'regular';
+  kosherLevel:
+    | 'any'
+    | 'glatt'
+    | 'chalav-yisrael'
+    | 'pas-yisrael'
+    | 'mehadrin'
+    | 'regular';
   priceRange: 'any' | '$' | '$$' | '$$$' | '$$$$';
-  
+
   // Denomination filters (for synagogues and mikvahs)
-  denomination: 'any' | 'orthodox' | 'conservative' | 'reform' | 'reconstructionist' | 'chabad' | 'sephardic' | 'ashkenazi';
-  
+  denomination:
+    | 'any'
+    | 'orthodox'
+    | 'conservative'
+    | 'reform'
+    | 'reconstructionist'
+    | 'chabad'
+    | 'sephardic'
+    | 'ashkenazi';
+
   // Store type filters (for stores)
-  storeType: 'any' | 'grocery' | 'butcher' | 'bakery' | 'deli' | 'market' | 'specialty';
-  
+  storeType:
+    | 'any'
+    | 'grocery'
+    | 'butcher'
+    | 'bakery'
+    | 'deli'
+    | 'market'
+    | 'specialty';
+
   // Location filters
   city: string;
   state: string;
-  
+
   // Service filters
   hasParking: boolean;
   hasWifi: boolean;
@@ -47,11 +72,11 @@ export interface FilterOptions {
   hasYouthPrograms: boolean;
   hasAdultEducation: boolean;
   hasSocialEvents: boolean;
-  
+
   // Time filters
   openNow: boolean;
   openWeekends: boolean;
-  
+
   // Sort options
   sortBy: 'distance' | 'rating' | 'name' | 'price';
   sortOrder: 'asc' | 'desc';
@@ -102,7 +127,8 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
   category,
 }) => {
   const [filters, setFilters] = useState<FilterOptions>(currentFilters);
-  const [filterOptions, setFilterOptions] = useState<CategoryFilterOptions | null>(null);
+  const [filterOptions, setFilterOptions] =
+    useState<CategoryFilterOptions | null>(null);
   const [loading, setLoading] = useState(false);
 
   // Load filter options when modal opens
@@ -114,7 +140,7 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
 
   const loadFilterOptions = useCallback(async () => {
     if (!category) return;
-    
+
     setLoading(true);
     try {
       const response = await filterOptionsService.getFilterOptions(category);
@@ -122,15 +148,18 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
         setFilterOptions(response.data);
       }
     } catch (error) {
-      console.error('Error loading filter options:', error);
+      errorLog('Error loading filter options:', error);
     } finally {
       setLoading(false);
     }
   }, [category]);
 
-  const handleFilterChange = useCallback((key: keyof FilterOptions, value: any) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
-  }, []);
+  const handleFilterChange = useCallback(
+    (key: keyof FilterOptions, value: any) => {
+      setFilters(prev => ({ ...prev, [key]: value }));
+    },
+    [],
+  );
 
   const handleApply = useCallback(() => {
     onApplyFilters(filters);
@@ -147,16 +176,16 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
       'Are you sure you want to clear all filters?',
       [
         { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Clear', 
+        {
+          text: 'Clear',
           style: 'destructive',
           onPress: () => {
             setFilters(defaultFilters);
             onApplyFilters(defaultFilters);
             onClose();
-          }
+          },
         },
-      ]
+      ],
     );
   }, [onApplyFilters, onClose]);
 
@@ -164,21 +193,26 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
     <View style={styles.filterSection}>
       <Text style={styles.sectionTitle}>Distance</Text>
       <View style={styles.distanceContainer}>
-        <Text style={styles.distanceLabel}>Within {filters.maxDistance} miles</Text>
+        <Text style={styles.distanceLabel}>
+          Within {filters.maxDistance} miles
+        </Text>
         <View style={styles.distanceButtons}>
-          {[1, 5, 10, 25, 50].map((distance) => (
+          {[1, 5, 10, 25, 50].map(distance => (
             <TouchableOpacity
               key={distance}
               style={[
                 styles.distanceButton,
-                filters.maxDistance === distance && styles.distanceButtonActive
+                filters.maxDistance === distance && styles.distanceButtonActive,
               ]}
               onPress={() => handleFilterChange('maxDistance', distance)}
             >
-              <Text style={[
-                styles.distanceButtonText,
-                filters.maxDistance === distance && styles.distanceButtonTextActive
-              ]}>
+              <Text
+                style={[
+                  styles.distanceButtonText,
+                  filters.maxDistance === distance &&
+                    styles.distanceButtonTextActive,
+                ]}
+              >
                 {distance}
               </Text>
             </TouchableOpacity>
@@ -196,19 +230,21 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
           {filters.minRating > 0 ? `${filters.minRating}+ stars` : 'Any rating'}
         </Text>
         <View style={styles.ratingButtons}>
-          {[0, 3, 4, 4.5].map((rating) => (
+          {[0, 3, 4, 4.5].map(rating => (
             <TouchableOpacity
               key={rating}
               style={[
                 styles.ratingButton,
-                filters.minRating === rating && styles.ratingButtonActive
+                filters.minRating === rating && styles.ratingButtonActive,
               ]}
               onPress={() => handleFilterChange('minRating', rating)}
             >
-              <Text style={[
-                styles.ratingButtonText,
-                filters.minRating === rating && styles.ratingButtonTextActive
-              ]}>
+              <Text
+                style={[
+                  styles.ratingButtonText,
+                  filters.minRating === rating && styles.ratingButtonTextActive,
+                ]}
+              >
                 {rating === 0 ? 'Any' : `${rating}★`}
               </Text>
             </TouchableOpacity>
@@ -220,27 +256,45 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
 
   const renderKosherFilter = () => {
     if (!filterOptions?.kosherLevels.length) return null;
-    
+
     return (
       <View style={styles.filterSection}>
         <Text style={styles.sectionTitle}>Kosher Level</Text>
         <View style={styles.kosherContainer}>
           {[
-            { key: 'any', label: 'Any', count: filterOptions.kosherLevels.reduce((sum, opt) => sum + (opt.count || 0), 0) },
-            ...filterOptions.kosherLevels
-          ].map((option) => (
+            {
+              key: 'any',
+              label: 'Any',
+              count: filterOptions.kosherLevels.reduce(
+                (sum, opt) => sum + (opt.count || 0),
+                0,
+              ),
+            },
+            ...filterOptions.kosherLevels,
+          ].map(option => (
             <TouchableOpacity
-              key={option.value}
+              key={(option as any).value || (option as any).key}
               style={[
                 styles.kosherButton,
-                filters.kosherLevel === option.value && styles.kosherButtonActive
+                filters.kosherLevel ===
+                  ((option as any).value || (option as any).key) &&
+                  styles.kosherButtonActive,
               ]}
-              onPress={() => handleFilterChange('kosherLevel', option.value)}
+              onPress={() =>
+                handleFilterChange(
+                  'kosherLevel',
+                  (option as any).value || (option as any).key,
+                )
+              }
             >
-              <Text style={[
-                styles.kosherButtonText,
-                filters.kosherLevel === option.value && styles.kosherButtonTextActive
-              ]}>
+              <Text
+                style={[
+                  styles.kosherButtonText,
+                  filters.kosherLevel ===
+                    ((option as any).value || (option as any).key) &&
+                    styles.kosherButtonTextActive,
+                ]}
+              >
                 {option.label} {option.count ? `(${option.count})` : ''}
               </Text>
             </TouchableOpacity>
@@ -252,24 +306,27 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
 
   const renderPriceFilter = () => {
     if (!filterOptions?.priceRanges.length) return null;
-    
+
     return (
       <View style={styles.filterSection}>
         <Text style={styles.sectionTitle}>Price Range</Text>
         <View style={styles.priceContainer}>
-          {filterOptions.priceRanges.map((option) => (
+          {filterOptions.priceRanges.map(option => (
             <TouchableOpacity
-              key={option.value}
+              key={(option as any).value || (option as any).key}
               style={[
                 styles.priceButton,
-                filters.priceRange === option.value && styles.priceButtonActive
+                filters.priceRange === option.value && styles.priceButtonActive,
               ]}
               onPress={() => handleFilterChange('priceRange', option.value)}
             >
-              <Text style={[
-                styles.priceButtonText,
-                filters.priceRange === option.value && styles.priceButtonTextActive
-              ]}>
+              <Text
+                style={[
+                  styles.priceButtonText,
+                  filters.priceRange === option.value &&
+                    styles.priceButtonTextActive,
+                ]}
+              >
                 {option.label} {option.count ? `(${option.count})` : ''}
               </Text>
             </TouchableOpacity>
@@ -281,27 +338,38 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
 
   const renderDenominationFilter = () => {
     if (!filterOptions?.denominations.length) return null;
-    
+
     return (
       <View style={styles.filterSection}>
         <Text style={styles.sectionTitle}>Denomination</Text>
         <View style={styles.denominationContainer}>
           {[
-            { value: 'any', label: 'Any', count: filterOptions.denominations.reduce((sum, opt) => sum + (opt.count || 0), 0) },
-            ...filterOptions.denominations
-          ].map((option) => (
+            {
+              value: 'any',
+              label: 'Any',
+              count: filterOptions.denominations.reduce(
+                (sum, opt) => sum + (opt.count || 0),
+                0,
+              ),
+            },
+            ...filterOptions.denominations,
+          ].map(option => (
             <TouchableOpacity
-              key={option.value}
+              key={(option as any).value || (option as any).key}
               style={[
                 styles.denominationButton,
-                filters.denomination === option.value && styles.denominationButtonActive
+                filters.denomination === option.value &&
+                  styles.denominationButtonActive,
               ]}
               onPress={() => handleFilterChange('denomination', option.value)}
             >
-              <Text style={[
-                styles.denominationButtonText,
-                filters.denomination === option.value && styles.denominationButtonTextActive
-              ]}>
+              <Text
+                style={[
+                  styles.denominationButtonText,
+                  filters.denomination === option.value &&
+                    styles.denominationButtonTextActive,
+                ]}
+              >
                 {option.label} {option.count ? `(${option.count})` : ''}
               </Text>
             </TouchableOpacity>
@@ -313,27 +381,38 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
 
   const renderStoreTypeFilter = () => {
     if (!filterOptions?.storeTypes.length) return null;
-    
+
     return (
       <View style={styles.filterSection}>
         <Text style={styles.sectionTitle}>Store Type</Text>
         <View style={styles.storeTypeContainer}>
           {[
-            { value: 'any', label: 'Any', count: filterOptions.storeTypes.reduce((sum, opt) => sum + (opt.count || 0), 0) },
-            ...filterOptions.storeTypes
-          ].map((option) => (
+            {
+              value: 'any',
+              label: 'Any',
+              count: filterOptions.storeTypes.reduce(
+                (sum, opt) => sum + (opt.count || 0),
+                0,
+              ),
+            },
+            ...filterOptions.storeTypes,
+          ].map(option => (
             <TouchableOpacity
-              key={option.value}
+              key={(option as any).value || (option as any).key}
               style={[
                 styles.storeTypeButton,
-                filters.storeType === option.value && styles.storeTypeButtonActive
+                filters.storeType === option.value &&
+                  styles.storeTypeButtonActive,
               ]}
               onPress={() => handleFilterChange('storeType', option.value)}
             >
-              <Text style={[
-                styles.storeTypeButtonText,
-                filters.storeType === option.value && styles.storeTypeButtonTextActive
-              ]}>
+              <Text
+                style={[
+                  styles.storeTypeButtonText,
+                  filters.storeType === option.value &&
+                    styles.storeTypeButtonTextActive,
+                ]}
+              >
                 {option.label} {option.count ? `(${option.count})` : ''}
               </Text>
             </TouchableOpacity>
@@ -352,19 +431,21 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
           { key: 'rating', label: 'Rating' },
           { key: 'name', label: 'Name' },
           { key: 'price', label: 'Price' },
-        ].map((option) => (
+        ].map(option => (
           <TouchableOpacity
             key={option.key}
             style={[
               styles.sortButton,
-              filters.sortBy === option.key && styles.sortButtonActive
+              filters.sortBy === option.key && styles.sortButtonActive,
             ]}
             onPress={() => handleFilterChange('sortBy', option.key)}
           >
-            <Text style={[
-              styles.sortButtonText,
-              filters.sortBy === option.key && styles.sortButtonTextActive
-            ]}>
+            <Text
+              style={[
+                styles.sortButtonText,
+                filters.sortBy === option.key && styles.sortButtonTextActive,
+              ]}
+            >
               {option.label}
             </Text>
           </TouchableOpacity>
@@ -374,28 +455,32 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
         <TouchableOpacity
           style={[
             styles.sortOrderButton,
-            filters.sortOrder === 'asc' && styles.sortOrderButtonActive
+            filters.sortOrder === 'asc' && styles.sortOrderButtonActive,
           ]}
           onPress={() => handleFilterChange('sortOrder', 'asc')}
         >
-          <Text style={[
-            styles.sortOrderButtonText,
-            filters.sortOrder === 'asc' && styles.sortOrderButtonTextActive
-          ]}>
+          <Text
+            style={[
+              styles.sortOrderButtonText,
+              filters.sortOrder === 'asc' && styles.sortOrderButtonTextActive,
+            ]}
+          >
             ↑ Ascending
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[
             styles.sortOrderButton,
-            filters.sortOrder === 'desc' && styles.sortOrderButtonActive
+            filters.sortOrder === 'desc' && styles.sortOrderButtonActive,
           ]}
           onPress={() => handleFilterChange('sortOrder', 'desc')}
         >
-          <Text style={[
-            styles.sortOrderButtonText,
-            filters.sortOrder === 'desc' && styles.sortOrderButtonTextActive
-          ]}>
+          <Text
+            style={[
+              styles.sortOrderButtonText,
+              filters.sortOrder === 'desc' && styles.sortOrderButtonTextActive,
+            ]}
+          >
             ↓ Descending
           </Text>
         </TouchableOpacity>
@@ -421,14 +506,14 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
       const amenityMap: Record<string, string> = {
         'Parking Available': 'hasParking',
         'Free WiFi': 'hasWifi',
-        'Accessible': 'hasAccessibility',
+        Accessible: 'hasAccessibility',
         'Delivery Available': 'hasDelivery',
         'Private Rooms': 'hasPrivateRooms',
-        'Heating': 'hasHeating',
+        Heating: 'hasHeating',
         'Air Conditioning': 'hasAirConditioning',
         'Kosher Kitchen': 'hasKosherKitchen',
         'Mikvah Available': 'hasMikvah',
-        'Library': 'hasLibrary',
+        Library: 'hasLibrary',
         'Youth Programs': 'hasYouthPrograms',
         'Adult Education': 'hasAdultEducation',
         'Social Events': 'hasSocialEvents',
@@ -439,7 +524,7 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
         .map(amenity => ({
           key: amenityMap[amenity.label],
           label: amenity.label,
-          count: amenity.count
+          count: amenity.count,
         }));
     };
 
@@ -450,20 +535,32 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
       <View style={styles.filterSection}>
         <Text style={styles.sectionTitle}>Services & Amenities</Text>
         <View style={styles.serviceContainer}>
-          {availableAmenities.map((service) => (
+          {availableAmenities.map(service => (
             <View key={service.key} style={styles.serviceRow}>
               <Text style={styles.serviceLabel}>
-                {service.label} {service.count ? `(${service.count})` : ''}
+                {service.label}{' '}
+                {(service as any).count ? `(${(service as any).count})` : ''}
               </Text>
               <TouchableOpacity
                 style={[
                   styles.checkbox,
-                  filters[service.key as keyof FilterOptions] && styles.checkboxChecked
+                  filters[service.key as keyof FilterOptions]
+                    ? styles.checkboxChecked
+                    : null,
                 ]}
-                onPress={() => handleFilterChange(service.key as keyof FilterOptions, !filters[service.key as keyof FilterOptions])}
+                onPress={() =>
+                  handleFilterChange(
+                    service.key as keyof FilterOptions,
+                    !filters[service.key as keyof FilterOptions],
+                  )
+                }
                 activeOpacity={0.7}
                 accessibilityRole="checkbox"
-                accessibilityState={{ checked: filters[service.key as keyof FilterOptions] as boolean }}
+                accessibilityState={{
+                  checked: filters[
+                    service.key as keyof FilterOptions
+                  ] as boolean,
+                }}
                 accessibilityLabel={`Toggle ${service.label}`}
               >
                 {filters[service.key as keyof FilterOptions] && (
@@ -545,8 +642,8 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E5E5EA',
   },
   closeButton: {
-    width: 32,
-    height: 32,
+    width: TouchTargets.minimum,
+    height: TouchTargets.minimum,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -771,8 +868,8 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   checkbox: {
-    width: 20,
-    height: 20,
+    width: TouchTargets.minimum,
+    height: TouchTargets.minimum,
     borderRadius: 4,
     borderWidth: 2,
     borderColor: '#E5E5EA',

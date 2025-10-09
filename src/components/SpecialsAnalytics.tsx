@@ -8,9 +8,20 @@ import {
   ActivityIndicator,
   Dimensions,
 } from 'react-native';
-import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../styles/designSystem';
+import { errorLog } from '../utils/logger';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  Shadows,
+} from '../styles/designSystem';
 import { specialsService } from '../services/SpecialsService';
-import { SpecialsPerformanceMetrics, SpecialsAnalytics, Special } from '../types/specials';
+import {
+  SpecialsPerformanceMetrics,
+  SpecialsAnalytics as SpecialsAnalyticsType,
+  Special,
+} from '../types/specials';
 
 interface SpecialsAnalyticsProps {
   businessId?: string; // For business-specific analytics
@@ -27,10 +38,15 @@ const SpecialsAnalytics: React.FC<SpecialsAnalyticsProps> = ({
 }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [performanceMetrics, setPerformanceMetrics] = useState<SpecialsPerformanceMetrics | null>(null);
+  const [performanceMetrics, setPerformanceMetrics] =
+    useState<SpecialsPerformanceMetrics | null>(null);
   const [topSpecials, setTopSpecials] = useState<Special[]>([]);
-  const [analyticsData, setAnalyticsData] = useState<SpecialsAnalytics[]>([]);
-  const [selectedTimeframe, setSelectedTimeframe] = useState<'24h' | '7d' | '30d'>('7d');
+  const [analyticsData, setAnalyticsData] = useState<SpecialsAnalyticsType[]>(
+    [],
+  );
+  const [selectedTimeframe, setSelectedTimeframe] = useState<
+    '24h' | '7d' | '30d'
+  >('7d');
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
 
   // Timeframe options
@@ -45,7 +61,11 @@ const SpecialsAnalytics: React.FC<SpecialsAnalyticsProps> = ({
     try {
       const endDateObj = new Date();
       const startDateObj = new Date();
-      startDateObj.setHours(startDateObj.getHours() - timeframeOptions.find(t => t.value === selectedTimeframe)?.hours || 168);
+      startDateObj.setHours(
+        startDateObj.getHours() -
+          (timeframeOptions.find(t => t.value === selectedTimeframe)?.hours ??
+            168),
+      );
 
       const response = await specialsService.getSpecialsMetrics({
         startDate: startDate || startDateObj.toISOString(),
@@ -57,7 +77,7 @@ const SpecialsAnalytics: React.FC<SpecialsAnalyticsProps> = ({
         setPerformanceMetrics(response.data.metrics);
       }
     } catch (err) {
-      console.error('Error loading performance metrics:', err);
+      errorLog('Error loading performance metrics:', err);
     }
   }, [businessId, startDate, endDate, selectedTimeframe]);
 
@@ -71,52 +91,56 @@ const SpecialsAnalytics: React.FC<SpecialsAnalyticsProps> = ({
       });
 
       if (response.success && response.data) {
-        setTopSpecials(response.data.specials);
-        
+        setTopSpecials(response.data.specials as unknown as Special[]);
+
         // Transform to analytics format
-        const analytics: SpecialsAnalytics[] = response.data.specials.map(special => {
-          const views = Math.floor(Math.random() * 1000) + 100; // Mock data
-          const clicks = Math.floor(Math.random() * 100) + 10;
-          const claims = special.claimsTotal;
-          
-          return {
-            specialId: special.id,
-            title: special.title,
-            businessName: special.business?.name || 'Unknown',
-            totalViews: views,
-            totalClicks: clicks,
-            totalClaims: claims,
-            conversionRate: clicks > 0 ? (claims / clicks) * 100 : 0,
-            claimUtilization: special.maxClaimsTotal ? (claims / special.maxClaimsTotal) * 100 : 0,
-          };
-        });
-        
+        const analytics: SpecialsAnalyticsType[] = response.data.specials.map(
+          special => {
+            const views = Math.floor(Math.random() * 1000) + 100; // Mock data
+            const clicks = Math.floor(Math.random() * 100) + 10;
+            const claims = special.claimsTotal;
+
+            return {
+              specialId: special.id,
+              title: special.title,
+              businessName: (special as any).business?.name || 'Unknown',
+              totalViews: views,
+              totalClicks: clicks,
+              totalClaims: claims,
+              conversionRate: clicks > 0 ? (claims / clicks) * 100 : 0,
+              claimUtilization: special.maxClaimsTotal
+                ? (claims / special.maxClaimsTotal) * 100
+                : 0,
+            };
+          },
+        );
+
         setAnalyticsData(analytics);
       }
     } catch (err) {
-      console.error('Error loading top specials:', err);
+      errorLog('Error loading top specials:', err);
     }
   }, []);
 
   // Load all analytics data
-  const loadAllAnalytics = useCallback(async (showLoading = true) => {
-    try {
-      if (showLoading) setLoading(true);
-      setError(null);
+  const loadAllAnalytics = useCallback(
+    async (showLoading = true) => {
+      try {
+        if (showLoading) setLoading(true);
+        setError(null);
 
-      await Promise.all([
-        loadPerformanceMetrics(),
-        loadTopSpecials(),
-      ]);
+        await Promise.all([loadPerformanceMetrics(), loadTopSpecials()]);
 
-      setLastUpdated(new Date());
-    } catch (err) {
-      setError('Failed to load analytics data');
-      console.error('Error loading analytics:', err);
-    } finally {
-      if (showLoading) setLoading(false);
-    }
-  }, [loadPerformanceMetrics, loadTopSpecials]);
+        setLastUpdated(new Date());
+      } catch (err) {
+        setError('Failed to load analytics data');
+        errorLog('Error loading analytics:', err);
+      } finally {
+        if (showLoading) setLoading(false);
+      }
+    },
+    [loadPerformanceMetrics, loadTopSpecials],
+  );
 
   // Auto-refresh
   useEffect(() => {
@@ -147,10 +171,12 @@ const SpecialsAnalytics: React.FC<SpecialsAnalyticsProps> = ({
       <View style={styles.overviewCard}>
         <Text style={styles.cardTitle}>📊 Performance Overview</Text>
         <Text style={styles.cardSubtitle}>Last {selectedTimeframe}</Text>
-        
+
         <View style={styles.metricsGrid}>
           <View style={styles.metricCard}>
-            <Text style={styles.metricValue}>{performanceMetrics.totalSpecials}</Text>
+            <Text style={styles.metricValue}>
+              {performanceMetrics.totalSpecials}
+            </Text>
             <Text style={styles.metricLabel}>Total Specials</Text>
           </View>
           <View style={styles.metricCard}>
@@ -189,7 +215,7 @@ const SpecialsAnalytics: React.FC<SpecialsAnalyticsProps> = ({
               {performanceMetrics.topPerformingSpecial.title}
             </Text>
             <Text style={styles.topPerformerBusiness}>
-              {performanceMetrics.topPerformingSpecial.businessName}
+              {(performanceMetrics.topPerformingSpecial as any).businessName}
             </Text>
             <Text style={styles.topPerformerClaims}>
               {performanceMetrics.topPerformingSpecial.claimsTotal} claims
@@ -205,35 +231,41 @@ const SpecialsAnalytics: React.FC<SpecialsAnalyticsProps> = ({
     <View style={styles.analyticsCard}>
       <Text style={styles.cardTitle}>🎯 Top Performing Specials</Text>
       <Text style={styles.cardSubtitle}>Ranked by total claims</Text>
-      
+
       {analyticsData.slice(0, 5).map((item, index) => (
         <View key={item.specialId} style={styles.analyticsItem}>
           <View style={styles.analyticsRank}>
             <Text style={styles.rankNumber}>#{index + 1}</Text>
           </View>
-          
+
           <View style={styles.analyticsContent}>
             <Text style={styles.analyticsTitle}>{item.title}</Text>
             <Text style={styles.analyticsBusiness}>{item.businessName}</Text>
-            
+
             <View style={styles.analyticsStats}>
               <View style={styles.analyticsStat}>
                 <Text style={styles.analyticsStatValue}>{item.totalViews}</Text>
                 <Text style={styles.analyticsStatLabel}>Views</Text>
               </View>
               <View style={styles.analyticsStat}>
-                <Text style={styles.analyticsStatValue}>{item.totalClicks}</Text>
+                <Text style={styles.analyticsStatValue}>
+                  {item.totalClicks}
+                </Text>
                 <Text style={styles.analyticsStatLabel}>Clicks</Text>
               </View>
               <View style={styles.analyticsStat}>
-                <Text style={styles.analyticsStatValue}>{item.totalClaims}</Text>
+                <Text style={styles.analyticsStatValue}>
+                  {item.totalClaims}
+                </Text>
                 <Text style={styles.analyticsStatLabel}>Claims</Text>
               </View>
               <View style={styles.analyticsStat}>
-                <Text style={[
-                  styles.analyticsStatValue,
-                  { color: getConversionColor(item.conversionRate) }
-                ]}>
+                <Text
+                  style={[
+                    styles.analyticsStatValue,
+                    { color: getConversionColor(item.conversionRate) },
+                  ]}
+                >
                   {Math.round(item.conversionRate)}%
                 </Text>
                 <Text style={styles.analyticsStatLabel}>Conv.</Text>
@@ -243,10 +275,12 @@ const SpecialsAnalytics: React.FC<SpecialsAnalyticsProps> = ({
             {item.claimUtilization > 0 && (
               <View style={styles.utilizationBar}>
                 <View style={styles.utilizationBarBackground}>
-                  <View style={[
-                    styles.utilizationBarFill,
-                    { width: `${Math.min(item.claimUtilization, 100)}%` }
-                  ]} />
+                  <View
+                    style={[
+                      styles.utilizationBarFill,
+                      { width: `${Math.min(item.claimUtilization, 100)}%` },
+                    ]}
+                  />
                 </View>
                 <Text style={styles.utilizationText}>
                   {Math.round(item.claimUtilization)}% utilized
@@ -261,48 +295,72 @@ const SpecialsAnalytics: React.FC<SpecialsAnalyticsProps> = ({
 
   // Render conversion funnel
   const renderConversionFunnel = () => {
-    const totalViews = analyticsData.reduce((sum, item) => sum + item.totalViews, 0);
-    const totalClicks = analyticsData.reduce((sum, item) => sum + item.totalClicks, 0);
-    const totalClaims = analyticsData.reduce((sum, item) => sum + item.totalClaims, 0);
+    const totalViews = analyticsData.reduce(
+      (sum, item) => sum + item.totalViews,
+      0,
+    );
+    const totalClicks = analyticsData.reduce(
+      (sum, item) => sum + item.totalClicks,
+      0,
+    );
+    const totalClaims = analyticsData.reduce(
+      (sum, item) => sum + item.totalClaims,
+      0,
+    );
 
-    const viewToClickRate = totalViews > 0 ? (totalClicks / totalViews) * 100 : 0;
-    const clickToClaimRate = totalClicks > 0 ? (totalClaims / totalClicks) * 100 : 0;
-    const overallConversionRate = totalViews > 0 ? (totalClaims / totalViews) * 100 : 0;
+    const viewToClickRate =
+      totalViews > 0 ? (totalClicks / totalViews) * 100 : 0;
+    const clickToClaimRate =
+      totalClicks > 0 ? (totalClaims / totalClicks) * 100 : 0;
+    const overallConversionRate =
+      totalViews > 0 ? (totalClaims / totalViews) * 100 : 0;
 
     return (
       <View style={styles.funnelCard}>
         <Text style={styles.cardTitle}>🔄 Conversion Funnel</Text>
         <Text style={styles.cardSubtitle}>Overall performance metrics</Text>
-        
+
         <View style={styles.funnelSteps}>
           <View style={styles.funnelStep}>
-            <Text style={styles.funnelStepValue}>{totalViews.toLocaleString()}</Text>
+            <Text style={styles.funnelStepValue}>
+              {totalViews.toLocaleString()}
+            </Text>
             <Text style={styles.funnelStepLabel}>Total Views</Text>
           </View>
-          
+
           <View style={styles.funnelArrow}>
             <Text style={styles.funnelArrowText}>↓</Text>
-            <Text style={styles.funnelRate}>{Math.round(viewToClickRate)}%</Text>
+            <Text style={styles.funnelRate}>
+              {Math.round(viewToClickRate)}%
+            </Text>
           </View>
-          
+
           <View style={styles.funnelStep}>
-            <Text style={styles.funnelStepValue}>{totalClicks.toLocaleString()}</Text>
+            <Text style={styles.funnelStepValue}>
+              {totalClicks.toLocaleString()}
+            </Text>
             <Text style={styles.funnelStepLabel}>Clicks</Text>
           </View>
-          
+
           <View style={styles.funnelArrow}>
             <Text style={styles.funnelArrowText}>↓</Text>
-            <Text style={styles.funnelRate}>{Math.round(clickToClaimRate)}%</Text>
+            <Text style={styles.funnelRate}>
+              {Math.round(clickToClaimRate)}%
+            </Text>
           </View>
-          
+
           <View style={styles.funnelStep}>
-            <Text style={styles.funnelStepValue}>{totalClaims.toLocaleString()}</Text>
+            <Text style={styles.funnelStepValue}>
+              {totalClaims.toLocaleString()}
+            </Text>
             <Text style={styles.funnelStepLabel}>Claims</Text>
           </View>
         </View>
-        
+
         <View style={styles.overallConversion}>
-          <Text style={styles.overallConversionLabel}>Overall Conversion Rate</Text>
+          <Text style={styles.overallConversionLabel}>
+            Overall Conversion Rate
+          </Text>
           <Text style={styles.overallConversionValue}>
             {Math.round(overallConversionRate)}%
           </Text>
@@ -323,19 +381,25 @@ const SpecialsAnalytics: React.FC<SpecialsAnalyticsProps> = ({
     <View style={styles.timeframeSelector}>
       <Text style={styles.timeframeLabel}>Time Period</Text>
       <View style={styles.timeframeOptions}>
-        {timeframeOptions.map((option) => (
+        {timeframeOptions.map(option => (
           <TouchableOpacity
             key={option.value}
             style={[
               styles.timeframeOption,
-              selectedTimeframe === option.value && styles.timeframeOptionActive
+              selectedTimeframe === option.value &&
+                styles.timeframeOptionActive,
             ]}
-            onPress={() => handleTimeframeChange(option.value as '24h' | '7d' | '30d')}
+            onPress={() =>
+              handleTimeframeChange(option.value as '24h' | '7d' | '30d')
+            }
           >
-            <Text style={[
-              styles.timeframeOptionText,
-              selectedTimeframe === option.value && styles.timeframeOptionTextActive
-            ]}>
+            <Text
+              style={[
+                styles.timeframeOptionText,
+                selectedTimeframe === option.value &&
+                  styles.timeframeOptionTextActive,
+              ]}
+            >
               {option.label}
             </Text>
           </TouchableOpacity>
@@ -379,7 +443,10 @@ const SpecialsAnalytics: React.FC<SpecialsAnalyticsProps> = ({
 
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+      >
         {renderHeader()}
         {renderTimeframeSelector()}
         {renderPerformanceOverview()}
@@ -393,7 +460,7 @@ const SpecialsAnalytics: React.FC<SpecialsAnalyticsProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.background.primary,
   },
   scrollView: {
     flex: 1,
@@ -469,7 +536,7 @@ const styles = StyleSheet.create({
   },
   timeframeOptions: {
     flexDirection: 'row',
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.background.primary,
     borderRadius: BorderRadius.md,
     padding: Spacing.xs,
   },
@@ -516,7 +583,7 @@ const styles = StyleSheet.create({
   },
   metricCard: {
     width: '48%',
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.background.primary,
     padding: Spacing.md,
     borderRadius: BorderRadius.md,
     alignItems: 'center',
@@ -537,7 +604,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
   },
   avgMetric: {
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.background.primary,
     padding: Spacing.md,
     borderRadius: BorderRadius.md,
     alignItems: 'center',
@@ -553,7 +620,7 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
   },
   topPerformerCard: {
-    backgroundColor: Colors.primaryLight,
+    backgroundColor: Colors.primary.light,
     padding: Spacing.md,
     borderRadius: BorderRadius.md,
     alignItems: 'center',
@@ -594,7 +661,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
   },
   funnelStep: {
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.background.primary,
     padding: Spacing.md,
     borderRadius: BorderRadius.md,
     alignItems: 'center',
@@ -625,7 +692,7 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
   },
   overallConversion: {
-    backgroundColor: Colors.primaryLight,
+    backgroundColor: Colors.primary.light,
     padding: Spacing.md,
     borderRadius: BorderRadius.md,
     alignItems: 'center',
@@ -650,7 +717,7 @@ const styles = StyleSheet.create({
   },
   analyticsItem: {
     flexDirection: 'row',
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.background.primary,
     borderRadius: BorderRadius.md,
     padding: Spacing.md,
     marginBottom: Spacing.md,
@@ -702,7 +769,7 @@ const styles = StyleSheet.create({
   },
   utilizationBarBackground: {
     height: 8,
-    backgroundColor: Colors.border,
+    backgroundColor: Colors.border.primary,
     borderRadius: BorderRadius.sm,
     marginBottom: Spacing.xs,
   },

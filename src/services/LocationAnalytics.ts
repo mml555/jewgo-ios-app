@@ -3,41 +3,51 @@
  * Tracks location-related metrics and performance for monitoring and optimization
  */
 
+import { debugLog, errorLog, warnLog } from '../utils/logger';
+
 export interface LocationMetrics {
   // Permission metrics
   permissionRequests: number;
   permissionGranted: number;
   permissionDenied: number;
   permissionBlocked: number;
-  
+
   // Accuracy metrics
   fullAccuracyCount: number;
   reducedAccuracyCount: number;
-  
+
   // Performance metrics
   timeToFirstFix: number[];
   locationErrors: number;
   fallbackUsage: number;
-  
+
   // Usage metrics
   locationRequests: number;
   successfulLocations: number;
   cachedLocationUsage: number;
-  
+
   // Error metrics
   timeoutErrors: number;
   permissionErrors: number;
   positionUnavailableErrors: number;
-  
+
   // Session metrics
   sessionStartTime: number;
   lastLocationTime: number;
 }
 
 export interface LocationEvent {
-  type: 'permission_request' | 'permission_granted' | 'permission_denied' | 
-        'location_success' | 'location_error' | 'accuracy_changed' | 
-        'fallback_used' | 'cache_hit' | 'timeout' | 'session_start';
+  type:
+    | 'permission_request'
+    | 'permission_granted'
+    | 'permission_denied'
+    | 'location_success'
+    | 'location_error'
+    | 'accuracy_changed'
+    | 'fallback_used'
+    | 'cache_hit'
+    | 'timeout'
+    | 'session_start';
   timestamp: number;
   data?: Record<string, any>;
 }
@@ -103,15 +113,15 @@ class LocationAnalytics {
       case 'permission_request':
         this.metrics.permissionRequests++;
         break;
-      
+
       case 'permission_granted':
         this.metrics.permissionGranted++;
         break;
-      
+
       case 'permission_denied':
         this.metrics.permissionDenied++;
         break;
-      
+
       case 'location_success':
         this.metrics.successfulLocations++;
         this.metrics.lastLocationTime = event.timestamp;
@@ -124,7 +134,7 @@ class LocationAnalytics {
           this.metrics.reducedAccuracyCount++;
         }
         break;
-      
+
       case 'location_error':
         this.metrics.locationErrors++;
         if (event.data?.errorClass === 'timeout') {
@@ -135,11 +145,11 @@ class LocationAnalytics {
           this.metrics.positionUnavailableErrors++;
         }
         break;
-      
+
       case 'fallback_used':
         this.metrics.fallbackUsage++;
         break;
-      
+
       case 'cache_hit':
         this.metrics.cachedLocationUsage++;
         break;
@@ -147,7 +157,7 @@ class LocationAnalytics {
   }
 
   private logEvent(event: LocationEvent): void {
-    console.log(`📍 Location Analytics [${event.type}]:`, {
+    debugLog(`📍 Location Analytics [${event.type}]:`, {
       timestamp: new Date(event.timestamp).toISOString(),
       sessionId: this.sessionId,
       ...event.data,
@@ -170,14 +180,18 @@ class LocationAnalytics {
   } {
     const totalRequests = this.metrics.locationRequests || 1;
     const totalPermissionRequests = this.metrics.permissionRequests || 1;
-    const totalEvents = this.metrics.successfulLocations + this.metrics.locationErrors;
+    const totalEvents =
+      this.metrics.successfulLocations + this.metrics.locationErrors;
 
     return {
       successRate: this.metrics.successfulLocations / totalRequests,
-      averageTimeToFirstFix: this.metrics.timeToFirstFix.length > 0 
-        ? this.metrics.timeToFirstFix.reduce((a, b) => a + b, 0) / this.metrics.timeToFirstFix.length 
-        : 0,
-      permissionGrantRate: this.metrics.permissionGranted / totalPermissionRequests,
+      averageTimeToFirstFix:
+        this.metrics.timeToFirstFix.length > 0
+          ? this.metrics.timeToFirstFix.reduce((a, b) => a + b, 0) /
+            this.metrics.timeToFirstFix.length
+          : 0,
+      permissionGrantRate:
+        this.metrics.permissionGranted / totalPermissionRequests,
       accuracyDistribution: {
         full: this.metrics.fullAccuracyCount,
         reduced: this.metrics.reducedAccuracyCount,
@@ -189,9 +203,7 @@ class LocationAnalytics {
 
   // Get recent events
   getRecentEvents(limit: number = 50): LocationEvent[] {
-    return this.events
-      .slice(-limit)
-      .sort((a, b) => b.timestamp - a.timestamp);
+    return this.events.slice(-limit).sort((a, b) => b.timestamp - a.timestamp);
   }
 
   // Get events by type
@@ -207,7 +219,7 @@ class LocationAnalytics {
   // Check if location services are performing well
   isLocationServicesHealthy(): boolean {
     const summary = this.getPerformanceSummary();
-    
+
     return (
       summary.successRate > 0.8 && // 80% success rate
       summary.averageTimeToFirstFix < 5000 && // Under 5 seconds
@@ -233,7 +245,9 @@ class LocationAnalytics {
 
     if (summary.averageTimeToFirstFix > 5000) {
       issues.push('Slow time to first fix');
-      recommendations.push('Consider increasing timeout or improving GPS signal');
+      recommendations.push(
+        'Consider increasing timeout or improving GPS signal',
+      );
     }
 
     if (summary.errorRate > 0.2) {
@@ -243,7 +257,9 @@ class LocationAnalytics {
 
     if (summary.fallbackRate > 0.3) {
       issues.push('High fallback usage');
-      recommendations.push('Improve location accuracy or reduce fallback threshold');
+      recommendations.push(
+        'Improve location accuracy or reduce fallback threshold',
+      );
     }
 
     if (summary.permissionGrantRate < 0.5) {
@@ -263,8 +279,8 @@ class LocationAnalytics {
     sessionId: string;
     metrics: LocationMetrics;
     events: LocationEvent[];
-    summary: ReturnType<typeof this.getPerformanceSummary>;
-    health: ReturnType<typeof this.getHealthStatus>;
+    summary: any;
+    health: any;
   } {
     return {
       sessionId: this.sessionId,
@@ -299,10 +315,10 @@ class LocationAnalytics {
       //   headers: { 'Content-Type': 'application/json' },
       //   body: JSON.stringify(data),
       // });
-      
-      console.log('📍 Analytics data sent:', data);
+
+      debugLog('📍 Analytics data sent:', data);
     } catch (error) {
-      console.error('Failed to send analytics data:', error);
+      errorLog('Failed to send analytics data:', error);
     }
   }
 
@@ -310,11 +326,11 @@ class LocationAnalytics {
   startHealthMonitoring(intervalMs: number = 30000): () => void {
     const interval = setInterval(() => {
       const health = this.getHealthStatus();
-      
+
       if (!health.healthy) {
-        console.warn('📍 Location services health issues detected:', health.issues);
+        warnLog('📍 Location services health issues detected:', health.issues);
       }
-      
+
       // Send periodic health data
       this.sendToAnalyticsService({
         type: 'health_check',

@@ -1,13 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Alert,
-} from 'react-native';
+import { View, Text, TextInput, StyleSheet, ScrollView } from 'react-native';
 import MapIcon from '../MapIcon';
 
 interface LocationContactPageProps {
@@ -19,18 +11,20 @@ interface LocationContactPageProps {
 const LocationContactPage: React.FC<LocationContactPageProps> = ({
   formData,
   onFormDataChange,
-  category,
 }) => {
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
-  const handleInputChange = useCallback((field: string, value: string) => {
-    onFormDataChange({ [field]: value });
-    
-    // Clear error when user starts typing
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
-    }
-  }, [onFormDataChange, errors]);
+  const handleInputChange = useCallback(
+    (field: string, value: string) => {
+      onFormDataChange({ [field]: value });
+
+      // Clear error when user starts typing
+      if (errors[field]) {
+        setErrors(prev => ({ ...prev, [field]: '' }));
+      }
+    },
+    [onFormDataChange, errors],
+  );
 
   const validateForm = useCallback(() => {
     const newErrors: { [key: string]: string } = {};
@@ -55,16 +49,24 @@ const LocationContactPage: React.FC<LocationContactPageProps> = ({
 
     if (!formData.phone?.trim()) {
       newErrors.phone = 'Phone number is required';
-    } else if (!/^\(?([0-9]{3})\)?[-. ]?([0-9]{3})[-. ]?([0-9]{4})$/.test(formData.phone.trim())) {
+    } else if (
+      !/^\(?([0-9]{3})\)?[-. ]?([0-9]{3})[-. ]?([0-9]{4})$/.test(
+        formData.phone.trim(),
+      )
+    ) {
       newErrors.phone = 'Please enter a valid phone number';
     }
 
-    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+    if (
+      formData.email &&
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())
+    ) {
       newErrors.email = 'Please enter a valid email address';
     }
 
     if (formData.website && !/^https?:\/\/.+/.test(formData.website.trim())) {
-      newErrors.website = 'Please enter a valid website URL (include http:// or https://)';
+      newErrors.website =
+        'Please enter a valid website URL (include http:// or https://)';
     }
 
     setErrors(newErrors);
@@ -74,10 +76,13 @@ const LocationContactPage: React.FC<LocationContactPageProps> = ({
   const formatPhoneNumber = useCallback((text: string) => {
     // Remove all non-numeric characters
     const cleaned = text.replace(/\D/g, '');
-    
+
     // Format as (XXX) XXX-XXXX
     if (cleaned.length >= 6) {
-      return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6, 10)}`;
+      return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(
+        6,
+        10,
+      )}`;
     } else if (cleaned.length >= 3) {
       return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3)}`;
     } else if (cleaned.length > 0) {
@@ -86,18 +91,24 @@ const LocationContactPage: React.FC<LocationContactPageProps> = ({
     return cleaned;
   }, []);
 
-  const handlePhoneChange = useCallback((text: string) => {
-    const formatted = formatPhoneNumber(text);
-    handleInputChange('phone', formatted);
-  }, [formatPhoneNumber, handleInputChange]);
+  const handlePhoneChange = useCallback(
+    (text: string) => {
+      const formatted = formatPhoneNumber(text);
+      handleInputChange('phone', formatted);
+    },
+    [formatPhoneNumber, handleInputChange],
+  );
 
-  const handleWebsiteChange = useCallback((text: string) => {
-    // Auto-add https:// if not present
-    if (text && !text.startsWith('http://') && !text.startsWith('https://')) {
-      text = 'https://' + text;
-    }
-    handleInputChange('website', text);
-  }, [handleInputChange]);
+  const handleWebsiteChange = useCallback(
+    (text: string) => {
+      // Auto-add https:// if not present
+      if (text && !text.startsWith('http://') && !text.startsWith('https://')) {
+        text = 'https://' + text;
+      }
+      handleInputChange('website', text);
+    },
+    [handleInputChange],
+  );
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -120,11 +131,13 @@ const LocationContactPage: React.FC<LocationContactPageProps> = ({
           placeholder="Street address"
           placeholderTextColor="#8E8E93"
           value={formData.address || ''}
-          onChangeText={(text) => handleInputChange('address', text)}
+          onChangeText={text => handleInputChange('address', text)}
           accessible={true}
           accessibilityLabel="Street address input"
         />
-        {errors.address && <Text style={styles.errorText}>{errors.address}</Text>}
+        {errors.address && (
+          <Text style={styles.errorText}>{errors.address}</Text>
+        )}
       </View>
 
       {/* City, State, ZIP */}
@@ -136,7 +149,7 @@ const LocationContactPage: React.FC<LocationContactPageProps> = ({
             placeholder="City"
             placeholderTextColor="#8E8E93"
             value={formData.city || ''}
-            onChangeText={(text) => handleInputChange('city', text)}
+            onChangeText={text => handleInputChange('city', text)}
             accessible={true}
             accessibilityLabel="City input"
           />
@@ -150,7 +163,9 @@ const LocationContactPage: React.FC<LocationContactPageProps> = ({
             placeholder="NY"
             placeholderTextColor="#8E8E93"
             value={formData.state || ''}
-            onChangeText={(text) => handleInputChange('state', text.toUpperCase())}
+            onChangeText={text =>
+              handleInputChange('state', text.toUpperCase())
+            }
             maxLength={2}
             accessible={true}
             accessibilityLabel="State input"
@@ -166,19 +181,21 @@ const LocationContactPage: React.FC<LocationContactPageProps> = ({
           placeholder="12345"
           placeholderTextColor="#8E8E93"
           value={formData.zipCode || ''}
-          onChangeText={(text) => handleInputChange('zipCode', text)}
+          onChangeText={text => handleInputChange('zipCode', text)}
           keyboardType="numeric"
           maxLength={10}
           accessible={true}
           accessibilityLabel="ZIP code input"
         />
-        {errors.zipCode && <Text style={styles.errorText}>{errors.zipCode}</Text>}
+        {errors.zipCode && (
+          <Text style={styles.errorText}>{errors.zipCode}</Text>
+        )}
       </View>
 
       {/* Contact Information */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Contact Information</Text>
-        
+
         <View style={styles.inputContainer}>
           <Text style={styles.inputLabel}>Phone Number *</Text>
           <TextInput
@@ -202,7 +219,7 @@ const LocationContactPage: React.FC<LocationContactPageProps> = ({
             placeholder="contact@business.com"
             placeholderTextColor="#8E8E93"
             value={formData.email || ''}
-            onChangeText={(text) => handleInputChange('email', text)}
+            onChangeText={text => handleInputChange('email', text)}
             keyboardType="email-address"
             autoCapitalize="none"
             accessible={true}
@@ -224,7 +241,9 @@ const LocationContactPage: React.FC<LocationContactPageProps> = ({
             accessible={true}
             accessibilityLabel="Website URL input"
           />
-          {errors.website && <Text style={styles.errorText}>{errors.website}</Text>}
+          {errors.website && (
+            <Text style={styles.errorText}>{errors.website}</Text>
+          )}
         </View>
       </View>
 

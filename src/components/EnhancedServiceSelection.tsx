@@ -10,12 +10,24 @@ import {
   UIManager,
   ScrollView,
 } from 'react-native';
-import { Colors, Typography, Spacing, BorderRadius, TouchTargets } from '../styles/designSystem';
-import { useResponsiveDimensions, getResponsiveLayout } from '../utils/deviceAdaptation';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  TouchTargets,
+} from '../styles/designSystem';
+import {
+  useResponsiveDimensions,
+  getResponsiveLayout,
+} from '../utils/deviceAdaptation';
 import { hapticButtonPress } from '../utils/hapticFeedback';
 
 // Enable LayoutAnimation on Android
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+if (
+  Platform.OS === 'android' &&
+  UIManager.setLayoutAnimationEnabledExperimental
+) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
@@ -101,271 +113,335 @@ const defaultServiceOptions: ServiceOption[] = [
   },
 ];
 
-const EnhancedServiceSelection: React.FC<EnhancedServiceSelectionProps> = memo(({
-  services,
-  onServicesChange,
-  options = defaultServiceOptions,
-  title = 'Service Options',
-  subtitle = 'Select the services your business offers',
-  maxSelections,
-  minSelections = 0,
-  showDescriptions = true,
-  compact = false,
-  disabled = false,
-  containerStyle,
-}) => {
-  // Responsive design hooks
-  const dimensions = useResponsiveDimensions();
-  const responsiveLayout = getResponsiveLayout();
-  
-  // Animation values
-  const selectionAnimations = useMemo(() => 
-    options.reduce((acc, option) => {
-      acc[option.id] = new Animated.Value(services[option.id] ? 1 : 0);
-      return acc;
-    }, {} as Record<string, Animated.Value>), [options, services]
-  );
+const EnhancedServiceSelection: React.FC<EnhancedServiceSelectionProps> = memo(
+  ({
+    services,
+    onServicesChange,
+    options = defaultServiceOptions,
+    title = 'Service Options',
+    subtitle = 'Select the services your business offers',
+    maxSelections,
+    minSelections = 0,
+    showDescriptions = true,
+    compact = false,
+    disabled = false,
+    containerStyle,
+  }) => {
+    // Responsive design hooks
+    const dimensions = useResponsiveDimensions();
+    const responsiveLayout = getResponsiveLayout();
 
-  // Handle service toggle
-  const handleServiceToggle = useCallback((serviceId: string) => {
-    if (disabled) return;
+    // Animation values
+    const selectionAnimations = useMemo(
+      () =>
+        options.reduce((acc, option) => {
+          acc[option.id] = new Animated.Value(services[option.id] ? 1 : 0);
+          return acc;
+        }, {} as Record<string, Animated.Value>),
+      [options, services],
+    );
 
-    const currentValue = services[serviceId];
-    const newServices = { ...services, [serviceId]: !currentValue };
-    
-    // Check max selections
-    if (maxSelections && !currentValue) {
-      const selectedCount = Object.values(newServices).filter(Boolean).length;
-      if (selectedCount > maxSelections) {
-        return; // Don't allow selection if max reached
-      }
-    }
-    
-    // Check min selections
-    if (minSelections > 0 && currentValue) {
-      const selectedCount = Object.values(newServices).filter(Boolean).length;
-      if (selectedCount <= minSelections) {
-        return; // Don't allow deselection if min not met
-      }
-    }
+    // Handle service toggle
+    const handleServiceToggle = useCallback(
+      (serviceId: string) => {
+        if (disabled) return;
 
-    // Animate selection
-    const animation = selectionAnimations[serviceId];
-    if (animation) {
-      Animated.timing(animation, {
-        toValue: !currentValue ? 1 : 0,
-        duration: 200,
-        useNativeDriver: false,
-      }).start();
-    }
+        const currentValue = services[serviceId];
+        const newServices = { ...services, [serviceId]: !currentValue };
 
-    // Layout animation for smooth transitions
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    
-    // Haptic feedback
-    hapticButtonPress();
-    
-    onServicesChange(newServices);
-  }, [services, onServicesChange, maxSelections, minSelections, disabled, selectionAnimations]);
-
-  // Get grid columns based on screen size
-  const getGridColumns = useCallback(() => {
-    if (compact) return 2;
-    if (dimensions.isTablet) return 3;
-    if (dimensions.isSmallScreen) return 2;
-    return 3;
-  }, [compact, dimensions.isTablet, dimensions.isSmallScreen]);
-
-  // Get service option styles
-  const getServiceOptionStyles = useCallback((option: ServiceOption) => {
-    const isSelected = services[option.id];
-    const baseStyles = [
-      styles.serviceOption,
-      {
-        minHeight: compact ? TouchTargets.minimum : TouchTargets.comfortable,
-        padding: compact ? Spacing.sm : Spacing.md,
-      },
-    ];
-
-    if (isSelected) {
-      return [...baseStyles, styles.serviceOptionSelected];
-    }
-
-    return baseStyles;
-  }, [services, compact]);
-
-  // Get service option text styles
-  const getServiceTextStyles = useCallback((option: ServiceOption) => {
-    const isSelected = services[option.id];
-    const baseStyles = [
-      styles.serviceLabel,
-      { fontSize: compact ? responsiveLayout.fontSize * 0.9 : responsiveLayout.fontSize },
-    ];
-
-    if (isSelected) {
-      return [...baseStyles, styles.serviceLabelSelected];
-    }
-
-    return baseStyles;
-  }, [services, compact, responsiveLayout]);
-
-  // Get service description styles
-  const getServiceDescriptionStyles = useCallback((option: ServiceOption) => {
-    const isSelected = services[option.id];
-    const baseStyles = [
-      styles.serviceDescription,
-      { fontSize: compact ? responsiveLayout.fontSize * 0.8 : responsiveLayout.fontSize * 0.85 },
-    ];
-
-    if (isSelected) {
-      return [...baseStyles, styles.serviceDescriptionSelected];
-    }
-
-    return baseStyles;
-  }, [services, compact, responsiveLayout]);
-
-  // Get selection count
-  const selectedCount = useMemo(() => 
-    Object.values(services).filter(Boolean).length, [services]
-  );
-
-  // Get validation message
-  const getValidationMessage = useCallback(() => {
-    if (minSelections > 0 && selectedCount < minSelections) {
-      return `Please select at least ${minSelections} service${minSelections > 1 ? 's' : ''}`;
-    }
-    if (maxSelections && selectedCount > maxSelections) {
-      return `Please select no more than ${maxSelections} service${maxSelections > 1 ? 's' : ''}`;
-    }
-    return null;
-  }, [minSelections, maxSelections, selectedCount]);
-
-  const validationMessage = getValidationMessage();
-  const gridColumns = getGridColumns();
-
-  return (
-    <View style={[styles.container, containerStyle]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={[
-          styles.title,
-          { fontSize: compact ? responsiveLayout.fontSize * 1.1 : responsiveLayout.fontSize * 1.2 },
-        ]}>
-          {title}
-        </Text>
-        {subtitle && (
-          <Text style={[
-            styles.subtitle,
-            { fontSize: compact ? responsiveLayout.fontSize * 0.9 : responsiveLayout.fontSize },
-          ]}>
-            {subtitle}
-          </Text>
-        )}
-        
-        {/* Selection Count */}
-        {(maxSelections || minSelections > 0) && (
-          <Text style={[
-            styles.selectionCount,
-            { fontSize: responsiveLayout.fontSize * 0.85 },
-          ]}>
-            {selectedCount}{maxSelections ? `/${maxSelections}` : ''} selected
-          </Text>
-        )}
-      </View>
-
-      {/* Service Options Grid */}
-      <View style={[
-        styles.optionsGrid,
-        { 
-          gridTemplateColumns: `repeat(${gridColumns}, 1fr)`,
-          gap: compact ? Spacing.sm : Spacing.md,
+        // Check max selections
+        if (maxSelections && !currentValue) {
+          const selectedCount =
+            Object.values(newServices).filter(Boolean).length;
+          if (selectedCount > maxSelections) {
+            return; // Don't allow selection if max reached
+          }
         }
-      ]}>
-        {options.map((option) => (
-          <Animated.View
-            key={option.id}
+
+        // Check min selections
+        if (minSelections > 0 && currentValue) {
+          const selectedCount =
+            Object.values(newServices).filter(Boolean).length;
+          if (selectedCount <= minSelections) {
+            return; // Don't allow deselection if min not met
+          }
+        }
+
+        // Animate selection
+        const animation = selectionAnimations[serviceId];
+        if (animation) {
+          Animated.timing(animation, {
+            toValue: !currentValue ? 1 : 0,
+            duration: 200,
+            useNativeDriver: false,
+          }).start();
+        }
+
+        // Layout animation for smooth transitions
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+
+        // Haptic feedback
+        hapticButtonPress();
+
+        onServicesChange(newServices);
+      },
+      [
+        services,
+        onServicesChange,
+        maxSelections,
+        minSelections,
+        disabled,
+        selectionAnimations,
+      ],
+    );
+
+    // Get grid columns based on screen size
+    const getGridColumns = useCallback(() => {
+      if (compact) return 2;
+      if (dimensions.isTablet) return 3;
+      if (dimensions.isSmallScreen) return 2;
+      return 3;
+    }, [compact, dimensions.isTablet, dimensions.isSmallScreen]);
+
+    // Get service option styles
+    const getServiceOptionStyles = useCallback(
+      (option: ServiceOption) => {
+        const isSelected = services[option.id];
+        const baseStyles = [
+          styles.serviceOption,
+          {
+            minHeight: compact
+              ? TouchTargets.minimum
+              : TouchTargets.comfortable,
+            padding: compact ? Spacing.sm : Spacing.md,
+          },
+        ];
+
+        if (isSelected) {
+          return [...baseStyles, styles.serviceOptionSelected];
+        }
+
+        return baseStyles;
+      },
+      [services, compact],
+    );
+
+    // Get service option text styles
+    const getServiceTextStyles = useCallback(
+      (option: ServiceOption) => {
+        const isSelected = services[option.id];
+        const baseStyles = [
+          styles.serviceLabel,
+          {
+            fontSize: compact
+              ? Typography.fontSize.sm * 0.9
+              : Typography.fontSize.sm,
+          },
+        ];
+
+        if (isSelected) {
+          return [...baseStyles, styles.serviceLabelSelected];
+        }
+
+        return baseStyles;
+      },
+      [services, compact, responsiveLayout],
+    );
+
+    // Get service description styles
+    const getServiceDescriptionStyles = useCallback(
+      (option: ServiceOption) => {
+        const isSelected = services[option.id];
+        const baseStyles = [
+          styles.serviceDescription,
+          {
+            fontSize: compact
+              ? Typography.fontSize.sm * 0.8
+              : Typography.fontSize.sm * 0.85,
+          },
+        ];
+
+        if (isSelected) {
+          return [...baseStyles, styles.serviceDescriptionSelected];
+        }
+
+        return baseStyles;
+      },
+      [services, compact, responsiveLayout],
+    );
+
+    // Get selection count
+    const selectedCount = useMemo(
+      () => Object.values(services).filter(Boolean).length,
+      [services],
+    );
+
+    // Get validation message
+    const getValidationMessage = useCallback(() => {
+      if (minSelections > 0 && selectedCount < minSelections) {
+        return `Please select at least ${minSelections} service${
+          minSelections > 1 ? 's' : ''
+        }`;
+      }
+      if (maxSelections && selectedCount > maxSelections) {
+        return `Please select no more than ${maxSelections} service${
+          maxSelections > 1 ? 's' : ''
+        }`;
+      }
+      return null;
+    }, [minSelections, maxSelections, selectedCount]);
+
+    const validationMessage = getValidationMessage();
+    const gridColumns = getGridColumns();
+
+    return (
+      <View style={[styles.container, containerStyle]}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text
             style={[
-              getServiceOptionStyles(option),
+              styles.title,
               {
-                transform: [{
-                  scale: selectionAnimations[option.id]?.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [1, 1.02],
-                  }) || 1,
-                }],
-                opacity: selectionAnimations[option.id]?.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0.7, 1],
-                }) || 1,
+                fontSize: compact
+                  ? Typography.fontSize.sm * 1.1
+                  : Typography.fontSize.sm * 1.2,
               },
             ]}
           >
-            <TouchableOpacity
-              style={styles.serviceOptionTouchable}
-              onPress={() => handleServiceToggle(option.id)}
-              disabled={disabled}
-              activeOpacity={0.8}
-              accessibilityRole="checkbox"
-              accessibilityState={{ checked: services[option.id] }}
-              accessibilityLabel={`${option.label}: ${option.description}`}
-              accessibilityHint={services[option.id] ? 'Tap to deselect' : 'Tap to select'}
-            >
-              {/* Icon */}
-              <Text style={[
-                styles.serviceIcon,
-                { fontSize: compact ? 20 : 24 },
-              ]}>
-                {option.icon}
-              </Text>
-
-              {/* Label */}
-              <Text style={getServiceTextStyles(option)}>
-                {option.label}
-              </Text>
-
-              {/* Description */}
-              {showDescriptions && !compact && (
-                <Text style={getServiceDescriptionStyles(option)}>
-                  {option.description}
-                </Text>
-              )}
-
-              {/* Selection Indicator */}
-              <Animated.View
-                style={[
-                  styles.selectionIndicator,
-                  {
-                    opacity: selectionAnimations[option.id] || 0,
-                    transform: [{
-                      scale: selectionAnimations[option.id]?.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [0, 1],
-                      }) || 0,
-                    }],
-                  },
-                ]}
-              >
-                <Text style={styles.selectionCheckmark}>✓</Text>
-              </Animated.View>
-            </TouchableOpacity>
-          </Animated.View>
-        ))}
-      </View>
-
-      {/* Validation Message */}
-      {validationMessage && (
-        <View style={styles.validationContainer}>
-          <Text style={[
-            styles.validationMessage,
-            { fontSize: responsiveLayout.fontSize * 0.9 },
-          ]}>
-            {validationMessage}
+            {title}
           </Text>
+          {subtitle && (
+            <Text
+              style={[
+                styles.subtitle,
+                {
+                  fontSize: compact
+                    ? Typography.fontSize.sm * 0.9
+                    : Typography.fontSize.sm,
+                },
+              ]}
+            >
+              {subtitle}
+            </Text>
+          )}
+
+          {/* Selection Count */}
+          {(maxSelections || minSelections > 0) && (
+            <Text
+              style={[
+                styles.selectionCount,
+                { fontSize: Typography.fontSize.sm * 0.85 },
+              ]}
+            >
+              {selectedCount}
+              {maxSelections ? `/${maxSelections}` : ''} selected
+            </Text>
+          )}
         </View>
-      )}
-    </View>
-  );
-});
+
+        {/* Service Options Grid */}
+        <View
+          style={[
+            styles.optionsGrid,
+            {
+              gap: compact ? Spacing.sm : Spacing.md,
+            },
+          ]}
+        >
+          {options.map(option => (
+            <Animated.View
+              key={option.id}
+              style={[
+                getServiceOptionStyles(option),
+                {
+                  transform: [
+                    {
+                      scale:
+                        selectionAnimations[option.id]?.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [1, 1.02],
+                        }) || 1,
+                    },
+                  ],
+                  opacity:
+                    selectionAnimations[option.id]?.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.7, 1],
+                    }) || 1,
+                },
+              ]}
+            >
+              <TouchableOpacity
+                style={styles.serviceOptionTouchable}
+                onPress={() => handleServiceToggle(option.id)}
+                disabled={disabled}
+                activeOpacity={0.8}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: services[option.id] }}
+                accessibilityLabel={`${option.label}: ${option.description}`}
+                accessibilityHint={
+                  services[option.id] ? 'Tap to deselect' : 'Tap to select'
+                }
+              >
+                {/* Icon */}
+                <Text
+                  style={[styles.serviceIcon, { fontSize: compact ? 20 : 24 }]}
+                >
+                  {option.icon}
+                </Text>
+
+                {/* Label */}
+                <Text style={getServiceTextStyles(option)}>{option.label}</Text>
+
+                {/* Description */}
+                {showDescriptions && !compact && (
+                  <Text style={getServiceDescriptionStyles(option)}>
+                    {option.description}
+                  </Text>
+                )}
+
+                {/* Selection Indicator */}
+                <Animated.View
+                  style={[
+                    styles.selectionIndicator,
+                    {
+                      opacity: selectionAnimations[option.id] || 0,
+                      transform: [
+                        {
+                          scale:
+                            selectionAnimations[option.id]?.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: [0, 1],
+                            }) || 0,
+                        },
+                      ],
+                    },
+                  ]}
+                >
+                  <Text style={styles.selectionCheckmark}>✓</Text>
+                </Animated.View>
+              </TouchableOpacity>
+            </Animated.View>
+          ))}
+        </View>
+
+        {/* Validation Message */}
+        {validationMessage && (
+          <View style={styles.validationContainer}>
+            <Text
+              style={[
+                styles.validationMessage,
+                { fontSize: Typography.fontSize.sm * 0.9 },
+              ]}
+            >
+              {validationMessage}
+            </Text>
+          </View>
+        )}
+      </View>
+    );
+  },
+);
 
 const styles = StyleSheet.create({
   container: {

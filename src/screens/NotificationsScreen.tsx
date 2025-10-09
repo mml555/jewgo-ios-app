@@ -1,10 +1,24 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Colors, Typography, Spacing, BorderRadius, Shadows, TouchTargets } from '../styles/designSystem';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  Shadows,
+  TouchTargets,
+} from '../styles/designSystem';
 import EateryIcon from '../components/EateryIcon';
 import StoreIcon from '../components/StoreIcon';
 import SpecialsIcon from '../components/SpecialsIcon';
+import { debugLog } from '../utils/logger';
 
 const NotificationsScreen: React.FC = () => {
   const [notifications, setNotifications] = useState([
@@ -63,20 +77,16 @@ const NotificationsScreen: React.FC = () => {
   });
 
   const handleNotificationPress = (notificationId: string) => {
-    setNotifications(prev => 
-      prev.map(notif => 
-        notif.id === notificationId 
-          ? { ...notif, isRead: true }
-          : notif
-      )
+    setNotifications(prev =>
+      prev.map(notif =>
+        notif.id === notificationId ? { ...notif, isRead: true } : notif,
+      ),
     );
-    console.log('Notification pressed:', notificationId);
+    debugLog('Notification pressed:', notificationId);
   };
 
   const handleMarkAllRead = () => {
-    setNotifications(prev => 
-      prev.map(notif => ({ ...notif, isRead: true }))
-    );
+    setNotifications(prev => prev.map(notif => ({ ...notif, isRead: true })));
   };
 
   const handleClearAll = () => {
@@ -92,21 +102,31 @@ const NotificationsScreen: React.FC = () => {
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
-      case 'event': return '🕍';
-      case 'business': return '🏪';
-      case 'offer': return '⭐';
-      case 'education': return '📚';
-      case 'service': return '🛒';
-      default: return '🔔';
+      case 'event':
+        return '🕍';
+      case 'business':
+        return '🏪';
+      case 'offer':
+        return '⭐';
+      case 'education':
+        return '📚';
+      case 'service':
+        return '🛒';
+      default:
+        return '🔔';
     }
   };
 
   const getNotificationIconComponent = (type: string) => {
     switch (type) {
-      case 'business': return StoreIcon;
-      case 'service': return StoreIcon;
-      case 'offer': return SpecialsIcon;
-      default: return null;
+      case 'business':
+        return StoreIcon;
+      case 'service':
+        return StoreIcon;
+      case 'offer':
+        return SpecialsIcon;
+      default:
+        return null;
     }
   };
 
@@ -114,12 +134,15 @@ const NotificationsScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>Notifications</Text>
           <Text style={styles.subtitle}>Stay updated with latest events</Text>
-          
+
           {unreadCount > 0 && (
             <View style={styles.badgeContainer}>
               <Text style={styles.badgeText}>{unreadCount} unread</Text>
@@ -135,11 +158,16 @@ const NotificationsScreen: React.FC = () => {
               onPress={handleMarkAllRead}
               disabled={unreadCount === 0}
             >
-              <Text style={[styles.actionButtonText, unreadCount === 0 && styles.actionButtonDisabled]}>
+              <Text
+                style={[
+                  styles.actionButtonText,
+                  unreadCount === 0 && styles.actionButtonDisabled,
+                ]}
+              >
                 Mark All Read
               </Text>
             </TouchableOpacity>
-            
+
             <TouchableOpacity
               style={styles.actionButton}
               onPress={handleClearAll}
@@ -152,43 +180,55 @@ const NotificationsScreen: React.FC = () => {
         {/* Notifications List */}
         <View style={styles.notificationsContainer}>
           {notifications.length > 0 ? (
-            notifications.map((notification) => (
+            notifications.map(notification => (
               <TouchableOpacity
                 key={notification.id}
                 style={[
                   styles.notificationItem,
-                  !notification.isRead && styles.unreadNotification
+                  !notification.isRead && styles.unreadNotification,
                 ]}
                 onPress={() => handleNotificationPress(notification.id)}
                 activeOpacity={0.7}
               >
                 <View style={styles.notificationIcon}>
                   {(() => {
-                    const IconComponent = getNotificationIconComponent(notification.type);
+                    const IconComponent = getNotificationIconComponent(
+                      notification.type,
+                    );
                     return IconComponent ? (
                       <IconComponent size={24} color="#666" />
                     ) : (
-                      <Text style={styles.iconText}>{getNotificationIcon(notification.type)}</Text>
+                      <Text style={styles.iconText}>
+                        {getNotificationIcon(notification.type)}
+                      </Text>
                     );
                   })()}
                 </View>
-                
+
                 <View style={styles.notificationContent}>
                   <View style={styles.notificationHeader}>
-                    <Text style={[
-                      styles.notificationTitle,
-                      !notification.isRead && styles.unreadTitle
-                    ]} numberOfLines={1}>
+                    <Text
+                      style={[
+                        styles.notificationTitle,
+                        !notification.isRead && styles.unreadTitle,
+                      ]}
+                      numberOfLines={1}
+                    >
                       {notification.title}
                     </Text>
                     {!notification.isRead && <View style={styles.unreadDot} />}
                   </View>
-                  
-                  <Text style={styles.notificationDescription} numberOfLines={2}>
+
+                  <Text
+                    style={styles.notificationDescription}
+                    numberOfLines={2}
+                  >
                     {notification.description}
                   </Text>
-                  
-                  <Text style={styles.notificationTime}>{notification.time}</Text>
+
+                  <Text style={styles.notificationTime}>
+                    {notification.time}
+                  </Text>
                 </View>
               </TouchableOpacity>
             ))
@@ -197,7 +237,8 @@ const NotificationsScreen: React.FC = () => {
               <Text style={styles.emptyIcon}>🔔</Text>
               <Text style={styles.emptyTitle}>No Notifications</Text>
               <Text style={styles.emptyDescription}>
-                You're all caught up! New notifications will appear here when they arrive.
+                You're all caught up! New notifications will appear here when
+                they arrive.
               </Text>
             </View>
           )}
@@ -206,32 +247,29 @@ const NotificationsScreen: React.FC = () => {
         {/* Notification Settings */}
         <View style={styles.settingsContainer}>
           <Text style={styles.sectionTitle}>Notification Settings</Text>
-          
+
           {Object.entries(notificationSettings).map(([key, value]) => (
             <View key={key} style={styles.settingItem}>
               <View style={styles.settingContent}>
                 <Text style={styles.settingTitle}>
-                  {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                  {key
+                    .replace(/([A-Z])/g, ' $1')
+                    .replace(/^./, str => str.toUpperCase())}
                 </Text>
                 <Text style={styles.settingDescription}>
                   {getSettingDescription(key)}
                 </Text>
               </View>
-              
+
               <TouchableOpacity
-                style={[
-                  styles.checkbox,
-                  value && styles.checkboxChecked
-                ]}
+                style={[styles.checkbox, value && styles.checkboxChecked]}
                 onPress={() => handleSettingToggle(key)}
                 activeOpacity={0.7}
                 accessibilityRole="checkbox"
                 accessibilityState={{ checked: value }}
                 accessibilityLabel={`Toggle ${key}`}
               >
-                {value && (
-                  <Text style={styles.checkmark}>✓</Text>
-                )}
+                {value && <Text style={styles.checkmark}>✓</Text>}
               </TouchableOpacity>
             </View>
           ))}
@@ -242,13 +280,20 @@ const NotificationsScreen: React.FC = () => {
 
   function getSettingDescription(key: string): string {
     switch (key) {
-      case 'pushNotifications': return 'Receive push notifications on your device';
-      case 'emailNotifications': return 'Get notifications via email';
-      case 'eventReminders': return 'Reminders for upcoming events and services';
-      case 'businessUpdates': return 'Updates about new businesses in your area';
-      case 'specialOffers': return 'Notifications about special offers and deals';
-      case 'communityNews': return 'Community news and announcements';
-      default: return '';
+      case 'pushNotifications':
+        return 'Receive push notifications on your device';
+      case 'emailNotifications':
+        return 'Get notifications via email';
+      case 'eventReminders':
+        return 'Reminders for upcoming events and services';
+      case 'businessUpdates':
+        return 'Updates about new businesses in your area';
+      case 'specialOffers':
+        return 'Notifications about special offers and deals';
+      case 'communityNews':
+        return 'Community news and announcements';
+      default:
+        return '';
     }
   }
 };
@@ -256,7 +301,7 @@ const NotificationsScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.background.primary,
   },
   scrollView: {
     flex: 1,
@@ -267,7 +312,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: Colors.border.primary,
     position: 'relative',
   },
   title: {
@@ -299,7 +344,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.sm,
     backgroundColor: Colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: Colors.border.primary,
   },
   actionButton: {
     flex: 1,
@@ -439,7 +484,7 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 4,
     borderWidth: 2,
-    borderColor: Colors.border,
+    borderColor: Colors.border.primary,
     backgroundColor: Colors.surface,
     alignItems: 'center',
     justifyContent: 'center',

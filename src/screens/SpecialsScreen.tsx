@@ -1,31 +1,43 @@
 import React, { useCallback, useMemo, useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  FlatList, 
-  ActivityIndicator, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  ActivityIndicator,
   RefreshControl,
   Alert,
   TouchableOpacity,
-  ScrollView
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
-import { Colors, Typography, Spacing, BorderRadius, Shadows, TouchTargets } from '../styles/designSystem';
-import type { RootStackParamList } from '../types/navigation';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  Shadows,
+  TouchTargets,
+} from '../styles/designSystem';
+import type { AppStackParamList } from '../types/navigation';
 import SpecialCard, { DealGridCard } from '../components/SpecialCard';
 import SpecialsIcon from '../components/SpecialsIcon';
 import BackIcon from '../components/icons/BackIcon';
+import { errorLog } from '../utils/logger';
 import SearchIcon from '../components/icons/SearchIcon';
 import { specialsService } from '../services/SpecialsService';
-import { Special, RestaurantWithSpecials, ActiveSpecial } from '../types/specials';
+import {
+  Special,
+  RestaurantWithSpecials,
+  ActiveSpecial,
+} from '../types/specials';
 import { useFavorites } from '../hooks/useFavorites';
 import { infoLog } from '../utils/logger';
 import guestService from '../services/GuestService';
 
-type NavigationProp = StackNavigationProp<RootStackParamList, 'SpecialDetail'>;
+type NavigationProp = StackNavigationProp<AppStackParamList, 'SpecialDetail'>;
 
 interface SpecialsScreenProps {
   route?: {
@@ -39,15 +51,17 @@ interface SpecialsScreenProps {
 const SpecialsScreen: React.FC<SpecialsScreenProps> = ({ route }) => {
   const navigation = useNavigation<NavigationProp>();
   const { toggleFavorite } = useFavorites();
-  
+
   // Get route params for business filtering
   const businessId = route?.params?.businessId;
   const businessName = route?.params?.businessName;
   const isFilteredByBusiness = !!businessId;
-  
+
   // State management
   const [specials, setSpecials] = useState<ActiveSpecial[]>([]);
-  const [restaurantsWithSpecials, setRestaurantsWithSpecials] = useState<RestaurantWithSpecials[]>([]);
+  const [restaurantsWithSpecials, setRestaurantsWithSpecials] = useState<
+    RestaurantWithSpecials[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -57,61 +71,102 @@ const SpecialsScreen: React.FC<SpecialsScreenProps> = ({ route }) => {
     // Calculate time left in seconds
     const validUntilDate = new Date(special.validUntil);
     const now = new Date();
-    const timeLeftSeconds = Math.max(0, Math.floor((validUntilDate.getTime() - now.getTime()) / 1000));
-    
+    const timeLeftSeconds = Math.max(
+      0,
+      Math.floor((validUntilDate.getTime() - now.getTime()) / 1000),
+    );
+
     // Use default pricing since ActiveSpecial doesn't have discount details
     const originalPrice = 25.99;
     const salePrice = 19.99;
+
+    // Determine badge type from discount label
+    const getBadgeType = (
+      label: string | undefined,
+    ): 'percent' | 'amount' | 'custom' | 'bogo' | 'free_item' => {
+      if (!label) return 'custom';
+
+      const labelLower = label.toLowerCase();
+      if (labelLower.includes('%') || labelLower.includes('percent')) {
+        return 'percent';
+      } else if (labelLower.includes('$') || labelLower.includes('off')) {
+        return 'amount';
+      } else if (
+        labelLower.includes('bogo') ||
+        labelLower.includes('buy one')
+      ) {
+        return 'bogo';
+      } else if (labelLower.includes('free')) {
+        return 'free_item';
+      }
+      return 'custom';
+    };
 
     return {
       id: special.id,
       title: special.title,
       imageUrl: `https://picsum.photos/300/200?random=${special.id}`,
       badge: {
-        text: special.discountLabel,
-        type: 'custom' // Default type since ActiveSpecial doesn't have discountType
+        text: special.discountLabel || 'Special Offer',
+        type: getBadgeType(special.discountLabel),
       },
       merchantName: special.businessName,
       price: {
         original: originalPrice,
         sale: salePrice,
-        currency: 'USD'
+        currency: 'USD',
       },
       timeLeftSeconds: timeLeftSeconds,
       expiresAt: special.validUntil,
-      claimsLeft: special.maxClaimsTotal ? Math.max(0, special.maxClaimsTotal - special.claimsTotal) : 999,
+      claimsLeft: special.maxClaimsTotal
+        ? Math.max(0, special.maxClaimsTotal - special.claimsTotal)
+        : 999,
       views: Math.floor(Math.random() * 2000) + 100, // Mock data for now
       isLiked: false,
       showHeart: true,
       ctaText: 'Click to Claim',
-      overlayTag: 'Restaurant'
+      overlayTag: 'Restaurant',
+      // Add deal type information from API response
+      discountType: special.discountType,
+      discountValue: special.discountValue,
     };
   };
 
-  // Load specials from enhanced API
+  // Optimized load specials with better error handling and performance
   const loadSpecials = useCallback(async () => {
     try {
       setError(null);
-      
+      setLoading(true);
+
       let response;
-      
+
       if (isFilteredByBusiness && businessId) {
         // Load specials for a specific business
         response = await specialsService.getRestaurantSpecials(businessId);
         if (response.success && response.data) {
-          // Transform Special[] to ActiveSpecial[] format
-          const activeSpecials: ActiveSpecial[] = response.data.specials.map(special => ({
-            id: special.id,
-            businessId: special.businessId,
-            businessName: special.business?.name || special.business_name || 'Unknown Business',
-            title: special.title,
-            discountLabel: special.discountLabel,
-            validUntil: special.validUntil,
-            claimsTotal: special.claimsTotal,
-            maxClaimsTotal: special.maxClaimsTotal,
-            city: special.business?.city || special.business_city || '',
-            state: special.business?.state || special.business_state || '',
-          }));
+          // Transform Special[] to ActiveSpecial[] format with deal type information
+          const activeSpecials: ActiveSpecial[] = response.data.specials.map(
+            special => ({
+              id: special.id,
+              businessId: special.businessId,
+              businessName:
+                (special as any).business_name || 'Unknown Business',
+              title: special.title,
+              discountLabel:
+                (special as any).discount_display ||
+                special.discountLabel ||
+                'Special Offer',
+              validUntil: special.validUntil,
+              claimsTotal: special.claimsTotal,
+              maxClaimsTotal: special.maxClaimsTotal,
+              city: (special as any).business_city || '',
+              state: (special as any).business_state || '',
+              // Preserve deal type information for enhanced display
+              discountType: special.discountType,
+              discountValue: special.discountValue,
+              priority: special.priority || 0,
+            }),
+          );
           setSpecials(activeSpecials);
         }
       } else {
@@ -119,18 +174,43 @@ const SpecialsScreen: React.FC<SpecialsScreenProps> = ({ route }) => {
         response = await specialsService.getActiveSpecials({
           limit: 20,
           sortBy: 'priority',
-          sortOrder: 'desc'
+          sortOrder: 'desc',
         });
-        
+
         if (response.success && response.data) {
-          setSpecials(response.data.specials);
-          
+          // Transform Special[] to ActiveSpecial[] format with deal type information
+          const activeSpecials: ActiveSpecial[] = response.data.specials.map(
+            special => ({
+              id: special.id,
+              businessId: special.businessId,
+              businessName:
+                (special as any).business_name || 'Unknown Business',
+              title: special.title,
+              discountLabel:
+                (special as any).discount_display ||
+                special.discountLabel ||
+                'Special Offer',
+              validUntil: special.validUntil,
+              claimsTotal: special.claimsTotal,
+              maxClaimsTotal: special.maxClaimsTotal,
+              city: (special as any).business_city || '',
+              state: (special as any).business_state || '',
+              // Preserve deal type information for enhanced display
+              discountType: special.discountType,
+              discountValue: special.discountValue,
+              priority: special.priority || 0,
+            }),
+          );
+
+          setSpecials(activeSpecials);
+
           // Also load restaurants with specials for enhanced data (optional)
           try {
-            const restaurantsResponse = await specialsService.getRestaurantsWithSpecialsFast({
-              limit: 20
-            });
-            
+            const restaurantsResponse =
+              await specialsService.getRestaurantsWithSpecialsFast({
+                limit: 20,
+              });
+
             if (restaurantsResponse.success && restaurantsResponse.data) {
               setRestaurantsWithSpecials(restaurantsResponse.data.restaurants);
             }
@@ -139,12 +219,12 @@ const SpecialsScreen: React.FC<SpecialsScreenProps> = ({ route }) => {
           }
         }
       }
-      
-             if (!response?.success) {
-               setError(response?.error || 'Failed to load specials');
-             }
+
+      if (!response?.success) {
+        setError(response?.error || 'Failed to load specials');
+      }
     } catch (err) {
-      console.error('Error loading specials:', err);
+      errorLog('Error loading specials:', err);
       setError('Failed to load specials');
     } finally {
       setLoading(false);
@@ -156,102 +236,120 @@ const SpecialsScreen: React.FC<SpecialsScreenProps> = ({ route }) => {
     loadSpecials();
   }, [loadSpecials]);
 
-  const handleOfferPress = useCallback((deal: DealGridCard) => {
-    infoLog('Deal pressed:', deal.title);
-    navigation.navigate('SpecialDetail', { specialId: deal.id });
-  }, [navigation]);
+  const handleOfferPress = useCallback(
+    (deal: DealGridCard) => {
+      infoLog('Deal pressed:', deal.title);
+      (navigation as any).navigate('SpecialDetail', { specialId: deal.id });
+    },
+    [navigation],
+  );
 
-  const handleClaimOffer = useCallback(async (dealId: string) => {
-    try {
-      const response = await specialsService.claimSpecial({
-        specialId: dealId,
-        userId: 'current-user-id', // TODO: Get from auth context
-        ipAddress: '127.0.0.1', // TODO: Get actual IP
-        userAgent: 'JewgoApp/1.0'
-      });
-      
-      if (response.success) {
-        Alert.alert('Success', 'Special claimed successfully!');
-        
-        // Track the claim event
-        await specialsService.trackSpecialEvent({
+  const handleClaimOffer = useCallback(
+    async (dealId: string) => {
+      try {
+        const response = await specialsService.claimSpecial({
           specialId: dealId,
-          eventType: 'claim',
-          userId: 'current-user-id',
-          ipAddress: '127.0.0.1',
-          userAgent: 'JewgoApp/1.0'
+          userId: 'current-user-id', // TODO: Get from auth context
+          ipAddress: '127.0.0.1', // TODO: Get actual IP
+          userAgent: 'JewgoApp/1.0',
         });
-        
-        // Refresh the specials list to update claim counts
-        await loadSpecials();
-      } else {
-        Alert.alert('Error', response.error || 'Failed to claim special');
+
+        if (response.success) {
+          Alert.alert('Success', 'Special claimed successfully!');
+
+          // Track the claim event
+          await specialsService.trackSpecialEvent({
+            specialId: dealId,
+            eventType: 'claim',
+            userId: 'current-user-id',
+            ipAddress: '127.0.0.1',
+            userAgent: 'JewgoApp/1.0',
+          });
+
+          // Refresh the specials list to update claim counts
+          await loadSpecials();
+        } else {
+          Alert.alert('Error', response.error || 'Failed to claim special');
+        }
+      } catch (err) {
+        errorLog('Error claiming special:', err);
+        Alert.alert('Error', 'Failed to claim special');
       }
-    } catch (err) {
-      console.error('Error claiming special:', err);
-      Alert.alert('Error', 'Failed to claim special');
-    }
-  }, [loadSpecials]);
+    },
+    [loadSpecials],
+  );
 
-  const handleToggleLike = useCallback(async (dealId: string) => {
-    try {
-      // Find the special to get its business information
-      const special = specials.find(s => s.id === dealId);
-      if (!special) {
-        console.error('Special not found:', dealId);
-        return;
+  const handleToggleLike = useCallback(
+    async (dealId: string) => {
+      try {
+        // Find the special to get its business information
+        const special = specials.find(s => s.id === dealId);
+        if (!special) {
+          errorLog('Special not found:', dealId);
+          return;
+        }
+
+        // Use business data from the ActiveSpecial
+        const businessName = special.businessName;
+        const businessCity = special.city;
+        const businessState = special.state;
+
+        // Prepare entity data for the favorites service
+        const entityData = {
+          entity_name: businessName,
+          entity_type: 'restaurant', // Specials are always for restaurants
+          description: special.discountLabel,
+          address: undefined, // ActiveSpecial doesn't have address
+          city: businessCity,
+          state: businessState,
+          rating: undefined, // ActiveSpecial doesn't have rating
+          review_count: undefined, // ActiveSpecial doesn't have review_count
+          image_url: undefined, // ActiveSpecial doesn't have image_url
+          category: 'restaurant',
+        };
+
+        const success = await toggleFavorite(special.businessId, entityData);
+
+        if (success) {
+          infoLog(`✅ Toggled favorite for restaurant: ${businessName}`);
+        } else {
+          errorLog(
+            '❌ Failed to toggle favorite for restaurant:',
+            businessName,
+          );
+        }
+      } catch (error) {
+        errorLog('Error toggling favorite for special:', error);
       }
-
-      // Use business data from the ActiveSpecial
-      const businessName = special.businessName;
-      const businessCity = special.city;
-      const businessState = special.state;
-
-      // Prepare entity data for the favorites service
-      const entityData = {
-        entity_name: businessName,
-        entity_type: 'restaurant', // Specials are always for restaurants
-        description: special.discountLabel,
-        address: undefined, // ActiveSpecial doesn't have address
-        city: businessCity,
-        state: businessState,
-        rating: undefined, // ActiveSpecial doesn't have rating
-        review_count: undefined, // ActiveSpecial doesn't have review_count
-        image_url: undefined, // ActiveSpecial doesn't have image_url
-        category: 'restaurant',
-      };
-
-      const success = await toggleFavorite(special.businessId, entityData);
-      
-      if (success) {
-        infoLog(`✅ Toggled favorite for restaurant: ${businessName}`);
-      } else {
-        console.error('❌ Failed to toggle favorite for restaurant:', businessName);
-      }
-    } catch (error) {
-      console.error('Error toggling favorite for special:', error);
-    }
-  }, [specials, toggleFavorite]);
+    },
+    [specials, toggleFavorite],
+  );
 
   // Memoized render item for FlatList
-  const renderItem = useCallback(({ item }: { item: DealGridCard }) => (
-    <SpecialCard
-      item={item}
-      onPress={handleOfferPress}
-      onClaim={handleClaimOffer}
-      onToggleLike={handleToggleLike}
-    />
-  ), [handleOfferPress, handleClaimOffer, handleToggleLike]);
+  const renderItem = useCallback(
+    ({ item }: { item: DealGridCard }) => (
+      <SpecialCard
+        item={item}
+        onPress={handleOfferPress}
+        onClaim={handleClaimOffer}
+        onToggleLike={handleToggleLike}
+      />
+    ),
+    [handleOfferPress, handleClaimOffer, handleToggleLike],
+  );
 
   // Memoized key extractor
   const keyExtractor = useCallback((item: DealGridCard) => item.id, []);
 
   // Memoized column wrapper style
-  const columnWrapperStyle = useMemo(() => ({
-    justifyContent: 'space-between' as const,
-    paddingHorizontal: 8,
-    marginBottom: 8,
-  }), []);
+  const columnWrapperStyle = useMemo(
+    () => ({
+      justifyContent: 'space-between' as const,
+      paddingHorizontal: 8,
+      marginBottom: 8,
+    }),
+    [],
+  );
 
   // Handle refresh
   const handleRefresh = useCallback(async () => {
@@ -259,7 +357,7 @@ const SpecialsScreen: React.FC<SpecialsScreenProps> = ({ route }) => {
     try {
       await loadSpecials();
     } catch (err) {
-      console.error('Error refreshing specials:', err);
+      errorLog('Error refreshing specials:', err);
     } finally {
       setRefreshing(false);
     }
@@ -275,7 +373,7 @@ const SpecialsScreen: React.FC<SpecialsScreenProps> = ({ route }) => {
         colors={[Colors.link]}
       />
     ),
-    [refreshing, handleRefresh]
+    [refreshing, handleRefresh],
   );
 
   // Category filter state
@@ -305,7 +403,7 @@ const SpecialsScreen: React.FC<SpecialsScreenProps> = ({ route }) => {
       return count.toString();
     }
   };
-  
+
   // Category options for specials
   const categories = [
     { id: 'all', name: 'All' },
@@ -324,112 +422,136 @@ const SpecialsScreen: React.FC<SpecialsScreenProps> = ({ route }) => {
     if (selectedCategory === 'all') {
       return transformedSpecials;
     }
-    return transformedSpecials.filter(deal => deal.overlayTag === selectedCategory);
+    return transformedSpecials.filter(
+      deal => deal.overlayTag === selectedCategory,
+    );
   }, [transformedSpecials, selectedCategory]);
 
   // Memoized empty component
   const renderEmpty = useCallback(() => {
     if (loading) return null;
-    
+
     return (
       <View style={styles.emptyContainer}>
         <SpecialsIcon size={64} color={Colors.gray400} />
         <Text style={styles.emptyTitle}>No Specials Available</Text>
         <Text style={styles.emptyDescription}>
-          Check back soon for exclusive deals and offers from your favorite Jewish community businesses.
+          Check back soon for exclusive deals and offers from your favorite
+          Jewish community businesses.
         </Text>
       </View>
     );
   }, [loading]);
 
   // Memoized header component with glassy header bar and category filters
-  const ListHeaderComponent = useMemo(() => (
-    <View>
-      {/* Header Bar - Matches ListingDetailScreen design */}
-      <View style={styles.headerBarContainer}>
-        <View style={styles.headerBarBackground} />
-        <View style={styles.headerBarBlur}>
-          <TouchableOpacity 
-            style={[
-              styles.headerBackButton,
-              pressedButtons.has('back') && styles.headerButtonPressed
-            ]}
-            onPress={() => navigation.goBack()}
-            onPressIn={() => handlePressIn('back')}
-            onPressOut={() => handlePressOut('back')}
-            activeOpacity={0.7}
-          >
-            <BackIcon size={20} color={Colors.text.primary} />
-          </TouchableOpacity>
-          
-          <View style={styles.headerTitle}>
-            <Text style={styles.headerTitleText}>
-              {isFilteredByBusiness ? businessName || 'Business Specials' : 'Specials'}
-            </Text>
+  const ListHeaderComponent = useMemo(
+    () => (
+      <View>
+        {/* Header Bar - Matches ListingDetailScreen design */}
+        <View style={styles.headerBarContainer}>
+          <View style={styles.headerBarBackground} />
+          <View style={styles.headerBarBlur}>
+            <TouchableOpacity
+              style={[
+                styles.headerBackButton,
+                pressedButtons.has('back') && styles.headerButtonPressed,
+              ]}
+              onPress={() => navigation.goBack()}
+              onPressIn={() => handlePressIn('back')}
+              onPressOut={() => handlePressOut('back')}
+              activeOpacity={0.7}
+            >
+              <BackIcon size={20} color={Colors.text.primary} />
+            </TouchableOpacity>
+
+            <View style={styles.headerTitle}>
+              <Text style={styles.headerTitleText}>
+                {isFilteredByBusiness
+                  ? businessName || 'Business Specials'
+                  : 'Specials'}
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              style={[
+                styles.headerSearchButton,
+                pressedButtons.has('search') && styles.headerButtonPressed,
+              ]}
+              onPress={() => {
+                // TODO: Implement search functionality
+                infoLog('Search from specials screen');
+              }}
+              onPressIn={() => handlePressIn('search')}
+              onPressOut={() => handlePressOut('search')}
+              activeOpacity={0.7}
+            >
+              <SearchIcon size={16} color={Colors.text.primary} />
+            </TouchableOpacity>
           </View>
-          
-          <TouchableOpacity 
-            style={[
-              styles.headerSearchButton,
-              pressedButtons.has('search') && styles.headerButtonPressed
-            ]}
-            onPress={() => {
-              // TODO: Implement search functionality
-              infoLog('Search from specials screen');
-            }}
-            onPressIn={() => handlePressIn('search')}
-            onPressOut={() => handlePressOut('search')}
-            activeOpacity={0.7}
-          >
-            <SearchIcon size={16} color={Colors.text.primary} />
-          </TouchableOpacity>
         </View>
-      </View>
 
-      {/* Page Subtitle */}
-      <View style={styles.subtitleContainer}>
-        <Text style={styles.subtitle}>
-          {isFilteredByBusiness 
-            ? `Current specials and offers from ${businessName || 'this business'}`
-            : 'Exclusive deals and offers'
-          }
-        </Text>
-      </View>
-
-      {/* Category Filter Buttons - Only show when not filtered by business */}
-      {!isFilteredByBusiness && (
-        <View style={styles.categoryContainer}>
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.categoryScrollContent}
-          >
-            {categories.map((category) => (
-              <TouchableOpacity
-                key={category.id}
-                style={[
-                  styles.categoryButton,
-                  selectedCategory === category.id && styles.categoryButtonActive
-                ]}
-                onPress={() => setSelectedCategory(category.id)}
-                accessible={true}
-                accessibilityRole="button"
-                accessibilityLabel={`Filter by ${category.name}`}
-                accessibilityState={{ selected: selectedCategory === category.id }}
-              >
-                <Text style={[
-                  styles.categoryButtonText,
-                  selectedCategory === category.id && styles.categoryButtonTextActive
-                ]}>
-                  {category.name}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+        {/* Page Subtitle */}
+        <View style={styles.subtitleContainer}>
+          <Text style={styles.subtitle}>
+            {isFilteredByBusiness
+              ? `Current specials and offers from ${
+                  businessName || 'this business'
+                }`
+              : 'Exclusive deals and offers'}
+          </Text>
         </View>
-      )}
-    </View>
-  ), [selectedCategory, categories, pressedButtons, navigation, handlePressIn, handlePressOut, isFilteredByBusiness, businessName]);
+
+        {/* Category Filter Buttons - Only show when not filtered by business */}
+        {!isFilteredByBusiness && (
+          <View style={styles.categoryContainer}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.categoryScrollContent}
+            >
+              {categories.map(category => (
+                <TouchableOpacity
+                  key={category.id}
+                  style={[
+                    styles.categoryButton,
+                    selectedCategory === category.id &&
+                      styles.categoryButtonActive,
+                  ]}
+                  onPress={() => setSelectedCategory(category.id)}
+                  accessible={true}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Filter by ${category.name}`}
+                  accessibilityState={{
+                    selected: selectedCategory === category.id,
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.categoryButtonText,
+                      selectedCategory === category.id &&
+                        styles.categoryButtonTextActive,
+                    ]}
+                  >
+                    {category.name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+      </View>
+    ),
+    [
+      selectedCategory,
+      categories,
+      pressedButtons,
+      navigation,
+      handlePressIn,
+      handlePressOut,
+      isFilteredByBusiness,
+      businessName,
+    ],
+  );
 
   // Show loading state
   if (loading) {
@@ -493,7 +615,7 @@ const SpecialsScreen: React.FC<SpecialsScreenProps> = ({ route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background, // Match CategoryGridScreen background
+    backgroundColor: Colors.background.primary, // Match CategoryGridScreen background
   },
   listContent: {
     paddingHorizontal: 0,
@@ -682,7 +804,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     borderRadius: BorderRadius.full,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: Colors.border.primary,
     marginRight: Spacing.sm,
     minWidth: 80,
     alignItems: 'center',

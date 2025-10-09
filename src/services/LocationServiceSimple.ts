@@ -6,6 +6,7 @@
 import Geolocation from '@react-native-community/geolocation';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { debugLog, warnLog } from '../utils/logger';
 
 // Types
 export interface LocationData {
@@ -88,13 +89,13 @@ class LocationServiceSimple {
       if (cached) {
         const locationData: LocationData = JSON.parse(cached);
         const age = Date.now() - locationData.timestamp;
-        
+
         if (age <= LOCATION_CACHE_TTL) {
           this.updateState({ lastKnownLocation: locationData });
         }
       }
     } catch (error) {
-      console.warn('Failed to load cached location:', error);
+      warnLog('Failed to load cached location:', error);
     }
   }
 
@@ -104,18 +105,20 @@ class LocationServiceSimple {
       await AsyncStorage.setItem(LOCATION_CACHE_KEY, JSON.stringify(location));
       this.updateState({ lastKnownLocation: location });
     } catch (error) {
-      console.warn('Failed to cache location:', error);
+      warnLog('Failed to cache location:', error);
     }
   }
 
   // Get current location with proper error handling
-  async getCurrentLocation(config: Partial<LocationConfig> = {}): Promise<LocationData | null> {
+  async getCurrentLocation(
+    config: Partial<LocationConfig> = {},
+  ): Promise<LocationData | null> {
     const finalConfig = { ...DEFAULT_CONFIG, ...config };
-    
+
     this.updateState({ loading: true, error: null });
     this.startTime = Date.now();
 
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       const options = {
         enableHighAccuracy: finalConfig.desiredAccuracy === 'high',
         timeout: finalConfig.timeout,
@@ -124,7 +127,7 @@ class LocationServiceSimple {
       };
 
       Geolocation.getCurrentPosition(
-        (position) => {
+        position => {
           const timeToFirstFix = Date.now() - this.startTime;
           const accuracyAuthorization = this.checkAccuracyAuthorization();
 
@@ -158,7 +161,7 @@ class LocationServiceSimple {
 
           resolve(locationData);
         },
-        (error) => {
+        error => {
           const timeToFirstFix = Date.now() - this.startTime;
           let errorMessage = 'Failed to get location';
           let errorClass = 'unknown';
@@ -197,7 +200,7 @@ class LocationServiceSimple {
           const fallbackLocation = this.getFallbackLocation();
           resolve(fallbackLocation);
         },
-        options
+        options,
       );
     });
   }
@@ -238,7 +241,7 @@ class LocationServiceSimple {
     };
 
     this.watchId = Geolocation.watchPosition(
-      (position) => {
+      position => {
         const accuracyAuthorization = this.checkAccuracyAuthorization();
         const locationData: LocationData = {
           latitude: position.coords.latitude,
@@ -255,13 +258,13 @@ class LocationServiceSimple {
           permissionStatus: 'granted',
         });
       },
-      (error) => {
-        console.warn('Location watch error:', error);
+      error => {
+        warnLog('Location watch error:', error);
         this.updateState({
           error: 'Location watch failed',
         });
       },
-      options
+      options,
     );
   }
 
@@ -300,17 +303,17 @@ class LocationServiceSimple {
       longitude: undefined,
     };
 
-    console.log(`📍 Location Telemetry [${event}]:`, sanitizedData);
+    debugLog(`📍 Location Telemetry [${event}]:`, sanitizedData);
   }
 
   // Check if location services are enabled
   async isLocationServicesEnabled(): Promise<boolean> {
     try {
-      return await new Promise((resolve) => {
+      return await new Promise(resolve => {
         Geolocation.getCurrentPosition(
           () => resolve(true),
           () => resolve(false),
-          { timeout: 1000, maximumAge: 0 }
+          { timeout: 1000, maximumAge: 0 },
         );
       });
     } catch {
@@ -326,7 +329,7 @@ class LocationServiceSimple {
 
     const currentTime = Date.now();
     const timeSinceLastUpdate = currentTime - this.state.location.timestamp;
-    
+
     // If it's been more than 5 minutes, invalidate cache
     if (timeSinceLastUpdate > 5 * 60 * 1000) {
       this.updateState({ lastKnownLocation: null });

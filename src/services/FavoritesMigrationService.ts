@@ -1,5 +1,6 @@
 import { favoritesService } from './FavoritesService';
 import { LocalFavoritesService } from './LocalFavoritesService';
+import { debugLog, errorLog, infoLog } from '../utils/logger';
 
 export interface MigrationResult {
   success: number;
@@ -14,13 +15,13 @@ export class FavoritesMigrationService {
    */
   static async migrateFavoritesOnAccountCreation(): Promise<MigrationResult> {
     try {
-      console.log('🔄 Starting favorites migration for new account...');
-      
+      infoLog('🔄 Starting favorites migration for new account...');
+
       // Check if there are local favorites to migrate
       const localCount = await LocalFavoritesService.getLocalFavoritesCount();
-      
+
       if (localCount === 0) {
-        console.log('ℹ️ No local favorites to migrate');
+        infoLog('ℹ️ No local favorites to migrate');
         return {
           success: 0,
           failed: 0,
@@ -29,13 +30,15 @@ export class FavoritesMigrationService {
         };
       }
 
-      console.log(`📦 Found ${localCount} local favorites to migrate`);
+      infoLog(`📦 Found ${localCount} local favorites to migrate`);
 
       // Migrate local favorites to server
       const result = await favoritesService.migrateLocalFavoritesToServer();
-      
-      console.log(`✅ Migration completed: ${result.success} successful, ${result.failed} failed`);
-      
+
+      infoLog(
+        `✅ Migration completed: ${result.success} successful, ${result.failed} failed`,
+      );
+
       return {
         success: result.success,
         failed: result.failed,
@@ -43,8 +46,9 @@ export class FavoritesMigrationService {
         total: localCount,
       };
     } catch (error) {
-      console.error('❌ Error during favorites migration:', error);
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      errorLog('❌ Error during favorites migration:', error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       return {
         success: 0,
         failed: 0,
@@ -62,7 +66,7 @@ export class FavoritesMigrationService {
       const count = await LocalFavoritesService.getLocalFavoritesCount();
       return count > 0;
     } catch (error) {
-      console.error('Error checking for local favorites:', error);
+      errorLog('Error checking for local favorites:', error);
       return false;
     }
   }
@@ -70,7 +74,9 @@ export class FavoritesMigrationService {
   /**
    * Get preview of local favorites that will be migrated
    */
-  static async getLocalFavoritesPreview(): Promise<Array<{ entity_name: string; entity_type: string }>> {
+  static async getLocalFavoritesPreview(): Promise<
+    Array<{ entity_name: string; entity_type: string }>
+  > {
     try {
       const favorites = await LocalFavoritesService.getLocalFavorites();
       return favorites.map(fav => ({
@@ -78,7 +84,7 @@ export class FavoritesMigrationService {
         entity_type: fav.entity_type,
       }));
     } catch (error) {
-      console.error('Error getting local favorites preview:', error);
+      errorLog('Error getting local favorites preview:', error);
       return [];
     }
   }

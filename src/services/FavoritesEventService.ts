@@ -1,9 +1,11 @@
 /**
  * Favorites Event Service
- * 
+ *
  * Provides a simple event system to notify components when favorites are updated
  * from other parts of the app, enabling dynamic updates without manual refresh.
  */
+
+import { debugLog, errorLog } from '../utils/logger';
 
 type FavoritesEventListener = () => void;
 
@@ -15,7 +17,7 @@ class FavoritesEventService {
    */
   addListener(listener: FavoritesEventListener): () => void {
     this.listeners.add(listener);
-    
+
     // Return unsubscribe function
     return () => {
       this.listeners.delete(listener);
@@ -26,12 +28,11 @@ class FavoritesEventService {
    * Notify all listeners that favorites have been updated
    */
   notifyFavoritesUpdated(): void {
-    console.log('🔄 Notifying favorites listeners of update...');
     this.listeners.forEach(listener => {
       try {
         listener();
       } catch (error) {
-        console.error('Error in favorites listener:', error);
+        errorLog('Error in favorites listener:', error);
       }
     });
   }

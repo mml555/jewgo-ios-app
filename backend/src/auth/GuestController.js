@@ -1,3 +1,5 @@
+const logger = require('../utils/logger');
+
 class GuestController {
   constructor(guestService, authService) {
     this.guestService = guestService;
@@ -17,7 +19,7 @@ class GuestController {
       const guestSession = await this.guestService.createGuestSession(
         deviceInfo || {},
         ipAddress,
-        userAgent
+        userAgent,
       );
 
       res.status(201).json({
@@ -27,15 +29,14 @@ class GuestController {
           sessionToken: guestSession.sessionToken,
           expiresAt: guestSession.expiresAt,
           guestUser: guestSession.guestUser,
-          permissions: await this.guestService.getGuestPermissions()
-        }
+          permissions: await this.guestService.getGuestPermissions(),
+        },
       });
-
     } catch (error) {
-      console.error('Create guest session error:', error);
+      logger.error('Create guest session error:', error);
       res.status(500).json({
         error: 'Failed to create guest session',
-        code: 'GUEST_SESSION_CREATE_ERROR'
+        code: 'GUEST_SESSION_CREATE_ERROR',
       });
     }
   }
@@ -47,16 +48,18 @@ class GuestController {
       if (!guestToken) {
         return res.status(400).json({
           error: 'Guest session token is required',
-          code: 'MISSING_GUEST_TOKEN'
+          code: 'MISSING_GUEST_TOKEN',
         });
       }
 
-      const guestSession = await this.guestService.validateGuestSession(guestToken);
+      const guestSession = await this.guestService.validateGuestSession(
+        guestToken,
+      );
 
       if (!guestSession || !guestSession.isValid) {
         return res.status(401).json({
           error: 'Invalid or expired guest session',
-          code: 'INVALID_GUEST_SESSION'
+          code: 'INVALID_GUEST_SESSION',
         });
       }
 
@@ -66,15 +69,14 @@ class GuestController {
           sessionId: guestSession.sessionId,
           expiresAt: guestSession.expiresAt,
           guestUser: guestSession.guestUser,
-          permissions: await this.guestService.getGuestPermissions()
-        }
+          permissions: await this.guestService.getGuestPermissions(),
+        },
       });
-
     } catch (error) {
-      console.error('Validate guest session error:', error);
+      logger.error('Validate guest session error:', error);
       res.status(500).json({
         error: 'Failed to validate guest session',
-        code: 'GUEST_SESSION_VALIDATE_ERROR'
+        code: 'GUEST_SESSION_VALIDATE_ERROR',
       });
     }
   }
@@ -87,29 +89,31 @@ class GuestController {
       if (!guestToken) {
         return res.status(400).json({
           error: 'Guest session token is required',
-          code: 'MISSING_GUEST_TOKEN'
+          code: 'MISSING_GUEST_TOKEN',
         });
       }
 
-      const success = await this.guestService.extendGuestSession(guestToken, additionalHours);
+      const success = await this.guestService.extendGuestSession(
+        guestToken,
+        additionalHours,
+      );
 
       if (!success) {
         return res.status(404).json({
           error: 'Guest session not found or expired',
-          code: 'GUEST_SESSION_NOT_FOUND'
+          code: 'GUEST_SESSION_NOT_FOUND',
         });
       }
 
       res.json({
         success: true,
-        message: `Guest session extended by ${additionalHours} hours`
+        message: `Guest session extended by ${additionalHours} hours`,
       });
-
     } catch (error) {
-      console.error('Extend guest session error:', error);
+      logger.error('Extend guest session error:', error);
       res.status(500).json({
         error: 'Failed to extend guest session',
-        code: 'GUEST_SESSION_EXTEND_ERROR'
+        code: 'GUEST_SESSION_EXTEND_ERROR',
       });
     }
   }
@@ -121,7 +125,7 @@ class GuestController {
       if (!guestToken) {
         return res.status(400).json({
           error: 'Guest session token is required',
-          code: 'MISSING_GUEST_TOKEN'
+          code: 'MISSING_GUEST_TOKEN',
         });
       }
 
@@ -130,20 +134,19 @@ class GuestController {
       if (!success) {
         return res.status(404).json({
           error: 'Guest session not found',
-          code: 'GUEST_SESSION_NOT_FOUND'
+          code: 'GUEST_SESSION_NOT_FOUND',
         });
       }
 
       res.json({
         success: true,
-        message: 'Guest session revoked successfully'
+        message: 'Guest session revoked successfully',
       });
-
     } catch (error) {
-      console.error('Revoke guest session error:', error);
+      logger.error('Revoke guest session error:', error);
       res.status(500).json({
         error: 'Failed to revoke guest session',
-        code: 'GUEST_SESSION_REVOKE_ERROR'
+        code: 'GUEST_SESSION_REVOKE_ERROR',
       });
     }
   }
@@ -161,15 +164,14 @@ class GuestController {
         data: {
           permissions,
           role: 'guest',
-          description: 'Limited access permissions for guest users'
-        }
+          description: 'Limited access permissions for guest users',
+        },
       });
-
     } catch (error) {
-      console.error('Get guest permissions error:', error);
+      logger.error('Get guest permissions error:', error);
       res.status(500).json({
         error: 'Failed to get guest permissions',
-        code: 'GUEST_PERMISSIONS_ERROR'
+        code: 'GUEST_PERMISSIONS_ERROR',
       });
     }
   }
@@ -186,14 +188,14 @@ class GuestController {
       if (!guestToken) {
         return res.status(400).json({
           error: 'Guest session token is required',
-          code: 'MISSING_GUEST_TOKEN'
+          code: 'MISSING_GUEST_TOKEN',
         });
       }
 
       if (!email || !password) {
         return res.status(400).json({
           error: 'Email and password are required',
-          code: 'MISSING_REQUIRED_FIELDS'
+          code: 'MISSING_REQUIRED_FIELDS',
         });
       }
 
@@ -202,7 +204,7 @@ class GuestController {
       if (existingUser) {
         return res.status(409).json({
           error: 'User already exists with this email',
-          code: 'USER_EXISTS'
+          code: 'USER_EXISTS',
         });
       }
 
@@ -211,7 +213,7 @@ class GuestController {
         email,
         firstName,
         lastName,
-        password
+        password,
       };
 
       const result = await this.authService.createUser(userData);
@@ -225,15 +227,14 @@ class GuestController {
         user: {
           id: result.user.id,
           email: result.user.email,
-          status: result.user.status
-        }
+          status: result.user.status,
+        },
       });
-
     } catch (error) {
-      console.error('Convert guest to user error:', error);
+      logger.error('Convert guest to user error:', error);
       res.status(500).json({
         error: 'Failed to convert guest to user',
-        code: 'GUEST_CONVERT_ERROR'
+        code: 'GUEST_CONVERT_ERROR',
       });
     }
   }
@@ -248,14 +249,13 @@ class GuestController {
 
       res.json({
         success: true,
-        data: stats
+        data: stats,
       });
-
     } catch (error) {
-      console.error('Get guest stats error:', error);
+      logger.error('Get guest stats error:', error);
       res.status(500).json({
         error: 'Failed to get guest statistics',
-        code: 'GUEST_STATS_ERROR'
+        code: 'GUEST_STATS_ERROR',
       });
     }
   }
@@ -267,14 +267,13 @@ class GuestController {
       res.json({
         success: true,
         message: `Cleaned up ${deletedCount} expired guest sessions`,
-        deletedCount
+        deletedCount,
       });
-
     } catch (error) {
-      console.error('Cleanup guest sessions error:', error);
+      logger.error('Cleanup guest sessions error:', error);
       res.status(500).json({
         error: 'Failed to cleanup expired sessions',
-        code: 'GUEST_CLEANUP_ERROR'
+        code: 'GUEST_CLEANUP_ERROR',
       });
     }
   }
@@ -288,7 +287,7 @@ class GuestController {
       if (!req.user || req.user.type !== 'guest') {
         return res.status(400).json({
           error: 'Only guest users can access this endpoint',
-          code: 'NOT_GUEST_USER'
+          code: 'NOT_GUEST_USER',
         });
       }
 
@@ -300,14 +299,14 @@ class GuestController {
           user: {
             id: req.user.id,
             type: req.user.type,
-            sessionId: req.user.sessionId
+            sessionId: req.user.sessionId,
           },
           permissions,
           limitations: {
             canCreate: false,
             canUpdate: false,
             canDelete: false,
-            readOnly: true
+            readOnly: true,
           },
           upgradeOptions: {
             createAccount: '/api/v5/auth/guest/convert',
@@ -315,17 +314,16 @@ class GuestController {
               'Create and manage business listings',
               'Write and edit reviews',
               'Save favorites',
-              'Personalized recommendations'
-            ]
-          }
-        }
+              'Personalized recommendations',
+            ],
+          },
+        },
       });
-
     } catch (error) {
-      console.error('Get guest info error:', error);
+      logger.error('Get guest info error:', error);
       res.status(500).json({
         error: 'Failed to get guest information',
-        code: 'GUEST_INFO_ERROR'
+        code: 'GUEST_INFO_ERROR',
       });
     }
   }

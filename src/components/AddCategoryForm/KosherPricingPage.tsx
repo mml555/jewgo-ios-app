@@ -1,13 +1,17 @@
 import React, { useState, useCallback, memo } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { ListingFormData } from '../../screens/AddCategoryScreen';
-import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../styles/designSystem';
-import { useResponsiveDimensions, getResponsiveLayout } from '../../utils/deviceAdaptation';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  TouchTargets,
+} from '../../styles/designSystem';
+import {
+  useResponsiveDimensions,
+  getResponsiveLayout,
+} from '../../utils/deviceAdaptation';
 import { hapticButtonPress } from '../../utils/hapticFeedback';
 import EnhancedKosherSelector from '../EnhancedKosherSelector';
 
@@ -17,121 +21,85 @@ interface KosherPricingPageProps {
   category: string;
 }
 
-const KosherPricingPage: React.FC<KosherPricingPageProps> = memo(({
-  formData,
-  onFormDataChange,
-  category,
-}) => {
-  const [errors, setErrors] = useState<{ [key: string]: string }>({});
-  
-  // Responsive design hooks
-  const dimensions = useResponsiveDimensions();
-  const responsiveLayout = getResponsiveLayout();
+const KosherPricingPage: React.FC<KosherPricingPageProps> = memo(
+  ({ formData, onFormDataChange }) => {
+    const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
-  const handleInputChange = useCallback((field: keyof ListingFormData, value: string | boolean) => {
-    onFormDataChange({ [field]: value });
-    
-    // Clear error when user starts typing
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
-    }
-  }, [onFormDataChange, errors]);
+    // Responsive design hooks
+    const dimensions = useResponsiveDimensions();
+    const responsiveLayout = getResponsiveLayout();
 
-  const kosherCategories = [
-    { 
-      value: 'Meat', 
-      label: 'Meat (Fleishig)', 
-      icon: '🥩', 
-      description: 'Serves meat dishes' 
-    },
-    { 
-      value: 'Dairy', 
-      label: 'Dairy (Milchig)', 
-      icon: '🧀', 
-      description: 'Serves dairy dishes' 
-    },
-    { 
-      value: 'Pareve', 
-      label: 'Pareve', 
-      icon: '🥗', 
-      description: 'Neither meat nor dairy' 
-    },
-  ];
+    const handleInputChange = useCallback(
+      (field: keyof ListingFormData, value: string | boolean) => {
+        onFormDataChange({ [field]: value });
 
-  const certifyingAgencies = [
-    { name: 'OU - Orthodox Union', symbol: 'ⓤ' },
-    { name: 'OK Kosher Certification', symbol: 'ⓚ' },
-    { name: 'Star-K', symbol: '✡️' },
-    { name: 'Kof-K', symbol: 'ⓚ' },
-    { name: 'CRC - Chicago Rabbinical Council', symbol: 'ⓒ' },
-    { name: 'Kosher Miami', symbol: 'Ⓜ️' },
-    { name: 'Other', symbol: '●' },
-  ];
+        // Clear error when user starts typing
+        if (errors[field]) {
+          setErrors(prev => ({ ...prev, [field]: '' }));
+        }
+      },
+      [onFormDataChange, errors],
+    );
 
-  const handleCategorySelect = useCallback((selectedCategory: string) => {
-    hapticButtonPress();
-    handleInputChange('kosher_category', selectedCategory);
-  }, [handleInputChange]);
+    const validateForm = useCallback(() => {
+      const newErrors: { [key: string]: string } = {};
 
-  const handleAgencySelect = useCallback((selectedAgency: string) => {
-    hapticButtonPress();
-    handleInputChange('certifying_agency', selectedAgency);
-    setShowAgencyModal(false);
-  }, [handleInputChange]);
+      // Required fields validation
+      if (!formData.kosher_category) {
+        newErrors.kosher_category = 'Please select a kosher category';
+      }
 
-  const validateForm = useCallback(() => {
-    const newErrors: { [key: string]: string } = {};
+      if (!formData.certifying_agency.trim()) {
+        newErrors.certifying_agency = 'Certifying agency is required';
+      }
 
-    // Required fields validation
-    if (!formData.kosher_category) {
-      newErrors.kosher_category = 'Please select a kosher category';
-    }
+      setErrors(newErrors);
+      return Object.keys(newErrors).length === 0;
+    }, [formData]);
 
-    if (!formData.certifying_agency.trim()) {
-      newErrors.certifying_agency = 'Certifying agency is required';
-    }
+    const handleNext = useCallback(() => {
+      if (validateForm()) {
+        return true;
+      }
+      return false;
+    }, [validateForm]);
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  }, [formData]);
+    // Expose validation function to parent
+    React.useEffect(() => {
+      (handleNext as any).validate = validateForm;
+    }, [validateForm, handleNext]);
 
-  const handleNext = useCallback(() => {
-    if (validateForm()) {
-      return true;
-    }
-    return false;
-  }, [validateForm]);
-
-  // Expose validation function to parent
-  React.useEffect(() => {
-    (handleNext as any).validate = validateForm;
-  }, [validateForm, handleNext]);
-
-
-  return (
-    <ScrollView 
-      style={styles.container} 
-      showsVerticalScrollIndicator={false}
-      contentContainerStyle={[
-        styles.content,
-        { paddingHorizontal: responsiveLayout.containerPadding }
-      ]}
-    >
-      <EnhancedKosherSelector
-        category={formData.kosher_category}
-        agency={formData.certifying_agency}
-        onCategoryChange={(category) => handleInputChange('kosher_category', category)}
-        onAgencyChange={(agency) => handleInputChange('certifying_agency', agency)}
-        customAgency={formData.custom_certifying_agency}
-        onCustomAgencyChange={(agency) => handleInputChange('custom_certifying_agency', agency)}
-        title="Kosher Certification"
-        subtitle="Help customers understand your kosher certification and standards"
-        compact={dimensions.isSmallScreen}
-        containerStyle={styles.enhancedKosherContainer}
-      />
-    </ScrollView>
-  );
-});
+    return (
+      <ScrollView
+        style={styles.container}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[
+          styles.content,
+          { paddingHorizontal: responsiveLayout.containerPadding },
+        ]}
+      >
+        <EnhancedKosherSelector
+          category={formData.kosher_category}
+          agency={formData.certifying_agency}
+          onCategoryChange={category =>
+            handleInputChange('kosher_category', category)
+          }
+          onAgencyChange={agency =>
+            handleInputChange('certifying_agency', agency)
+          }
+          customAgency={formData.custom_certifying_agency}
+          onCustomAgencyChange={agency =>
+            handleInputChange('custom_certifying_agency', agency)
+          }
+          title="Kosher Certification"
+          subtitle="Help customers understand your kosher certification and standards"
+          compact={dimensions.isSmallScreen}
+          containerStyle={styles.enhancedKosherContainer}
+        />
+      </ScrollView>
+    );
+  },
+);
 
 const styles = StyleSheet.create({
   container: {
@@ -235,8 +203,8 @@ const styles = StyleSheet.create({
     marginHorizontal: 0,
   },
   checkbox: {
-    width: 24,
-    height: 24,
+    width: TouchTargets.minimum,
+    height: TouchTargets.minimum,
     borderWidth: 2,
     borderColor: '#E5E5EA',
     borderRadius: 6,
@@ -352,7 +320,7 @@ const styles = StyleSheet.create({
   categoryOption: {
     backgroundColor: Colors.white,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: Colors.border.primary,
     borderRadius: BorderRadius.sm,
     padding: Spacing.xs,
     alignItems: 'center',
@@ -402,7 +370,7 @@ const styles = StyleSheet.create({
   agencySelector: {
     backgroundColor: Colors.white,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: Colors.border.primary,
     borderRadius: BorderRadius.sm,
     padding: Spacing.xs,
     flexDirection: 'row',

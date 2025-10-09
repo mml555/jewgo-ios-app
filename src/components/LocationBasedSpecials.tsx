@@ -9,7 +9,14 @@ import {
   ActivityIndicator,
   Dimensions,
 } from 'react-native';
-import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../styles/designSystem';
+import { errorLog } from '../utils/logger';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  Shadows,
+} from '../styles/designSystem';
 import { specialsService } from '../services/SpecialsService';
 import { NearbyRestaurantsWithSpecials, Special } from '../types/specials';
 
@@ -28,10 +35,15 @@ const LocationBasedSpecials: React.FC<LocationBasedSpecialsProps> = ({
 }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [restaurants, setRestaurants] = useState<NearbyRestaurantsWithSpecials[]>([]);
+  const [restaurants, setRestaurants] = useState<
+    NearbyRestaurantsWithSpecials[]
+  >([]);
   const [selectedRadius, setSelectedRadius] = useState(1000); // 1km default
   const [sortBy, setSortBy] = useState<'distance' | 'priority'>('distance');
-  const [lastLocation, setLastLocation] = useState<{ lat: number; lng: number }>({
+  const [lastLocation, setLastLocation] = useState<{
+    lat: number;
+    lng: number;
+  }>({
     lat: latitude,
     lng: longitude,
   });
@@ -55,7 +67,7 @@ const LocationBasedSpecials: React.FC<LocationBasedSpecialsProps> = ({
         latitude,
         longitude,
         selectedRadius,
-        20 // limit
+        20, // limit
       );
 
       if (response.success && response.data) {
@@ -63,12 +75,12 @@ const LocationBasedSpecials: React.FC<LocationBasedSpecialsProps> = ({
 
         // Sort by distance or priority
         if (sortBy === 'distance') {
-          sortedRestaurants = sortedRestaurants.sort((a, b) => 
-            a.distanceMeters - b.distanceMeters
+          sortedRestaurants = sortedRestaurants.sort(
+            (a, b) => a.distanceMeters - b.distanceMeters,
           );
         } else {
-          sortedRestaurants = sortedRestaurants.sort((a, b) => 
-            (b.maxPriority || 0) - (a.maxPriority || 0)
+          sortedRestaurants = sortedRestaurants.sort(
+            (a, b) => (b.maxPriority || 0) - (a.maxPriority || 0),
           );
         }
 
@@ -79,7 +91,7 @@ const LocationBasedSpecials: React.FC<LocationBasedSpecialsProps> = ({
       }
     } catch (err) {
       setError('Failed to load nearby restaurants');
-      console.error('Error loading nearby restaurants:', err);
+      errorLog('Error loading nearby restaurants:', err);
     } finally {
       setLoading(false);
     }
@@ -105,7 +117,7 @@ const LocationBasedSpecials: React.FC<LocationBasedSpecialsProps> = ({
     if (meters < 1000) {
       return `${Math.round(meters)}m`;
     }
-    return `${Math.round(meters / 1000 * 10) / 10}km`;
+    return `${Math.round((meters / 1000) * 10) / 10}km`;
   };
 
   // Get priority color
@@ -149,33 +161,42 @@ const LocationBasedSpecials: React.FC<LocationBasedSpecialsProps> = ({
           <View style={styles.topSpecialHeader}>
             <Text style={styles.topSpecialLabel}>🎯 Top Special</Text>
             {restaurant.maxPriority && restaurant.maxPriority > 0 && (
-              <View style={[
-                styles.priorityBadge,
-                { backgroundColor: getPriorityColor(restaurant.maxPriority) }
-              ]}>
+              <View
+                style={[
+                  styles.priorityBadge,
+                  { backgroundColor: getPriorityColor(restaurant.maxPriority) },
+                ]}
+              >
                 <Text style={styles.priorityText}>
                   Priority {restaurant.maxPriority}
                 </Text>
               </View>
             )}
           </View>
-          
+
           <TouchableOpacity
             style={styles.topSpecialCard}
             onPress={() => onSpecialPress?.(restaurant.topSpecial!)}
           >
-            <Text style={styles.topSpecialTitle}>{restaurant.topSpecial.title}</Text>
+            <Text style={styles.topSpecialTitle}>
+              {restaurant.topSpecial.title}
+            </Text>
             <Text style={styles.topSpecialDiscount}>
               {restaurant.topSpecial.discountLabel}
             </Text>
-            
+
             <View style={styles.specialMeta}>
               <Text style={styles.specialExpiry}>
-                Expires: {new Date(restaurant.topSpecial.validUntil).toLocaleDateString()}
+                Expires:{' '}
+                {new Date(
+                  restaurant.topSpecial.validUntil,
+                ).toLocaleDateString()}
               </Text>
               {restaurant.topSpecial.maxClaimsTotal && (
                 <Text style={styles.specialClaims}>
-                  {restaurant.topSpecial.maxClaimsTotal - restaurant.topSpecial.claimsTotal} left
+                  {restaurant.topSpecial.maxClaimsTotal -
+                    restaurant.topSpecial.claimsTotal}{' '}
+                  left
                 </Text>
               )}
             </View>
@@ -208,24 +229,27 @@ const LocationBasedSpecials: React.FC<LocationBasedSpecialsProps> = ({
       {/* Radius Selector */}
       <View style={styles.controlSection}>
         <Text style={styles.controlLabel}>Search Radius</Text>
-        <ScrollView 
-          horizontal 
+        <ScrollView
+          horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.radiusSelector}
         >
-          {radiusOptions.map((option) => (
+          {radiusOptions.map(option => (
             <TouchableOpacity
               key={option.value}
               style={[
                 styles.radiusOption,
-                selectedRadius === option.value && styles.radiusOptionActive
+                selectedRadius === option.value && styles.radiusOptionActive,
               ]}
               onPress={() => handleRadiusChange(option.value)}
             >
-              <Text style={[
-                styles.radiusOptionText,
-                selectedRadius === option.value && styles.radiusOptionTextActive
-              ]}>
+              <Text
+                style={[
+                  styles.radiusOptionText,
+                  selectedRadius === option.value &&
+                    styles.radiusOptionTextActive,
+                ]}
+              >
                 {option.label}
               </Text>
             </TouchableOpacity>
@@ -240,28 +264,32 @@ const LocationBasedSpecials: React.FC<LocationBasedSpecialsProps> = ({
           <TouchableOpacity
             style={[
               styles.sortOption,
-              sortBy === 'distance' && styles.sortOptionActive
+              sortBy === 'distance' && styles.sortOptionActive,
             ]}
             onPress={() => handleSortChange('distance')}
           >
-            <Text style={[
-              styles.sortOptionText,
-              sortBy === 'distance' && styles.sortOptionTextActive
-            ]}>
+            <Text
+              style={[
+                styles.sortOptionText,
+                sortBy === 'distance' && styles.sortOptionTextActive,
+              ]}
+            >
               📍 Distance
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[
               styles.sortOption,
-              sortBy === 'priority' && styles.sortOptionActive
+              sortBy === 'priority' && styles.sortOptionActive,
             ]}
             onPress={() => handleSortChange('priority')}
           >
-            <Text style={[
-              styles.sortOptionText,
-              sortBy === 'priority' && styles.sortOptionTextActive
-            ]}>
+            <Text
+              style={[
+                styles.sortOptionText,
+                sortBy === 'priority' && styles.sortOptionTextActive,
+              ]}
+            >
               ⭐ Priority
             </Text>
           </TouchableOpacity>
@@ -287,11 +315,13 @@ const LocationBasedSpecials: React.FC<LocationBasedSpecialsProps> = ({
   const renderResultsSummary = () => (
     <View style={styles.resultsSummary}>
       <Text style={styles.resultsCount}>
-        Found {restaurants.length} restaurants with specials within {formatDistance(selectedRadius)}
+        Found {restaurants.length} restaurants with specials within{' '}
+        {formatDistance(selectedRadius)}
       </Text>
       {restaurants.length > 0 && (
         <Text style={styles.resultsStats}>
-          {restaurants.reduce((sum, r) => sum + r.activeSpecialsCount, 0)} total specials available
+          {restaurants.reduce((sum, r) => sum + r.activeSpecialsCount, 0)} total
+          specials available
         </Text>
       )}
     </View>
@@ -301,7 +331,9 @@ const LocationBasedSpecials: React.FC<LocationBasedSpecialsProps> = ({
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={Colors.primary.main} />
-        <Text style={styles.loadingText}>Finding nearby restaurants with specials...</Text>
+        <Text style={styles.loadingText}>
+          Finding nearby restaurants with specials...
+        </Text>
       </View>
     );
   }
@@ -310,7 +342,10 @@ const LocationBasedSpecials: React.FC<LocationBasedSpecialsProps> = ({
     return (
       <View style={styles.errorContainer}>
         <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={loadNearbyRestaurants}>
+        <TouchableOpacity
+          style={styles.retryButton}
+          onPress={loadNearbyRestaurants}
+        >
           <Text style={styles.retryButtonText}>Retry</Text>
         </TouchableOpacity>
       </View>
@@ -319,7 +354,10 @@ const LocationBasedSpecials: React.FC<LocationBasedSpecialsProps> = ({
 
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+      >
         {renderLocationInfo()}
         {renderControls()}
         {renderResultsSummary()}
@@ -333,8 +371,9 @@ const LocationBasedSpecials: React.FC<LocationBasedSpecialsProps> = ({
             <Text style={styles.emptyIcon}>🍽️</Text>
             <Text style={styles.emptyTitle}>No Restaurants Found</Text>
             <Text style={styles.emptyDescription}>
-              No restaurants with active specials found within {formatDistance(selectedRadius)}. 
-              Try increasing your search radius.
+              No restaurants with active specials found within{' '}
+              {formatDistance(selectedRadius)}. Try increasing your search
+              radius.
             </Text>
           </View>
         )}
@@ -346,7 +385,7 @@ const LocationBasedSpecials: React.FC<LocationBasedSpecialsProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.background.primary,
   },
   scrollView: {
     flex: 1,
@@ -430,7 +469,7 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
     marginRight: Spacing.sm,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: Colors.border.primary,
   },
   radiusOptionActive: {
     backgroundColor: Colors.primary.main,
@@ -519,7 +558,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   distanceBadge: {
-    backgroundColor: Colors.primaryLight,
+    backgroundColor: Colors.primary.light,
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.xs,
     borderRadius: BorderRadius.sm,
@@ -542,7 +581,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   topSpecialContainer: {
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.background.primary,
     borderRadius: BorderRadius.md,
     padding: Spacing.md,
     marginBottom: Spacing.md,

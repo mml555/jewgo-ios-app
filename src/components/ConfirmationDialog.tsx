@@ -7,7 +7,13 @@ import {
   Modal,
   Dimensions,
 } from 'react-native';
-import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../styles/designSystem';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  Shadows,
+} from '../styles/designSystem';
 
 interface ConfirmationDialogProps {
   visible: boolean;
@@ -86,10 +92,12 @@ const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
               accessibilityRole="button"
               accessibilityLabel={confirmText}
             >
-              <Text style={[
-                styles.confirmButtonText,
-                destructive && styles.destructiveButtonText,
-              ]}>
+              <Text
+                style={[
+                  styles.confirmButtonText,
+                  destructive && styles.destructiveButtonText,
+                ]}
+              >
                 {confirmText}
               </Text>
             </TouchableOpacity>
@@ -115,7 +123,7 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: screenWidth * 0.85,
     alignItems: 'center',
-    ...Shadows.large,
+    ...Shadows.lg,
   },
   iconContainer: {
     marginBottom: Spacing.md,
@@ -154,7 +162,7 @@ const styles = StyleSheet.create({
   cancelButton: {
     backgroundColor: Colors.gray100,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: Colors.border.primary,
   },
   cancelButtonText: {
     ...Typography.styles.body,

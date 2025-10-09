@@ -11,8 +11,15 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
-import { Colors, Typography, Spacing, BorderRadius, TouchTargets } from '../styles/designSystem';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  TouchTargets,
+} from '../styles/designSystem';
 import { hapticNavigation, hapticSuccess } from '../utils/hapticFeedback';
+import { errorLog } from '../utils/logger';
 import { KeyboardManager } from '../utils/keyboardManager';
 import FormProgressIndicator from '../components/FormProgressIndicator';
 import ConfirmationDialog from '../components/ConfirmationDialog';
@@ -36,11 +43,11 @@ export interface MikvahFormData {
   phone: string;
   email: string;
   website: string;
-  
+
   // Mikvah-specific fields
   kosher_level: 'glatt' | 'chalav_yisrael' | 'regular';
   denomination: 'orthodox' | 'conservative' | 'reform' | 'chabad';
-  
+
   // Amenities
   has_parking: boolean;
   has_accessibility: boolean;
@@ -48,19 +55,19 @@ export interface MikvahFormData {
   has_heating: boolean;
   has_air_conditioning: boolean;
   has_wifi: boolean;
-  
+
   // Pricing
   price_per_use?: number;
   currency: string;
   accepts_cash: boolean;
   accepts_credit: boolean;
   accepts_checks: boolean;
-  
+
   // Social media
   facebook_url?: string;
   instagram_url?: string;
   website_url?: string;
-  
+
   // Operating hours
   operating_hours: Record<string, any>;
 }
@@ -94,7 +101,7 @@ const defaultFormData: MikvahFormData = {
 const AddMikvahScreen: React.FC = () => {
   const navigation = useNavigation();
   const { isAuthenticated, checkPermission } = useAuth();
-  
+
   const [currentPage, setCurrentPage] = useState(1);
   const [formData, setFormData] = useState<MikvahFormData>(defaultFormData);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -112,8 +119,11 @@ const AddMikvahScreen: React.FC = () => {
         'Please log in to add a new mikvah.',
         [
           { text: 'Cancel', onPress: () => navigation.goBack() },
-          { text: 'Login', onPress: () => navigation.navigate('Auth' as never) }
-        ]
+          {
+            text: 'Login',
+            onPress: () => navigation.navigate('Auth' as never),
+          },
+        ],
       );
       return;
     }
@@ -122,7 +132,7 @@ const AddMikvahScreen: React.FC = () => {
       Alert.alert(
         'Access Denied',
         'You do not have permission to create listings.',
-        [{ text: 'OK', onPress: () => navigation.goBack() }]
+        [{ text: 'OK', onPress: () => navigation.goBack() }],
       );
       return;
     }
@@ -132,44 +142,49 @@ const AddMikvahScreen: React.FC = () => {
     setFormData(prev => ({ ...prev, ...data }));
   }, []);
 
-  const validateStep = useCallback((step: number) => {
-    switch (step) {
-      case 1: // Basic Info
-        const basicErrors = [];
-        if (!formData.name.trim()) basicErrors.push('Mikvah name');
-        if (!formData.address.trim()) basicErrors.push('Address');
-        if (!formData.city.trim()) basicErrors.push('City');
-        if (!formData.state.trim()) basicErrors.push('State');
-        if (!formData.zip_code.trim()) basicErrors.push('ZIP code');
-        if (!formData.phone.trim()) basicErrors.push('Phone number');
-        if (!formData.kosher_level) basicErrors.push('Kosher level');
-        if (!formData.denomination) basicErrors.push('Denomination');
-        
-        return {
-          isValid: basicErrors.length === 0,
-          errors: basicErrors
-        };
-      
-      case 2: // Amenities
-        return { isValid: true, errors: [] };
-      
-      default:
-        return { isValid: true, errors: [] };
-    }
-  }, [formData]);
+  const validateStep = useCallback(
+    (step: number) => {
+      switch (step) {
+        case 1: // Basic Info
+          const basicErrors = [];
+          if (!formData.name.trim()) basicErrors.push('Mikvah name');
+          if (!formData.address.trim()) basicErrors.push('Address');
+          if (!formData.city.trim()) basicErrors.push('City');
+          if (!formData.state.trim()) basicErrors.push('State');
+          if (!formData.zip_code.trim()) basicErrors.push('ZIP code');
+          if (!formData.phone.trim()) basicErrors.push('Phone number');
+          if (!formData.kosher_level) basicErrors.push('Kosher level');
+          if (!formData.denomination) basicErrors.push('Denomination');
+
+          return {
+            isValid: basicErrors.length === 0,
+            errors: basicErrors,
+          };
+
+        case 2: // Amenities
+          return { isValid: true, errors: [] };
+
+        default:
+          return { isValid: true, errors: [] };
+      }
+    },
+    [formData],
+  );
 
   const handleNext = useCallback(async () => {
     KeyboardManager.dismiss();
-    
+
     if (currentPage < totalPages) {
       const stepValidation = validateStep(currentPage);
-      
+
       if (!stepValidation.isValid) {
-        const errorMessage = `Please complete the required fields: ${stepValidation.errors.join(', ')}`;
+        const errorMessage = `Please complete the required fields: ${stepValidation.errors.join(
+          ', ',
+        )}`;
         Alert.alert('Required Fields Missing', errorMessage, [{ text: 'OK' }]);
         return;
       }
-      
+
       hapticNavigation();
       setCurrentPage(prev => prev + 1);
     }
@@ -178,7 +193,7 @@ const AddMikvahScreen: React.FC = () => {
   const handleBack = useCallback(() => {
     KeyboardManager.dismiss();
     hapticNavigation();
-    
+
     if (currentPage > 1) {
       setCurrentPage(prev => prev - 1);
     } else {
@@ -188,25 +203,27 @@ const AddMikvahScreen: React.FC = () => {
 
   const handleSubmit = useCallback(async () => {
     const formValidation = validateStep(1);
-    
+
     if (!formValidation.isValid) {
       Alert.alert(
         'Form Incomplete',
-        `Please fix the following issues before submitting:\n\n${formValidation.errors.join('\n')}`,
-        [{ text: 'OK' }]
+        `Please fix the following issues before submitting:\n\n${formValidation.errors.join(
+          '\n',
+        )}`,
+        [{ text: 'OK' }],
       );
       return;
     }
-    
+
     setIsSubmitting(true);
-    
+
     try {
       const response = await apiV5Service.createMikvah(formData);
-      
+
       if (response.success) {
         hapticSuccess();
         setShowSuccessCelebration(true);
-        
+
         setTimeout(() => {
           navigation.goBack();
         }, 2000);
@@ -214,11 +231,11 @@ const AddMikvahScreen: React.FC = () => {
         throw new Error(response.error || 'Failed to create mikvah');
       }
     } catch (error) {
-      console.error('Error creating mikvah:', error);
+      errorLog('Error creating mikvah:', error);
       Alert.alert(
         'Submission Failed',
         'There was an error creating your mikvah listing. Please try again.',
-        [{ text: 'OK' }]
+        [{ text: 'OK' }],
       );
     } finally {
       setIsSubmitting(false);
@@ -257,16 +274,20 @@ const AddMikvahScreen: React.FC = () => {
 
   const getStepTitle = (step: number) => {
     switch (step) {
-      case 1: return 'Basic Information';
-      case 2: return 'Amenities & Pricing';
-      default: return '';
+      case 1:
+        return 'Basic Information';
+      case 2:
+        return 'Amenities & Pricing';
+      default:
+        return '';
     }
   };
 
   const steps = Array.from({ length: totalPages }, (_, index) => ({
     number: index + 1,
     title: getStepTitle(index + 1),
-    subtitle: index === 0 ? 'Tell us about your mikvah' : 'Set amenities and pricing',
+    subtitle:
+      index === 0 ? 'Tell us about your mikvah' : 'Set amenities and pricing',
     isCompleted: index + 1 < currentPage,
     isValid: validateStep(index + 1).isValid,
     isCurrent: index + 1 === currentPage,
@@ -276,7 +297,7 @@ const AddMikvahScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         style={styles.keyboardView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
@@ -296,8 +317,7 @@ const AddMikvahScreen: React.FC = () => {
         {/* Progress Indicator */}
         <FormProgressIndicator
           steps={steps}
-          currentStep={currentPage}
-          onStepPress={(step) => {
+          onStepPress={step => {
             if (step <= currentPage) {
               setCurrentPage(step);
             }
@@ -305,9 +325,7 @@ const AddMikvahScreen: React.FC = () => {
         />
 
         {/* Form Content */}
-        <View style={styles.content}>
-          {renderCurrentPage()}
-        </View>
+        <View style={styles.content}>{renderCurrentPage()}</View>
 
         {/* Navigation Footer */}
         <View style={styles.footer}>
@@ -328,7 +346,7 @@ const AddMikvahScreen: React.FC = () => {
                 <TouchableOpacity
                   style={[
                     styles.submitButton,
-                    isSubmitting && styles.submitButtonDisabled
+                    isSubmitting && styles.submitButtonDisabled,
                   ]}
                   onPress={handleSubmit}
                   activeOpacity={0.8}
@@ -388,11 +406,11 @@ const styles = StyleSheet.create({
   backButtonText: {
     fontSize: Typography.sizes.md,
     color: Colors.primary.main,
-    fontWeight: Typography.weights.semibold,
+    fontWeight: '600' as const,
   },
   headerTitle: {
     fontSize: Typography.sizes.lg,
-    fontWeight: Typography.weights.bold,
+    fontWeight: '700' as const,
     color: Colors.text.primary,
   },
   headerSpacer: {
@@ -433,7 +451,7 @@ const styles = StyleSheet.create({
   nextButtonText: {
     color: Colors.text.inverse,
     fontSize: Typography.sizes.md,
-    fontWeight: Typography.weights.semibold,
+    fontWeight: '600' as const,
   },
   submitButton: {
     backgroundColor: Colors.status.success,
@@ -450,7 +468,7 @@ const styles = StyleSheet.create({
   submitButtonText: {
     color: Colors.text.inverse,
     fontSize: Typography.sizes.md,
-    fontWeight: Typography.weights.semibold,
+    fontWeight: '600' as const,
   },
 });
 

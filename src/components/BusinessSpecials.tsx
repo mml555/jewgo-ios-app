@@ -8,7 +8,14 @@ import {
   Alert,
   Image,
 } from 'react-native';
-import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../styles/designSystem';
+import { errorLog } from '../utils/logger';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  Shadows,
+} from '../styles/designSystem';
 import { specialsService } from '../services/SpecialsService';
 import { Special } from '../types/specials';
 import EateryIcon from './EateryIcon';
@@ -40,12 +47,14 @@ const BusinessSpecials: React.FC<BusinessSpecialsProps> = ({
     const validUntilDate = new Date(validUntil);
     const now = new Date();
     const timeLeftMs = validUntilDate.getTime() - now.getTime();
-    
+
     if (timeLeftMs <= 0) return 'Expired';
-    
+
     const days = Math.floor(timeLeftMs / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((timeLeftMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    
+    const hours = Math.floor(
+      (timeLeftMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60),
+    );
+
     if (days > 0) {
       return `${days} day${days > 1 ? 's' : ''} left`;
     } else if (hours > 0) {
@@ -77,17 +86,17 @@ const BusinessSpecials: React.FC<BusinessSpecialsProps> = ({
     try {
       setLoading(true);
       setError(null);
-      
+
       infoLog('🔍 Loading specials for business:', businessId);
-      
+
       // Use the search endpoint with business_id filter
       const response = await specialsService.searchSpecials({
         business_id: businessId,
-        active_only: true
+        active_only: true,
       });
-      
+
       infoLog('🔍 Specials response:', response);
-      
+
       if (response.success && response.data) {
         infoLog('🔍 Found specials:', response.data.specials.length);
         setSpecials(response.data.specials.slice(0, maxDisplayCount));
@@ -96,7 +105,7 @@ const BusinessSpecials: React.FC<BusinessSpecialsProps> = ({
         setError(response.error || 'Failed to load specials');
       }
     } catch (err) {
-      console.error('Error loading business specials:', err);
+      errorLog('Error loading business specials:', err);
       setError('Failed to load specials');
     } finally {
       setLoading(false);
@@ -107,12 +116,11 @@ const BusinessSpecials: React.FC<BusinessSpecialsProps> = ({
     loadSpecials();
   }, [loadSpecials]);
 
-
   if (loading) {
     return (
-      <View style={styles.specialCardsContainer}>
-        <View style={styles.specialCardsHeader}>
-          <Text style={styles.specialCardsTitle}>Current Specials</Text>
+      <View style={styles.specialsSection}>
+        <View style={styles.specialsHeader}>
+          <Text style={styles.specialsTitle}>Current Specials</Text>
         </View>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="small" color={Colors.primary.main} />
@@ -124,26 +132,31 @@ const BusinessSpecials: React.FC<BusinessSpecialsProps> = ({
 
   if (error || specials.length === 0) {
     return (
-      <View style={styles.specialCardsContainer}>
-        <View style={styles.specialCardsHeader}>
-          <Text style={styles.specialCardsTitle}>Current Specials</Text>
-          <TouchableOpacity 
+      <View style={styles.specialsSection}>
+        <View style={styles.specialsHeader}>
+          <Text style={styles.specialsTitle}>Current Specials</Text>
+          <TouchableOpacity
             style={[
-              styles.viewAllSpecialsButton,
-              pressedButtons.has('view-all-specials') && styles.viewAllSpecialsButtonPressed
+              styles.viewAllButton,
+              pressedButtons.has('view-all-specials') &&
+                styles.viewAllButtonPressed,
             ]}
             onPress={onViewAllPress}
             onPressIn={() => handlePressIn('view-all-specials')}
             onPressOut={() => handlePressOut('view-all-specials')}
             activeOpacity={0.8}
           >
-            <Text style={styles.viewAllSpecialsButtonText}>View All</Text>
+            <Text style={styles.viewAllButtonText}>View All</Text>
           </TouchableOpacity>
         </View>
         <View style={styles.noSpecialsContainer}>
           <EateryIcon size={32} color={Colors.gray400} />
-          <Text style={styles.noSpecialsText}>No current specials available</Text>
-          <Text style={styles.noSpecialsSubtext}>Check back soon for new offers!</Text>
+          <Text style={styles.noSpecialsText}>
+            No current specials available
+          </Text>
+          <Text style={styles.noSpecialsSubtext}>
+            Check back soon for new offers!
+          </Text>
         </View>
       </View>
     );
@@ -152,7 +165,8 @@ const BusinessSpecials: React.FC<BusinessSpecialsProps> = ({
   // Get emoji for special type
   const getSpecialEmoji = (title: string): string => {
     const lowerTitle = title.toLowerCase();
-    if (lowerTitle.includes('happy hour') || lowerTitle.includes('drink')) return '🍺';
+    if (lowerTitle.includes('happy hour') || lowerTitle.includes('drink'))
+      return '🍺';
     if (lowerTitle.includes('student')) return '🎓';
     if (lowerTitle.includes('weekend')) return '🎉';
     if (lowerTitle.includes('lunch')) return '🍽️';
@@ -168,87 +182,96 @@ const BusinessSpecials: React.FC<BusinessSpecialsProps> = ({
   };
 
   return (
-    <View style={styles.specialCardsContainer}>
-      {/* Original horizontal card layout */}
-      {specials.slice(0, maxDisplayCount).map((special, index) => (
-        <TouchableOpacity 
-          key={special.id}
-          style={[
-            styles.specialCard,
-            pressedButtons.has(`special-${index}`) && styles.specialCardPressed
-          ]}
-          onPress={() => onSpecialPress(special.id)}
-          onPressIn={() => handlePressIn(`special-${index}`)}
-          onPressOut={() => handlePressOut(`special-${index}`)}
-          activeOpacity={0.8}
-        >
-          <View style={styles.specialCardImage}>
-            {special.image_url && !imageErrors.has(special.id) ? (
-              <Image 
-                source={{ uri: special.image_url }}
-                style={styles.specialCardImageContent}
-                resizeMode="cover"
-                onError={() => handleImageError(special.id)}
-              />
-            ) : (
-              <Text style={styles.specialCardImageText}>
-                {getSpecialEmoji(special.title)}
+    <View style={styles.specialsSection}>
+      {/* Section Title */}
+      <View style={styles.specialsHeader}>
+        <Text style={styles.specialsTitle}>Current Specials</Text>
+        {specials.length > 0 && (
+          <TouchableOpacity
+            style={[
+              styles.viewAllButton,
+              pressedButtons.has('view-all-specials') &&
+                styles.viewAllButtonPressed,
+            ]}
+            onPress={onViewAllPress}
+            onPressIn={() => handlePressIn('view-all-specials')}
+            onPressOut={() => handlePressOut('view-all-specials')}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.viewAllButtonText}>View All</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* Special Cards */}
+      <View style={styles.specialCardsContainer}>
+        {specials.slice(0, maxDisplayCount).map((special, index) => (
+          <TouchableOpacity
+            key={special.id}
+            style={[
+              styles.specialCard,
+              pressedButtons.has(`special-${index}`) &&
+                styles.specialCardPressed,
+            ]}
+            onPress={() => onSpecialPress(special.id)}
+            onPressIn={() => handlePressIn(`special-${index}`)}
+            onPressOut={() => handlePressOut(`special-${index}`)}
+            activeOpacity={0.8}
+          >
+            <View style={styles.specialCardImage}>
+              {special.image_url && !imageErrors.has(special.id) ? (
+                <Image
+                  source={{ uri: special.image_url }}
+                  style={styles.specialCardImageContent}
+                  resizeMode="cover"
+                  onError={() => handleImageError(special.id)}
+                />
+              ) : (
+                <Text style={styles.specialCardImageText}>
+                  {getSpecialEmoji(special.title)}
+                </Text>
+              )}
+            </View>
+            <View style={styles.specialCardContent}>
+              <Text style={styles.specialCardTitle} numberOfLines={1}>
+                {special.title}
               </Text>
-            )}
-          </View>
-          <View style={styles.specialCardContent}>
-            <Text style={styles.specialCardTitle} numberOfLines={1}>
-              {special.title}
-            </Text>
-            <Text style={styles.specialCardDescription} numberOfLines={1}>
-              {special.discountLabel}
-            </Text>
-            {special.validUntil && (
               <Text style={styles.specialCardDescription} numberOfLines={1}>
-                {formatTimeLeft(special.validUntil)}
+                {special.discountLabel}
               </Text>
-            )}
-          </View>
-        </TouchableOpacity>
-      ))}
-      
-      {/* Add View All button if there are specials */}
-      {specials.length > 0 && (
-        <TouchableOpacity 
-          style={[
-            styles.viewAllButton,
-            pressedButtons.has('view-all-specials') && styles.viewAllButtonPressed
-          ]}
-          onPress={onViewAllPress}
-          onPressIn={() => handlePressIn('view-all-specials')}
-          onPressOut={() => handlePressOut('view-all-specials')}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.viewAllButtonText}>View All</Text>
-        </TouchableOpacity>
-      )}
+              {special.validUntil && (
+                <Text style={styles.specialCardDescription} numberOfLines={1}>
+                  {formatTimeLeft(special.validUntil)}
+                </Text>
+              )}
+            </View>
+          </TouchableOpacity>
+        ))}
+      </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  specialCardsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  specialsSection: {
     marginBottom: Spacing.md,
-    gap: Spacing.sm,
   },
-  specialCardsHeader: {
+  specialsHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: Spacing.sm,
   },
-  specialCardsTitle: {
+  specialsTitle: {
     ...Typography.styles.h4,
     color: Colors.text.primary,
     fontSize: 16,
     fontWeight: '600',
+  },
+  specialCardsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: Spacing.sm,
   },
   specialCard: {
     flex: 1,
@@ -319,25 +342,6 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.95 }],
   },
   viewAllButtonText: {
-    ...Typography.styles.caption,
-    color: Colors.white,
-    fontWeight: '600',
-    fontSize: 12,
-  },
-  viewAllSpecialsButton: {
-    backgroundColor: Colors.primary.main,
-    borderRadius: BorderRadius.md,
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-    justifyContent: 'center',
-    alignItems: 'center',
-    ...Shadows.sm,
-  },
-  viewAllSpecialsButtonPressed: {
-    backgroundColor: Colors.primary.dark,
-    transform: [{ scale: 0.95 }],
-  },
-  viewAllSpecialsButtonText: {
     ...Typography.styles.caption,
     color: Colors.white,
     fontWeight: '600',

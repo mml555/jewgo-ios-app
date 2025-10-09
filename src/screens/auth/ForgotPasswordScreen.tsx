@@ -11,11 +11,12 @@ import {
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigation } from '@react-navigation/native';
+import { errorLog } from '../../utils/logger';
 
 const ForgotPasswordScreen: React.FC = () => {
   const { requestPasswordReset, isLoading } = useAuth();
   const navigation = useNavigation();
-  
+
   const [email, setEmail] = useState('');
   const [emailSent, setEmailSent] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -42,11 +43,11 @@ const ForgotPasswordScreen: React.FC = () => {
       await requestPasswordReset(email.trim().toLowerCase());
       setEmailSent(true);
     } catch (error: any) {
-      console.error('Password reset error:', error);
+      errorLog('Password reset error:', error);
       Alert.alert(
         'Reset Failed',
         error.message || 'An error occurred. Please try again.',
-        [{ text: 'OK' }]
+        [{ text: 'OK' }],
       );
     }
   }, [email, requestPasswordReset, validateForm]);
@@ -64,14 +65,11 @@ const ForgotPasswordScreen: React.FC = () => {
             We've sent a password reset link to {email}
           </Text>
           <Text style={styles.description}>
-            Please check your email and follow the instructions to reset your password.
-            The link will expire in 15 minutes.
+            Please check your email and follow the instructions to reset your
+            password. The link will expire in 15 minutes.
           </Text>
-          
-          <TouchableOpacity
-            style={styles.button}
-            onPress={navigateToLogin}
-          >
+
+          <TouchableOpacity style={styles.button} onPress={navigateToLogin}>
             <Text style={styles.buttonText}>Back to Login</Text>
           </TouchableOpacity>
         </View>
@@ -88,7 +86,8 @@ const ForgotPasswordScreen: React.FC = () => {
         <View style={styles.header}>
           <Text style={styles.title}>Reset Password</Text>
           <Text style={styles.subtitle}>
-            Enter your email address and we'll send you a link to reset your password.
+            Enter your email address and we'll send you a link to reset your
+            password.
           </Text>
         </View>
 
@@ -96,10 +95,7 @@ const ForgotPasswordScreen: React.FC = () => {
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Email</Text>
             <TextInput
-              style={[
-                styles.input,
-                errors.email && styles.inputError
-              ]}
+              style={[styles.input, errors.email && styles.inputError]}
               value={email}
               onChangeText={setEmail}
               placeholder="Enter your email address"

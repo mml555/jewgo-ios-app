@@ -1,15 +1,16 @@
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
+import { RootStackParamList } from '../types/navigation';
 import { useAuth } from '../contexts/AuthContext';
 import AuthNavigator from './AuthNavigator';
 import AppNavigator from './AppNavigator';
 import LoadingScreen from '../screens/LoadingScreen';
 
-const Stack = createStackNavigator();
+const Stack = createStackNavigator<RootStackParamList>();
 
 const RootNavigator: React.FC = () => {
-  const { isAuthenticated, hasAnyAuth, isInitializing, createGuestSession } = useAuth();
-
+  const { isAuthenticated, hasAnyAuth, isInitializing, createGuestSession } =
+    useAuth();
 
   if (isInitializing) {
     return <LoadingScreen />;
