@@ -47,8 +47,9 @@ test_endpoint() {
     return 1
   }
   
-  body=$(echo "$response" | head -n -1)
-  status=$(echo "$response" | tail -n 1)
+  # macOS-compatible parsing
+  body=$(echo "$response" | sed '$d')
+  status=$(echo "$response" | tail -1)
   
   if [ "$status" -eq "$expected_status" ]; then
     echo -e "${GREEN}✅ OK (HTTP $status)${NC}"

@@ -55,8 +55,9 @@ while true; do
     continue
   }
   
-  body=$(echo "$response" | head -n -1)
-  status=$(echo "$response" | tail -n 1)
+  # macOS-compatible parsing
+  body=$(echo "$response" | sed '$d')
+  status=$(echo "$response" | tail -1)
   
   if [ "$status" -eq 200 ]; then
     FAILURE_COUNT=0
