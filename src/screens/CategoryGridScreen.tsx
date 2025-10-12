@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useEffect, useState } from 'react';
+import React, { useCallback, useMemo, useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import { useLocation, calculateDistance } from '../hooks/useLocation';
 import CategoryCard from '../components/CategoryCard';
 import JobCard from '../components/JobCard';
 import FastButton from '../components/FastButton';
+import { SkeletonGrid } from '../components/SkeletonLoader';
 import {
   Colors,
   Typography,
@@ -26,6 +27,9 @@ import {
 import { debugLog, errorLog } from '../utils/logger';
 import { apiService } from '../services/api';
 import jobSeekersService from '../services/JobSeekersService';
+import EventsService, { Event, EventFilters } from '../services/EventsService';
+import { usePrefetchDetails } from '../hooks/usePrefetchNavigation';
+import { enhancedApiService } from '../services/EnhancedApiService';
 
 interface CategoryGridScreenProps {
   categoryKey: string;
@@ -54,6 +58,135 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
       navigation.navigate('Shtetl' as never);
     }
   }, [categoryKey, navigation]);
+
+  // State for events data
+  const [eventsData, setEventsData] = useState<Event[]>([]);
+  const [eventsLoading, setEventsLoading] = useState(false);
+  const [eventsRefreshing, setEventsRefreshing] = useState(false);
+  const [eventsError, setEventsError] = useState<string | null>(null);
+  const [eventsPage, setEventsPage] = useState(1);
+  const [eventsHasMore, setEventsHasMore] = useState(true);
+  const [eventsFilters, setEventsFilters] = useState<EventFilters>({});
+
+  // Use refs to track fetching state, mounted state, and abort controller
+  const isFetchingEventsRef = useRef(false);
+  const lastFetchParamsRef = useRef<string>('');
+  const eventsAbortControllerRef = useRef<AbortController | null>(null);
+  const isMountedRef = useRef(true);
+  
+  // Memoized fetch function to avoid recreating on every render
+  const fetchEventsData = useCallback(async (page = 1, isRefresh = false, isLoadMore = false) => {
+    if (categoryKey !== 'events') return;
+    
+    // Create a stable key from params to detect actual changes
+    const paramsKey = JSON.stringify({ query, eventsFilters, page });
+    
+    // Prevent duplicate fetches for the same params (but allow load more)
+    if (!isRefresh && !isLoadMore && lastFetchParamsRef.current === paramsKey) {
+      return;
+    }
+    
+    // Prevent concurrent fetches
+    if (isFetchingEventsRef.current) return;
+    
+    try {
+      // Cancel any in-flight request
+      if (eventsAbortControllerRef.current) {
+        eventsAbortControllerRef.current.abort();
+      }
+      
+      // Create new abort controller
+      eventsAbortControllerRef.current = new AbortController();
+      
+      isFetchingEventsRef.current = true;
+      lastFetchParamsRef.current = paramsKey;
+      
+      if (isRefresh) {
+        setEventsRefreshing(true);
+      } else {
+        setEventsLoading(true);
+      }
+      setEventsError(null);
+
+      const apiFilters: EventFilters = {
+        page,
+        limit: 20,
+        sortBy: 'event_date',
+        sortOrder: 'ASC',
+        ...eventsFilters, // Include any advanced filters
+      };
+
+      if (query) {
+        apiFilters.search = query;
+      }
+
+      const result = await EventsService.getEvents(apiFilters);
+      
+      // Check if component is still mounted before updating state
+      if (!isMountedRef.current) return;
+      
+      if (isRefresh || page === 1) {
+        setEventsData(result.events);
+      } else {
+        setEventsData(prev => [...prev, ...result.events]);
+      }
+      
+      setEventsHasMore(result.events.length === 20);
+      setEventsPage(page);
+      
+      debugLog('✅ Events fetched successfully:', {
+        count: result.events.length,
+        page,
+        hasMore: result.events.length === 20,
+      });
+    } catch (error: any) {
+      // Ignore abort errors
+      if (error.name === 'AbortError') {
+        debugLog('⚠️ Events fetch aborted (expected during navigation/filters)');
+        return;
+      }
+      
+      errorLog('❌ Error fetching events:', {
+        message: error?.message || 'Unknown error',
+        status: error?.status,
+        page,
+        filters: apiFilters,
+        error: error,
+      });
+      
+      if (isMountedRef.current) {
+        setEventsError(error?.message || 'Failed to load events. Please try again.');
+      }
+    } finally {
+      if (isMountedRef.current) {
+        setEventsLoading(false);
+        setEventsRefreshing(false);
+        isFetchingEventsRef.current = false;
+      }
+    }
+  }, [categoryKey, query, eventsFilters]);
+  
+  // Load events when dependencies change
+  useEffect(() => {
+    if (categoryKey !== 'events') return;
+    
+    fetchEventsData(1, false, false);
+  }, [categoryKey, fetchEventsData]);
+  
+  // Separate function for refresh and load more
+  const fetchEvents = useCallback(async (page = 1, isRefresh = false) => {
+    await fetchEventsData(page, isRefresh, page > 1);
+  }, [fetchEventsData]);
+  
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+      if (eventsAbortControllerRef.current) {
+        eventsAbortControllerRef.current.abort();
+      }
+    };
+  }, []);
 
   const { data, loading, refreshing, hasMore, error, refresh, loadMore } =
     useCategoryData({
@@ -350,6 +483,11 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
 
   // Apply filters and sorting to the data
   const filteredData = useMemo(() => {
+    // Use events data for events category
+    if (categoryKey === 'events') {
+      return eventsData;
+    }
+
     // Use job seekers data if in seeking mode, otherwise use regular data
     // If API data is available, use it; otherwise fall back to mock data
     let sourceData = data;
@@ -550,18 +688,53 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
     jobSeekersData,
     mockJobSeekersData,
     jobSeekersError,
+    eventsData,
   ]);
 
   // Memoized render item to prevent unnecessary re-renders
+  // Transform Event to CategoryItem for consistent grid display
+  const transformEventToCategoryItem = useCallback((event: Event): CategoryItem => {
+    return {
+      id: event.id,
+      title: event.title,
+      description: event.description,
+      imageUrl: event.flyer_url || event.flyer_thumbnail_url,
+      category: 'events',
+      rating: undefined,
+      coordinate: event.latitude && event.longitude 
+        ? { latitude: event.latitude, longitude: event.longitude }
+        : undefined,
+      zip_code: event.zip_code,
+      latitude: event.latitude,
+      longitude: event.longitude,
+      price: event.is_free ? 'Free' : 'Paid',
+      isOpen: event.status === 'approved',
+      openWeekends: true,
+      phone: event.contact_phone,
+      address: event.address || event.location_display,
+      city: event.city,
+      state: event.state,
+      // Additional event-specific info in subtitle
+      subtitle: `${EventsService.formatEventDate(event.event_date)} • ${event.venue_name || event.city || ''}`,
+    };
+  }, []);
+
   const renderItem = useCallback(
-    ({ item }: { item: CategoryItem }) => {
-      // Use JobCard for jobs category, CategoryCard for all others
-      if (categoryKey === 'jobs') {
-        return <JobCard item={item} categoryKey={categoryKey} />;
+    ({ item }: { item: CategoryItem | Event }) => {
+      // Transform events to use standard CategoryCard for consistent grid layout
+      if (categoryKey === 'events') {
+        const event = item as Event;
+        const categoryItem = transformEventToCategoryItem(event);
+        return <CategoryCard item={categoryItem} categoryKey={categoryKey} />;
       }
-      return <CategoryCard item={item} categoryKey={categoryKey} />;
+      // Use JobCard for jobs category
+      if (categoryKey === 'jobs') {
+        return <JobCard item={item as CategoryItem} categoryKey={categoryKey} />;
+      }
+      // Use CategoryCard for all other categories
+      return <CategoryCard item={item as CategoryItem} categoryKey={categoryKey} />;
     },
-    [categoryKey],
+    [categoryKey, transformEventToCategoryItem],
   );
 
   // Memoized key extractor
@@ -588,8 +761,8 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
         (item as any).entity_type === 'job_seeker' ||
         item.id?.startsWith('seeker-')
       ) {
-        (navigation as any).navigate('JobSeekerDetail', {
-          jobSeekerId: item.id,
+        (navigation as any).navigate('JobSeekerDetailV2', {
+          profileId: item.id,
         });
       } else {
         (navigation as any).navigate('ListingDetail', {
@@ -603,27 +776,36 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
 
   // Handle end reached for infinite scroll
   const handleEndReached = useCallback(() => {
-    if (!loading && hasMore) {
-      loadMore();
+    if (categoryKey === 'events') {
+      if (!eventsLoading && eventsHasMore) {
+        fetchEvents(eventsPage + 1, false);
+      }
+    } else {
+      if (!loading && hasMore) {
+        loadMore();
+      }
     }
-  }, [loading, hasMore, loadMore]);
+  }, [categoryKey, loading, hasMore, loadMore, eventsLoading, eventsHasMore, eventsPage, fetchEvents]);
 
   // Memoized refresh control
   const refreshControl = useMemo(
     () => (
       <RefreshControl
-        refreshing={refreshing}
-        onRefresh={refresh}
+        refreshing={categoryKey === 'events' ? eventsRefreshing : refreshing}
+        onRefresh={categoryKey === 'events' ? () => fetchEvents(1, true) : refresh}
         tintColor={Colors.link}
         colors={[Colors.link]}
       />
     ),
-    [refreshing, refresh],
+    [categoryKey, eventsRefreshing, refreshing, refresh, fetchEvents],
   );
 
   // Memoized footer component for loading indicator
   const renderFooter = useCallback(() => {
-    if (!loading || data.length === 0) return null;
+    const isLoading = categoryKey === 'events' ? eventsLoading : loading;
+    const hasData = categoryKey === 'events' ? eventsData.length > 0 : data.length > 0;
+    
+    if (!isLoading || !hasData) return null;
 
     return (
       <View style={styles.footerLoader}>
@@ -631,23 +813,28 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
         <Text style={styles.footerText}>Loading more...</Text>
       </View>
     );
-  }, [loading, data.length]);
+  }, [categoryKey, loading, data.length, eventsLoading, eventsData.length]);
 
   // Memoized empty component
   const renderEmpty = useCallback(() => {
-    if (loading) return null;
+    const isLoading = categoryKey === 'events' ? eventsLoading : loading;
+    const errorMessage = categoryKey === 'events' ? eventsError : error;
+    
+    if (isLoading) return null;
 
     return (
       <View style={styles.emptyContainer}>
-        <Text style={styles.emptyTitle}>No items found</Text>
+        <Text style={styles.emptyTitle}>
+          {errorMessage ? 'Error loading data' : 'No items found'}
+        </Text>
         <Text style={styles.emptyDescription}>
-          {query
+          {errorMessage || (query
             ? `No results for "${query}"`
-            : 'No items available in this category'}
+            : `No ${categoryKey === 'events' ? 'events' : 'items'} available`)}
         </Text>
       </View>
     );
-  }, [loading, query]);
+  }, [categoryKey, loading, eventsLoading, query, error, eventsError]);
 
   // Memoized error component
   const renderError = useCallback(() => {
@@ -661,8 +848,28 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
     );
   }, [error]);
 
+  // Prefetch details for items in the list
+  usePrefetchDetails(
+    filteredData.slice(0, 5),
+    async (id: string) => {
+      return enhancedApiService.prefetchListing(id);
+    }
+  );
+
   // Memoized column wrapper style for 2-column layout
   const columnWrapperStyle = useMemo(() => styles.row, []);
+
+  // Show skeleton loader on initial load
+  const isInitialLoading = (categoryKey === 'events' ? eventsLoading : loading) && 
+                           (categoryKey === 'events' ? eventsData.length === 0 : data.length === 0);
+
+  if (isInitialLoading) {
+    return (
+      <View style={styles.container}>
+        <SkeletonGrid count={6} columns={2} />
+      </View>
+    );
+  }
 
   if (error && data.length === 0) {
     return <View style={styles.container}>{renderError()}</View>;
@@ -729,6 +936,7 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
       )}
 
       <FlatList
+        key="grid-list"
         data={filteredData}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
@@ -883,6 +1091,44 @@ const styles = StyleSheet.create({
     color: '#8E8E93',
     textAlign: 'center',
     lineHeight: 22,
+  },
+  eventsFilterBar: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    backgroundColor: Colors.background.primary,
+  },
+  advancedFiltersButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    backgroundColor: Colors.primary.main,
+    borderRadius: BorderRadius.md,
+    ...Shadows.small,
+  },
+  advancedFiltersIcon: {
+    fontSize: 16,
+    marginRight: Spacing.xs,
+  },
+  advancedFiltersText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+  },
+  filterCountBadge: {
+    marginLeft: Spacing.xs,
+    backgroundColor: Colors.error,
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  filterCountText: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
   },
 });
 

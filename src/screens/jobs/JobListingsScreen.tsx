@@ -22,12 +22,15 @@ import JobsService, {
 } from '../../services/JobsService';
 import { Spacing } from '../../styles/designSystem';
 import { AppStackParamList } from '../../types/navigation';
+import { FALLBACK_INDUSTRIES, FALLBACK_JOB_TYPES } from '../../utils/fallbackData';
+import { useLocation, calculateDistance } from '../../hooks/useLocation';
 
 type JobListingsScreenNavigationProp = StackNavigationProp<AppStackParamList>;
 
 const JobListingsScreen: React.FC = () => {
   const navigation = useNavigation<JobListingsScreenNavigationProp>();
   const insets = useSafeAreaInsets();
+  const { location } = useLocation();
 
   // State
   const [jobs, setJobs] = useState<JobListing[]>([]);
@@ -46,17 +49,10 @@ const JobListingsScreen: React.FC = () => {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
 
-  // Load lookup data
-  useEffect(() => {
-    loadLookupData();
-  }, []);
+  // Track if rate limited to prevent infinite loops
+  const [isRateLimited, setIsRateLimited] = useState(false);
 
-  // Load jobs
-  useEffect(() => {
-    loadJobs();
-  }, [selectedIndustry, selectedJobType, searchQuery]);
-
-  const loadLookupData = async () => {
+  const loadLookupData = useCallback(async () => {
     try {
       const [industriesRes, jobTypesRes] = await Promise.all([
         JobsService.getIndustries(),
@@ -66,50 +62,98 @@ const JobListingsScreen: React.FC = () => {
       setJobTypes(jobTypesRes.jobTypes);
     } catch (error) {
       console.error('Error loading lookup data:', error);
+      
+      // Provide fallback data
+      setIndustries(FALLBACK_INDUSTRIES);
+      setJobTypes(FALLBACK_JOB_TYPES);
+      
+      // Show a subtle notification that we're using offline data
+      console.log('Using fallback data due to API connectivity issues');
     }
-  };
+  }, []);
 
-  const loadJobs = async (pageNum = 1, append = false) => {
-    try {
-      if (!append) setLoading(true);
+  // Load lookup data on mount
+  useEffect(() => {
+    loadLookupData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty deps - only run on mount
 
-      const response = await JobsService.getJobListings({
-        industry: selectedIndustry || undefined,
-        jobType: selectedJobType || undefined,
-        search: searchQuery || undefined,
-        page: pageNum,
-        limit: 20,
-        sortBy: 'created_at',
-        sortOrder: 'DESC',
-      });
-
-      if (append) {
-        setJobs([...jobs, ...response.jobListings]);
-      } else {
-        setJobs(response.jobListings);
+  const loadJobs = useCallback(
+    async (pageNum = 1, append = false) => {
+      // Don't retry if we're rate limited
+      if (isRateLimited) {
+        console.log('Skipping request - rate limited');
+        setLoading(false);
+        setRefreshing(false);
+        return;
       }
 
-      setHasMore(response.pagination.page < response.pagination.totalPages);
-      setPage(pageNum);
-    } catch (error) {
-      console.error('Error loading jobs:', error);
-      Alert.alert('Error', 'Failed to load job listings');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
+      try {
+        if (!append) setLoading(true);
+
+        const response = await JobsService.getJobListings({
+          industry: selectedIndustry || undefined,
+          jobType: selectedJobType || undefined,
+          search: searchQuery || undefined,
+          page: pageNum,
+          limit: 20,
+          sortBy: 'created_at',
+          sortOrder: 'DESC',
+        });
+
+        if (append) {
+          setJobs(prevJobs => [...prevJobs, ...response.jobListings]);
+        } else {
+          setJobs(response.jobListings);
+        }
+
+        setHasMore(response.pagination.page < response.pagination.totalPages);
+        setPage(pageNum);
+        setIsRateLimited(false); // Clear rate limit flag on success
+      } catch (error: any) {
+        console.error('Error loading jobs:', error);
+        
+        // Check if rate limited or blocked
+        const errorMessage = error?.message || '';
+        if (
+          errorMessage.includes('Rate limit') ||
+          errorMessage.includes('Access temporarily blocked') ||
+          errorMessage.includes('429') ||
+          errorMessage.includes('403')
+        ) {
+          setIsRateLimited(true);
+          Alert.alert(
+            'Too Many Requests',
+            'Please wait a few minutes before trying again.',
+            [{ text: 'OK' }],
+          );
+        } else {
+          Alert.alert('Error', 'Failed to load job listings');
+        }
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [selectedIndustry, selectedJobType, searchQuery, isRateLimited],
+  );
+
+  // Load jobs when filters change
+  useEffect(() => {
+    loadJobs(1, false);
+  }, [loadJobs]);
 
   const handleRefresh = useCallback(() => {
     setRefreshing(true);
+    setIsRateLimited(false); // Reset rate limit on manual refresh
     loadJobs(1, false);
-  }, [selectedIndustry, selectedJobType, searchQuery]);
+  }, [loadJobs]);
 
   const handleLoadMore = useCallback(() => {
-    if (!loading && hasMore) {
+    if (!loading && hasMore && !isRateLimited) {
       loadJobs(page + 1, true);
     }
-  }, [loading, hasMore, page]);
+  }, [loading, hasMore, page, isRateLimited, loadJobs]);
 
   const formatSalary = (min?: number, max?: number, structure?: string) => {
     if (!min && !max) return 'Salary not disclosed';
@@ -130,6 +174,13 @@ const JobListingsScreen: React.FC = () => {
     }
     return `${formatAmount(min || max!)}`;
   };
+
+  // Format location - show zip code (distance calculation would need lat/lng on JobListing)
+  const formatJobLocation = useCallback((item: JobListing): string => {
+    if (item.is_remote) return 'Remote';
+    if (item.is_hybrid) return 'Hybrid';
+    return item.zip_code || 'Location TBD';
+  }, []);
 
   const renderJobCard = ({ item }: { item: JobListing }) => (
     <TouchableOpacity
@@ -170,11 +221,7 @@ const JobListingsScreen: React.FC = () => {
           <View style={styles.metaItem}>
             <Text style={styles.metaIcon}>📍</Text>
             <Text style={styles.metaText}>
-              {item.is_remote
-                ? 'Remote'
-                : item.is_hybrid
-                ? 'Hybrid'
-                : `${item.city || item.zip_code}, ${item.state || ''}`}
+              {formatJobLocation(item)}
             </Text>
           </View>
 

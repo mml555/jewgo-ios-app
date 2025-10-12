@@ -1,5 +1,6 @@
 import { configService } from '../config/ConfigService';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { authService } from './AuthService';
+import guestService from './GuestService';
 
 const API_BASE_URL = configService.getApiUrl();
 
@@ -136,28 +137,26 @@ export interface ExperienceLevel {
 }
 
 class JobsService {
-  private static async getAuthToken(): Promise<string | null> {
-    try {
-      return await AsyncStorage.getItem('authToken');
-    } catch (error) {
-      console.error('Error getting auth token:', error);
-      return null;
-    }
-  }
-
   private static async makeRequest(
     endpoint: string,
     options: RequestInit = {},
   ): Promise<any> {
-    const token = await this.getAuthToken();
+    // Get authentication headers using the same pattern as main ApiService
+    let authHeaders: Record<string, string> = {};
+
+    if (authService.isAuthenticated()) {
+      // User is authenticated - use user token
+      authHeaders = await authService.getAuthHeaders();
+    } else if (guestService.isGuestAuthenticated()) {
+      // Guest is authenticated - use guest token
+      authHeaders = await guestService.getAuthHeadersAsync();
+    }
+
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
+      ...authHeaders,
       ...(options.headers as Record<string, string>),
     };
-
-    if (token) {
-      headers.Authorization = `Bearer ${token}`;
-    }
 
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       ...options,
@@ -168,6 +167,21 @@ class JobsService {
       const error = await response
         .json()
         .catch(() => ({ error: 'Request failed' }));
+      
+      // Handle rate limiting gracefully
+      if (response.status === 429) {
+        const retryAfter = response.headers.get('Retry-After');
+        const errorMessage = retryAfter
+          ? `Rate limit exceeded. Please try again in ${retryAfter} seconds.`
+          : 'Rate limit exceeded. Please try again later.';
+        throw new Error(errorMessage);
+      }
+      
+      // Handle access blocked errors
+      if (response.status === 403 || response.status === 401) {
+        throw new Error('Access temporarily blocked');
+      }
+      
       throw new Error(error.error || `HTTP ${response.status}`);
     }
 
@@ -205,11 +219,11 @@ class JobsService {
       });
     }
 
-    return this.makeRequest(`/api/v5/jobs/listings?${params.toString()}`);
+    return this.makeRequest(`/jobs/listings?${params.toString()}`);
   }
 
   static async getJobById(id: string): Promise<{ jobListing: JobListing }> {
-    return this.makeRequest(`/api/v5/jobs/listings/${id}`);
+    return this.makeRequest(`/jobs/listings/${id}`);
   }
 
   static async createJobListing(data: {
@@ -238,7 +252,7 @@ class JobsService {
     companyWebsite?: string;
     companyLogoUrl?: string;
   }): Promise<{ success: boolean; jobListing: JobListing }> {
-    return this.makeRequest('/api/v5/jobs/listings', {
+    return this.makeRequest('/jobs/listings', {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -248,14 +262,14 @@ class JobsService {
     id: string,
     data: Partial<any>,
   ): Promise<{ success: boolean; jobListing: JobListing }> {
-    return this.makeRequest(`/api/v5/jobs/listings/${id}`, {
+    return this.makeRequest(`/jobs/listings/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     });
   }
 
   static async deleteJobListing(id: string): Promise<{ success: boolean }> {
-    return this.makeRequest(`/api/v5/jobs/listings/${id}`, {
+    return this.makeRequest(`/jobs/listings/${id}`, {
       method: 'DELETE',
     });
   }
@@ -263,13 +277,13 @@ class JobsService {
   static async repostJobListing(
     id: string,
   ): Promise<{ success: boolean; jobListing: JobListing }> {
-    return this.makeRequest(`/api/v5/jobs/listings/${id}/repost`, {
+    return this.makeRequest(`/jobs/listings/${id}/repost`, {
       method: 'POST',
     });
   }
 
   static async markJobAsFilled(id: string): Promise<{ success: boolean }> {
-    return this.makeRequest(`/api/v5/jobs/listings/${id}/mark-filled`, {
+    return this.makeRequest(`/jobs/listings/${id}/mark-filled`, {
       method: 'POST',
     });
   }
@@ -289,7 +303,7 @@ class JobsService {
       });
     }
 
-    return this.makeRequest(`/api/v5/jobs/my-listings?${params.toString()}`);
+    return this.makeRequest(`/jobs/my-listings?${params.toString()}`);
   }
 
   // ============================================================================
@@ -322,13 +336,24 @@ class JobsService {
       });
     }
 
-    return this.makeRequest(`/api/v5/jobs/seekers?${params.toString()}`);
+    return this.makeRequest(`/jobs/seekers?${params.toString()}`);
   }
 
   static async getSeekerProfileById(
     id: string,
   ): Promise<{ profile: JobSeekerProfile }> {
-    return this.makeRequest(`/api/v5/jobs/seekers/${id}`);
+    const response = await this.makeRequest(`/jobs/seekers/${id}`);
+    console.log('🔍 JobsService.getSeekerProfileById - Raw response:', response);
+    console.log('🔍 JobsService.getSeekerProfileById - response.data:', response.data);
+    console.log('🔍 JobsService.getSeekerProfileById - response.profile:', response.profile);
+    
+    // Transform the backend response format to match frontend expectations
+    const profileData = response.data || response.profile || response;
+    console.log('🔍 JobsService.getSeekerProfileById - Final profile data:', profileData);
+    
+    return {
+      profile: profileData
+    };
   }
 
   static async createSeekerProfile(data: {
@@ -356,7 +381,7 @@ class JobsService {
     desiredSalaryMax?: number;
     availability?: string;
   }): Promise<{ success: boolean; profile: JobSeekerProfile }> {
-    return this.makeRequest('/api/v5/jobs/seekers', {
+    return this.makeRequest('/jobs/seekers', {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -366,20 +391,20 @@ class JobsService {
     id: string,
     data: Partial<any>,
   ): Promise<{ success: boolean; profile: JobSeekerProfile }> {
-    return this.makeRequest(`/api/v5/jobs/seekers/${id}`, {
+    return this.makeRequest(`/jobs/seekers/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     });
   }
 
   static async deleteSeekerProfile(id: string): Promise<{ success: boolean }> {
-    return this.makeRequest(`/api/v5/jobs/seekers/${id}`, {
+    return this.makeRequest(`/jobs/seekers/${id}`, {
       method: 'DELETE',
     });
   }
 
   static async getMyProfile(): Promise<{ profile: JobSeekerProfile | null }> {
-    return this.makeRequest('/api/v5/jobs/my-profile');
+    return this.makeRequest('/jobs/my-profile');
   }
 
   static async contactSeeker(
@@ -387,7 +412,7 @@ class JobsService {
     message: string,
     jobListingId?: string,
   ): Promise<{ success: boolean }> {
-    return this.makeRequest(`/api/v5/jobs/seekers/${profileId}/contact`, {
+    return this.makeRequest(`/jobs/seekers/${profileId}/contact`, {
       method: 'POST',
       body: JSON.stringify({ message, jobListingId }),
     });
@@ -397,20 +422,20 @@ class JobsService {
     profileId: string,
     notes?: string,
   ): Promise<{ success: boolean }> {
-    return this.makeRequest(`/api/v5/jobs/seekers/${profileId}/save`, {
+    return this.makeRequest(`/jobs/seekers/${profileId}/save`, {
       method: 'POST',
       body: JSON.stringify({ notes }),
     });
   }
 
   static async unsaveProfile(profileId: string): Promise<{ success: boolean }> {
-    return this.makeRequest(`/api/v5/jobs/seekers/${profileId}/save`, {
+    return this.makeRequest(`/jobs/seekers/${profileId}/save`, {
       method: 'DELETE',
     });
   }
 
   static async getMySavedProfiles(): Promise<{ savedProfiles: any[] }> {
-    return this.makeRequest('/api/v5/jobs/my-saved-profiles');
+    return this.makeRequest('/jobs/my-saved-profiles');
   }
 
   // ============================================================================
@@ -426,7 +451,7 @@ class JobsService {
       answers?: any;
     },
   ): Promise<{ success: boolean; application: JobApplication }> {
-    return this.makeRequest(`/api/v5/jobs/listings/${jobListingId}/apply`, {
+    return this.makeRequest(`/jobs/listings/${jobListingId}/apply`, {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -451,7 +476,7 @@ class JobsService {
     }
 
     return this.makeRequest(
-      `/api/v5/jobs/listings/${jobListingId}/applications?${params.toString()}`,
+      `/jobs/listings/${jobListingId}/applications?${params.toString()}`,
     );
   }
 
@@ -471,7 +496,7 @@ class JobsService {
     }
 
     return this.makeRequest(
-      `/api/v5/jobs/my-applications?${params.toString()}`,
+      `/jobs/my-applications?${params.toString()}`,
     );
   }
 
@@ -482,7 +507,7 @@ class JobsService {
     interviewScheduledAt?: string,
   ): Promise<{ success: boolean; application: JobApplication }> {
     return this.makeRequest(
-      `/api/v5/jobs/applications/${applicationId}/status`,
+      `/jobs/applications/${applicationId}/status`,
       {
         method: 'PUT',
         body: JSON.stringify({ status, employerNotes, interviewScheduledAt }),
@@ -494,7 +519,7 @@ class JobsService {
     applicationId: string,
   ): Promise<{ success: boolean }> {
     return this.makeRequest(
-      `/api/v5/jobs/applications/${applicationId}/withdraw`,
+      `/jobs/applications/${applicationId}/withdraw`,
       {
         method: 'POST',
       },
@@ -505,7 +530,7 @@ class JobsService {
     jobListingId: string,
   ): Promise<{ statistics: any }> {
     return this.makeRequest(
-      `/api/v5/jobs/listings/${jobListingId}/application-stats`,
+      `/jobs/listings/${jobListingId}/application-stats`,
     );
   }
 
@@ -514,23 +539,23 @@ class JobsService {
   // ============================================================================
 
   static async getIndustries(): Promise<{ industries: Industry[] }> {
-    return this.makeRequest('/api/v5/jobs/industries');
+    return this.makeRequest('/jobs/industries');
   }
 
   static async getJobTypes(): Promise<{ jobTypes: JobType[] }> {
-    return this.makeRequest('/api/v5/jobs/job-types');
+    return this.makeRequest('/jobs/job-types');
   }
 
   static async getCompensationStructures(): Promise<{
     compensationStructures: CompensationStructure[];
   }> {
-    return this.makeRequest('/api/v5/jobs/compensation-structures');
+    return this.makeRequest('/jobs/compensation-structures');
   }
 
   static async getExperienceLevels(): Promise<{
     experienceLevels: ExperienceLevel[];
   }> {
-    return this.makeRequest('/api/v5/jobs/experience-levels');
+    return this.makeRequest('/jobs/experience-levels');
   }
 }
 

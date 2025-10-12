@@ -101,39 +101,71 @@ class JobsController {
       // Get location data
       const locationData = await this.getLocationData(zipCode);
 
-      // Create job listing
+      // Determine location_type
+      let locationType = 'on-site';
+      if (isRemote) locationType = 'remote';
+      else if (isHybrid) locationType = 'hybrid';
+
+      // Determine compensation_type and values
+      let compensationType = 'salary';
+      let compMin = null;
+      let compMax = null;
+
+      if (hourlyRateMin || hourlyRateMax) {
+        compensationType = 'hourly';
+        compMin = hourlyRateMin;
+        compMax = hourlyRateMax;
+      } else if (salaryMin || salaryMax) {
+        compensationType = 'salary';
+        compMin = salaryMin;
+        compMax = salaryMax;
+      }
+
+      // Create job listing with all fields
       const result = await client.query(
         `INSERT INTO jobs (
-          poster_id, title, company_name, job_type, compensation_type,
-          compensation_min, compensation_max, compensation_currency,
-          zip_code, city, state, latitude, longitude,
-          is_remote, location_type, description, requirements, benefits,
-          tags, application_url, contact_email, contact_phone
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
+          poster_id, title, company_name, company_website, company_logo_url,
+          industry_id, job_type_id, experience_level_id, compensation_structure_id,
+          compensation_type, compensation_min, compensation_max, compensation_currency,
+          show_compensation, zip_code, city, state, latitude, longitude,
+          is_remote, is_hybrid, location_type, description, requirements, benefits,
+          responsibilities, skills, application_url, contact_email, contact_phone,
+          is_active, posted_date
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32)
         RETURNING *`,
         [
           userId,
           jobTitle,
           companyName,
-          jobTypeId || 'full-time',
-          compensationStructureId || 'salary',
-          salaryMin,
-          salaryMax,
+          companyWebsite,
+          companyLogoUrl,
+          industryId,
+          jobTypeId,
+          experienceLevelId,
+          compensationStructureId,
+          compensationType,
+          compMin,
+          compMax,
           currency || 'USD',
+          showSalary !== false, // Default to true if not specified
           zipCode,
           locationData.city,
           locationData.state,
           locationData.latitude,
           locationData.longitude,
           isRemote || false,
-          isRemote ? 'remote' : 'on-site',
+          isHybrid || false,
+          locationType,
           description,
           requirements,
           benefits,
+          responsibilities,
           JSON.stringify(skills || []),
           ctaLink,
           contactEmail,
           contactPhone,
+          true, // is_active
+          new Date(), // posted_date
         ],
       );
 
@@ -187,9 +219,19 @@ class JobsController {
           u.first_name as employer_first_name,
           u.last_name as employer_last_name,
           u.email as employer_email,
+          ji.name as industry_name,
+          ji.key as industry_key,
+          jt.name as job_type_name,
+          jt.key as job_type_key,
+          el.name as experience_level_name,
+          cs.name as compensation_structure_name,
           (SELECT COUNT(*) FROM job_applications WHERE job_id = j.id) as total_applications
         FROM jobs j
         LEFT JOIN users u ON j.poster_id = u.id
+        LEFT JOIN job_industries ji ON j.industry_id = ji.id
+        LEFT JOIN job_types jt ON j.job_type_id = jt.id
+        LEFT JOIN experience_levels el ON j.experience_level_id = el.id
+        LEFT JOIN compensation_structures cs ON j.compensation_structure_id = cs.id
         WHERE j.is_active = true AND (j.expires_date IS NULL OR j.expires_date > NOW())
       `;
 
@@ -199,25 +241,25 @@ class JobsController {
       // Add filters
       if (industry) {
         paramCount++;
-        query += ` AND j.category = $${paramCount}`;
+        query += ` AND (j.industry_id = $${paramCount} OR ji.key = $${paramCount} OR j.category = $${paramCount})`;
         params.push(industry);
       }
 
       if (jobType) {
         paramCount++;
-        query += ` AND j.job_type = $${paramCount}`;
+        query += ` AND (j.job_type_id = $${paramCount} OR jt.key = $${paramCount} OR j.job_type = $${paramCount})`;
         params.push(jobType);
       }
 
       if (experienceLevel) {
         paramCount++;
-        query += ` AND j.experience_level = $${paramCount}`;
+        query += ` AND (j.experience_level_id = $${paramCount} OR el.key = $${paramCount} OR j.experience_level = $${paramCount})`;
         params.push(experienceLevel);
       }
 
       if (compensationStructure) {
         paramCount++;
-        query += ` AND j.compensation_type = $${paramCount}`;
+        query += ` AND (j.compensation_structure_id = $${paramCount} OR cs.key = $${paramCount} OR j.compensation_type = $${paramCount})`;
         params.push(compensationStructure);
       }
 
@@ -305,7 +347,10 @@ class JobsController {
       const countResult = await db.query(countQuery);
 
       res.json({
-        jobListings: result.rows,
+        success: true,
+        data: {
+          listings: result.rows,
+        },
         pagination: {
           page: parseInt(page, 10),
           limit: parseInt(limit, 10),

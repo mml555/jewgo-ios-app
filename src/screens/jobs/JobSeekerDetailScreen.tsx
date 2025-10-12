@@ -3,18 +3,44 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
-  Image,
   ActivityIndicator,
   Alert,
   Linking,
-  Platform,
+  Dimensions,
+  Image,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import JobsService, { JobSeekerProfile } from '../../services/JobsService';
-import { Spacing } from '../../styles/designSystem';
+import DetailHeaderBar from '../../components/DetailHeaderBar';
+import { 
+  Colors,
+  Spacing,
+  Typography,
+  BorderRadius,
+  Shadows,
+} from '../../styles/designSystem';
+
+// Responsive scaling functions
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+
+// Enhanced responsive scaling
+const scale = (size: number) => Math.max(screenWidth / 375, 0.8) * size;
+const verticalScale = (size: number) => Math.max(screenHeight / 812, 0.8) * size;
+const moderateScale = (size: number, factor = 0.5) => size + (scale(size) - size) * factor;
+
+// Screen size detection
+const isSmallScreen = screenHeight < 700;
+const isMediumScreen = screenHeight >= 700 && screenHeight < 850;
+const isLargeScreen = screenHeight >= 850;
+
+// Dynamic sizing based on screen size
+const getResponsiveSize = (small: number, medium: number, large: number) => {
+  if (isSmallScreen) return small;
+  if (isMediumScreen) return medium;
+  return large;
+};
 
 type RouteParams = {
   JobSeekerDetail: {
@@ -25,12 +51,12 @@ type RouteParams = {
 const JobSeekerDetailScreen: React.FC = () => {
   const navigation = useNavigation();
   const route = useRoute<RouteProp<RouteParams, 'JobSeekerDetail'>>();
-  const insets = useSafeAreaInsets();
   const { profileId } = route.params;
 
   const [profile, setProfile] = useState<JobSeekerProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSaved, setIsSaved] = useState(false);
+  const [pressedButtons, setPressedButtons] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     loadProfile();
@@ -39,11 +65,25 @@ const JobSeekerDetailScreen: React.FC = () => {
   const loadProfile = async () => {
     try {
       setLoading(true);
+      console.log('🔍 Loading profile for ID:', profileId);
       const response = await JobsService.getSeekerProfileById(profileId);
-      setProfile(response.profile);
-      setIsSaved(response.profile.is_saved || false);
+      console.log('📊 API Response:', response);
+      console.log('👤 Profile Data:', response.profile);
+      console.log('🔍 Response keys:', Object.keys(response));
+      console.log('🔍 Response.profile exists:', !!response.profile);
+      console.log('🔍 Response.profile type:', typeof response.profile);
+      
+      if (response.profile) {
+        setProfile(response.profile);
+        setIsSaved(response.profile.is_saved || false);
+        console.log('✅ Profile loaded successfully:', response.profile.name);
+      } else {
+        console.log('❌ No profile data in response');
+        console.log('❌ Full response object:', JSON.stringify(response, null, 2));
+        Alert.alert('Error', 'No profile data found');
+      }
     } catch (error) {
-      console.error('Error loading profile:', error);
+      console.error('❌ Error loading profile:', error);
       Alert.alert('Error', 'Failed to load profile');
       navigation.goBack();
     } finally {
@@ -97,126 +137,179 @@ const JobSeekerDetailScreen: React.FC = () => {
     }
   };
 
+  // Helper functions for DetailHeaderBar
+  const handlePressIn = (buttonId: string) => {
+    setPressedButtons(prev => new Set(prev).add(buttonId));
+  };
+
+  const handlePressOut = (buttonId: string) => {
+    setPressedButtons(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(buttonId);
+      return newSet;
+    });
+  };
+
+  const formatCount = (count: number): string => {
+    if (count >= 1000) {
+      return `${(count / 1000).toFixed(1)}k`;
+    }
+    return count.toString();
+  };
+
+  const handleReportPress = () => {
+    Alert.alert('Report Profile', 'Report this job seeker profile for inappropriate content.');
+  };
+
+  const handleSharePress = () => {
+    Alert.alert('Share Profile', 'Share this job seeker profile with others.');
+  };
+
+  // Helper functions
+  const getRelativeTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (diffInDays === 0) return 'Today';
+    if (diffInDays === 1) return 'Yesterday';
+    if (diffInDays < 7) return `${diffInDays} days ago`;
+    if (diffInDays < 30) return `${Math.floor(diffInDays / 7)} weeks ago`;
+    return `${Math.floor(diffInDays / 30)} months ago`;
+  };
+
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#74E1A0" />
-      </View>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={Colors.primary.main} />
+          <Text style={styles.loadingText}>Loading profile...</Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
   if (!profile) {
+    console.log('❌ No profile data available for rendering');
     return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>Profile not found</Text>
-      </View>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorEmoji}>⚠️</Text>
+          <Text style={styles.errorTitle}>Profile not found</Text>
+          <Text style={styles.errorDescription}>
+            The job seeker profile you're looking for doesn't exist or has been removed.
+          </Text>
+          <TouchableOpacity style={styles.retryButton} onPress={() => navigation.goBack()}>
+            <Text style={styles.retryButtonText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
     );
   }
 
+  // Debug logging for profile data
+  console.log('🎨 Rendering profile with data:', {
+    name: profile.name,
+    bio: profile.bio,
+    industry_name: profile.industry_name,
+    job_type_name: profile.job_type_name,
+    experience_level_name: profile.experience_level_name,
+    city: profile.city,
+    state: profile.state,
+    zip_code: profile.zip_code,
+    availability: profile.availability,
+    willing_to_remote: profile.willing_to_remote,
+    willing_to_relocate: profile.willing_to_relocate,
+    profile_completion_percentage: profile.profile_completion_percentage,
+    view_count: profile.view_count,
+    skills: profile.skills,
+    contact_email: profile.contact_email,
+    contact_phone: profile.contact_phone,
+  });
+
+
   return (
-    <View style={styles.container}>
-      <ScrollView style={styles.scrollView}>
-        {/* Hero Section */}
-        <View style={styles.hero}>
-          {profile.headshot_url ? (
-            <Image
-              source={{ uri: profile.headshot_url }}
-              style={styles.largeHeadshot}
-            />
-          ) : (
-            <View style={[styles.largeHeadshot, styles.headshotPlaceholder]}>
-              <Text style={styles.headshotText}>
-                {profile.name
-                  .split(' ')
-                  .map(n => n[0])
-                  .join('')
-                  .slice(0, 2)}
-              </Text>
-            </View>
-          )}
+    <SafeAreaView style={styles.container}>
+      {/* Detail Header Bar */}
+      <DetailHeaderBar
+        pressedButtons={pressedButtons}
+        handlePressIn={handlePressIn}
+        handlePressOut={handlePressOut}
+        formatCount={formatCount}
+        onReportPress={handleReportPress}
+        onSharePress={handleSharePress}
+        onFavoritePress={handleSave}
+        centerContent={{
+          type: 'view_count',
+          count: profile.view_count || 0
+        }}
+        rightContent={{
+          type: 'share_favorite',
+          shareCount: profile.view_count || 0,
+          likeCount: profile.view_count || 0,
+          isFavorited: isSaved
+        }}
+      />
 
-          <Text style={styles.profileName}>
-            {profile.name}
-            {profile.age && (
-              <Text style={styles.profileAge}>, {profile.age}</Text>
-            )}
-          </Text>
-
-          {/* Profile Completion */}
-          <View style={styles.completionContainer}>
-            <View style={styles.completionBar}>
-              <View
-                style={[
-                  styles.completionProgress,
-                  { width: `${profile.profile_completion_percentage}%` },
-                ]}
+      <View style={styles.contentContainer}>
+        {/* Profile Summary Card */}
+        <View style={styles.profileCard}>
+          {/* Profile Image - Top Right Corner */}
+          <View style={styles.profileImageContainer}>
+            {profile.headshot_url ? (
+              <Image
+                source={{ uri: profile.headshot_url }}
+                style={styles.profileImage}
+                onError={() => {
+                  console.log('Failed to load headshot image');
+                }}
               />
-            </View>
-            <Text style={styles.completionText}>
-              Profile {profile.profile_completion_percentage}% complete
-            </Text>
-          </View>
-
-          {/* Meta Info */}
-          <View style={styles.metaRow}>
-            {profile.industry_name && (
-              <View style={styles.metaItem}>
-                <Text style={styles.metaIcon}>💼</Text>
-                <Text style={styles.metaText}>{profile.industry_name}</Text>
-              </View>
-            )}
-
-            {profile.job_type_name && (
-              <View style={styles.metaItem}>
-                <Text style={styles.metaIcon}>⏰</Text>
-                <Text style={styles.metaText}>{profile.job_type_name}</Text>
-              </View>
-            )}
-
-            {profile.experience_level_name && (
-              <View style={styles.metaItem}>
-                <Text style={styles.metaIcon}>📊</Text>
-                <Text style={styles.metaText}>
-                  {profile.experience_level_name}
+            ) : (
+              <View style={[styles.profileImage, styles.placeholderImage]}>
+                <Text style={styles.placeholderText}>
+                  {profile.name
+                    .split(' ')
+                    .map((n: string) => n[0])
+                    .join('')
+                    .toUpperCase()}
                 </Text>
               </View>
             )}
           </View>
 
-          {/* Location & Preferences */}
-          <View style={styles.preferencesRow}>
-            <View style={styles.preferenceChip}>
-              <Text style={styles.preferenceText}>
-                📍 {profile.city}, {profile.state}
+          <Text style={styles.profileName}>{profile.name}</Text>
+          <Text style={styles.profileTitle}>
+            Looking for {profile.industry_name || profile.job_type_name || 'opportunities'}
+          </Text>
+          <View style={styles.profileFooter}>
+            <View style={styles.jobTypeTag}>
+              <Text style={styles.jobTypeText}>
+                {profile.availability === 'immediate' ? 'Full Time' : 
+                profile.availability === '2-weeks' ? 'Part Time' : 
+                profile.availability === 'flexible' ? 'Contract' : 'Available'}
               </Text>
             </View>
-
-            {profile.willing_to_remote && (
-              <View style={styles.preferenceChip}>
-                <Text style={styles.preferenceText}>💻 Remote OK</Text>
-              </View>
-            )}
-
-            {profile.willing_to_relocate && (
-              <View style={styles.preferenceChip}>
-                <Text style={styles.preferenceText}>✈️ Will Relocate</Text>
-              </View>
-            )}
+            <Text style={styles.profileId}>{profile.zip_code || profile.id?.slice(-5) || 'ID'}</Text>
           </View>
         </View>
 
-        {/* Bio */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>About</Text>
-          <Text style={styles.sectionText}>{profile.bio}</Text>
+        {/* Spacer to push About Me section down */}
+        <View style={styles.spacer} />
+
+        {/* About Me Card - Centered */}
+        <View style={styles.aboutCard}>
+          <Text style={styles.aboutTitle}>About me</Text>
+          <Text style={styles.aboutText}>
+            {profile.bio || 'Professional seeking new opportunities.'}
+          </Text>
         </View>
 
-        {/* Skills */}
+        {/* Skills Section */}
         {profile.skills && profile.skills.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Skills</Text>
+          <View style={styles.skillsCard}>
+            <Text style={styles.skillsTitle}>Skills</Text>
             <View style={styles.skillsContainer}>
-              {profile.skills.map((skill, index) => (
+              {profile.skills.slice(0, 3).map((skill, index) => (
                 <View key={index} style={styles.skillChip}>
                   <Text style={styles.skillText}>{skill}</Text>
                 </View>
@@ -225,303 +318,312 @@ const JobSeekerDetailScreen: React.FC = () => {
           </View>
         )}
 
-        {/* Languages */}
-        {profile.languages && profile.languages.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Languages</Text>
-            <View style={styles.skillsContainer}>
-              {profile.languages.map((lang, index) => (
-                <View key={index} style={styles.skillChip}>
-                  <Text style={styles.skillText}>{lang}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-        )}
-
-        {/* Links */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Contact & Links</Text>
-
-          <TouchableOpacity
-            style={styles.linkItem}
-            onPress={() => Linking.openURL(`mailto:${profile.contact_email}`)}
-          >
-            <Text style={styles.linkIcon}>📧</Text>
-            <Text style={styles.linkText}>{profile.contact_email}</Text>
-          </TouchableOpacity>
-
-          {profile.contact_phone && (
-            <TouchableOpacity
-              style={styles.linkItem}
-              onPress={() => Linking.openURL(`tel:${profile.contact_phone}`)}
-            >
-              <Text style={styles.linkIcon}>📱</Text>
-              <Text style={styles.linkText}>{profile.contact_phone}</Text>
-            </TouchableOpacity>
-          )}
-
-          {profile.resume_url && (
-            <TouchableOpacity
-              style={styles.linkItem}
-              onPress={() => openLink(profile.resume_url)}
-            >
-              <Text style={styles.linkIcon}>📄</Text>
-              <Text style={styles.linkText}>View Resume</Text>
-            </TouchableOpacity>
-          )}
-
-          {profile.linkedin_url && (
-            <TouchableOpacity
-              style={styles.linkItem}
-              onPress={() => openLink(profile.linkedin_url)}
-            >
-              <Text style={styles.linkIcon}>💼</Text>
-              <Text style={styles.linkText}>LinkedIn Profile</Text>
-            </TouchableOpacity>
-          )}
-
-          {profile.portfolio_url && (
-            <TouchableOpacity
-              style={styles.linkItem}
-              onPress={() => openLink(profile.portfolio_url)}
-            >
-              <Text style={styles.linkIcon}>🎨</Text>
-              <Text style={styles.linkText}>Portfolio</Text>
-            </TouchableOpacity>
-          )}
-
-          {profile.meeting_link && (
-            <TouchableOpacity
-              style={styles.linkItem}
-              onPress={() => openLink(profile.meeting_link)}
-            >
-              <Text style={styles.linkIcon}>📹</Text>
-              <Text style={styles.linkText}>Schedule Meeting</Text>
-            </TouchableOpacity>
-          )}
+        {/* Contact Card */}
+        <View style={styles.contactCard}>
+          <Text style={styles.contactTitle}>Reach out to me! ({profile.name?.split(' ')[0] || 'candidate'})</Text>
+          <Text style={styles.contactInstruction}>Please call me or text on whatsapp</Text>
         </View>
 
-        <View style={{ height: 100 }} />
-      </ScrollView>
-
-      {/* Action Bar */}
-      <View style={[styles.actionBar, { paddingBottom: insets.bottom + 10 }]}>
-        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-          <Text style={styles.saveButtonIcon}>{isSaved ? '❤️' : '🤍'}</Text>
+        {/* Resume Button */}
+        <TouchableOpacity 
+          style={styles.resumeButton}
+          onPress={() => profile.resume_url ? openLink(profile.resume_url) : Alert.alert('Resume', 'Resume not available')}
+        >
+          <Text style={styles.resumeButtonText}>📄 View PDF Resume</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.contactButton} onPress={handleContact}>
-          <Text style={styles.contactButtonText}>Contact</Text>
-        </TouchableOpacity>
+        {/* Reach Out CTA Buttons */}
+        <View style={styles.reachOutActionBar}>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => {
+              if (profile.contact_phone) {
+                Linking.openURL(`tel:${profile.contact_phone}`);
+              }
+            }}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.actionButtonIcon}>📱</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => {
+              if (profile.contact_email) {
+                Linking.openURL(`mailto:${profile.contact_email}?subject=Interested in your profile`);
+              }
+            }}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.actionButtonIcon}>📧</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => {
+              if (profile.contact_phone) {
+                Linking.openURL(`https://wa.me/${profile.contact_phone.replace(/[^\d]/g, '')}`);
+              }
+            }}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.actionButtonIcon}>💬</Text>
+          </TouchableOpacity>
+        </View>
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F2F2F7',
-  },
-  scrollView: {
-    flex: 1,
+    backgroundColor: '#F5F5F5', // Light gray background like JobDetailScreen
   },
   loadingContainer: {
     flex: 1,
-    alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F2F2F7',
+    alignItems: 'center',
+  },
+  loadingText: {
+    ...Typography.styles.body,
+    marginTop: Spacing.md,
+    color: Colors.text.primary,
+    fontWeight: '500',
   },
   errorContainer: {
     flex: 1,
-    alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F2F2F7',
-  },
-  errorText: {
-    fontSize: 16,
-    color: '#666',
-  },
-  hero: {
-    backgroundColor: '#FFFFFF',
-    padding: Spacing.lg,
     alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    padding: isSmallScreen ? Spacing.md : Spacing.lg,
   },
-  largeHeadshot: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    marginBottom: Spacing.md,
+  errorEmoji: {
+    fontSize: isSmallScreen ? 40 : 48,
+    marginBottom: Spacing.lg,
   },
-  headshotPlaceholder: {
-    backgroundColor: '#74E1A0',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headshotText: {
-    fontSize: 48,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
-  profileName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#292B2D',
-    marginBottom: Spacing.xs,
-  },
-  profileAge: {
-    fontSize: 20,
-    fontWeight: 'normal',
-    color: '#666',
-  },
-  completionContainer: {
-    width: '80%',
-    marginVertical: Spacing.md,
-  },
-  completionBar: {
-    height: 8,
-    backgroundColor: '#E0E0E0',
-    borderRadius: 4,
-    marginBottom: 4,
-  },
-  completionProgress: {
-    height: '100%',
-    backgroundColor: '#74E1A0',
-    borderRadius: 4,
-  },
-  completionText: {
-    fontSize: 12,
-    color: '#999',
+  errorTitle: {
+    fontSize: isSmallScreen ? 20 : 24,
+    fontWeight: '700',
+    color: Colors.text.primary,
+    marginBottom: Spacing.sm,
     textAlign: 'center',
   },
-  metaRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    marginBottom: Spacing.sm,
+  errorDescription: {
+    fontSize: isSmallScreen ? 14 : 16,
+    color: Colors.text.primary,
+    textAlign: 'center',
+    marginBottom: Spacing.lg,
+    lineHeight: 22,
   },
-  metaItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginHorizontal: Spacing.sm,
-    marginVertical: Spacing.xs,
+  retryButton: {
+    backgroundColor: Colors.primary.main,
+    paddingHorizontal: isSmallScreen ? Spacing.md : Spacing.lg,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.md,
+    ...Shadows.md,
   },
-  metaIcon: {
-    fontSize: 16,
-    marginRight: 4,
+  retryButtonText: {
+    ...Typography.styles.button,
+    color: Colors.white,
+    fontWeight: '600',
   },
-  metaText: {
-    fontSize: 14,
-    color: '#666',
+  contentContainer: {
+    flex: 1,
+    paddingHorizontal: scale(16),
+    paddingTop: verticalScale(4),
+    paddingBottom: verticalScale(16),
+    justifyContent: 'space-between',
   },
-  preferencesRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
+  // Profile Summary Card
+  profileCard: {
+    backgroundColor: Colors.white,
+    padding: scale(18),
+    borderRadius: moderateScale(14),
+    ...Shadows.small,
   },
-  preferenceChip: {
-    backgroundColor: '#F1F1F1',
-    borderRadius: 20,
-    paddingVertical: Spacing.xs,
-    paddingHorizontal: Spacing.md,
-    margin: 4,
-  },
-  preferenceText: {
-    fontSize: 14,
-    color: '#666',
-  },
-  section: {
-    backgroundColor: '#FFFFFF',
-    padding: Spacing.lg,
-    marginTop: Spacing.md,
-  },
-  sectionTitle: {
-    fontSize: 18,
+  profileName: {
+    fontSize: moderateScale(20),
     fontWeight: 'bold',
-    color: '#292B2D',
-    marginBottom: Spacing.md,
+    color: Colors.text.primary,
+    textAlign: 'left',
+    marginBottom: verticalScale(6),
+    lineHeight: moderateScale(26),
   },
-  sectionText: {
-    fontSize: 16,
-    color: '#666',
-    lineHeight: 24,
+  profileTitle: {
+    fontSize: moderateScale(16),
+    color: Colors.text.primary,
+    textAlign: 'left',
+    marginBottom: verticalScale(12),
+    lineHeight: moderateScale(22),
+    fontWeight: '600',
+  },
+  profileFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: verticalScale(6),
+  },
+  jobTypeTag: {
+    backgroundColor: '#E8F5E8', // Light green background like JobDetailScreen
+    paddingHorizontal: scale(14),
+    paddingVertical: verticalScale(7),
+    borderRadius: moderateScale(18),
+    minWidth: scale(90),
+    alignItems: 'center',
+  },
+  jobTypeText: {
+    fontSize: moderateScale(13),
+    color: '#2E7D32', // Dark green text like JobDetailScreen
+    fontWeight: '600',
+  },
+  profileId: {
+    fontSize: moderateScale(13),
+    color: '#2196F3', // Light blue like JobDetailScreen
+    textDecorationLine: 'underline',
+    fontWeight: '500',
+  },
+  // Profile Image
+  profileImageContainer: {
+    position: 'absolute',
+    top: scale(18),
+    right: scale(18),
+    zIndex: 1,
+  },
+  profileImage: {
+    width: scale(40),
+    height: scale(40),
+    borderRadius: scale(20),
+    borderWidth: 2,
+    borderColor: Colors.white,
+    ...Shadows.small,
+  },
+  placeholderImage: {
+    backgroundColor: '#666666',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  placeholderText: {
+    color: Colors.white,
+    fontSize: moderateScale(16),
+    fontWeight: 'bold',
+  },
+  // Spacer to push About Me section down
+  spacer: {
+    height: verticalScale(4),
+  },
+  // About Me Card
+  aboutCard: {
+    backgroundColor: '#E8F5E8',
+    marginBottom: verticalScale(4),
+    padding: scale(18),
+    borderRadius: moderateScale(14),
+    ...Shadows.small,
+  },
+  aboutTitle: {
+    fontSize: moderateScale(17),
+    fontWeight: 'bold',
+    color: '#2E7D32', // Dark green text to match reference
+    textAlign: 'center',
+    marginBottom: verticalScale(8),
+    lineHeight: moderateScale(22),
+  },
+  aboutText: {
+    fontSize: moderateScale(14),
+    color: '#2E7D32', // Dark green text to match reference
+    lineHeight: moderateScale(22),
+    textAlign: 'left',
+  },
+  // Skills Section
+  skillsCard: {
+    backgroundColor: Colors.white,
+    padding: scale(18),
+    borderRadius: moderateScale(14),
+    marginTop: verticalScale(4),
+    marginBottom: verticalScale(12),
+    ...Shadows.small,
+  },
+  skillsTitle: {
+    fontSize: moderateScale(17),
+    fontWeight: 'bold',
+    color: Colors.text.primary,
+    textAlign: 'center',
+    marginBottom: verticalScale(8),
+    lineHeight: moderateScale(22),
   },
   skillsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    gap: scale(8),
+    justifyContent: 'center',
   },
   skillChip: {
-    backgroundColor: '#F1F1F1',
-    borderRadius: 8,
-    paddingVertical: Spacing.xs,
-    paddingHorizontal: Spacing.sm,
-    marginRight: Spacing.xs,
-    marginBottom: Spacing.xs,
+    backgroundColor: '#E8F5E8', // Light green background
+    paddingHorizontal: scale(12),
+    paddingVertical: verticalScale(4),
+    borderRadius: moderateScale(12),
   },
   skillText: {
-    fontSize: 14,
-    color: '#292B2D',
+    fontSize: moderateScale(12),
+    color: '#2E7D32', // Dark green text
+    fontWeight: '600',
   },
-  linkItem: {
-    flexDirection: 'row',
+  // Contact Card
+  contactCard: {
+    backgroundColor: Colors.white,
+    padding: scale(18),
+    borderRadius: moderateScale(14),
+    ...Shadows.small,
+  },
+  contactTitle: {
+    fontSize: moderateScale(17),
+    fontWeight: 'bold',
+    color: Colors.text.primary, // Black text like JobDetailScreen
+    textAlign: 'center',
+    marginBottom: verticalScale(8),
+    lineHeight: moderateScale(22),
+  },
+  resumeButton: {
+    backgroundColor: '#E8F5E8', // Light green background like JobDetailScreen
+    marginVertical: verticalScale(12),
+    paddingVertical: verticalScale(14),
+    paddingHorizontal: scale(20),
+    borderRadius: moderateScale(12),
     alignItems: 'center',
-    paddingVertical: Spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F1F1',
+    minHeight: verticalScale(52),
+    justifyContent: 'center',
+    ...Shadows.small,
   },
-  linkIcon: {
-    fontSize: 20,
-    marginRight: Spacing.md,
+  resumeButtonText: {
+    fontSize: moderateScale(15),
+    color: '#2E7D32', // Dark green like JobDetailScreen
+    fontWeight: '600',
   },
-  linkText: {
-    fontSize: 16,
-    color: '#2196F3',
+  contactInstruction: {
+    fontSize: moderateScale(14),
+    color: Colors.text.primary, // Black text like JobDetailScreen
+    textAlign: 'center',
+    lineHeight: moderateScale(20),
   },
-  actionBar: {
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.md,
+  // Reach Out CTA Buttons
+  reachOutActionBar: {
     flexDirection: 'row',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: -2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 8,
-      },
-    }),
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+    gap: scale(12),
   },
-  saveButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#F1F1F1',
+  actionButton: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: Spacing.sm,
+    paddingVertical: verticalScale(14),
+    backgroundColor: '#E8F5E8', // Light green background
+    borderRadius: moderateScale(12),
+    minHeight: verticalScale(52),
   },
-  saveButtonIcon: {
-    fontSize: 24,
-  },
-  contactButton: {
-    flex: 1,
-    backgroundColor: '#74E1A0',
-    borderRadius: 12,
-    paddingVertical: Spacing.md,
-    alignItems: 'center',
-  },
-  contactButtonText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
+  actionButtonIcon: {
+    fontSize: moderateScale(24),
+    color: '#2E7D32', // Dark green
   },
 });
 

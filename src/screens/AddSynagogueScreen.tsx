@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -123,6 +123,20 @@ const AddSynagogueScreen: React.FC = () => {
   const totalPages = 2;
   const apiV5Service = new ApiV5Service();
 
+  // Track component mount state and cleanup timers
+  const isMountedRef = useRef(true);
+  const navigationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+      if (navigationTimeoutRef.current) {
+        clearTimeout(navigationTimeoutRef.current);
+      }
+    };
+  }, []);
+
   // Check authentication and permissions
   useEffect(() => {
     if (!isAuthenticated) {
@@ -237,17 +251,29 @@ const AddSynagogueScreen: React.FC = () => {
     try {
       const response = await apiV5Service.createSynagogue(formData);
 
+      // Guard against state updates after unmount
+      if (!isMountedRef.current) {
+        return;
+      }
+
       if (response.success) {
         hapticSuccess();
         setShowSuccessCelebration(true);
 
-        setTimeout(() => {
-          navigation.goBack();
+        // Schedule navigation with cleanup support
+        navigationTimeoutRef.current = setTimeout(() => {
+          if (isMountedRef.current) {
+            navigation.goBack();
+          }
         }, 2000);
       } else {
         throw new Error(response.error || 'Failed to create synagogue');
       }
     } catch (error) {
+      // Guard against showing error alert after unmount
+      if (!isMountedRef.current) {
+        return;
+      }
       errorLog('Error creating synagogue:', error);
       Alert.alert(
         'Submission Failed',
@@ -255,7 +281,10 @@ const AddSynagogueScreen: React.FC = () => {
         [{ text: 'OK' }],
       );
     } finally {
-      setIsSubmitting(false);
+      // Guard against state update after unmount
+      if (isMountedRef.current) {
+        setIsSubmitting(false);
+      }
     }
   }, [formData, validateStep, apiV5Service, navigation]);
 

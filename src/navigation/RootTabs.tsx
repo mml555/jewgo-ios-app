@@ -11,8 +11,7 @@ import {
   Spacing,
   TouchTargets,
 } from '../styles/designSystem';
-import SpecialsIcon from '../components/SpecialsIcon';
-import HeartIcon from '../components/HeartIcon';
+import Icon, { IconName } from '../components/Icon';
 
 // Import screens
 import HomeScreen from '../screens/HomeScreen';
@@ -25,11 +24,11 @@ const Tab = createBottomTabNavigator<TabParamList>();
 
 // Tab icon component with haptic feedback
 const TabIcon: React.FC<{
-  icon: string;
+  iconName: IconName;
   focused: boolean;
   label: string;
-  iconComponent?: React.ComponentType<{ size?: number; color?: string }>;
-}> = ({ icon, focused, label, iconComponent }) => {
+  filled?: boolean;
+}> = ({ iconName, focused, label, filled = false }) => {
   const handlePress = useCallback(() => {
     // Haptic feedback on tab press
     if (Platform.OS === 'ios') {
@@ -51,16 +50,12 @@ const TabIcon: React.FC<{
       accessibilityLabel={label}
       accessibilityHint={`Navigate to ${label} tab`}
     >
-      {iconComponent ? (
-        React.createElement(iconComponent, {
-          size: 24,
-          color: focused ? Colors.primary.main : Colors.textSecondary,
-        })
-      ) : (
-        <Text style={[styles.tabIcon, focused && styles.tabIconFocused]}>
-          {icon}
-        </Text>
-      )}
+      <Icon
+        name={iconName}
+        size={24}
+        color={focused ? Colors.primary.main : Colors.textSecondary}
+        filled={filled && focused}
+      />
     </View>
   );
 };
@@ -75,46 +70,43 @@ function RootTabs() {
         // They expect functions that return elements - this is the correct usage
         /* eslint-disable react/no-unstable-nested-components */
         tabBarIcon: ({ focused }) => {
-          let icon: string;
+          let iconName: IconName;
           let label: string;
-          let iconComponent:
-            | React.ComponentType<{ size?: number; color?: string }>
-            | undefined;
+          let filled = false;
 
           switch (route.name) {
             case 'Home':
-              icon = '🏠';
+              iconName = 'home';
               label = 'Home';
               break;
             case 'Favorites':
-              icon = '';
+              iconName = 'heart';
               label = 'Favorites';
-              iconComponent = HeartIcon;
+              filled = true; // Heart fills when focused
               break;
             case 'Specials':
-              icon = '⭐';
+              iconName = 'tag';
               label = 'Specials';
-              iconComponent = SpecialsIcon;
               break;
             case 'Notifications':
-              icon = '🔔';
+              iconName = 'bell';
               label = 'Notifications';
               break;
             case 'Profile':
-              icon = '👤';
+              iconName = 'user';
               label = 'Profile';
               break;
             default:
-              icon = '❓';
+              iconName = 'info';
               label = 'Unknown';
           }
 
           return (
             <TabIcon
-              icon={icon}
+              iconName={iconName}
               focused={focused}
               label={label}
-              iconComponent={iconComponent}
+              filled={filled}
             />
           );
         },

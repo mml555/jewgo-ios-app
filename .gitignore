@@ -62,6 +62,10 @@ buck-out/
 # CocoaPods
 /ios/Pods/
 
+# Ruby/Bundler
+vendor/
+.bundle/
+
 # Expo
 .expo/
 web-build/
@@ -102,11 +106,13 @@ jspm_packages/
 .yarn-integrity
 
 # Environment variables
-# Ignore all .env files to prevent committing secrets
+# Keep .env for development defaults, but ignore environment-specific files
 .env
+.env.*
 .env.local
 .env.*.local
-backend/.env
+*.env
+*.env.backup
 
 # next.js build output
 .next
@@ -152,3 +158,7 @@ Flipper-Folly
 
 # OS generated files
 Thumbs.db
+# Expo
+.expo
+dist/
+web-build/

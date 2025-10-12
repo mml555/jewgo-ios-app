@@ -40,7 +40,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
     // For now, we'll just log the action
   }, []);
 
-  const getCategoryDisplayName = (categoryKey: string) => {
+  const getCategoryDisplayName = useCallback((categoryKey: string) => {
     const categoryMap: { [key: string]: string } = {
       mikvah: 'Mikvah',
       eatery: 'Eatery',
@@ -51,11 +51,15 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
       social: 'Social',
     };
     return categoryMap[categoryKey] || 'Place';
-  };
+  }, []);
 
   return (
     <View style={styles.container}>
-      <TopBar onQueryChange={handleSearchChange} />
+      {/* Always show TopBar with search */}
+      <TopBar 
+        onQueryChange={handleSearchChange} 
+        placeholder={activeCategory === 'jobs' ? 'Find a job' : 'Search places, events...'}
+      />
       <CategoryRail
         activeCategory={activeCategory}
         onCategoryChange={handleCategoryChange}

@@ -1,6 +1,5 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, TextInput, StyleSheet, ScrollView } from 'react-native';
-import MapIcon from '../MapIcon';
 
 interface LocationContactPageProps {
   formData: any;

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -85,15 +85,9 @@ const CreateJobScreen: React.FC = () => {
   // Skills input
   const [skillInput, setSkillInput] = useState('');
 
-  useEffect(() => {
-    loadLookupData();
-    if (mode === 'edit' && jobId) {
-      loadJobForEdit();
-    }
-  }, []);
-
-  const loadLookupData = async () => {
+  const loadLookupData = useCallback(async () => {
     try {
+      console.log('🔄 Loading lookup data from API...');
       const [industriesRes, jobTypesRes, compensationRes, experienceRes] =
         await Promise.all([
           JobsService.getIndustries(),
@@ -102,17 +96,28 @@ const CreateJobScreen: React.FC = () => {
           JobsService.getExperienceLevels(),
         ]);
 
+      console.log('✅ Lookup data loaded:', {
+        industries: industriesRes.industries?.length,
+        jobTypes: jobTypesRes.jobTypes?.length,
+        compensationStructures: compensationRes.compensationStructures?.length,
+        experienceLevels: experienceRes.experienceLevels?.length
+      });
+
       setIndustries(industriesRes.industries);
       setJobTypes(jobTypesRes.jobTypes);
       setCompensationStructures(compensationRes.compensationStructures);
       setExperienceLevels(experienceRes.experienceLevels);
     } catch (error) {
-      console.error('Error loading lookup data:', error);
-      Alert.alert('Error', 'Failed to load form data');
+      console.error('❌ Error loading lookup data:', error);
+      Alert.alert(
+        'Error Loading Form',
+        'Failed to load form data from server. Please check your connection and try again.',
+        [{ text: 'OK', onPress: () => navigation.goBack() }]
+      );
     }
-  };
+  }, [navigation]);
 
-  const loadJobForEdit = async () => {
+  const loadJobForEdit = useCallback(async () => {
     if (!jobId) return;
 
     try {
@@ -154,7 +159,16 @@ const CreateJobScreen: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [jobId]);
+
+  // Load lookup data and job data on mount
+  useEffect(() => {
+    loadLookupData();
+    if (mode === 'edit' && jobId) {
+      loadJobForEdit();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty deps - only run on mount
 
   const updateFormData = (key: string, value: any) => {
     setFormData({ ...formData, [key]: value });

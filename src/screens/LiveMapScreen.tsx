@@ -22,12 +22,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { WebView } from 'react-native-webview';
 import { useFilters } from '../hooks/useFilters';
 import FiltersModal from '../components/FiltersModal';
-import FilterIcon from '../components/FilterIcon';
-import MikvahIcon from '../components/MikvahIcon';
-import EateryIcon from '../components/EateryIcon';
-import HeartIcon from '../components/HeartIcon';
-import StoreIcon from '../components/StoreIcon';
-import SpecialsIcon from '../components/SpecialsIcon';
+import Icon from '../components/Icon';
 import { Spacing, Shadows } from '../styles/designSystem';
 import { useLocation, calculateDistance } from '../hooks/useLocation';
 import { useCategoryData } from '../hooks/useCategoryData';
@@ -133,7 +128,6 @@ const LiveMapScreen: React.FC = () => {
       label: 'Eatery',
       emoji: '🍽️',
       color: '#FF6B6B',
-      iconComponent: EateryIcon,
     },
     { key: 'shul', label: 'Shul', emoji: '🕍', color: '#4ECDC4' },
     {
@@ -141,7 +135,6 @@ const LiveMapScreen: React.FC = () => {
       label: 'Mikvah',
       emoji: '🛁',
       color: '#45B7D1',
-      iconComponent: MikvahIcon,
     },
     { key: 'schools', label: 'Schools', emoji: '🎓', color: '#96CEB4' },
     {
@@ -149,7 +142,6 @@ const LiveMapScreen: React.FC = () => {
       label: 'Stores',
       emoji: '🛒',
       color: '#FFEAA7',
-      iconComponent: StoreIcon,
     },
     { key: 'services', label: 'Services', emoji: '🔧', color: '#DDA0DD' },
     { key: 'housing', label: 'Housing', emoji: '🏠', color: '#F7DC6F' },
@@ -159,7 +151,6 @@ const LiveMapScreen: React.FC = () => {
       label: 'Events',
       emoji: '🎉',
       color: '#FFB6C1',
-      iconComponent: HeartIcon,
     },
     { key: 'jobs', label: 'Jobs', emoji: '💼', color: '#DDA0DD' },
   ];
@@ -806,7 +797,7 @@ const LiveMapScreen: React.FC = () => {
             accessibilityHint="Tap to open filter options"
           >
             <View style={styles.filterIconContainer}>
-              <FilterIcon size={16} color="#666" />
+              <Icon name="filter" size={16} color="#666" />
             </View>
             {getActiveFiltersCount() > 0 && (
               <View style={styles.filterBadge}>
@@ -888,7 +879,7 @@ const LiveMapScreen: React.FC = () => {
                 </Text>
               </View>
               <TouchableOpacity style={styles.popupHeartButton}>
-                <HeartIcon size={20} color="#666" filled={false} />
+                <Icon name="heart" size={20} color="#666" filled={false} />
               </TouchableOpacity>
             </View>
 

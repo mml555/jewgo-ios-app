@@ -14,8 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigation } from '@react-navigation/native';
 import { errorLog } from '../utils/logger';
-import SpecialsIcon from '../components/SpecialsIcon';
-import HeartIcon from '../components/HeartIcon';
+import Icon from '../components/Icon';
 import DatabaseDashboardButton from '../components/DatabaseDashboardButton';
 import {
   Colors,
@@ -91,11 +90,7 @@ const ProfileScreen: React.FC = () => {
     return 'Guest';
   };
 
-  useEffect(() => {
-    loadUserData();
-  }, [user, guestUser]);
-
-  const loadUserData = async () => {
+  const loadUserData = useCallback(async () => {
     if (!isAuthenticated && !isGuestAuthenticated) return;
 
     try {
@@ -119,7 +114,11 @@ const ProfileScreen: React.FC = () => {
     } finally {
       setStatsLoading(false);
     }
-  };
+  }, [isAuthenticated, isGuestAuthenticated, getActiveSessions]);
+
+  useEffect(() => {
+    loadUserData();
+  }, [loadUserData]);
 
   const handleEditProfile = () => {
     if (isGuestAuthenticated) {
@@ -528,14 +527,14 @@ const ProfileScreen: React.FC = () => {
             style={styles.quickActionButton}
             onPress={handleFavorites}
           >
-            <HeartIcon size={24} color="#666" filled={true} />
+            <Icon name="heart" size={24} color="#666" filled={true} />
             <Text style={styles.quickActionText}>Favorites</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.quickActionButton}
             onPress={handleReviews}
           >
-            <SpecialsIcon size={24} color="#666" />
+            <Icon name="star" size={24} color="#666" />
             <Text style={styles.quickActionText}>Reviews</Text>
           </TouchableOpacity>
           <TouchableOpacity

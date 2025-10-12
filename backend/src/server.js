@@ -4,7 +4,7 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const compression = require('compression');
 const logger = require('./utils/logger');
-const { rateLimiters, getStats } = require('./middleware/rateLimiter');
+const { rateLimiters, getStats, clearBlockedIPs, resetCounts } = require('./middleware/rateLimiter');
 require('dotenv').config();
 
 // Import database connection
@@ -107,6 +107,56 @@ app.get('/health', async (req, res) => {
   }
 });
 
+// Development-only rate limit management endpoints (no auth required)
+if (process.env.NODE_ENV === 'development') {
+  app.post('/dev/clear-blocks', (req, res) => {
+    try {
+      const count = clearBlockedIPs();
+      res.json({
+        success: true,
+        message: `Cleared ${count} blocked IP(s)`,
+        count,
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: error.message,
+      });
+    }
+  });
+
+  app.post('/dev/reset-counts', (req, res) => {
+    try {
+      const count = resetCounts();
+      res.json({
+        success: true,
+        message: `Reset ${count} request count(s)`,
+        count,
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: error.message,
+      });
+    }
+  });
+
+  app.get('/dev/rate-limit-stats', (req, res) => {
+    try {
+      const stats = getStats();
+      res.json({
+        success: true,
+        data: stats,
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: error.message,
+      });
+    }
+  });
+}
+
 // Import auth routes
 const createAuthRoutes = require('./routes/auth');
 const createRBACRoutes = require('./routes/rbac');
@@ -205,6 +255,55 @@ app.use(
   authSystem.getAuthMiddleware().requireAuthOrGuest(),
   shtetlProductsRoutes,
 );
+// Public lookup routes (no auth required)
+app.get('/api/v5/jobs/industries', async (req, res) => {
+  try {
+    const db = require('./database/connection');
+    const result = await db.query(
+      'SELECT * FROM job_industries WHERE is_active = true ORDER BY sort_order',
+    );
+    res.json({ industries: result.rows });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/v5/jobs/job-types', async (req, res) => {
+  try {
+    const db = require('./database/connection');
+    const result = await db.query(
+      'SELECT * FROM job_types WHERE is_active = true ORDER BY sort_order',
+    );
+    res.json({ jobTypes: result.rows });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/v5/jobs/compensation-structures', async (req, res) => {
+  try {
+    const db = require('./database/connection');
+    const result = await db.query(
+      'SELECT * FROM compensation_structures WHERE is_active = true ORDER BY sort_order',
+    );
+    res.json({ compensationStructures: result.rows });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/v5/jobs/experience-levels', async (req, res) => {
+  try {
+    const db = require('./database/connection');
+    const result = await db.query(
+      'SELECT * FROM experience_levels WHERE is_active = true ORDER BY sort_order',
+    );
+    res.json({ experienceLevels: result.rows });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.use(
   '/api/v5/jobs',
   authSystem.getAuthMiddleware().requireAuthOrGuest(),

@@ -123,7 +123,7 @@ router.get(
 );
 
 // ============================================================================
-// LOOKUP DATA ROUTES
+// LOOKUP DATA ROUTES (Public - no auth required)
 // ============================================================================
 
 router.get('/industries', async (req, res) => {

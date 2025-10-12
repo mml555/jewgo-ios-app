@@ -20,7 +20,6 @@ import {
 } from '../styles/designSystem';
 import { useLocation, calculateDistance } from '../hooks/useLocation';
 import { DistanceDisplay } from '../components/DistanceDisplay';
-import HeartIcon from '../components/HeartIcon';
 import ActionBar from '../components/ActionBar';
 import { debugLog, errorLog } from '../utils/logger';
 import jobSeekersService, {
@@ -162,8 +161,8 @@ const JobSeekersScreen: React.FC = () => {
       );
       try {
         // Navigate to job seeker detail screen
-        (navigation as any).navigate('JobSeekerDetail', {
-          jobSeekerId: jobSeeker.id,
+        (navigation as any).navigate('JobSeekerDetailV2', {
+          profileId: jobSeeker.id,
         });
         debugLog('🔍 JobSeekersScreen: Navigation triggered successfully');
       } catch (error) {

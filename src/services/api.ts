@@ -185,8 +185,8 @@ class ApiService {
   ): Promise<ApiResponse<T>> {
     try {
       const url = `${this.baseUrl}${endpoint}`;
-      // Only log API requests very occasionally to reduce console noise
-      if (__DEV__ && Math.random() < 0.01) {
+      // Log all API requests temporarily for jobs debugging
+      if (__DEV__) {
         debugLog('🌐 API Request:', url);
       }
 
@@ -196,14 +196,24 @@ class ApiService {
       if (authService.isAuthenticated()) {
         // User is authenticated - use user token
         authHeaders = await authService.getAuthHeaders();
+        // Removed excessive logging to prevent memory issues
       } else if (guestService.isGuestAuthenticated()) {
         // Guest is authenticated - use guest token
         authHeaders = await guestService.getAuthHeadersAsync();
-      }
-
-      // Only log auth headers very occasionally to reduce console noise
-      if (__DEV__ && Math.random() < 0.01) {
-        debugLog('🔐 Auth headers:', authHeaders);
+        // Removed excessive logging to prevent memory issues
+      } else {
+        // No authentication - try to create guest session automatically
+        // Only log very occasionally to reduce console noise
+        if (__DEV__ && Math.random() < 0.01) {
+          debugLog('🔐 No authentication found, attempting to create guest session...');
+        }
+        try {
+          await guestService.createGuestSession();
+          authHeaders = await guestService.getAuthHeadersAsync();
+        } catch (error) {
+          // Removed excessive logging to prevent memory issues
+          // Continue without auth headers - some endpoints might work without auth
+        }
       }
 
       const response = await fetch(url, {
@@ -450,7 +460,7 @@ class ApiService {
       const response = await this.request<{
         job_seekers: JobSeeker[];
         pagination: any;
-      }>(`/api/v5/job-seekers?${queryParams.toString()}`);
+      }>(`/api/v5/jobs/seekers?${queryParams.toString()}`);
 
       if (response.success) {
         debugLog('✅ Job seekers fetched successfully:', response.data);
@@ -474,7 +484,7 @@ class ApiService {
       debugLog('🔍 Fetching job seeker:', id);
 
       const response = await this.request<JobSeeker>(
-        `/api/v5/job-seekers/${id}`,
+        `/api/v5/jobs/seekers/${id}`,
       );
 
       if (response.success) {
@@ -500,7 +510,7 @@ class ApiService {
     try {
       debugLog('📝 Creating job seeker profile:', jobSeekerData);
 
-      const response = await this.request<JobSeeker>('/api/v5/job-seekers', {
+      const response = await this.request<JobSeeker>('/api/v5/jobs/seekers', {
         method: 'POST',
         body: JSON.stringify(jobSeekerData),
       });
@@ -530,7 +540,7 @@ class ApiService {
       debugLog('📝 Updating job seeker profile:', id, jobSeekerData);
 
       const response = await this.request<JobSeeker>(
-        `/api/v5/job-seekers/${id}`,
+        `/api/v5/jobs/seekers/${id}`,
         {
           method: 'PUT',
           body: JSON.stringify(jobSeekerData),
@@ -561,28 +571,49 @@ class ApiService {
   ): Promise<ApiResponse<{ listings: Listing[] }>> {
     // Special handling for jobs category - use dedicated jobs endpoint
     if (categoryKey === 'jobs') {
-      // debugLog('🔍 Fetching jobs from dedicated endpoint');
+      debugLog('🔍 Fetching jobs from dedicated endpoint');
       try {
         const response = await this.request(
-          `/jobs?limit=${limit}&offset=${offset}&isActive=true`,
+          `/jobs/listings?limit=${limit}&page=1`,
         );
 
-        if (response.success && response.data) {
-          const dataArray = response.data as any[];
-          // debugLog('🔍 Raw jobs data sample:', dataArray[0]);
+        debugLog('🔍 Jobs API raw response:', JSON.stringify(response).substring(0, 200));
+        debugLog('🔍 Response has data.listings?', !!((response as any)?.data?.listings));
+        debugLog('🔍 Response has success?', !!(response as any).success);
+
+        // V5 API returns { success: true, data: { listings: [...] } }
+        if (response && (response as any)?.success && (response as any)?.data?.listings) {
+          const jobListings = (response as any).data.listings;
+          debugLog('🔍 Found jobs:', jobListings.length);
+          debugLog('🔍 First job title:', jobListings[0]?.title);
           // Transform jobs data to match listing format
-          const transformedListings = dataArray.map((job: any) =>
-            this.transformJobToListing(job),
-          );
-          // debugLog('🔍 Transformed job sample:', transformedListings[0]);
+          const transformedListings = Array.isArray(jobListings)
+            ? jobListings.map((job: any) => this.transformJobToListing(job))
+            : [];
+          debugLog('🔍 Transformed jobs:', transformedListings.length);
           return {
             success: true,
             data: { listings: transformedListings },
           };
         }
+        
+        // Handle error responses
+        if ((response as any).success === false) {
+          debugLog('🔍 Jobs API returned error response');
+          return response as ApiResponse<{ listings: Listing[] }>;
+        }
+        
+        debugLog('🔍 Jobs response did not match expected format');
       } catch (error) {
         errorLog('Failed to fetch jobs:', error);
       }
+      
+      // If we get here for jobs category, return error (don't fall through to entity fetch)
+      debugLog('🔍 Returning error for jobs category - no valid data found');
+      return {
+        success: false,
+        error: 'Failed to load jobs',
+      };
     }
 
     // Map category keys to entity types (available for both V5 and fallback)

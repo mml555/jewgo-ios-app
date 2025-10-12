@@ -26,6 +26,8 @@ import { apiService } from '../services/api';
 import jobSeekersService, { JobSeeker } from '../services/JobSeekersService';
 import { debugLog, errorLog } from '../utils/logger';
 import { AppStackParamList } from '../types/navigation';
+import DetailHeaderBar from '../components/DetailHeaderBar';
+import { useFavorites } from '../hooks/useFavorites';
 
 type JobSeekerDetailRouteProp = RouteProp<AppStackParamList, 'JobSeekerDetail'>;
 type JobSeekerDetailNavigationProp = StackNavigationProp<
@@ -47,6 +49,55 @@ const JobSeekerDetailScreen: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { isFavorited, toggleFavorite } = useFavorites();
+  const [pressedButtons, setPressedButtons] = useState<Set<string>>(new Set());
+
+  // Helper functions for button press effects
+  const handlePressIn = (buttonId: string) => {
+    setPressedButtons(prev => new Set(prev).add(buttonId));
+  };
+
+  const handlePressOut = (buttonId: string) => {
+    setPressedButtons(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(buttonId);
+      return newSet;
+    });
+  };
+
+  // Format count numbers (e.g., 1200 -> 1.2k, 24 -> 24)
+  const formatCount = (count: number): string => {
+    if (count >= 1000000) {
+      return `${(count / 1000000).toFixed(1)}M`;
+    } else if (count >= 1000) {
+      return `${(count / 1000).toFixed(1)}k`;
+    }
+    return count.toString();
+  };
+
+  const handleFavorite = () => {
+    if (jobSeeker) {
+      toggleFavorite(jobSeeker.id);
+    }
+  };
+
+  const handleShare = async () => {
+    // TODO: Implement share functionality
+    Alert.alert('Share', 'Share functionality coming soon');
+  };
+
+  const handleReport = () => {
+    Alert.alert(
+      'Report Profile',
+      'What would you like to report about this profile?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Inappropriate Content', onPress: () => {} },
+        { text: 'False Information', onPress: () => {} },
+        { text: 'Other', onPress: () => {} },
+      ],
+    );
+  };
 
   const loadJobSeeker = useCallback(async () => {
     try {
@@ -497,8 +548,30 @@ const JobSeekerDetailScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Header Bar - Consistent with other detail pages */}
+      <DetailHeaderBar
+        pressedButtons={pressedButtons}
+        handlePressIn={handlePressIn}
+        handlePressOut={handlePressOut}
+        formatCount={formatCount}
+        onReportPress={handleReport}
+        onSharePress={handleShare}
+        onFavoritePress={handleFavorite}
+        centerContent={{
+          type: 'view_count',
+          count: jobSeeker?.view_count || 0,
+        }}
+        rightContent={{
+          type: 'share_favorite',
+          shareCount: 0,
+          likeCount: 0,
+          isFavorited: jobSeeker ? isFavorited(jobSeeker.id) : false,
+        }}
+      />
+
       <ScrollView
         style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -508,15 +581,74 @@ const JobSeekerDetailScreen: React.FC = () => {
           />
         }
       >
-        {renderHeader()}
-        {renderContactSection()}
-        {renderSummarySection()}
-        {renderExperienceSection()}
-        {renderJobPreferencesSection()}
-        {renderJewishCommunitySection()}
-        {renderDocumentsSection()}
+        {/* Job Seeker Details Card */}
+        <View style={styles.jobSeekerDetailsCard}>
+          <Text style={styles.jobSeekerName}>{jobSeeker.full_name}</Text>
+          <Text style={styles.jobSeekerTitle}>{jobSeeker.title}</Text>
+          
+          <View style={styles.jobSeekerDetailsFooter}>
+            <View style={styles.experienceTag}>
+              <Text style={styles.experienceText}>
+                {jobSeeker.experience_years} years experience
+              </Text>
+            </View>
+            <Text style={styles.jobSeekerLocation}>
+              {jobSeeker.zip_code || `${jobSeeker.city}, ${jobSeeker.state}`}
+            </Text>
+          </View>
+        </View>
 
-        <View style={styles.bottomSpacing} />
+        {/* About Job Seeker Card */}
+        <View style={styles.aboutJobSeekerCard}>
+          <Text style={styles.cardTitle}>About candidate</Text>
+          <Text style={styles.jobSeekerDescription}>{jobSeeker.summary || 'No summary available'}</Text>
+        </View>
+
+        {/* Contact Information Card */}
+        <View style={styles.contactCard}>
+          <Text style={styles.cardTitle}>Reach out to us! ({jobSeeker.full_name})</Text>
+          <Text style={styles.contactInstructions}>
+            Please call us or text on whatsapp or email for more information
+          </Text>
+        </View>
+
+        {/* View Resume Button */}
+        {jobSeeker.resume_url && (
+          <TouchableOpacity
+            style={styles.pdfButtonContainer}
+            onPress={handleViewResume}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.pdfButtonText}>📄 View Resume</Text>
+          </TouchableOpacity>
+        )}
+
+        {/* Reach Out CTA Buttons */}
+        <View style={styles.reachOutActionBar}>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => handleContact('phone')}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.actionButtonIcon}>📱</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => handleContact('email')}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.actionButtonIcon}>📧</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => handleContact('linkedin')}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.actionButtonIcon}>💼</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -525,10 +657,13 @@ const JobSeekerDetailScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background.primary,
+    backgroundColor: '#F5F5F5', // Light gray background like job details
   },
   scrollView: {
     flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 16,
   },
   loadingContainer: {
     flex: 1,
@@ -829,8 +964,131 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     lineHeight: 24,
   },
-  bottomSpacing: {
-    height: Spacing.xl,
+  // Job Seeker Details Card
+  jobSeekerDetailsCard: {
+    backgroundColor: Colors.white,
+    marginHorizontal: 16,
+    marginTop: 16,
+    marginBottom: 12,
+    padding: 18,
+    borderRadius: 16,
+    ...Shadows.small,
+  },
+  jobSeekerName: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: Colors.textPrimary,
+    marginBottom: 6,
+    lineHeight: 26,
+  },
+  jobSeekerTitle: {
+    fontSize: 15,
+    color: Colors.textPrimary,
+    marginBottom: 12,
+    lineHeight: 20,
+  },
+  jobSeekerDetailsFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  experienceTag: {
+    backgroundColor: '#E8F5E8', // Light green background
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: 16,
+    minWidth: 80,
+    alignItems: 'center',
+  },
+  experienceText: {
+    fontSize: 13,
+    color: '#2E7D32', // Dark green text
+    fontWeight: '600',
+  },
+  jobSeekerLocation: {
+    fontSize: 13,
+    color: '#2196F3', // Light blue
+    fontWeight: '500',
+  },
+  // About Job Seeker Card
+  aboutJobSeekerCard: {
+    backgroundColor: '#E8F5E8', // Light green background
+    marginHorizontal: 16,
+    marginVertical: 12,
+    padding: 18,
+    borderRadius: 16,
+    ...Shadows.small,
+  },
+  cardTitle: {
+    fontSize: 17,
+    fontWeight: 'bold',
+    color: Colors.textPrimary, // Black text
+    textAlign: 'center',
+    marginBottom: 10,
+    lineHeight: 22,
+  },
+  jobSeekerDescription: {
+    fontSize: 14,
+    color: Colors.textPrimary, // Black text
+    lineHeight: 22,
+    textAlign: 'left',
+  },
+  // Contact Card
+  contactCard: {
+    backgroundColor: Colors.white,
+    marginHorizontal: 16,
+    marginVertical: 12,
+    marginBottom: 20,
+    padding: 18,
+    borderRadius: 16,
+    ...Shadows.small,
+  },
+  contactInstructions: {
+    fontSize: 14,
+    color: Colors.textPrimary, // Black text
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 10,
+  },
+  pdfButtonContainer: {
+    backgroundColor: '#E8F5E8', // Light green background
+    marginHorizontal: 16,
+    marginVertical: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    ...Shadows.small,
+  },
+  pdfButtonText: {
+    fontSize: 15,
+    color: '#2E7D32', // Dark green
+    fontWeight: '600',
+  },
+  // Reach Out Action Bar
+  reachOutActionBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 16,
+  },
+  actionButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    marginHorizontal: 4,
+    backgroundColor: '#E8F5E8', // Light green background
+    borderRadius: 12,
+    minHeight: 44,
+  },
+  actionButtonIcon: {
+    fontSize: 22,
+    color: '#2E7D32', // Dark green
   },
 });
 

@@ -9,8 +9,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { useFilters } from '../hooks/useFilters';
 import FiltersModal from './FiltersModal';
-import FilterIcon from './FilterIcon';
-import MapIcon from './MapIcon';
+import Icon from './Icon';
 import SeekingHiringToggle from './SeekingHiringToggle';
 import { Colors, Spacing, Shadows, TouchTargets } from '../styles/designSystem';
 
@@ -146,7 +145,8 @@ const ActionBar: React.FC<ActionBarProps> = ({
               accessibilityLabel="Open filters"
               accessibilityHint="Tap to open filter options"
             >
-              <FilterIcon
+              <Icon
+                name="filter"
                 size={16}
                 color={
                   getActiveFiltersCount() > 0
@@ -189,7 +189,7 @@ const ActionBar: React.FC<ActionBarProps> = ({
           accessibilityLabel="Open live map"
           accessibilityHint="Tap to view live map"
         >
-          <MapIcon size={14} color="#333" />
+          <Icon name="map" size={14} color="#333" />
           <Text style={styles.actionText}>Live Map</Text>
         </TouchableOpacity>
 
@@ -223,7 +223,7 @@ const ActionBar: React.FC<ActionBarProps> = ({
           accessibilityHint="Tap to open filter options"
         >
           <View style={styles.filterIconWrapper}>
-            <FilterIcon size={14} color="#333" />
+            <Icon name="filter" size={14} color="#333" />
           </View>
           <Text style={styles.actionText}>
             Filters

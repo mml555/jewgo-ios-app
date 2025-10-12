@@ -14,7 +14,6 @@ import {
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { errorLog } from '../utils/logger';
 import { ShtetlStore, Product } from '../types/shtetl';
-import HeartIcon from '../components/HeartIcon';
 import ShtetlStoreGrid from '../components/ShtetlStoreGrid';
 import ProductCard from '../components/ProductCard';
 import {

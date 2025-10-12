@@ -22,7 +22,6 @@ import {
   BorderRadius,
   Shadows,
 } from '../styles/designSystem';
-import HeartIcon from '../components/HeartIcon';
 import { useFavorites } from '../hooks/useFavorites';
 import { apiService } from '../services/api';
 import DetailHeaderBar from '../components/DetailHeaderBar';
@@ -113,7 +112,12 @@ interface JobDetails {
   application_count: number;
 }
 
-const { width: screenWidth } = Dimensions.get('window');
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+
+// Responsive sizing based on screen dimensions
+const scale = (size: number) => (screenWidth / 375) * size; // Base width: 375 (iPhone SE)
+const verticalScale = (size: number) => (screenHeight / 812) * size; // Base height: 812 (iPhone 12)
+const moderateScale = (size: number, factor = 0.5) => size + (scale(size) - size) * factor;
 
 // Section Header Component
 interface SectionHeaderProps {
@@ -260,7 +264,7 @@ const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
         schedule: 'Flexible 40 hours, Sunday-Thursday primarily',
         start_date: '2025-11-01',
         contact_email: 'careers@torahtech.com',
-        application_url: 'https://torahtech.com/apply',
+        application_url: 'https://torahtech.com/apply-job-pdf.pdf',
         kosher_environment: false,
         shabbat_observant: true,
         jewish_organization: true,
@@ -462,7 +466,7 @@ const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header Bar - Reusable Component */}
+      {/* Header Bar - Consistent with other detail pages */}
       <DetailHeaderBar
         pressedButtons={pressedButtons}
         handlePressIn={handlePressIn}
@@ -477,295 +481,113 @@ const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
         }}
         rightContent={{
           type: 'share_favorite',
-          shareCount: 0, // Jobs don't track shares separately
-          likeCount: 0, // Jobs don't track likes separately
+          shareCount: job.application_count || 0, // Use application count as share count
+          likeCount: job.application_count || 0, // Use application count as like count
           isFavorited: isFavorited(job.id),
         }}
       />
 
-      <ScrollView
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Content */}
-        <View style={styles.content}>
-          {/* Title Section */}
-          <View style={styles.titleSection}>
-            <Text style={styles.title}>{job.title}</Text>
-            {job.is_urgent && (
-              <View style={styles.urgentBadge}>
-                <Text style={styles.urgentText}>⚡ URGENT</Text>
-              </View>
-            )}
-          </View>
-
-          {/* Company Info */}
-          <View style={styles.companyInfo}>
-            <Text style={styles.companyName}>
-              {job.company_name || 'Company'}
-            </Text>
-            {job.jewish_organization && (
-              <View style={styles.verifiedBadge}>
-                <Text style={styles.verifiedText}>✓ Jewish Org</Text>
-              </View>
-            )}
-          </View>
-
-          {/* Quick Facts Summary Card */}
-          <View style={styles.quickFactsCard}>
-            <Text style={styles.quickFactsTitle}>⚡ Quick Overview</Text>
-            <View style={styles.quickFactsRow}>
-              <Text style={styles.quickFact}>
-                💼{' '}
-                {job.job_type.charAt(0).toUpperCase() +
-                  job.job_type.slice(1).replace('-', ' ')}
-              </Text>
-              <Text style={styles.quickFactDot}>•</Text>
-              <Text style={styles.quickFact}>📍 {getLocationText()}</Text>
-            </View>
-            <View style={styles.quickFactsRow}>
-              <Text style={styles.quickFact}>💰 {getCompensationText()}</Text>
-              {job.shabbat_observant && (
-                <>
-                  <Text style={styles.quickFactDot}>•</Text>
-                  <Text style={styles.quickFact}>🕯️ Shabbat Friendly</Text>
-                </>
-              )}
-            </View>
-          </View>
-
-          {/* Application Deadline Counter */}
-          {job.expires_date && getDaysUntil(job.expires_date) > 0 && (
-            <View style={styles.deadlineCard}>
-              <Text style={styles.deadlineText}>
-                ⏰ Applications close in{' '}
-                <Text style={styles.deadlineDays}>
-                  {getDaysUntil(job.expires_date)} days
-                </Text>
+      <View style={styles.contentContainer}>
+        {/* Job Details Card */}
+        <View style={styles.jobDetailsCard}>
+          <Text style={styles.jobTitle}>{job.title}</Text>
+          <Text style={styles.jobSalary}>{getCompensationText()}</Text>
+          
+          <View style={styles.jobDetailsFooter}>
+            <View style={styles.jobTypeTag}>
+              <Text style={styles.jobTypeText}>
+                {job.job_type.charAt(0).toUpperCase() + job.job_type.slice(1).replace('-', ' ')}
               </Text>
             </View>
-          )}
-
-          {/* Social Proof Indicators */}
-          <View style={styles.socialProofCard}>
-            <View style={styles.socialProofRow}>
-              <Text style={styles.socialProofItem}>
-                👁️ {job.view_count} views
-              </Text>
-              <Text style={styles.socialProofDot}>•</Text>
-              <Text style={styles.socialProofItem}>
-                📱 {job.application_count} applies
-              </Text>
-            </View>
-            <View style={styles.socialProofRow}>
-              <Text style={styles.socialProofItem}>
-                ⏰ Posted {getTimeAgo(job.posted_date)}
-              </Text>
-            </View>
-          </View>
-
-          {/* Key Info Row */}
-          <View style={styles.infoRow}>
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>📍 Location</Text>
-              <Text style={styles.infoValue}>{getLocationText()}</Text>
-            </View>
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>💰 Compensation</Text>
-              <Text style={styles.infoValue}>{getCompensationText()}</Text>
-            </View>
-          </View>
-
-          <View style={styles.infoRow}>
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>⏰ Type</Text>
-              <Text style={styles.infoValue}>
-                {job.job_type.charAt(0).toUpperCase() +
-                  job.job_type.slice(1).replace('-', ' ')}
-              </Text>
-            </View>
-            {job.start_date && (
-              <View style={styles.infoItem}>
-                <Text style={styles.infoLabel}>📅 Start Date</Text>
-                <Text style={styles.infoValue}>
-                  {formatDate(job.start_date)}
-                </Text>
-              </View>
-            )}
-          </View>
-
-          {/* Apply and Save Buttons */}
-          <View style={styles.actionButtons}>
-            <TouchableOpacity
-              style={[
-                styles.applyButton,
-                applying && styles.applyButtonDisabled,
-                pressedButtons.has('apply') && styles.applyButtonPressed,
-              ]}
-              onPress={handleApply}
-              onPressIn={() => handlePressIn('apply')}
-              onPressOut={() => handlePressOut('apply')}
-              disabled={applying}
-              activeOpacity={0.7}
-            >
-              {applying ? (
-                <ActivityIndicator color={Colors.white} size="small" />
-              ) : (
-                <Text style={styles.applyButtonText}>
-                  🚀{' '}
-                  {job.application_url
-                    ? 'Apply Now'
-                    : job.contact_email
-                    ? 'Contact via Email'
-                    : 'Get Contact Info'}
-                </Text>
-              )}
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.saveButton,
-                pressedButtons.has('save') && styles.saveButtonPressed,
-              ]}
-              onPress={handleFavorite}
-              onPressIn={() => handlePressIn('save')}
-              onPressOut={() => handlePressOut('save')}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.saveButtonText}>
-                {isFavorited(job.id) ? '✓ Saved' : '🔖 Save for Later'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Divider */}
-          <View style={styles.divider} />
-
-          {/* Job Description */}
-          <View style={styles.descriptionContainer}>
-            <SectionHeader icon="📋" title="Job Description" />
-            <Text style={styles.description}>{job.description}</Text>
-          </View>
-
-          {/* Requirements */}
-          {job.requirements.length > 0 && (
-            <>
-              <View style={styles.divider} />
-              <View style={styles.listContainer}>
-                <SectionHeader
-                  icon="✅"
-                  title="Requirements"
-                  count={job.requirements.length}
-                />
-                {job.requirements.map((req, index) => (
-                  <View key={index} style={styles.bulletPoint}>
-                    <Text style={styles.bullet}>•</Text>
-                    <Text style={styles.bulletText}>{req}</Text>
-                  </View>
-                ))}
-              </View>
-            </>
-          )}
-
-          {/* Qualifications */}
-          {job.qualifications.length > 0 && (
-            <>
-              <View style={styles.divider} />
-              <View style={styles.listContainer}>
-                <SectionHeader
-                  icon="🌟"
-                  title="Preferred Qualifications"
-                  count={job.qualifications.length}
-                />
-                {job.qualifications.map((qual, index) => (
-                  <View key={index} style={styles.bulletPoint}>
-                    <Text style={styles.bullet}>•</Text>
-                    <Text style={styles.bulletText}>{qual}</Text>
-                  </View>
-                ))}
-              </View>
-            </>
-          )}
-
-          {/* Benefits */}
-          {job.benefits.length > 0 && (
-            <>
-              <View style={styles.divider} />
-              <View style={styles.listContainer}>
-                <SectionHeader
-                  icon="🎁"
-                  title="Benefits & Perks"
-                  count={job.benefits.length}
-                />
-                {job.benefits.map((benefit, index) => (
-                  <View key={index} style={styles.bulletPoint}>
-                    <Text style={styles.bullet}>✓</Text>
-                    <Text style={styles.bulletText}>{benefit}</Text>
-                  </View>
-                ))}
-              </View>
-            </>
-          )}
-
-          {/* Jewish Community Info */}
-          {(job.kosher_environment || job.shabbat_observant) && (
-            <>
-              <View style={styles.divider} />
-              <View style={styles.jewishInfoContainer}>
-                <SectionHeader icon="✡️" title="Jewish Community Details" />
-                <View style={styles.jewishBadges}>
-                  {job.kosher_environment && (
-                    <View style={styles.jewishBadge}>
-                      <Text style={styles.jewishBadgeText}>
-                        🍽️ Kosher Environment
-                      </Text>
-                    </View>
-                  )}
-                  {job.shabbat_observant && (
-                    <View style={styles.jewishBadge}>
-                      <Text style={styles.jewishBadgeText}>
-                        🕯️ Shabbat Observant
-                      </Text>
-                    </View>
-                  )}
-                </View>
-              </View>
-            </>
-          )}
-
-          {/* Tags */}
-          {job.tags.length > 0 && (
-            <>
-              <View style={styles.divider} />
-              <View style={styles.tagsSection}>
-                <SectionHeader icon="🏷️" title="Tags" count={job.tags.length} />
-                <View style={styles.tagsContainer}>
-                  {job.tags.map((tag, index) => (
-                    <View key={index} style={styles.tag}>
-                      <Text style={styles.tagText}>{tag}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-            </>
-          )}
-
-          {/* Metadata */}
-          <View style={styles.metadata}>
-            <Text style={styles.metadataText}>
-              Posted {formatDate(job.posted_date)}
-            </Text>
-            {job.expires_date && (
-              <Text style={styles.metadataText}>
-                • Expires {formatDate(job.expires_date)}
-              </Text>
-            )}
-            <Text style={styles.metadataText}>
-              • {job.view_count} views • {job.application_count} applicants
+            <Text style={styles.jobLocation}>
+              {job.zip_code || getLocationText()}
             </Text>
           </View>
         </View>
-      </ScrollView>
+
+        {/* About Job Card */}
+        <View style={styles.aboutJobCard}>
+          <Text style={[styles.cardTitle, { textAlign: 'center' }]}>About job</Text>
+          <ScrollView 
+            style={styles.descriptionScroll}
+            contentContainerStyle={styles.descriptionContent}
+            showsVerticalScrollIndicator={false}
+            nestedScrollEnabled={true}
+          >
+            <Text style={styles.jobDescription}>{job.description}</Text>
+          </ScrollView>
+        </View>
+
+        {/* Contact Information Card */}
+        <View style={styles.contactCard}>
+          <Text style={[styles.cardTitle, { textAlign: 'center' }]}>Reach out to us! ({job.poster_name || 'benjy'})</Text>
+          <Text style={styles.contactInstructions}>
+            Please call us or text on whatsapp or email your resume to us
+          </Text>
+        </View>
+
+        {/* View Job Application PDF Button */}
+        {job.application_url && (
+          <TouchableOpacity
+            style={styles.pdfButtonContainer}
+            onPress={async () => {
+              try {
+                const supported = await Linking.canOpenURL(job.application_url!);
+                if (supported) {
+                  await Linking.openURL(job.application_url!);
+                } else {
+                  Alert.alert('Error', 'Cannot open application link');
+                }
+              } catch (error) {
+                errorLog('Error opening application URL:', error);
+                Alert.alert('Error', 'Failed to open application link');
+              }
+            }}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.pdfButtonText}>📄 View Job Application PDF</Text>
+          </TouchableOpacity>
+        )}
+
+        {/* Reach Out CTA Buttons */}
+        <View style={styles.reachOutActionBar}>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => {
+              if (job.contact_phone) {
+                Linking.openURL(`tel:${job.contact_phone}`);
+              }
+            }}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.actionButtonIcon}>📱</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => {
+              if (job.contact_email) {
+                Linking.openURL(`mailto:${job.contact_email}?subject=Application for ${job.title}`);
+              }
+            }}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.actionButtonIcon}>📧</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => {
+              if (job.contact_phone) {
+                Linking.openURL(`https://wa.me/${job.contact_phone.replace(/[^\d]/g, '')}`);
+              }
+            }}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.actionButtonIcon}>💬</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
     </SafeAreaView>
   );
 };
@@ -773,7 +595,7 @@ const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background.primary,
+    backgroundColor: '#F5F5F5', // Light gray background like reference
   },
   loadingContainer: {
     flex: 1,
@@ -781,350 +603,173 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    ...Typography.styles.body,
-    marginTop: Spacing.md,
+    fontSize: moderateScale(16),
+    marginTop: scale(16),
     color: Colors.textSecondary,
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: Spacing.md,
+    padding: scale(20),
   },
   errorTitle: {
-    ...Typography.styles.h2,
+    fontSize: moderateScale(22),
+    fontWeight: 'bold',
     color: Colors.textPrimary,
-    marginBottom: Spacing.sm,
+    marginBottom: scale(12),
   },
   errorDescription: {
-    ...Typography.styles.body,
+    fontSize: moderateScale(16),
     color: Colors.textSecondary,
     textAlign: 'center',
-    marginBottom: Spacing.xl,
+    marginBottom: scale(20),
   },
   retryButton: {
     backgroundColor: Colors.primary.main,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.lg,
+    paddingHorizontal: scale(32),
+    paddingVertical: verticalScale(14),
+    borderRadius: moderateScale(12),
+    minHeight: verticalScale(50),
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   retryButtonText: {
-    ...Typography.styles.button,
+    fontSize: moderateScale(16),
+    fontWeight: '600',
     color: Colors.white,
   },
-  scrollView: {
+  contentContainer: {
     flex: 1,
+    paddingHorizontal: scale(16),
+    paddingTop: verticalScale(12),
+    paddingBottom: verticalScale(16),
+    justifyContent: 'space-between',
   },
-  content: {
-    paddingTop: Spacing.md,
-    paddingBottom: Spacing.xl,
-    paddingHorizontal: Spacing.md,
+  // Job Details Card - Fixed size
+  jobDetailsCard: {
+    backgroundColor: Colors.white,
+    padding: scale(18),
+    borderRadius: moderateScale(14),
+    ...Shadows.small,
   },
-  titleSection: {
+  jobTitle: {
+    fontSize: moderateScale(20),
+    fontWeight: 'bold',
+    color: Colors.textPrimary,
+    marginBottom: verticalScale(6),
+    lineHeight: moderateScale(26),
+  },
+  jobSalary: {
+    fontSize: moderateScale(16),
+    color: Colors.textPrimary,
+    marginBottom: verticalScale(12),
+    lineHeight: moderateScale(22),
+    fontWeight: '600',
+  },
+  jobDetailsFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: Spacing.md,
-  },
-  title: {
-    ...Typography.styles.h2,
-    flex: 1,
-    marginRight: Spacing.md,
-    fontWeight: '700',
-  },
-  companyInfo: {
-    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: Spacing.md,
-    flexWrap: 'wrap',
+    marginTop: verticalScale(6),
   },
-  companyName: {
-    ...Typography.styles.h3,
-    color: Colors.textPrimary,
-    marginRight: Spacing.sm,
-  },
-  verifiedBadge: {
-    backgroundColor: Colors.success,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 4,
-    borderRadius: BorderRadius.sm,
-  },
-  verifiedText: {
-    ...Typography.styles.caption,
-    color: Colors.white,
-    fontWeight: '600',
-    fontSize: 11,
-  },
-  urgentBadge: {
-    backgroundColor: Colors.error,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 4,
-    borderRadius: BorderRadius.sm,
-  },
-  urgentText: {
-    ...Typography.styles.caption,
-    color: Colors.white,
-    fontWeight: '700',
-    fontSize: 11,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: Spacing.md,
-    gap: Spacing.sm,
-  },
-  infoItem: {
-    flex: 1,
-    backgroundColor: Colors.gray100,
-    padding: Spacing.md,
-    borderRadius: BorderRadius.md,
-  },
-  infoLabel: {
-    ...Typography.styles.caption,
-    color: Colors.textSecondary,
-    marginBottom: Spacing.xs,
-    fontSize: 12,
-  },
-  infoValue: {
-    ...Typography.styles.body,
-    color: Colors.textPrimary,
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  // Quick Facts Card
-  quickFactsCard: {
-    backgroundColor: Colors.primary.light,
-    padding: Spacing.md,
-    borderRadius: BorderRadius.md,
-    marginBottom: Spacing.md,
-    borderLeftWidth: 4,
-    borderLeftColor: Colors.primary.main,
-  },
-  quickFactsTitle: {
-    ...Typography.styles.h4,
-    fontWeight: '700',
-    marginBottom: Spacing.sm,
-    color: Colors.primary.main,
-  },
-  quickFactsRow: {
-    flexDirection: 'row',
+  jobTypeTag: {
+    backgroundColor: '#E8F5E8', // Light green background
+    paddingHorizontal: scale(14),
+    paddingVertical: verticalScale(7),
+    borderRadius: moderateScale(18),
+    minWidth: scale(90),
     alignItems: 'center',
-    marginBottom: Spacing.xs,
-    flexWrap: 'wrap',
   },
-  quickFact: {
-    ...Typography.styles.body,
-    fontSize: 14,
-    marginRight: Spacing.xs,
-  },
-  quickFactDot: {
-    ...Typography.styles.body,
-    color: Colors.textSecondary,
-    marginHorizontal: Spacing.xs,
-  },
-  // Deadline Card
-  deadlineCard: {
-    backgroundColor: Colors.warningLight,
-    padding: Spacing.sm,
-    borderRadius: BorderRadius.md,
-    marginBottom: Spacing.md,
-    borderLeftWidth: 4,
-    borderLeftColor: Colors.warning,
-  },
-  deadlineText: {
-    ...Typography.styles.body,
-    color: Colors.warning,
+  jobTypeText: {
+    fontSize: moderateScale(13),
+    color: '#2E7D32', // Dark green text
     fontWeight: '600',
-    fontSize: 14,
-    textAlign: 'center',
   },
-  deadlineDays: {
-    fontWeight: '700',
-    fontSize: 16,
-  },
-  // Social Proof Card
-  socialProofCard: {
-    backgroundColor: Colors.gray100,
-    padding: Spacing.sm,
-    borderRadius: BorderRadius.md,
-    marginBottom: Spacing.md,
-  },
-  socialProofRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginVertical: Spacing.xs,
-  },
-  socialProofItem: {
-    ...Typography.styles.caption,
-    color: Colors.textSecondary,
-    fontSize: 13,
+  jobLocation: {
+    fontSize: moderateScale(13),
+    color: '#2196F3', // Light blue
     fontWeight: '500',
   },
-  socialProofDot: {
-    ...Typography.styles.caption,
-    color: Colors.textSecondary,
-    marginHorizontal: Spacing.sm,
-  },
-  // Action Buttons
-  actionButtons: {
-    gap: Spacing.sm,
-    marginBottom: Spacing.md,
-  },
-  applyButton: {
-    backgroundColor: Colors.status.success,
-    borderRadius: BorderRadius['2xl'],
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.lg,
-    alignItems: 'center',
-    ...Shadows.md,
-  },
-  applyButtonPressed: {
-    backgroundColor: '#5CB85C',
-    transform: [{ scale: 0.98 }],
-    ...Shadows.lg,
-  },
-  applyButtonDisabled: {
-    backgroundColor: Colors.gray400,
-  },
-  applyButtonText: {
-    ...Typography.styles.button,
-    color: Colors.white,
-    fontWeight: '700',
-  },
-  saveButton: {
-    backgroundColor: 'transparent',
-    borderRadius: BorderRadius['2xl'],
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.lg,
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: Colors.primary.main,
-  },
-  saveButtonPressed: {
-    backgroundColor: Colors.primary.light,
-    transform: [{ scale: 0.98 }],
-  },
-  saveButtonText: {
-    ...Typography.styles.button,
-    color: Colors.primary.main,
-    fontWeight: '600',
-  },
-  // Section Headers
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: Spacing.md,
-  },
-  sectionIcon: {
-    fontSize: 20,
-    marginRight: Spacing.sm,
-  },
-  sectionTitle: {
-    ...Typography.styles.h3,
-    color: Colors.textPrimary,
-    fontWeight: '700',
+  // About Job Card - Flexible to fill space
+  aboutJobCard: {
     flex: 1,
+    backgroundColor: '#E8F5E8', // Light green background
+    marginVertical: verticalScale(12),
+    padding: scale(18),
+    borderRadius: moderateScale(14),
+    ...Shadows.small,
   },
-  countBadge: {
-    backgroundColor: Colors.primary.main,
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    minWidth: 24,
-    alignItems: 'center',
-  },
-  countBadgeText: {
-    ...Typography.styles.caption,
-    color: Colors.white,
-    fontWeight: '700',
-    fontSize: 12,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: Colors.border.primary,
-    marginVertical: Spacing.md,
-  },
-  descriptionContainer: {
-    marginBottom: Spacing.md,
-  },
-  description: {
-    ...Typography.styles.body,
-    color: Colors.textPrimary,
-    lineHeight: 22,
-  },
-  listContainer: {
-    marginBottom: Spacing.md,
-  },
-  bulletPoint: {
-    flexDirection: 'row',
-    marginBottom: Spacing.sm,
-    alignItems: 'flex-start',
-  },
-  bullet: {
-    ...Typography.styles.body,
-    color: Colors.primary.main,
-    fontWeight: '700',
-    marginRight: Spacing.sm,
-    width: 20,
-  },
-  bulletText: {
-    ...Typography.styles.body,
-    color: Colors.textPrimary,
-    flex: 1,
-    lineHeight: 22,
-  },
-  jewishInfoContainer: {
-    marginBottom: Spacing.md,
-  },
-  jewishBadges: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.sm,
-  },
-  jewishBadge: {
-    backgroundColor: Colors.primary.light,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderRadius: BorderRadius.md,
-  },
-  jewishBadgeText: {
-    ...Typography.styles.body,
-    color: Colors.primary.main,
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  tagsSection: {
-    marginBottom: Spacing.md,
-  },
-  tagsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.sm,
-  },
-  tag: {
-    backgroundColor: Colors.gray200,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 4,
-    borderRadius: BorderRadius.sm,
-  },
-  tagText: {
-    ...Typography.styles.caption,
-    color: Colors.textSecondary,
-    fontWeight: '600',
-    fontSize: 11,
-  },
-  metadata: {
-    marginTop: Spacing.md,
-    paddingTop: Spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border.primary,
-  },
-  metadataText: {
-    ...Typography.styles.caption,
-    color: Colors.textSecondary,
+  cardTitle: {
+    fontSize: moderateScale(17),
+    fontWeight: 'bold',
+    color: Colors.textPrimary, // Black text
     textAlign: 'center',
-    fontSize: 11,
+    marginBottom: verticalScale(8),
+    lineHeight: moderateScale(22),
+  },
+  descriptionScroll: {
+    flex: 1,
+  },
+  descriptionContent: {
+    flexGrow: 1,
+  },
+  jobDescription: {
+    fontSize: moderateScale(14),
+    color: Colors.textPrimary, // Black text
+    lineHeight: moderateScale(22),
+    textAlign: 'left',
+  },
+  // Contact Card - Fixed size
+  contactCard: {
+    backgroundColor: Colors.white,
+    padding: scale(18),
+    borderRadius: moderateScale(14),
+    ...Shadows.small,
+  },
+  contactInstructions: {
+    fontSize: moderateScale(14),
+    color: Colors.textPrimary, // Black text
+    textAlign: 'center',
+    lineHeight: moderateScale(20),
+  },
+  // PDF Button - Fixed size
+  pdfButtonContainer: {
+    backgroundColor: '#E8F5E8', // Light green background
+    marginVertical: verticalScale(12),
+    paddingVertical: verticalScale(14),
+    paddingHorizontal: scale(20),
+    borderRadius: moderateScale(12),
+    alignItems: 'center',
+    minHeight: verticalScale(52),
+    justifyContent: 'center',
+    ...Shadows.small,
+  },
+  pdfButtonText: {
+    fontSize: moderateScale(15),
+    color: '#2E7D32', // Dark green
+    fontWeight: '600',
+  },
+  // Reach Out Action Bar - Fixed size
+  reachOutActionBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+    gap: scale(12),
+  },
+  actionButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: verticalScale(14),
+    backgroundColor: '#E8F5E8', // Light green background
+    borderRadius: moderateScale(12),
+    minHeight: verticalScale(52),
+  },
+  actionButtonIcon: {
+    fontSize: moderateScale(24),
+    color: '#2E7D32', // Dark green
   },
 });
 

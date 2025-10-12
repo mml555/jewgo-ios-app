@@ -1,16 +1,13 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState, useRef } from 'react';
 import {
   View,
   Text,
-  FlatList,
+  ScrollView,
   TouchableOpacity,
   StyleSheet,
   Dimensions,
 } from 'react-native';
-import MikvahIcon from './MikvahIcon';
-import EateryIcon from './EateryIcon';
-import StoreIcon from './StoreIcon';
-import HeartIcon from './HeartIcon';
+import Icon, { IconName } from './Icon';
 
 interface CategoryRailProps {
   activeCategory: string;
@@ -20,18 +17,17 @@ interface CategoryRailProps {
 interface Category {
   id: string;
   name: string;
-  icon: string;
-  iconComponent?: React.ComponentType<{ size?: number; color?: string }>;
+  iconName: IconName;
 }
 
 const CATEGORIES: Category[] = [
-  { id: 'mikvah', name: 'Mikvah', icon: '🛁', iconComponent: MikvahIcon },
-  { id: 'eatery', name: 'Eatery', icon: '🍽️', iconComponent: EateryIcon },
-  { id: 'shul', name: 'Shul', icon: '🕍' },
-  { id: 'stores', name: 'Stores', icon: '🏪', iconComponent: StoreIcon },
-  { id: 'shtetl', name: 'Shtetl', icon: '🏘️' },
-  { id: 'events', name: 'Events', icon: '🎉', iconComponent: HeartIcon },
-  { id: 'jobs', name: 'Jobs', icon: '💼' },
+  { id: 'mikvah', name: 'Mikvah', iconName: 'pool' },
+  { id: 'eatery', name: 'Eatery', iconName: 'restaurant' },
+  { id: 'shul', name: 'Shul', iconName: 'synagogue' },
+  { id: 'stores', name: 'Stores', iconName: 'shopping-bag' },
+  { id: 'shtetl', name: 'Shtetl', iconName: 'users' }, // Community icon
+  { id: 'events', name: 'Events', iconName: 'calendar' },
+  { id: 'jobs', name: 'Jobs', iconName: 'briefcase' },
 ];
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -44,6 +40,8 @@ const CategoryRail: React.FC<CategoryRailProps> = ({
   activeCategory,
   onCategoryChange,
 }) => {
+  const [scrollX, setScrollX] = useState(0);
+  const scrollViewRef = useRef<ScrollView>(null);
   // Memoize the render item to prevent unnecessary re-renders
   const renderCategoryChip = useCallback(
     ({ item }: { item: Category }) => {
@@ -60,14 +58,11 @@ const CategoryRail: React.FC<CategoryRailProps> = ({
           accessibilityState={{ selected: isActive }}
         >
           <View style={styles.iconContainer}>
-            {item.iconComponent ? (
-              <item.iconComponent
-                size={24}
-                color={isActive ? '#FFFFFF' : '#666666'}
-              />
-            ) : (
-              <Text style={styles.chipIcon}>{item.icon}</Text>
-            )}
+            <Icon
+              name={item.iconName}
+              size={24}
+              color={isActive ? '#FFFFFF' : '#374151'} // Spec: white icon on active, charcoal on inactive
+            />
           </View>
           <Text style={[styles.chipText, isActive && styles.chipTextActive]}>
             {item.name}
@@ -90,31 +85,52 @@ const CategoryRail: React.FC<CategoryRailProps> = ({
   // Calculate snap interval for smooth scrolling
   const snapToInterval = useMemo(() => CHIP_WIDTH + CHIP_SPACING, []);
 
+  // Calculate the position of the green indicator based on active category and scroll position
+  const getIndicatorPosition = useCallback(() => {
+    const activeIndex = CATEGORIES.findIndex(category => category.id === activeCategory);
+    if (activeIndex === -1) return CONTAINER_PADDING + (CHIP_WIDTH - 32) / 2;
+    
+    // Calculate the left edge of the active button
+    const buttonLeftEdge = CONTAINER_PADDING + (CHIP_WIDTH + CHIP_SPACING) * activeIndex - scrollX;
+    // Center the 32px indicator under the 80px button - fine-tune centering
+    const centeredPosition = buttonLeftEdge + 8; // Start earlier, further left for perfect centering
+    return Math.max(CONTAINER_PADDING, centeredPosition);
+  }, [activeCategory, scrollX]);
+
+  // Handle scroll events to update indicator position
+  const handleScroll = useCallback((event: any) => {
+    setScrollX(event.nativeEvent.contentOffset.x);
+  }, []);
+
   return (
     <View style={styles.container}>
-      <FlatList
-        data={CATEGORIES}
-        renderItem={renderCategoryChip}
-        keyExtractor={keyExtractor}
+      <ScrollView
+        ref={scrollViewRef}
         horizontal
         showsHorizontalScrollIndicator={false}
+        showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
-        ItemSeparatorComponent={ItemSeparator}
-        snapToInterval={snapToInterval}
+        style={styles.scrollViewStyle}
         decelerationRate="fast"
+        snapToInterval={snapToInterval}
         snapToAlignment="start"
-        getItemLayout={(data, index) => ({
-          length: CHIP_WIDTH,
-          offset: (CHIP_WIDTH + CHIP_SPACING) * index,
-          index,
-        })}
-        initialNumToRender={VISIBLE_CHIPS}
-        maxToRenderPerBatch={VISIBLE_CHIPS}
-        windowSize={VISIBLE_CHIPS}
-        removeClippedSubviews={true}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
         accessibilityRole="list"
         accessibilityLabel="Category filter list"
-      />
+      >
+        {CATEGORIES.map((item, index) => (
+          <React.Fragment key={item.id}>
+            {renderCategoryChip({ item })}
+            {index < CATEGORIES.length - 1 && <ItemSeparator />}
+          </React.Fragment>
+        ))}
+      </ScrollView>
+      {/* Static scrollbar positioned below the buttons */}
+      <View style={styles.staticScrollbar}>
+        {/* Green indicator under the selected category */}
+        <View style={[styles.scrollbarIndicator, { left: getIndicatorPosition() }]} />
+      </View>
     </View>
   );
 };
@@ -124,23 +140,57 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E5EA',
+    height: 90, // Increased height to accommodate static scrollbar
+    position: 'relative',
+  },
+  scrollViewStyle: {
+    flexGrow: 0, // Prevent ScrollView from expanding unnecessarily
+    height: 72, // Height for the category buttons
   },
   scrollContent: {
     paddingHorizontal: CONTAINER_PADDING,
     paddingVertical: 12,
+    alignItems: 'center', // Center content vertically within the fixed height
+    flexDirection: 'row', // Ensure horizontal layout for ScrollView
+  },
+  staticScrollbar: {
+    position: 'absolute',
+    bottom: 8, // Position below the buttons with some spacing
+    left: 0,
+    right: 0,
+    height: 2,
+    backgroundColor: '#E5E7EB', // Light gray track
+    borderRadius: 1,
+    marginHorizontal: CONTAINER_PADDING,
+  },
+  scrollbarIndicator: {
+    position: 'absolute',
+    top: 0,
+    width: 32, // Smaller width for better visual balance
+    height: 2,
+    backgroundColor: '#10B981', // Green color for selected category
+    borderRadius: 1,
   },
   chip: {
     width: CHIP_WIDTH,
     alignItems: 'center',
     paddingVertical: 8,
     paddingHorizontal: 4,
-    borderRadius: 16,
-    backgroundColor: '#F2F2F7',
-    minHeight: 60, // Accessibility: minimum touch target with larger icons
+    borderRadius: 20, // Spec: radius 20-24
+    backgroundColor: '#FFFFFF', // Solid background required for shadow
+    borderWidth: 1,
+    borderColor: '#E5E7EB', // Spec: neutral stroke
+    minHeight: 60,
     justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 1,
   },
   chipActive: {
-    backgroundColor: '#000000',
+    backgroundColor: '#374151', // Spec: charcoal fill
+    borderColor: '#374151',
     shadowColor: '#000000',
     shadowOffset: {
       width: 0,
@@ -165,13 +215,12 @@ const styles = StyleSheet.create({
   chipText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#8E8E93',
+    color: '#6B7280',
     textAlign: 'center',
   },
   chipTextActive: {
     color: '#FFFFFF',
     fontWeight: '600',
-    textDecorationLine: 'underline',
   },
   separator: {
     width: CHIP_SPACING,

@@ -3,6 +3,7 @@ import React, {
   useContext,
   useEffect,
   useState,
+  useMemo,
   ReactNode,
 } from 'react';
 import authService, {
@@ -64,9 +65,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isInitializing, setIsInitializing] = useState(true);
   const [isCreatingGuestSession, setIsCreatingGuestSession] = useState(false);
 
-  const isAuthenticated = !!user && authService.isAuthenticated();
-  const isGuestAuthenticated = guestService.isGuestAuthenticated();
-  const hasAnyAuth = isAuthenticated || isGuestAuthenticated;
+  // Memoize authentication state to prevent excessive re-checks
+  const isAuthenticated = useMemo(() => !!user && authService.isAuthenticated(), [user]);
+  const isGuestAuthenticated = useMemo(() => guestService.isGuestAuthenticated(), [guestUser]);
+  const hasAnyAuth = useMemo(() => isAuthenticated || isGuestAuthenticated, [isAuthenticated, isGuestAuthenticated]);
 
   // ==============================================
   // INITIALIZATION
@@ -100,11 +102,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (guestService.isGuestAuthenticated()) {
         const guest = guestService.getGuestUser();
         setGuestUser(guest);
-        debugLog('🔐 AuthContext: Restored guest session from storage');
+        // Only log occasionally to avoid console spam
+        if (__DEV__ && Math.random() < 0.1) {
+          debugLog('🔐 AuthContext: Restored guest session from storage');
+        }
+      } else {
+        // If no authentication exists, create a guest session automatically
+        // This ensures the app works even if users bypass the Welcome screen
+        // Only log occasionally to avoid console spam
+        if (__DEV__ && Math.random() < 0.1) {
+          debugLog('🔐 AuthContext: No authentication found, creating guest session...');
+        }
+        try {
+          await createGuestSession();
+        } catch (error) {
+          errorLog('Failed to create automatic guest session:', error);
+          // Continue without guest session - API service will handle this gracefully
+        }
       }
-      // NOTE: We no longer automatically create guest sessions during initialization
-      // Guest sessions will be created lazily when needed (e.g., on Welcome screen)
-      // This prevents rate limiting issues during app hot reloading in development
     } catch (error) {
       errorLog('Auth initialization error:', error);
       setUser(null);
@@ -186,17 +201,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const createGuestSession = async () => {
     // Prevent duplicate guest session creation
     if (isCreatingGuestSession) {
-      debugLog(
-        '🔐 AuthContext: Guest session creation already in progress, skipping...',
-      );
+      // Only log occasionally to avoid console spam
+      if (__DEV__ && Math.random() < 0.1) {
+        debugLog(
+          '🔐 AuthContext: Guest session creation already in progress, skipping...',
+        );
+      }
       return;
     }
 
     // If we already have a valid guest session, don't create another one
     if (guestService.isGuestAuthenticated()) {
-      debugLog(
-        '🔐 AuthContext: Valid guest session already exists, skipping creation',
-      );
+      // Only log occasionally to avoid console spam
+      if (__DEV__ && Math.random() < 0.1) {
+        debugLog(
+          '🔐 AuthContext: Valid guest session already exists, skipping creation',
+        );
+      }
       const guest = guestService.getGuestUser();
       if (guest) {
         setGuestUser(guest);
@@ -209,7 +230,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsLoading(true);
       const guestSession = await guestService.createGuestSession();
       setGuestUser(guestSession.guestUser);
-      debugLog('🔐 AuthContext: Guest session created and set');
+      // Only log occasionally to avoid console spam
+      if (__DEV__ && Math.random() < 0.1) {
+        debugLog('🔐 AuthContext: Guest session created and set');
+      }
     } catch (error) {
       errorLog('Create guest session error:', error);
       throw error;
@@ -277,7 +301,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       // Make API call to update profile
       // This would be implemented when the backend endpoint is ready
-      debugLog('Update profile:', data);
+      // Removed excessive logging
 
       // Update local user state
       if (user) {

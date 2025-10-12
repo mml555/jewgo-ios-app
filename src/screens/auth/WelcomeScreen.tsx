@@ -18,7 +18,6 @@ import {
   Spacing,
   Shadows,
 } from '../../styles/designSystem';
-import HeartIcon from '../../components/HeartIcon';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 

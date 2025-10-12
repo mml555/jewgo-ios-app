@@ -27,6 +27,89 @@ class EventsController {
   }
 
   // ============================================================================
+  // NEW HELPER METHODS FOR ENHANCED FEATURES
+  // ============================================================================
+
+  static formatEventDateRange(startDate, endDate, timezone = 'America/New_York') {
+    try {
+      const start = new Date(startDate);
+      const end = endDate ? new Date(endDate) : start;
+      
+      const startDateStr = start.toLocaleDateString('en-US', {
+        month: 'long',
+        day: 'numeric',
+        timeZone: timezone
+      });
+      
+      const startTimeStr = start.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+        timeZone: timezone
+      });
+      
+      const startDayStr = start.toLocaleDateString('en-US', {
+        weekday: 'long',
+        timeZone: timezone
+      });
+      
+      if (start.toDateString() === end.toDateString()) {
+        // Single day event
+        return `${startDateStr} ${startDayStr} ${startTimeStr}`;
+      } else {
+        // Multi-day event
+        const endDateStr = end.toLocaleDateString('en-US', {
+          month: 'long',
+          day: 'numeric',
+          timeZone: timezone
+        });
+        return `${startDateStr}-${endDateStr} ${startDayStr} ${startTimeStr}`;
+      }
+    } catch (error) {
+      logger.error('Error formatting date range:', error);
+      return 'Date TBA';
+    }
+  }
+
+  static generateShareLinks(eventId, title, baseUrl = 'https://jewgo.app') {
+    const eventUrl = `${baseUrl}/events/${eventId}`;
+    const encodedTitle = encodeURIComponent(title);
+    const encodedUrl = encodeURIComponent(eventUrl);
+    
+    return {
+      whatsapp: `whatsapp://send?text=${encodedTitle}%20-%20${encodedUrl}`,
+      facebook: `fb://share?link=${encodedUrl}`,
+      twitter: `twitter://post?message=${encodedTitle}%20-%20${encodedUrl}`,
+      email: `mailto:?subject=${encodedTitle}&body=${encodedUrl}`,
+      copy_link: eventUrl
+    };
+  }
+
+  static async getEventCategories() {
+    try {
+      const result = await db.query(
+        'SELECT * FROM event_categories WHERE is_active = true ORDER BY sort_order'
+      );
+      return result.rows;
+    } catch (error) {
+      logger.error('Error getting event categories:', error);
+      return [];
+    }
+  }
+
+  static async getEventTypes() {
+    try {
+      const result = await db.query(
+        'SELECT * FROM event_types WHERE is_active = true ORDER BY sort_order'
+      );
+      return result.rows;
+    } catch (error) {
+      logger.error('Error getting event types:', error);
+      return [];
+    }
+  }
+
+  // ============================================================================
   // EVENTS - CREATE
   // ============================================================================
 
@@ -235,6 +318,9 @@ class EventsController {
         dateTo,
         isRsvpRequired,
         isSponsorshipAvailable,
+        isFree,
+        zipCode,
+        tags,
         search,
         lat,
         lng,
@@ -245,18 +331,30 @@ class EventsController {
         sortOrder = 'ASC',
       } = req.query;
 
+      // Query directly from events table to avoid view GROUP BY issues
       let query = `
         SELECT 
-          e.*,
-          ec.name as category_name,
-          ec.icon_name as category_icon,
-          et.name as event_type_name,
+          e.id, e.organizer_id, e.title, e.description,
+          e.event_date, e.event_end_date, e.timezone,
+          e.zip_code, e.address, e.city, e.state, e.latitude, e.longitude,
+          e.venue_name, e.flyer_url, e.flyer_width, e.flyer_height, e.flyer_thumbnail_url,
+          e.category_id, e.event_type_id, e.tags, e.host,
+          e.contact_email, e.contact_phone, e.cta_link,
+          e.capacity, e.is_rsvp_required, e.rsvp_count, e.waitlist_count,
+          e.is_sponsorship_available, e.is_nonprofit, e.nonprofit_approval_status,
+          e.is_paid, e.payment_status, e.status, e.view_count,
+          e.created_at, e.expires_at,
+          ec.name as category_name, ec.icon_name as category_icon, ec.key as category_key,
+          et.name as event_type_name, et.key as event_type_key,
+          u.first_name || ' ' || u.last_name as organizer_full_name,
           u.first_name as organizer_first_name,
           u.last_name as organizer_last_name,
+          NOT e.is_paid as is_free,
           CASE 
-            WHEN e.capacity IS NOT NULL THEN ROUND((e.rsvp_count::DECIMAL / e.capacity::DECIMAL) * 100, 0)
-            ELSE NULL
-          END as capacity_percentage
+            WHEN e.venue_name IS NOT NULL THEN e.venue_name
+            WHEN e.address IS NOT NULL THEN e.address
+            ELSE e.city || ', ' || e.state
+          END as location_display
         FROM events e
         JOIN event_categories ec ON e.category_id = ec.id
         JOIN event_types et ON e.event_type_id = et.id
@@ -269,54 +367,73 @@ class EventsController {
 
       if (category) {
         paramCount++;
-        query += ` AND ec.key = $${paramCount}`;
+        query += ` AND category_key = $${paramCount}`;
         params.push(category);
       }
 
       if (eventType) {
         paramCount++;
-        query += ` AND et.key = $${paramCount}`;
+        query += ` AND event_type_key = $${paramCount}`;
         params.push(eventType);
       }
 
       if (dateFrom) {
         paramCount++;
-        query += ` AND e.event_date >= $${paramCount}`;
+        query += ` AND event_date >= $${paramCount}`;
         params.push(dateFrom);
       }
 
       if (dateTo) {
         paramCount++;
-        query += ` AND e.event_date <= $${paramCount}`;
+        query += ` AND event_date <= $${paramCount}`;
         params.push(dateTo);
       }
 
       if (isRsvpRequired === 'true') {
-        query += ` AND e.is_rsvp_required = true`;
+        query += ` AND is_rsvp_required = true`;
       }
 
       if (isSponsorshipAvailable === 'true') {
-        query += ` AND e.is_sponsorship_available = true`;
+        query += ` AND is_sponsorship_available = true`;
+      }
+
+      // New filters
+      if (isFree === 'true') {
+        query += ` AND is_free = true`;
+      }
+
+      if (zipCode) {
+        paramCount++;
+        query += ` AND zip_code = $${paramCount}`;
+        params.push(zipCode);
+      }
+
+      if (tags) {
+        const tagArray = Array.isArray(tags) ? tags : tags.split(',');
+        paramCount++;
+        query += ` AND tags ? $${paramCount}`;
+        params.push(tagArray[0]); // Check for first tag, can be extended for multiple
       }
 
       if (search) {
         paramCount++;
         query += ` AND (
-          to_tsvector('english', e.title || ' ' || e.description) @@ plainto_tsquery('english', $${paramCount})
-          OR e.title ILIKE $${paramCount + 1}
+          search_vector @@ plainto_tsquery('english', $${paramCount})
+          OR title ILIKE $${paramCount + 1}
+          OR description ILIKE $${paramCount + 2}
         )`;
-        params.push(search, `%${search}%`);
-        paramCount++;
+        params.push(search, `%${search}%`, `%${search}%`);
+        paramCount += 2;
       }
 
       // Location filtering
       if (lat && lng && radius) {
         paramCount++;
         query += ` AND (
-          e.latitude IS NOT NULL AND e.longitude IS NOT NULL AND
-          (3959 * acos(cos(radians($${paramCount})) * cos(radians(e.latitude)) * 
-          cos(radians(e.longitude) - radians($${paramCount + 1})) + 
-          sin(radians($${paramCount})) * sin(radians(e.latitude)))) <= $${
+          latitude IS NOT NULL AND longitude IS NOT NULL AND
+          (3959 * acos(cos(radians($${paramCount})) * cos(radians(latitude)) * 
+          cos(radians(longitude) - radians($${paramCount + 1})) + 
+          sin(radians($${paramCount})) * sin(radians(latitude)))) <= $${
           paramCount + 2
         }
         )`;
@@ -331,6 +448,7 @@ class EventsController {
         'title',
         'rsvp_count',
         'view_count',
+        'capacity_percentage',
       ];
       const sortColumn = validSortColumns.includes(sortBy)
         ? sortBy
@@ -338,7 +456,7 @@ class EventsController {
       const validSortOrder =
         sortOrder.toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
 
-      query += ` ORDER BY e.${sortColumn} ${validSortOrder}`;
+      query += ` ORDER BY ${sortColumn} ${validSortOrder}`;
 
       // Pagination
       paramCount++;
@@ -372,22 +490,67 @@ class EventsController {
     try {
       const { id } = req.params;
       const userId = req.user?.id;
+      
+      // Strip "guest_" prefix if present - guest IDs aren't valid UUIDs for database queries
+      const cleanUserId = userId && !userId.startsWith('guest_') ? userId : null;
 
-      const result = await db.query(
-        `SELECT 
-          e.*,
-          ec.name as category_name,
-          et.name as event_type_name,
+      // Query directly from events table instead of view to avoid GROUP BY issues
+      let query = `
+        SELECT 
+          e.id, e.organizer_id, e.title, e.description,
+          e.event_date, e.event_end_date, e.timezone,
+          e.zip_code, e.address, e.city, e.state, e.latitude, e.longitude,
+          e.venue_name, e.flyer_url, e.flyer_width, e.flyer_height, e.flyer_thumbnail_url,
+          e.category_id, e.event_type_id, e.tags, e.host,
+          e.contact_email, e.contact_phone, e.cta_link,
+          e.capacity, e.is_rsvp_required, e.rsvp_count, e.waitlist_count,
+          e.is_sponsorship_available, e.is_nonprofit, e.nonprofit_approval_status,
+          e.is_paid, e.payment_status, e.status, e.view_count,
+          e.created_at, e.expires_at,
+          -- Category info
+          ec.name as category_name, ec.icon_name as category_icon, ec.key as category_key,
+          -- Event type info
+          et.name as event_type_name, et.key as event_type_key,
+          -- Organizer info
+          u.first_name || ' ' || u.last_name as organizer_full_name,
           u.first_name as organizer_first_name,
           u.last_name as organizer_last_name,
           u.email as organizer_email,
+          -- Computed fields
+          NOT e.is_paid as is_free,
+          CASE 
+            WHEN e.event_date > NOW() THEN 'upcoming'
+            WHEN e.event_end_date IS NOT NULL AND e.event_end_date < NOW() THEN 'past'
+            WHEN e.event_date <= NOW() AND (e.event_end_date IS NULL OR e.event_end_date >= NOW()) THEN 'happening_now'
+            ELSE 'past'
+          END as event_status,
+          CASE 
+            WHEN e.event_date > NOW() THEN false
+            WHEN e.event_end_date IS NOT NULL AND e.event_end_date < NOW() THEN true
+            WHEN e.event_date <= NOW() AND (e.event_end_date IS NULL OR e.event_end_date >= NOW()) THEN false
+            ELSE true
+          END as is_past,
+          CASE 
+            WHEN e.event_date <= NOW() AND (e.event_end_date IS NULL OR e.event_end_date >= NOW()) THEN true
+            ELSE false
+          END as is_happening_now,
+          CASE 
+            WHEN e.capacity IS NOT NULL AND e.capacity > 0 THEN 
+              ROUND((e.rsvp_count::DECIMAL / e.capacity::DECIMAL) * 100, 0)
+            ELSE NULL
+          END as capacity_percentage,
+          CASE 
+            WHEN e.venue_name IS NOT NULL THEN e.venue_name
+            WHEN e.address IS NOT NULL THEN e.address
+            ELSE e.city || ', ' || e.state
+          END as location_display,
           ${
-            userId
+            cleanUserId
               ? `(SELECT COUNT(*) > 0 FROM event_rsvps WHERE event_id = e.id AND user_id = $2) as has_rsvped,`
               : 'false as has_rsvped,'
           }
           ${
-            userId
+            cleanUserId
               ? `(SELECT status FROM event_rsvps WHERE event_id = e.id AND user_id = $2) as rsvp_status`
               : 'NULL as rsvp_status'
           }
@@ -395,8 +558,12 @@ class EventsController {
         JOIN event_categories ec ON e.category_id = ec.id
         JOIN event_types et ON e.event_type_id = et.id
         JOIN users u ON e.organizer_id = u.id
-        WHERE e.id = $1`,
-        userId ? [id, userId] : [id],
+        WHERE e.id = $1
+      `;
+
+      const result = await db.query(
+        query,
+        cleanUserId ? [id, cleanUserId] : [id],
       );
 
       if (result.rows.length === 0) {
@@ -405,19 +572,21 @@ class EventsController {
           .json({ error: 'Event not found', code: 'EVENT_NOT_FOUND' });
       }
 
+      const event = result.rows[0];
+
       // Increment view count
       await db.query(
         'UPDATE events SET view_count = view_count + 1 WHERE id = $1',
         [id],
       );
 
-      // Log analytics
+      // Log analytics (use cleanUserId for proper UUID format)
       await db.query(
-        'INSERT INTO event_analytics (event_id, metric_type, user_id) VALUES ($1, $2, $3)',
-        [id, 'view', userId],
+        'INSERT INTO event_analytics (event_id, metric_type, user_id, ip_address, user_agent) VALUES ($1, $2, $3, $4, $5)',
+        [id, 'view', cleanUserId, req.ip, req.get('User-Agent')],
       );
 
-      res.json({ event: result.rows[0] });
+      res.json({ event });
     } catch (error) {
       logger.error('Error getting event:', error);
       res.status(500).json({ error: error.message, code: 'EVENT_FETCH_ERROR' });

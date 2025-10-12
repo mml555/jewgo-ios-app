@@ -47,10 +47,30 @@ export class FormPersistenceService {
     };
   }
 
+  // Clear status reset timer helper
+  private clearStatusResetTimer(): void {
+    if (this.statusResetTimer) {
+      clearTimeout(this.statusResetTimer);
+      this.statusResetTimer = null;
+    }
+  }
+
   // Update save status and notify subscribers
   private updateSaveStatus(status: SaveStatus): void {
     this.saveStatus = status;
     this.saveStatusCallbacks.forEach(callback => callback(status));
+  }
+
+  // Schedule status reset with cleanup
+  private scheduleStatusReset(fromStatus: SaveStatus, delay: number): void {
+    this.clearStatusResetTimer();
+    
+    this.statusResetTimer = setTimeout(() => {
+      if (this.saveStatus === fromStatus) {
+        this.updateSaveStatus(SaveStatus.IDLE);
+      }
+      this.statusResetTimer = null;
+    }, delay);
   }
 
   // Get current save status
@@ -90,36 +110,11 @@ export class FormPersistenceService {
       await this.saveToHistory(mergedData as any, metadata);
 
       this.updateSaveStatus(SaveStatus.SAVED);
-
-      // Clear any existing status reset timer
-      if (this.statusResetTimer) {
-        clearTimeout(this.statusResetTimer);
-      }
-
-      // Reset to idle after 2 seconds
-      this.statusResetTimer = setTimeout(() => {
-        if (this.saveStatus === SaveStatus.SAVED) {
-          this.updateSaveStatus(SaveStatus.IDLE);
-        }
-        this.statusResetTimer = null;
-      }, 2000);
+      this.scheduleStatusReset(SaveStatus.SAVED, 2000);
     } catch (error) {
       errorLog('Error saving form data:', error);
       this.updateSaveStatus(SaveStatus.ERROR);
-
-      // Clear any existing status reset timer
-      if (this.statusResetTimer) {
-        clearTimeout(this.statusResetTimer);
-      }
-
-      // Reset to idle after 3 seconds
-      this.statusResetTimer = setTimeout(() => {
-        if (this.saveStatus === SaveStatus.ERROR) {
-          this.updateSaveStatus(SaveStatus.IDLE);
-        }
-        this.statusResetTimer = null;
-      }, 3000);
-
+      this.scheduleStatusReset(SaveStatus.ERROR, 3000);
       throw error;
     }
   }
@@ -154,6 +149,9 @@ export class FormPersistenceService {
   // Clear form data
   async clearFormData(): Promise<void> {
     try {
+      // Clear all timers first
+      this.clearStatusResetTimer();
+      
       await Promise.all([
         AsyncStorage.removeItem(FORM_STORAGE_KEY),
         AsyncStorage.removeItem(FORM_METADATA_KEY),
@@ -217,10 +215,24 @@ export class FormPersistenceService {
       this.autoSaveTimer = null;
     }
     // Also clear status reset timer
-    if (this.statusResetTimer) {
-      clearTimeout(this.statusResetTimer);
-      this.statusResetTimer = null;
-    }
+    this.clearStatusResetTimer();
+  }
+
+  // Comprehensive cleanup method for service disposal
+  cleanup(): void {
+    // Stop auto-save timer
+    this.stopAutoSave();
+    
+    // Clear status reset timer
+    this.clearStatusResetTimer();
+    
+    // Clear all callbacks to prevent memory leaks
+    this.saveStatusCallbacks = [];
+    
+    // Reset status to idle
+    this.saveStatus = SaveStatus.IDLE;
+    
+    debugLog('FormPersistenceService: Cleanup completed');
   }
 
   // Check if form data has minimal required information for saving

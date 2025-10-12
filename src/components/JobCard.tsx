@@ -19,7 +19,7 @@ import {
   Shadows,
   TouchTargets,
 } from '../styles/designSystem';
-import HeartIcon from './HeartIcon';
+import Icon from './Icon';
 import { DistanceDisplay } from './DistanceDisplay';
 import { useLocationSimple } from '../hooks/useLocationSimple';
 import { debugLog, errorLog } from '../utils/logger';
@@ -36,7 +36,7 @@ interface JobCardProps {
 
 const { width: screenWidth } = Dimensions.get('window');
 const ROW_PADDING = 16; // 8px padding on each side of the row
-const CARD_SPACING = 8; // Space between cards in a row
+const CARD_SPACING = 8; // Reduced space between cards
 const CARD_WIDTH = (screenWidth - ROW_PADDING - CARD_SPACING) / 2;
 
 const JobCard: React.FC<JobCardProps> = memo(({ item, categoryKey }) => {
@@ -46,20 +46,36 @@ const JobCard: React.FC<JobCardProps> = memo(({ item, categoryKey }) => {
   const { checkFavoriteStatus, toggleFavorite } = useFavorites();
   const [isFavorited, setIsFavorited] = useState(false);
 
-  // Check favorite status on mount
+  // Check favorite status on mount and when item.id changes
   useEffect(() => {
+    let mounted = true;
+    
     const checkStatus = async () => {
-      const status = await checkFavoriteStatus(item.id);
-      setIsFavorited(status);
+      try {
+        const status = await checkFavoriteStatus(item.id);
+        // Only update if component is still mounted
+        if (mounted) {
+          setIsFavorited(status);
+        }
+      } catch (error) {
+        errorLog('Error checking favorite status in JobCard:', error);
+      }
     };
+    
     checkStatus();
-  }, [item.id, checkFavoriteStatus]);
+    
+    // Cleanup function to prevent state updates on unmounted component
+    return () => {
+      mounted = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [item.id]); // Only depend on item.id, not checkFavoriteStatus
 
   const handlePress = () => {
     // Check if this is a job seeker (has entity_type 'job_seeker')
     if ((item as any).entity_type === 'job_seeker') {
-      (navigation as any).navigate('JobSeekerDetail', {
-        jobSeekerId: item.id,
+      (navigation as any).navigate('JobSeekerDetailV2', {
+        profileId: item.id,
       });
     } else {
       (navigation as any).navigate('JobDetail', {
@@ -127,6 +143,34 @@ const JobCard: React.FC<JobCardProps> = memo(({ item, categoryKey }) => {
     return null;
   }, [location, item.latitude, item.longitude]);
 
+  // Normalize employment type for consistent display
+  const normalizeEmploymentType = (jobType?: string): string => {
+    if (!jobType) return 'Full Time';
+    const normalized = jobType.toLowerCase().replace(/[-_]/g, ' ');
+    return normalized
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
+
+  // Format location - prioritize distance, then zip code
+  const formatLocation = (): string => {
+    // If we have distance and location accuracy, show distance
+    if (realDistanceMeters !== null && accuracyAuthorization === 'full') {
+      const distanceMiles = realDistanceMeters / 1609.34;
+      if (distanceMiles < 1) {
+        return `${Math.round(distanceMiles * 5280)} ft away`;
+      } else if (distanceMiles < 100) {
+        return `${distanceMiles.toFixed(1)} mi away`;
+      } else {
+        return `${Math.round(distanceMiles)} mi away`;
+      }
+    }
+    
+    // Otherwise show zip code
+    return item.zip_code ? String(item.zip_code) : 'Remote';
+  };
+
   // Simple job data processing to match the original design
   const jobData = useMemo(() => {
     // Ensure we have a valid item
@@ -135,6 +179,7 @@ const JobCard: React.FC<JobCardProps> = memo(({ item, categoryKey }) => {
         jobTitle: 'Job Title',
         compensation: 'Salary TBD',
         employmentType: 'Full Time',
+        location: 'N/A',
       };
     }
 
@@ -151,7 +196,7 @@ const JobCard: React.FC<JobCardProps> = memo(({ item, categoryKey }) => {
     }
 
     // Get employment type from job_type or default
-    const employmentType = item.job_type || 'Full Time';
+    const employmentType = normalizeEmploymentType(item.job_type);
 
     return {
       jobTitle,
@@ -183,11 +228,12 @@ const JobCard: React.FC<JobCardProps> = memo(({ item, categoryKey }) => {
           isFavorited ? 'Remove from favorites' : 'Add to favorites'
         }
         accessibilityHint="Tap to toggle favorite status"
-        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
       >
-        <HeartIcon
-          size={20}
-          color={isFavorited ? Colors.error : Colors.textSecondary}
+        <Icon
+          name="heart"
+          size={14}
+          color={isFavorited ? Colors.error : '#6B7280'}
           filled={isFavorited}
         />
       </Pressable>
@@ -203,16 +249,17 @@ const JobCard: React.FC<JobCardProps> = memo(({ item, categoryKey }) => {
           {jobData.compensation}
         </Text>
 
-        {/* Employment Type - In a green pill */}
-        <View style={styles.employmentTypeContainer}>
-          <Text style={styles.employmentTypeText}>
-            {jobData.employmentType}
-          </Text>
-        </View>
+        {/* Spacer to push footer to bottom */}
+        <View style={styles.spacer} />
 
-        {/* Distance/Zip Code - Bottom right, underlined */}
-        <View style={styles.bottomRightContainer}>
-          {realDistanceMeters ? (
+        {/* Footer with Employment Type and Location/Distance */}
+        <View style={styles.cardFooter}>
+          <View style={styles.employmentTypeContainer}>
+            <Text style={styles.employmentTypeText}>
+              {jobData.employmentType}
+            </Text>
+          </View>
+          {realDistanceMeters !== null && accuracyAuthorization === 'full' ? (
             <DistanceDisplay
               distanceMeters={realDistanceMeters}
               accuracyContext={{
@@ -224,7 +271,7 @@ const JobCard: React.FC<JobCardProps> = memo(({ item, categoryKey }) => {
             />
           ) : (
             <Text style={styles.bottomRightText}>
-              {item.zip_code ? String(item.zip_code) : 'N/A'}
+              {item.zip_code ? String(item.zip_code) : 'Remote'}
             </Text>
           )}
         </View>
@@ -239,65 +286,79 @@ const styles = StyleSheet.create({
   container: {
     width: CARD_WIDTH,
     backgroundColor: Colors.white,
-    borderRadius: BorderRadius.xl, // More rounded corners
-    padding: Spacing.md,
-    ...Shadows.sm,
+    borderRadius: 16, // Smaller radius to match reference
+    padding: 12, // Reduced padding
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
     position: 'relative',
-    minHeight: 120, // Back to original height
+    minHeight: 100, // Much thinner cards
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   heartButton: {
     position: 'absolute',
-    top: Spacing.sm,
-    right: Spacing.sm,
-    width: TouchTargets.minimum,
-    height: TouchTargets.minimum,
+    top: 8,
+    right: 8,
+    width: 28,
+    height: 28,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 10,
-    borderRadius: TouchTargets.minimum / 2, // Fully rounded heart button
+    borderRadius: 14,
   },
   contentContainer: {
     flex: 1,
-    paddingRight: 24, // Make room for heart button
+    paddingRight: 12, // Reduced space for smaller heart button
+    justifyContent: 'space-between',
   },
   jobTitle: {
-    ...Typography.styles.h3,
     fontSize: 16,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-    marginBottom: Spacing.sm,
+    fontWeight: '600',
+    color: Colors.text.primary,
+    marginBottom: 4,
     lineHeight: 20,
+    paddingRight: 4,
   },
   compensationText: {
-    ...Typography.styles.body,
-    fontSize: 12,
-    color: Colors.textSecondary,
-    marginBottom: Spacing.sm,
+    fontSize: 14,
+    fontWeight: '500',
+    color: Colors.text.primary,
+    marginBottom: 6,
+    lineHeight: 18,
+    paddingRight: 4,
+  },
+  spacer: {
+    flex: 1,
   },
   employmentTypeContainer: {
     backgroundColor: '#E8F5E9',
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 8,
     alignSelf: 'flex-start',
-    marginBottom: Spacing.sm,
   },
   employmentTypeText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600',
-    color: '#388E3C',
-    textTransform: 'capitalize',
+    color: '#4CAF50',
   },
-  bottomRightContainer: {
-    position: 'absolute',
-    bottom: Spacing.sm,
-    right: Spacing.sm,
+  cardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    marginTop: 2,
+    paddingTop: 2,
   },
   bottomRightText: {
     fontSize: 12,
     fontWeight: '500',
-    color: Colors.primary.main,
+    color: '#3B82F6',
     textDecorationLine: 'underline',
+    flexShrink: 1,
+    marginLeft: 8,
   },
 });
 

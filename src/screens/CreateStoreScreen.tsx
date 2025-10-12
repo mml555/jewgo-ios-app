@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -45,6 +45,15 @@ const CreateStoreScreen: React.FC = () => {
   const [errors, setErrors] = useState<
     Partial<Record<keyof CreateStoreForm, string>>
   >({});
+
+  // Track component mount state to prevent updates after unmount
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const storeTypes = [
     { key: 'general', label: 'General Store', emoji: '🏪' },
@@ -126,6 +135,11 @@ const CreateStoreScreen: React.FC = () => {
       // Mock success for now
       await new Promise(resolve => setTimeout(resolve, 2000));
 
+      // Guard against showing alert after component unmount
+      if (!isMountedRef.current) {
+        return;
+      }
+
       Alert.alert(
         'Store Created!',
         'Your store has been created successfully. You can now start adding products.',
@@ -137,10 +151,17 @@ const CreateStoreScreen: React.FC = () => {
         ],
       );
     } catch (error) {
+      // Guard against showing error alert after unmount
+      if (!isMountedRef.current) {
+        return;
+      }
       Alert.alert('Error', 'Failed to create store. Please try again.');
       errorLog('Error creating store:', error);
     } finally {
-      setLoading(false);
+      // Guard against state update after unmount
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
     }
   }, [formData, validateForm, navigation]);
 

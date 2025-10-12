@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import {
   favoritesService,
@@ -54,108 +54,159 @@ export const useFavorites = (): UseFavoritesReturn => {
     Map<string, boolean>
   >(new Map());
   const [lastLoadTime, setLastLoadTime] = useState(0);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   const PAGE_SIZE = 20;
-  const DEBOUNCE_DELAY = 300; // 300ms debounce
+  const DEBOUNCE_DELAY = 1000; // 1 second debounce (increased from 300ms)
+  const FOCUS_RELOAD_DELAY = 2000; // Only reload on focus if >2s since last load
 
-  const loadFavorites = useCallback(
-    async (reset: boolean = true) => {
-      try {
-        // Prevent multiple simultaneous calls
-        if (loading && reset) {
-          return;
-        }
+  // Use ref to store loading function to avoid recreating callbacks
+  const loadFavoritesRef = useRef<(reset?: boolean) => Promise<void>>();
+  const currentOffsetRef = useRef(currentOffset);
+  const loadingRef = useRef(loading);
+  const lastLoadTimeRef = useRef(lastLoadTime);
+  const loadingMoreRef = useRef(loadingMore);
 
-        // Debounce rapid calls
-        const now = Date.now();
-        if (reset && now - lastLoadTime < DEBOUNCE_DELAY) {
-          return;
-        }
-
-        if (reset) {
-          setLoading(true);
-          setCurrentOffset(0);
-          setFavorites([]);
-          setLastLoadTime(now);
-        } else {
-          setLoadingMore(true);
-        }
-        setError(null);
-
-        const offset = reset ? 0 : currentOffset;
-        const response = await favoritesService.getUserFavorites(
-          PAGE_SIZE,
-          offset,
-        );
-
-        if (response.success) {
-          if (reset) {
-            setFavorites(response.data.favorites);
-            trackFavoriteEvent('favorites_viewed', {
-              total_count: response.data.total,
-              loaded_count: response.data.favorites.length,
-              pagination: { offset, limit: PAGE_SIZE },
-            });
-          } else {
-            setFavorites(prev => [...prev, ...response.data.favorites]);
-            trackFavoriteEvent('favorites_pagination', {
-              loaded_count: response.data.favorites.length,
-              pagination: { offset, limit: PAGE_SIZE },
-            });
-          }
-
-          setFavoritesCount(response.data.total);
-          setCurrentOffset(offset + response.data.favorites.length);
-          setHasMore(response.data.favorites.length === PAGE_SIZE);
-
-          // Update favorite statuses map
-          const statusMap = new Map<string, boolean>();
-          response.data.favorites.forEach(fav => {
-            statusMap.set(fav.entity_id, true);
-          });
-          setFavoriteStatuses(prev => {
-            const newMap = new Map(prev);
-            statusMap.forEach((value, key) => {
-              newMap.set(key, value);
-            });
-            return newMap;
-          });
-        } else {
-          setError('Failed to load favorites');
-        }
-      } catch (err) {
-        errorLog('Error loading favorites:', err);
-        setError('Failed to load favorites');
-      } finally {
-        setLoading(false);
-        setLoadingMore(false);
-      }
-    },
-    [currentOffset, PAGE_SIZE, loading, lastLoadTime],
-  );
-
-  // Load favorites on mount and when dependencies change
+  // Update refs when values change
   useEffect(() => {
-    loadFavorites();
+    currentOffsetRef.current = currentOffset;
+    loadingRef.current = loading;
+    lastLoadTimeRef.current = lastLoadTime;
+    loadingMoreRef.current = loadingMore;
+  }, [currentOffset, loading, lastLoadTime, loadingMore]);
+
+  loadFavoritesRef.current = async (reset: boolean = true, forcedReload: boolean = false) => {
+    try {
+      // Prevent multiple simultaneous calls
+      if ((loadingRef.current || loadingMoreRef.current) && !forcedReload) {
+        if (__DEV__) {
+          debugLog('🚫 Preventing duplicate favorites load - already loading');
+        }
+        return;
+      }
+
+      // Debounce rapid calls
+      const now = Date.now();
+      if (reset && now - lastLoadTimeRef.current < DEBOUNCE_DELAY && !forcedReload) {
+        if (__DEV__) {
+          debugLog('🚫 Debouncing favorites load - too soon since last load:', now - lastLoadTimeRef.current, 'ms');
+        }
+        return;
+      }
+
+      if (reset) {
+        setLoading(true);
+        setCurrentOffset(0);
+        setFavorites([]);
+        setLastLoadTime(now);
+        lastLoadTimeRef.current = now;
+      } else {
+        setLoadingMore(true);
+      }
+      setError(null);
+
+      const offset = reset ? 0 : currentOffsetRef.current;
+      const response = await favoritesService.getUserFavorites(
+        PAGE_SIZE,
+        offset,
+      );
+
+      if (response.success) {
+        if (reset) {
+          setFavorites(response.data.favorites);
+          trackFavoriteEvent('favorites_viewed', {
+            total_count: response.data.total,
+            loaded_count: response.data.favorites.length,
+            pagination: { offset, limit: PAGE_SIZE },
+          });
+        } else {
+          setFavorites(prev => [...prev, ...response.data.favorites]);
+          trackFavoriteEvent('favorites_pagination', {
+            loaded_count: response.data.favorites.length,
+            pagination: { offset, limit: PAGE_SIZE },
+          });
+        }
+
+        setFavoritesCount(response.data.total);
+        setCurrentOffset(offset + response.data.favorites.length);
+        setHasMore(response.data.favorites.length === PAGE_SIZE);
+
+        // Update favorite statuses map
+        const statusMap = new Map<string, boolean>();
+        response.data.favorites.forEach(fav => {
+          statusMap.set(fav.entity_id, true);
+        });
+        setFavoriteStatuses(prev => {
+          const newMap = new Map(prev);
+          statusMap.forEach((value, key) => {
+            newMap.set(key, value);
+          });
+          return newMap;
+        });
+      } else {
+        setError('Failed to load favorites');
+      }
+    } catch (err) {
+      errorLog('Error loading favorites:', err);
+      setError('Failed to load favorites');
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  };
+
+  const loadFavorites = useCallback(async (reset: boolean = true, forcedReload: boolean = false) => {
+    await loadFavoritesRef.current?.(reset, forcedReload);
   }, []);
 
+  // Load favorites on mount only
+  useEffect(() => {
+    if (!isInitialized) {
+      setIsInitialized(true);
+      loadFavoritesRef.current?.(true, true); // Force initial load
+    }
+  }, []); // Empty deps - only run on mount
+
   // Add focus listener to refresh favorites when screen comes into focus
+  // Only reload if sufficient time has passed since last load
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
-      loadFavorites(true);
+      const now = Date.now();
+      const timeSinceLastLoad = now - lastLoadTimeRef.current;
+      
+      if (timeSinceLastLoad > FOCUS_RELOAD_DELAY) {
+        if (__DEV__) {
+          debugLog('🔄 Reloading favorites on focus - last load was', timeSinceLastLoad, 'ms ago');
+        }
+        loadFavoritesRef.current?.(true, false); // Don't force, use normal debouncing
+      } else if (__DEV__) {
+        debugLog('🚫 Skipping favorites reload on focus - too recent');
+      }
     });
 
     return unsubscribe;
-  }, [navigation, loadFavorites]);
+  }, [navigation]); // Only depend on navigation
 
   // Add global favorites event listener for dynamic updates
+  // Only reload if triggered by user action (not on every event)
   useEffect(() => {
     const unsubscribe = favoritesEventService.addListener(() => {
-      loadFavorites(true);
+      const now = Date.now();
+      const timeSinceLastLoad = now - lastLoadTimeRef.current;
+      
+      // Only reload if enough time has passed OR this is likely a user action
+      if (timeSinceLastLoad > DEBOUNCE_DELAY) {
+        if (__DEV__) {
+          debugLog('🔄 Reloading favorites on event - last load was', timeSinceLastLoad, 'ms ago');
+        }
+        loadFavoritesRef.current?.(true, false);
+      } else if (__DEV__) {
+        debugLog('🚫 Skipping favorites reload on event - too recent');
+      }
     });
 
     return unsubscribe;
-  }, [loadFavorites]);
+  }, []); // Empty deps - event service is stable
 
   const isFavorited = useCallback(
     (entityId: string): boolean => {

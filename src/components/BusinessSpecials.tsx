@@ -18,7 +18,7 @@ import {
 } from '../styles/designSystem';
 import { specialsService } from '../services/SpecialsService';
 import { Special } from '../types/specials';
-import EateryIcon from './EateryIcon';
+import Icon from './Icon';
 import { infoLog } from '../utils/logger';
 
 interface BusinessSpecialsProps {
@@ -150,7 +150,7 @@ const BusinessSpecials: React.FC<BusinessSpecialsProps> = ({
           </TouchableOpacity>
         </View>
         <View style={styles.noSpecialsContainer}>
-          <EateryIcon size={32} color={Colors.gray400} />
+          <Icon name="tag" size={32} color={Colors.gray400} />
           <Text style={styles.noSpecialsText}>
             No current specials available
           </Text>

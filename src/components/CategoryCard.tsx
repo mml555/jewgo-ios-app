@@ -28,7 +28,7 @@ import {
   TouchTargets,
 } from '../styles/designSystem';
 import { favoritesEventService } from '../services/FavoritesEventService';
-import HeartIcon from './HeartIcon';
+import Icon from './Icon';
 import { debugLog, errorLog, warnLog } from '../utils/logger';
 import { DistanceDisplay } from './DistanceDisplay';
 import { useLocationSimple } from '../hooks/useLocationSimple';
@@ -75,14 +75,18 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
   const [imageError, setImageError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
 
-  // Use refs to prevent unnecessary re-renders
+  // Use refs to prevent unnecessary re-renders and memory leaks
   const imageErrorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isMountedRef = useRef(true);
 
-  // Cleanup timeout on unmount
+  // Cleanup on unmount
   useEffect(() => {
+    isMountedRef.current = true;
     return () => {
+      isMountedRef.current = false;
       if (imageErrorTimeoutRef.current) {
         clearTimeout(imageErrorTimeoutRef.current);
+        imageErrorTimeoutRef.current = null;
       }
     };
   }, []);
@@ -92,10 +96,13 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
     if (isInitiallyFavorited === undefined) {
       const checkStatus = async () => {
         const status = await checkFavoriteStatus(item.id);
-        if (__DEV__) {
-          // debugLog('🔄 CategoryCard checking favorite status for', item.title, ':', status);
+        // Only update state if component is still mounted
+        if (isMountedRef.current) {
+          if (__DEV__) {
+            // debugLog('🔄 CategoryCard checking favorite status for', item.title, ':', status);
+          }
+          setIsFavorited(status);
         }
-        setIsFavorited(status);
       };
       checkStatus();
     } else if (__DEV__) {
@@ -138,11 +145,27 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
 
   // Memoized press handler to prevent unnecessary re-renders
   const handlePress = useCallback(() => {
-    (navigation as any).navigate('ListingDetail', {
-      itemId: item.id,
-      categoryKey: categoryKey,
+    console.log('🔷 CategoryCard pressed:', { 
+      categoryKey, 
+      itemId: item.id, 
+      title: item.title 
     });
-  }, [navigation, item.id, categoryKey]);
+    
+    // Events category navigates to EventDetail screen
+    if (categoryKey === 'events') {
+      console.log('🔷 Navigating to EventDetail with eventId:', item.id);
+      (navigation as any).navigate('EventDetail', {
+        eventId: item.id,
+      });
+    } else {
+      // All other categories navigate to ListingDetail screen
+      console.log('🔷 Navigating to ListingDetail with itemId:', item.id);
+      (navigation as any).navigate('ListingDetail', {
+        itemId: item.id,
+        categoryKey: categoryKey,
+      });
+    }
+  }, [navigation, item.id, categoryKey, item.title]);
 
   // Memoized heart press handler to prevent unnecessary re-renders
   const handleHeartPress = useCallback(async () => {
@@ -307,7 +330,8 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
           accessibilityHint="Tap to toggle favorite status"
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <HeartIcon
+          <Icon
+            name="heart"
             size={20}
             color={isFavorited ? Colors.error : Colors.textSecondary}
             filled={isFavorited}
@@ -365,13 +389,15 @@ const styles = StyleSheet.create({
     width: CARD_WIDTH,
     borderRadius: BorderRadius.lg,
     padding: 0, // Remove padding to align with image edges
-    ...Shadows.sm, // Add subtle shadow for depth
+    // Shadow moved to specific container types to prevent rendering warnings
   },
   containerWithBackground: {
     backgroundColor: Colors.background.secondary, // White background for jobs
+    ...Shadows.sm, // Shadow only on solid background
   },
   containerTransparent: {
-    backgroundColor: 'transparent', // Transparent for all other categories
+    backgroundColor: Colors.background.secondary, // Use solid color for shadow calculation
+    ...Shadows.sm, // Shadow requires solid background
   },
   imageContainer: {
     position: 'relative',

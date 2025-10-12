@@ -30,7 +30,6 @@ import { Favorite } from '../services/FavoritesService';
 import { CategoryItem } from '../hooks/useCategoryData';
 import CategoryCard, { CategoryCardWithMemo } from '../components/CategoryCard';
 import JobCard from '../components/JobCard';
-import HeartIcon from '../components/HeartIcon';
 import { debugLog, warnLog } from '../utils/logger';
 
 type NavigationProp = StackNavigationProp<RootStackParamList>;

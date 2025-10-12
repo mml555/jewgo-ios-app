@@ -8,13 +8,14 @@ const logger = require('../utils/logger');
 // In-memory store for rate limiting (for production, use Redis)
 const requestCounts = new Map();
 const blockedIPs = new Map();
+const blockedIPLogTracker = new Map(); // Track when we last logged about a blocked IP
 
 // Configuration
 const RATE_LIMIT_CONFIG = {
   // General API limits
   general: {
     windowMs: 15 * 60 * 1000, // 15 minutes
-    maxRequests: process.env.NODE_ENV === 'development' ? 2000 : 100,
+    maxRequests: process.env.NODE_ENV === 'development' ? 50000 : 100, // Very high for dev to prevent blocking during debugging
     message: 'Too many requests from this IP, please try again later.',
   },
 
@@ -40,7 +41,9 @@ const RATE_LIMIT_CONFIG = {
   },
 
   // Block duration for abusive IPs
-  blockDuration: 60 * 60 * 1000, // 1 hour
+  blockDuration: process.env.NODE_ENV === 'development' 
+    ? 5 * 60 * 1000  // 5 minutes in development
+    : 60 * 60 * 1000, // 1 hour in production
 
   // Skip rate limiting for these paths in development
   skipPaths: ['/health', '/api/v5/health', '/api/v5/guest/create'],
@@ -102,15 +105,18 @@ const blockIP = (clientId, reason = 'Rate limit exceeded') => {
  */
 const createRateLimiter = (config = RATE_LIMIT_CONFIG.general) => {
   return (req, res, next) => {
-    // Skip in development for certain paths
+    const clientId = getClientId(req);
+    
+    // Skip rate limiting for localhost in development
     if (
-      process.env.NODE_ENV === 'development' &&
+      process.env.NODE_ENV === 'development' ||
+      clientId === '::ffff:127.0.0.1' ||
+      clientId === '127.0.0.1' ||
+      clientId === '::1' ||
       RATE_LIMIT_CONFIG.skipPaths.includes(req.path)
     ) {
       return next();
     }
-
-    const clientId = getClientId(req);
 
     // Check if IP is blocked
     if (isBlocked(clientId)) {
@@ -119,11 +125,17 @@ const createRateLimiter = (config = RATE_LIMIT_CONFIG.general) => {
         (blockInfo.expiresAt - Date.now()) / 1000 / 60,
       );
 
-      logger.warn('Blocked IP attempted access', {
-        clientId,
-        path: req.path,
-        remainingTime: `${remainingTime} minutes`,
-      });
+      // Only log blocked access once every 5 minutes to prevent log spam
+      const lastLogTime = blockedIPLogTracker.get(clientId) || 0;
+      const now = Date.now();
+      if (now - lastLogTime > 5 * 60 * 1000) {
+        logger.warn('Blocked IP attempted access', {
+          clientId,
+          path: req.path,
+          remainingTime: `${remainingTime} minutes`,
+        });
+        blockedIPLogTracker.set(clientId, now);
+      }
 
       return res.status(403).json({
         success: false,
@@ -164,15 +176,17 @@ const createRateLimiter = (config = RATE_LIMIT_CONFIG.general) => {
 
     // Check if limit exceeded
     if (requestInfo.count > config.maxRequests) {
-      // Log excessive requests
-      logger.warn('Rate limit exceeded', {
-        clientId,
-        path: req.path,
-        method: req.method,
-        count: requestInfo.count,
-        limit: config.maxRequests,
-        userAgent: req.headers['user-agent'],
-      });
+      // Only log in production to reduce dev noise
+      if (process.env.NODE_ENV !== 'development') {
+        logger.warn('Rate limit exceeded', {
+          clientId,
+          path: req.path,
+          method: req.method,
+          count: requestInfo.count,
+          limit: config.maxRequests,
+          userAgent: req.headers['user-agent'],
+        });
+      }
 
       // Block IP if they exceed limit by 50%
       if (requestInfo.count > config.maxRequests * 1.5) {
@@ -187,14 +201,14 @@ const createRateLimiter = (config = RATE_LIMIT_CONFIG.general) => {
       });
     }
 
-    // Log requests from new IPs
-    if (requestInfo.count === 1) {
-      logger.debug('New client request', {
-        clientId,
-        path: req.path,
-        userAgent: req.headers['user-agent']?.substring(0, 50),
-      });
-    }
+    // Don't log every request in development
+    // if (requestInfo.count === 1) {
+    //   logger.debug('New client request', {
+    //     clientId,
+    //     path: req.path,
+    //     userAgent: req.headers['user-agent']?.substring(0, 50),
+    //   });
+    // }
 
     next();
   };
@@ -217,6 +231,14 @@ const cleanup = () => {
   for (const [key, value] of blockedIPs.entries()) {
     if (now > value.expiresAt) {
       blockedIPs.delete(key);
+      blockedIPLogTracker.delete(key); // Also clear log tracker
+    }
+  }
+
+  // Clean up log tracker for IPs that are no longer blocked
+  for (const [key] of blockedIPLogTracker.entries()) {
+    if (!blockedIPs.has(key)) {
+      blockedIPLogTracker.delete(key);
     }
   }
 
@@ -265,9 +287,46 @@ const getStats = () => {
   };
 };
 
+/**
+ * Clear all blocked IPs (for development/debugging)
+ */
+const clearBlockedIPs = () => {
+  const count = blockedIPs.size;
+  blockedIPs.clear();
+  blockedIPLogTracker.clear();
+  logger.info('Cleared all blocked IPs', { count });
+  return count;
+};
+
+/**
+ * Clear specific IP block (for development/debugging)
+ */
+const clearIPBlock = (clientId) => {
+  const wasBlocked = blockedIPs.has(clientId);
+  blockedIPs.delete(clientId);
+  blockedIPLogTracker.delete(clientId);
+  if (wasBlocked) {
+    logger.info('Cleared IP block', { clientId });
+  }
+  return wasBlocked;
+};
+
+/**
+ * Reset request counts (for development/debugging)
+ */
+const resetCounts = () => {
+  const count = requestCounts.size;
+  requestCounts.clear();
+  logger.info('Reset all request counts', { count });
+  return count;
+};
+
 module.exports = {
   rateLimiters,
   createRateLimiter,
   getStats,
+  clearBlockedIPs,
+  clearIPBlock,
+  resetCounts,
   RATE_LIMIT_CONFIG,
 };

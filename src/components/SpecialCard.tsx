@@ -16,7 +16,7 @@ import {
   Shadows,
   TouchTargets,
 } from '../styles/designSystem';
-import HeartIcon from './HeartIcon';
+import Icon from './Icon';
 
 type CurrencyCode = 'USD' | 'ILS' | 'EUR' | string;
 
@@ -173,7 +173,8 @@ const SpecialCard: React.FC<SpecialCardProps> = memo(
               accessibilityHint="Tap to toggle favorite status"
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <HeartIcon
+              <Icon
+                name="heart"
                 size={20}
                 color={item.isLiked ? Colors.error : Colors.textSecondary}
                 filled={item.isLiked}

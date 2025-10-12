@@ -23,10 +23,8 @@ import {
 } from '../styles/designSystem';
 import type { AppStackParamList } from '../types/navigation';
 import SpecialCard, { DealGridCard } from '../components/SpecialCard';
-import SpecialsIcon from '../components/SpecialsIcon';
-import BackIcon from '../components/icons/BackIcon';
+import { SkeletonList } from '../components/SkeletonLoader';
 import { errorLog } from '../utils/logger';
-import SearchIcon from '../components/icons/SearchIcon';
 import { specialsService } from '../services/SpecialsService';
 import {
   Special,
@@ -553,14 +551,11 @@ const SpecialsScreen: React.FC<SpecialsScreenProps> = ({ route }) => {
     ],
   );
 
-  // Show loading state
-  if (loading) {
+  // Show loading state with skeleton
+  if (loading && specials.length === 0) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Colors.primary.main} />
-          <Text style={styles.loadingText}>Loading special offers...</Text>
-        </View>
+        <SkeletonList count={5} />
       </SafeAreaView>
     );
   }

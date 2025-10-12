@@ -221,7 +221,9 @@ export const useLocation = () => {
               // Only update if moved more than 10 meters
               shouldUpdate = distanceMeters > 10;
 
-              if (!shouldUpdate && __DEV__) {
+              // Removed excessive logging to prevent memory issues
+              // Only log very occasionally (0.1% of the time)
+              if (!shouldUpdate && __DEV__ && Math.random() < 0.001) {
                 debugLog(
                   '🔥 Location change too small, skipping update:',
                   distanceMeters.toFixed(2),

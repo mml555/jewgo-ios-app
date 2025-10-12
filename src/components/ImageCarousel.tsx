@@ -1,13 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
-  Image,
   Dimensions,
 } from 'react-native';
 import { Colors, Typography, Spacing, BorderRadius } from '../styles/designSystem';
+import OptimizedImage from './OptimizedImage';
+import { imageCacheService } from '../services/ImageCacheService';
 
 interface ImageCarouselProps {
   images?: string[];
@@ -25,6 +26,22 @@ const ImageCarousel: React.FC<ImageCarouselProps> = ({
   borderRadius = 25,
 }) => {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+
+  // Prefetch all images when component mounts
+  useEffect(() => {
+    if (images && images.length > 0) {
+      const validUrls = images.filter(img => img && img.trim().length > 0);
+      if (validUrls.length > 0) {
+        // Prefetch first image with high priority
+        imageCacheService.prefetchImage(validUrls[0], 'high');
+        
+        // Prefetch remaining images with medium priority
+        if (validUrls.length > 1) {
+          imageCacheService.prefetchImages(validUrls.slice(1), 'medium');
+        }
+      }
+    }
+  }, [images]);
 
   // Handle image swipe for carousel
   const handleImageSwipe = (event: any) => {
@@ -54,13 +71,16 @@ const ImageCarousel: React.FC<ImageCarouselProps> = ({
             {images.map((image, index) => {
               const workingUrl = getWorkingImageUrl(image);
               return (
-                <Image
+                <OptimizedImage
                   key={index}
                   source={{ uri: workingUrl }}
                   style={[styles.image, { borderRadius }]}
                   resizeMode="cover"
                   accessible={true}
                   accessibilityLabel={`Image ${index + 1} of ${images.length}`}
+                  priority={index === 0 ? 'high' : 'medium'}
+                  fallbackSource={fallbackImageUrl ? { uri: fallbackImageUrl } : undefined}
+                  showLoader={true}
                 />
               );
             })}
@@ -93,10 +113,11 @@ const ImageCarousel: React.FC<ImageCarouselProps> = ({
         </>
       ) : (
         <View style={[styles.placeholderImage, { borderRadius }]}>
-          <Image
+          <OptimizedImage
             source={{ uri: fallbackImageUrl || 'https://picsum.photos/400/300?random=default' }}
             style={[styles.image, { borderRadius }]}
             resizeMode="cover"
+            showLoader={true}
           />
         </View>
       )}

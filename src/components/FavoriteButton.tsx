@@ -7,7 +7,7 @@ import {
   BorderRadius,
 } from '../styles/designSystem';
 import { useFavorites } from '../hooks/useFavorites';
-import HeartIcon from './HeartIcon';
+import Icon from './Icon';
 import { debugLog, errorLog } from '../utils/logger';
 
 interface FavoriteButtonProps {
@@ -145,7 +145,8 @@ const FavoriteButton: React.FC<FavoriteButtonProps> = ({
         />
       ) : (
         <>
-          <HeartIcon
+          <Icon
+            name="heart"
             size={sizeStyles.icon.fontSize}
             color={isFavoritedStatus ? Colors.white : Colors.textSecondary}
             filled={isFavoritedStatus}

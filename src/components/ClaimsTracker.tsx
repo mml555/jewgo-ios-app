@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -36,41 +36,52 @@ const ClaimsTracker: React.FC<ClaimsTrackerProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
 
-  // Load user's claimed specials
-  const loadClaims = useCallback(
-    async (showLoading = true) => {
-      try {
-        if (showLoading) setLoading(true);
-        setError(null);
+  // Use ref to store the latest userId to avoid recreating callbacks
+  const userIdRef = useRef(userId);
+  useEffect(() => {
+    userIdRef.current = userId;
+  }, [userId]);
 
-        const response = await specialsService.getUserClaimedSpecials(userId, {
+  // Load user's claimed specials - stable with ref
+  const loadClaimsRef = useRef<(showLoading?: boolean) => Promise<void>>();
+  loadClaimsRef.current = async (showLoading = true) => {
+    try {
+      if (showLoading) setLoading(true);
+      setError(null);
+
+      const response = await specialsService.getUserClaimedSpecials(
+        userIdRef.current,
+        {
           limit: 50,
-        });
+        },
+      );
 
-        if (response.success && response.data) {
-          setClaims(response.data.claims);
-          setLastUpdated(new Date());
-        } else {
-          setError(response.error || 'Failed to load claims');
-        }
-      } catch (err) {
-        setError('Failed to load claims');
-        errorLog('Error loading claims:', err);
-      } finally {
-        if (showLoading) setLoading(false);
+      if (response.success && response.data) {
+        setClaims(response.data.claims);
+        setLastUpdated(new Date());
+      } else {
+        setError(response.error || 'Failed to load claims');
       }
-    },
-    [userId],
-  );
+    } catch (err) {
+      setError('Failed to load claims');
+      errorLog('Error loading claims:', err);
+    } finally {
+      if (showLoading) setLoading(false);
+    }
+  };
 
-  // Handle refresh
+  const loadClaims = useCallback(async (showLoading = true) => {
+    await loadClaimsRef.current?.(showLoading);
+  }, []);
+
+  // Handle refresh - stable callback
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    await loadClaims(false);
+    await loadClaimsRef.current?.(false);
     setRefreshing(false);
-  }, [loadClaims]);
+  }, []);
 
-  // Handle claim action (redeem, cancel, etc.)
+  // Handle claim action (redeem, cancel, etc.) - stable callback
   const handleClaimAction = useCallback(
     async (claimId: string, action: 'redeemed' | 'cancelled' | 'revoked') => {
       try {
@@ -81,7 +92,7 @@ const ClaimsTracker: React.FC<ClaimsTrackerProps> = ({
 
         if (response.success) {
           Alert.alert('Success', `Claim ${action} successfully!`);
-          await loadClaims(false); // Reload claims
+          await loadClaimsRef.current?.(false); // Reload claims
         } else {
           Alert.alert('Error', response.error || `Failed to ${action} claim`);
         }
@@ -90,19 +101,19 @@ const ClaimsTracker: React.FC<ClaimsTrackerProps> = ({
         errorLog(`Error ${action} claim:`, err);
       }
     },
-    [loadClaims],
+    [],
   );
 
-  // Auto-refresh
+  // Auto-refresh - now with stable loadClaims
   useEffect(() => {
-    loadClaims();
+    loadClaimsRef.current?.(true);
 
     const interval = setInterval(() => {
-      loadClaims(false);
+      loadClaimsRef.current?.(false);
     }, refreshInterval);
 
     return () => clearInterval(interval);
-  }, [loadClaims, refreshInterval]);
+  }, [refreshInterval]); // Only depends on refreshInterval
 
   // Format time remaining
   const getTimeRemaining = (validUntil: string) => {
@@ -336,6 +347,11 @@ const ClaimsTracker: React.FC<ClaimsTrackerProps> = ({
         refreshing={refreshing}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={10}
+        updateCellsBatchingPeriod={50}
+        initialNumToRender={10}
+        windowSize={10}
       />
     </View>
   );

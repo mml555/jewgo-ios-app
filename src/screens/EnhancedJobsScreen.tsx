@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -8,11 +8,7 @@ import {
   RefreshControl,
   ActivityIndicator,
   TextInput,
-  Modal,
-  Alert,
-  Image,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import {
   Colors,
@@ -23,11 +19,12 @@ import {
   TouchTargets,
 } from '../styles/designSystem';
 import { useLocation, calculateDistance } from '../hooks/useLocation';
+import { useLocationSimple } from '../hooks/useLocationSimple';
 import { DistanceDisplay } from '../components/DistanceDisplay';
-import HeartIcon from '../components/HeartIcon';
-import ActionBar from '../components/ActionBar';
 import { debugLog, errorLog } from '../utils/logger';
 import { apiService } from '../services/api';
+import jobSeekersService from '../services/JobSeekersService';
+import Icon from '../components/Icon';
 
 interface JobListing {
   id: string;
@@ -101,6 +98,7 @@ const INDUSTRIES = [
 const EnhancedJobsScreen: React.FC = () => {
   const navigation = useNavigation();
   const { location } = useLocation();
+  const { accuracyAuthorization } = useLocationSimple();
   const [activeTab, setActiveTab] = useState<TabType>('jobs');
   const [jobListings, setJobListings] = useState<JobListing[]>([]);
   const [jobSeekerListings, setJobSeekerListings] = useState<
@@ -116,24 +114,28 @@ const EnhancedJobsScreen: React.FC = () => {
   const [selectedIndustries, setSelectedIndustries] = useState<string[]>([]);
   const [zipCodeFilter, setZipCodeFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // Track if rate limited to prevent infinite loops
+  const [isRateLimited, setIsRateLimited] = useState(false);
 
   // Mock data - in real app this would come from API
-  const mockJobListings: JobListing[] = [
+  // CRITICAL: Memoized to prevent infinite loop in loadData useCallback
+  const mockJobListings: JobListing[] = React.useMemo(() => [
     {
       id: '1',
-      title: 'Software Developer',
+      title: 'Assistant Princa...',
       company_name: 'Tech Solutions Inc',
       description:
         'Join our team as a full-stack developer working on cutting-edge web applications.',
       industry: 'Technology',
-      job_type: 'Full-time',
+      job_type: 'Full Time',
       compensation_structure: 'salary',
-      salary_rate: '$80K-$100K',
-      zip_code: '10001',
-      city: 'New York',
-      state: 'NY',
-      latitude: 40.7589,
-      longitude: -73.9851,
+      salary_rate: '$100k-$110k plus commissi...',
+      zip_code: '33169',
+      city: undefined, // Show zip code instead of city
+      state: undefined,
+      latitude: 25.7617,
+      longitude: -80.1918,
       contact_email: 'hr@techsolutions.com',
       contact_phone: '(555) 123-4567',
       cta_link: 'https://techsolutions.com/apply',
@@ -144,19 +146,19 @@ const EnhancedJobsScreen: React.FC = () => {
     },
     {
       id: '2',
-      title: 'Marketing Manager',
+      title: 'Warehouse Mana..',
       company_name: 'Jewish Community Center',
       description:
         'Lead marketing initiatives for our community programs and events.',
       industry: 'Non-profit',
-      job_type: 'Full-time',
-      compensation_structure: 'salary',
-      salary_rate: '$60K-$75K',
-      zip_code: '11230',
-      city: 'Brooklyn',
-      state: 'NY',
-      latitude: 40.6195,
-      longitude: -73.9735,
+      job_type: 'Part Time',
+      compensation_structure: 'hourly',
+      salary_rate: '$18 Per Hour',
+      zip_code: '33110',
+      city: undefined, // Show zip code instead of city
+      state: undefined,
+      latitude: 25.9331,
+      longitude: -80.1628,
       contact_email: 'jobs@jcc.org',
       is_remote: false,
       location_type: 'on-site',
@@ -165,37 +167,37 @@ const EnhancedJobsScreen: React.FC = () => {
     },
     {
       id: '3',
-      title: 'Remote Customer Support',
+      title: 'Call Agent at Skyli..',
       company_name: 'Kosher Foods Co',
       description:
         'Provide excellent customer service for our kosher food products.',
       industry: 'Food Service',
       job_type: 'Remote',
-      compensation_structure: 'hourly',
-      salary_rate: '$18-$22/hour',
-      zip_code: '90210',
-      city: 'Los Angeles',
-      state: 'CA',
+      compensation_structure: 'salary',
+      salary_rate: '$45K Per Year',
+      zip_code: '33122',
+      city: undefined, // Show zip code instead of city
+      state: undefined,
       contact_email: 'support@kosherfoods.com',
       is_remote: true,
       location_type: 'remote',
       posted_date: '2024-01-13',
       status: 'active',
     },
-  ];
+  ], []);
 
-  const mockJobSeekerListings: JobSeekerListing[] = [
+  const mockJobSeekerListings: JobSeekerListing[] = React.useMemo(() => [
     {
       id: '1',
       full_name: 'Dovi Brody',
-      title: 'Looking for an E-commerce role',
+      title: 'Looking for an E-commer...',
       age: 28,
       gender: 'male',
       preferred_industry: 'Technology',
-      job_type: 'Full-time',
+      job_type: 'Full Time',
       zip_code: '33169',
-      city: 'Miami',
-      state: 'FL',
+      city: undefined, // Show zip code instead of city
+      state: undefined,
       latitude: 25.7617,
       longitude: -80.1918,
       contact_email: 'dovi.brody@email.com',
@@ -215,10 +217,10 @@ const EnhancedJobsScreen: React.FC = () => {
       age: 32,
       gender: 'male',
       preferred_industry: 'General',
-      job_type: 'Part-time',
+      job_type: 'Part Time',
       zip_code: '33110',
-      city: 'North Miami Beach',
-      state: 'FL',
+      city: undefined, // Show zip code instead of city
+      state: undefined,
       latitude: 25.9331,
       longitude: -80.1628,
       contact_email: 'ruvy.g@email.com',
@@ -227,13 +229,16 @@ const EnhancedJobsScreen: React.FC = () => {
       availability: '2 weeks notice',
       created_at: '2024-01-14',
     },
-  ];
+  ], []);
 
-  useEffect(() => {
-    loadData();
-  }, [activeTab]);
+  const loadData = useCallback(async () => {
+    // Don't retry if we're rate limited
+    if (isRateLimited) {
+      debugLog('Skipping request - rate limited');
+      setLoading(false);
+      return;
+    }
 
-  const loadData = async () => {
     try {
       setLoading(true);
 
@@ -249,61 +254,164 @@ const EnhancedJobsScreen: React.FC = () => {
           debugLog('Found real jobs:', response.data.listings.length);
           debugLog('First job:', response.data.listings[0]);
           // Transform API jobs to frontend format
-          const transformedJobs = response.data.listings.map((job: any) => ({
-            id: job.id,
-            title: job.title,
-            company_name: job.company_name,
-            description: job.description,
-            industry: job.category,
-            job_type: job.job_type || 'Full-time',
-            compensation_structure: job.compensation_type,
-            salary_rate: job.compensation_display || job.price || 'Salary TBD',
-            zip_code: job.zip_code,
-            city: job.city,
-            state: job.state,
-            latitude: job.latitude ? parseFloat(job.latitude) : undefined,
-            longitude: job.longitude ? parseFloat(job.longitude) : undefined,
-            contact_email: job.contact_email,
-            contact_phone: job.contact_phone,
-            cta_link: job.application_url,
-            is_remote: job.is_remote || false,
-            location_type: job.location_type || 'on-site',
-            posted_date: job.posted_date || job.created_at,
-            status: job.is_active ? 'active' : 'inactive',
-            is_favorited: false,
-          }));
+          const transformedJobs = response.data.listings.map((job: any) => {
+            // Build compensation display string
+            let salaryRate = 'Salary TBD';
+            if (job.compensation_display) {
+              salaryRate = job.compensation_display;
+            } else if (job.compensation_min && job.compensation_max) {
+              if (job.compensation_type === 'hourly') {
+                salaryRate = `$${(job.compensation_min / 100).toFixed(2)}-$${(job.compensation_max / 100).toFixed(2)}/hr`;
+              } else {
+                const minK = Math.floor(job.compensation_min / 100 / 1000);
+                const maxK = Math.floor(job.compensation_max / 100 / 1000);
+                salaryRate = `$${minK}K-$${maxK}K`;
+              }
+            } else if (job.compensation_min) {
+              if (job.compensation_type === 'hourly') {
+                salaryRate = `$${(job.compensation_min / 100).toFixed(2)}/hr+`;
+              } else {
+                salaryRate = `$${Math.floor(job.compensation_min / 100 / 1000)}K+`;
+              }
+            }
+
+            return {
+              id: job.id,
+              title: job.title,
+              company_name: job.company_name,
+              description: job.description,
+              industry: job.industry_name || job.category || 'Other',
+              job_type: job.job_type_name || job.job_type || 'Full-time',
+              compensation_structure: job.compensation_structure_name || job.compensation_type || 'Salary',
+              salary_rate: salaryRate,
+              zip_code: job.zip_code,
+              city: job.city,
+              state: job.state,
+              latitude: job.latitude ? parseFloat(job.latitude) : undefined,
+              longitude: job.longitude ? parseFloat(job.longitude) : undefined,
+              contact_email: job.contact_email,
+              contact_phone: job.contact_phone,
+              cta_link: job.application_url,
+              is_remote: job.is_remote || false,
+              location_type: job.location_type || 'on-site',
+              posted_date: job.posted_date || job.created_at,
+              status: job.is_active ? 'active' : 'inactive',
+              is_favorited: false,
+            };
+          });
           setJobListings(transformedJobs);
+          setIsRateLimited(false); // Clear rate limit on success
         } else {
-          // Fallback to mock data if API fails
+          // No mock data fallback - show empty state
           debugLog(
-            'Using mock job listings - API returned no data. Response:',
+            'No job listings found in database. Response:',
             response,
           );
-          setJobListings(mockJobListings);
+          setJobListings([]);
         }
       } else {
-        // For job seekers, use mock data for now since there's no specific API endpoint
-        debugLog('Using mock job seeker listings');
-        setJobSeekerListings(mockJobSeekerListings);
+        // Fetch job seekers from API
+        debugLog('🔍 Fetching job seekers from API');
+        const response = await jobSeekersService.getJobSeekers({
+          limit: 50,
+          page: 1,
+        });
+
+        debugLog('Job Seekers API Response:', response);
+        if (response.success && response.data?.job_seekers) {
+          debugLog('Found job seekers:', response.data.job_seekers.length);
+          debugLog('First job seeker:', response.data.job_seekers[0]);
+          debugLog('First job seeker name field:', response.data.job_seekers[0]?.name);
+          debugLog('First job seeker title field:', response.data.job_seekers[0]?.title);
+          
+          // Transform API job seekers to frontend format
+          const transformedSeekers = response.data.job_seekers.map((seeker: any) => {
+            // Create a meaningful title from bio or use a default
+            let title = 'Open to opportunities';
+            if (seeker.bio) {
+              // Extract the first part of the bio as a title
+              const bioWords = seeker.bio.split(' ');
+              if (bioWords.length >= 3) {
+                title = bioWords.slice(0, 3).join(' ');
+              } else {
+                title = seeker.bio;
+              }
+            }
+            
+            return {
+              id: seeker.id,
+              full_name: seeker.name || seeker.full_name || 'Job Seeker',
+              title: seeker.title || title,
+              bio: seeker.bio || seeker.summary,
+              location: seeker.location || `${seeker.city}, ${seeker.state}`,
+              zip_code: seeker.zip_code,
+              latitude: seeker.latitude ? parseFloat(seeker.latitude) : undefined,
+              longitude: seeker.longitude ? parseFloat(seeker.longitude) : undefined,
+              experience_years: seeker.experience_years || 0,
+              experience_level: seeker.experience_level,
+              skills: Array.isArray(seeker.skills) ? seeker.skills : [],
+              availability: seeker.availability || 'Available',
+              headshot_url: seeker.headshot_url,
+              resume_url: seeker.resume_url,
+              contact_email: seeker.contact_email || seeker.email,
+              contact_phone: seeker.contact_phone || seeker.phone,
+              linkedin_url: seeker.linkedin_url,
+              portfolio_url: seeker.portfolio_url,
+              is_remote_ok: seeker.is_remote_ok || seeker.willing_to_remote,
+              willing_to_relocate: seeker.willing_to_relocate,
+              created_at: seeker.created_at,
+              is_favorited: false,
+            };
+          });
+          
+          debugLog('Transformed job seekers:', transformedSeekers);
+          debugLog('First transformed seeker full_name:', transformedSeekers[0]?.full_name);
+          debugLog('First transformed seeker title:', transformedSeekers[0]?.title);
+          debugLog('First transformed seeker bio:', transformedSeekers[0]?.bio);
+          
+          setJobSeekerListings(transformedSeekers);
+          setIsRateLimited(false); // Clear rate limit on success
+        } else {
+          debugLog('No job seekers found in database. Response:', response);
+          setJobSeekerListings([]);
+        }
       }
-    } catch (error) {
+    } catch (error: any) {
       errorLog('Error loading data:', error);
-      // Fallback to mock data on error
+      
+      // Check if rate limited or blocked
+      const errorMessage = error?.message || String(error);
+      if (
+        errorMessage.includes('Rate limit') ||
+        errorMessage.includes('Access temporarily blocked') ||
+        errorMessage.includes('429') ||
+        errorMessage.includes('403')
+      ) {
+        setIsRateLimited(true);
+        errorLog('Rate limited - stopping requests');
+      }
+      
+      // No mock data fallback on error - show empty state
       if (activeTab === 'jobs') {
-        setJobListings(mockJobListings);
+        setJobListings([]);
       } else {
-        setJobSeekerListings(mockJobSeekerListings);
+        setJobSeekerListings([]);
       }
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeTab, isRateLimited, mockJobListings, mockJobSeekerListings]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
+    setIsRateLimited(false); // Reset rate limit on manual refresh
     await loadData();
     setRefreshing(false);
-  }, [activeTab]);
+  }, [loadData]);
 
   const handleHeartPress = useCallback(
     async (itemId: string) => {
@@ -346,8 +454,8 @@ const EnhancedJobsScreen: React.FC = () => {
       if (activeTab === 'jobs') {
         (navigation as any).navigate('JobDetail', { jobId: item.id });
       } else {
-        (navigation as any).navigate('JobSeekerDetail', {
-          jobSeekerId: item.id,
+        (navigation as any).navigate('JobSeekerDetailV2', {
+          profileId: item.id,
         });
       }
     },
@@ -375,6 +483,7 @@ const EnhancedJobsScreen: React.FC = () => {
     setSearchQuery('');
   };
 
+
   const renderTabBar = () => {
     debugLog('🎯 Rendering tab bar with activeTab:', activeTab);
     debugLog('🎯 activeTab === "jobs":', activeTab === 'jobs');
@@ -396,6 +505,7 @@ const EnhancedJobsScreen: React.FC = () => {
                   ? styles.activeTabText
                   : styles.inactiveTabText,
               ]}
+              numberOfLines={1}
             >
               Job feed
             </Text>
@@ -403,12 +513,28 @@ const EnhancedJobsScreen: React.FC = () => {
           <TouchableOpacity
             style={[styles.tab, styles.plusTab]}
             onPress={() => {
-              // Navigate to create job screen
-              (navigation as any).navigate('CreateJobV2');
+              debugLog('🎯 Plus button pressed, activeTab:', activeTab);
+              try {
+                // Navigate to appropriate create screen based on current tab
+                if (activeTab === 'seekers') {
+                  debugLog('🎯 Navigating to CreateJobSeekerProfile');
+                  (navigation as any).navigate('CreateJobSeekerProfile');
+                } else {
+                  debugLog('🎯 Navigating to CreateJobV2');
+                  (navigation as any).navigate('CreateJobV2');
+                }
+              } catch (error) {
+                errorLog('🎯 Navigation error:', error);
+              }
             }}
+            activeOpacity={0.7}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel={activeTab === 'seekers' ? "Create job seeker profile" : "Create job listing"}
+            accessibilityHint="Opens form to create a new listing"
           >
-            <Text style={[styles.tabText, styles.plusTabText]}>
-              I'm Hiring +
+            <Text style={[styles.tabText, styles.plusTabText]} numberOfLines={1}>
+              {activeTab === 'seekers' ? "I'm Seeking +" : "I'm Hiring +"}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -425,116 +551,161 @@ const EnhancedJobsScreen: React.FC = () => {
                   ? styles.activeTabText
                   : styles.inactiveTabText,
               ]}
+              numberOfLines={1}
             >
               Resume Feed
             </Text>
           </TouchableOpacity>
         </View>
-        <TouchableOpacity style={styles.filterIcon}>
-          <Text style={styles.filterIconText}>⋮</Text>
+        <TouchableOpacity 
+          style={styles.filterButton}
+          onPress={() => setShowFilters(!showFilters)}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel="Filter jobs"
+        >
+          <Icon name="filter" size={18} color={Colors.textSecondary} />
         </TouchableOpacity>
       </View>
     );
   };
 
-  const renderFilters = () => (
-    <View style={styles.searchContainer}>
-      <View style={styles.searchPill}>
-        <Text style={styles.searchIcon}>🔍</Text>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Find a job"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          placeholderTextColor={Colors.textTertiary}
-        />
-      </View>
+  const renderFilters = () => {
+    if (!showFilters) return null;
 
-      {showFilters && (
-        <View style={styles.filtersPanel}>
-          <View style={styles.filterSection}>
-            <Text style={styles.filterLabel}>Job Type</Text>
-            <View style={styles.filterChips}>
-              {JOB_TYPES.map(type => (
-                <TouchableOpacity
-                  key={type}
+    return (
+      <View style={styles.filtersPanel}>
+        <View style={styles.filterSection}>
+          <Text style={styles.filterLabel}>Job Type</Text>
+          <View style={styles.filterChips}>
+            {JOB_TYPES.map(type => (
+              <TouchableOpacity
+                key={type}
+                style={[
+                  styles.filterChip,
+                  selectedJobTypes.includes(type) && styles.filterChipActive,
+                ]}
+                onPress={() => toggleJobType(type)}
+              >
+                <Text
                   style={[
-                    styles.filterChip,
-                    selectedJobTypes.includes(type) && styles.filterChipActive,
+                    styles.filterChipText,
+                    selectedJobTypes.includes(type) &&
+                      styles.filterChipTextActive,
                   ]}
-                  onPress={() => toggleJobType(type)}
                 >
-                  <Text
-                    style={[
-                      styles.filterChipText,
-                      selectedJobTypes.includes(type) &&
-                        styles.filterChipTextActive,
-                    ]}
-                  >
-                    {type}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          <View style={styles.filterSection}>
-            <Text style={styles.filterLabel}>Industry</Text>
-            <View style={styles.filterChips}>
-              {INDUSTRIES.slice(0, 8).map(industry => (
-                <TouchableOpacity
-                  key={industry}
-                  style={[
-                    styles.filterChip,
-                    selectedIndustries.includes(industry) &&
-                      styles.filterChipActive,
-                  ]}
-                  onPress={() => toggleIndustry(industry)}
-                >
-                  <Text
-                    style={[
-                      styles.filterChipText,
-                      selectedIndustries.includes(industry) &&
-                        styles.filterChipTextActive,
-                    ]}
-                  >
-                    {industry}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          <View style={styles.filterSection}>
-            <Text style={styles.filterLabel}>Zip Code</Text>
-            <TextInput
-              style={styles.zipInput}
-              placeholder="Enter zip code"
-              value={zipCodeFilter}
-              onChangeText={setZipCodeFilter}
-              keyboardType="numeric"
-              placeholderTextColor={Colors.textTertiary}
-            />
-          </View>
-
-          <View style={styles.filterActions}>
-            <TouchableOpacity style={styles.clearButton} onPress={clearFilters}>
-              <Text style={styles.clearButtonText}>Clear All</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.applyButton}
-              onPress={() => setShowFilters(false)}
-            >
-              <Text style={styles.applyButtonText}>Apply Filters</Text>
-            </TouchableOpacity>
+                  {type}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
         </View>
-      )}
-    </View>
-  );
+
+        <View style={styles.filterSection}>
+          <Text style={styles.filterLabel}>Industry</Text>
+          <View style={styles.filterChips}>
+            {INDUSTRIES.slice(0, 8).map(industry => (
+              <TouchableOpacity
+                key={industry}
+                style={[
+                  styles.filterChip,
+                  selectedIndustries.includes(industry) &&
+                    styles.filterChipActive,
+                ]}
+                onPress={() => toggleIndustry(industry)}
+              >
+                <Text
+                  style={[
+                    styles.filterChipText,
+                    selectedIndustries.includes(industry) &&
+                      styles.filterChipTextActive,
+                  ]}
+                >
+                  {industry}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        <View style={styles.filterSection}>
+          <Text style={styles.filterLabel}>Zip Code</Text>
+          <TextInput
+            style={styles.zipInput}
+            placeholder="Enter zip code"
+            value={zipCodeFilter}
+            onChangeText={setZipCodeFilter}
+            keyboardType="numeric"
+            placeholderTextColor={Colors.textTertiary}
+          />
+        </View>
+
+        <View style={styles.filterActions}>
+          <TouchableOpacity style={styles.clearButton} onPress={clearFilters}>
+            <Text style={styles.clearButtonText}>Clear All</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.applyButton}
+            onPress={() => setShowFilters(false)}
+          >
+            <Text style={styles.applyButtonText}>Apply Filters</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  };
+
+  // Normalize employment type for consistent display
+  const normalizeEmploymentType = (jobType: string): string => {
+    const normalized = jobType.toLowerCase().replace(/[-_]/g, ' ');
+    return normalized
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
+
+  // Format location - prioritize distance, then zip code
+  const formatLocation = useCallback((item: JobListing): string => {
+    // If we have user location and job coordinates, calculate distance
+    if (location && item.latitude && item.longitude) {
+      const distanceMiles = calculateDistance(
+        location.latitude,
+        location.longitude,
+        Number(item.latitude),
+        Number(item.longitude),
+      );
+      
+      // Only show distance if within reasonable range (< 1000 miles)
+      if (distanceMiles < 1000) {
+        if (distanceMiles < 1) {
+          return `${Math.round(distanceMiles * 5280)} ft away`;
+        } else if (distanceMiles < 100) {
+          return `${distanceMiles.toFixed(1)} mi away`;
+        } else {
+          return `${Math.round(distanceMiles)} mi away`;
+        }
+      }
+    }
+    
+    // Otherwise show zip code
+    return item.zip_code ? String(item.zip_code) : 'Remote';
+  }, [location]);
 
   const renderJobCard = ({ item }: { item: JobListing }) => {
     const isFavorited = favorites.has(item.id) || item.is_favorited;
+    const displayJobType = normalizeEmploymentType(item.job_type);
+    
+    // Calculate distance in meters for DistanceDisplay component
+    let distanceMeters: number | null = null;
+    if (location && item.latitude && item.longitude) {
+      const distanceMiles = calculateDistance(
+        location.latitude,
+        location.longitude,
+        Number(item.latitude),
+        Number(item.longitude),
+      );
+      distanceMeters = distanceMiles * 1609.34; // Convert miles to meters
+    }
 
     return (
       <TouchableOpacity
@@ -545,11 +716,12 @@ const EnhancedJobsScreen: React.FC = () => {
         <TouchableOpacity
           style={styles.heartButton}
           onPress={() => handleHeartPress(item.id)}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <HeartIcon
-            size={18}
+          <Icon
+            name="heart"
+            size={14}
             color={isFavorited ? Colors.error : Colors.textSecondary}
-            filled={isFavorited}
           />
         </TouchableOpacity>
 
@@ -565,12 +737,24 @@ const EnhancedJobsScreen: React.FC = () => {
           )}
 
           <View style={styles.cardFooter}>
-            <View style={styles.jobMeta}>
-              <View style={styles.jobTypeChip}>
-                <Text style={styles.jobTypeText}>{item.job_type}</Text>
-              </View>
+            <View style={styles.jobTypeChip}>
+              <Text style={styles.jobTypeText}>{displayJobType}</Text>
             </View>
-            <Text style={styles.zipCode}>{item.zip_code || 'Remote'}</Text>
+            {distanceMeters !== null && accuracyAuthorization === 'full' ? (
+              <DistanceDisplay
+                distanceMeters={distanceMeters}
+                accuracyContext={{
+                  accuracyAuthorization,
+                  isApproximate: false,
+                }}
+                textStyle={styles.zipCode}
+                options={{ unit: 'imperial' }}
+              />
+            ) : (
+              <Text style={styles.zipCode}>
+                {item.zip_code ? String(item.zip_code) : 'Remote'}
+              </Text>
+            )}
           </View>
         </View>
       </TouchableOpacity>
@@ -579,6 +763,9 @@ const EnhancedJobsScreen: React.FC = () => {
 
   const renderJobSeekerCard = ({ item }: { item: JobSeekerListing }) => {
     const isFavorited = favorites.has(item.id) || item.is_favorited;
+    // Show zip code instead of city for job seekers
+    const displayLocation = item.zip_code || 'Location not specified';
+    const displayJobType = item.job_type ? normalizeEmploymentType(item.job_type) : 'Any';
 
     return (
       <TouchableOpacity
@@ -589,11 +776,12 @@ const EnhancedJobsScreen: React.FC = () => {
         <TouchableOpacity
           style={styles.heartButton}
           onPress={() => handleHeartPress(item.id)}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <HeartIcon
-            size={18}
+          <Icon
+            name="heart"
+            size={14}
             color={isFavorited ? Colors.error : Colors.textSecondary}
-            filled={isFavorited}
           />
         </TouchableOpacity>
 
@@ -607,12 +795,10 @@ const EnhancedJobsScreen: React.FC = () => {
           </Text>
 
           <View style={styles.cardFooter}>
-            <View style={styles.jobMeta}>
-              <View style={styles.jobTypeChip}>
-                <Text style={styles.jobTypeText}>{item.job_type}</Text>
-              </View>
+            <View style={styles.jobTypeChip}>
+              <Text style={styles.jobTypeText}>{displayJobType}</Text>
             </View>
-            <Text style={styles.zipCode}>{item.zip_code || 'Remote'}</Text>
+            <Text style={styles.zipCode}>{displayLocation}</Text>
           </View>
         </View>
       </TouchableOpacity>
@@ -652,7 +838,7 @@ const EnhancedJobsScreen: React.FC = () => {
 
   if (loading && currentData.length === 0) {
     return (
-      <SafeAreaView style={styles.container}>
+      <View style={styles.container}>
         {renderTabBar()}
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={Colors.primary.main} />
@@ -660,16 +846,14 @@ const EnhancedJobsScreen: React.FC = () => {
             Loading {activeTab === 'jobs' ? 'jobs' : 'job seekers'}...
           </Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       {renderTabBar()}
       {renderFilters()}
-
-      {/* ActionBar removed - using built-in tabs instead */}
 
       <FlatList
         data={currentData as any}
@@ -680,7 +864,6 @@ const EnhancedJobsScreen: React.FC = () => {
         numColumns={2}
         columnWrapperStyle={styles.row}
         contentContainerStyle={styles.grid}
-        ItemSeparatorComponent={() => <View style={{ height: Spacing.lg }} />}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -693,7 +876,7 @@ const EnhancedJobsScreen: React.FC = () => {
         ListEmptyComponent={renderEmpty}
         showsVerticalScrollIndicator={false}
       />
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -704,20 +887,12 @@ const styles = StyleSheet.create({
   },
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: Colors.white,
     marginHorizontal: Spacing.md,
     marginTop: Spacing.sm,
     marginBottom: Spacing.sm,
-    borderRadius: BorderRadius.lg,
-    padding: Spacing.sm,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
     alignItems: 'center',
     justifyContent: 'space-between',
-    height: 48,
+    minHeight: 36,
   },
   tabsContainer: {
     flexDirection: 'row',
@@ -727,109 +902,71 @@ const styles = StyleSheet.create({
   },
   tab: {
     flex: 1,
-    height: 40,
-    paddingHorizontal: Spacing.md,
+    height: 36,
+    paddingHorizontal: Spacing.xs,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 20, // Pill shape
+    borderRadius: 18, // Pill shape
     backgroundColor: Colors.white,
     borderWidth: 1,
-    borderColor: Colors.border.primary,
+    borderColor: '#E5E7EB',
   },
   activeTab: {
-    backgroundColor: '#4CAF50',
-    borderColor: '#4CAF50',
+    backgroundColor: '#1F2937',
+    borderColor: '#1F2937',
   },
   tabText: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: '500',
     color: Colors.textSecondary,
   },
   activeTabText: {
-    color: Colors.white,
+    color: Colors.jewgoGreen,
+    fontWeight: '500', // Spec: weight 500, not 600/700 (keeps it calm)
   },
   inactiveTabText: {
     color: Colors.textPrimary,
   },
-  filterIcon: {
-    width: 40,
-    height: 40,
+  filterButton: {
+    width: 36,
+    height: 36,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 20,
-    backgroundColor: Colors.background.secondary,
+    borderRadius: 18,
+    backgroundColor: Colors.white,
     borderWidth: 1,
-    borderColor: Colors.border.primary,
+    borderColor: '#E5E7EB',
     marginLeft: Spacing.sm,
-  },
-  filterIconText: {
-    fontSize: 16,
-    color: Colors.textSecondary,
-    fontWeight: 'bold',
   },
   plusTab: {
     backgroundColor: Colors.white,
     borderWidth: 1,
-    borderColor: Colors.border.primary,
-    height: 40,
-    paddingHorizontal: Spacing.md,
+    borderColor: '#E5E7EB',
+    height: 36,
+    paddingHorizontal: Spacing.xs,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 20, // Pill shape
+    borderRadius: 18, // Pill shape
   },
   plusTabText: {
     color: Colors.textPrimary,
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: '500',
   },
-  searchContainer: {
+  filtersPanel: {
     marginHorizontal: Spacing.md,
     marginTop: Spacing.sm,
     marginBottom: Spacing.sm,
-  },
-  searchPill: {
-    height: 44,
+    padding: Spacing.md,
     backgroundColor: Colors.white,
-    borderRadius: 22, // Fully rounded pill
-    paddingHorizontal: Spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
+    borderRadius: BorderRadius.lg,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 8,
-    elevation: 2,
+    elevation: 1,
     borderWidth: 1,
-    borderColor: Colors.border.primary,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    color: Colors.textPrimary,
-    paddingHorizontal: Spacing.sm,
-    height: '100%',
-  },
-  searchIcon: {
-    fontSize: 16,
-    color: Colors.textSecondary,
-    marginRight: Spacing.sm,
-  },
-  filterButton: {
-    backgroundColor: Colors.primary.light,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderRadius: BorderRadius.md,
-  },
-  filterButtonText: {
-    ...Typography.styles.body,
-    color: Colors.primary.main,
-    fontWeight: '600',
-  },
-  filtersPanel: {
-    marginTop: Spacing.md,
-    paddingTop: Spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border.primary,
+    borderColor: '#E5E7EB',
   },
   filterSection: {
     marginBottom: Spacing.md,
@@ -925,39 +1062,40 @@ const styles = StyleSheet.create({
   },
   row: {
     justifyContent: 'space-between',
-    paddingHorizontal: Spacing.xs, // Small padding to account for card margins
+    gap: 8, // Reduced gutter between cards for longer cards
   },
   grid: {
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.lg,
+    paddingVertical: Spacing.sm,
+    gap: 12, // Reduced row gap for even spacing
   },
   cardContainer: {
     flex: 1,
+    maxWidth: '49%', // Slightly wider cards for better space utilization
     backgroundColor: Colors.white,
     borderRadius: 16,
-    padding: Spacing.md,
+    padding: 12, // Reduced padding
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
     position: 'relative',
-    minHeight: 120,
-    marginHorizontal: Spacing.xs,
-    marginBottom: Spacing.lg,
+    minHeight: 100, // Much thinner cards
     justifyContent: 'space-between',
     borderWidth: 1,
-    borderColor: Colors.border.primary,
+    borderColor: '#E5E7EB',
   },
   heartButton: {
     position: 'absolute',
-    top: Spacing.sm,
-    right: Spacing.sm,
+    top: 8,
+    right: 8,
     zIndex: 1,
-    backgroundColor: Colors.white,
-    borderRadius: TouchTargets.minimum / 2,
-    padding: Spacing.xs,
-    ...Shadows.xs,
+    width: 28,
+    height: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 14,
   },
   cardContent: {
     flex: 1,
@@ -967,14 +1105,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: Colors.textPrimary,
-    marginBottom: Spacing.sm,
-    paddingRight: Spacing.lg,
+    marginBottom: 4,
+    paddingRight: 12,
     lineHeight: 20,
   },
   seekerJob: {
     fontSize: 14,
     color: Colors.textSecondary,
-    marginBottom: Spacing.sm,
+    marginBottom: 6,
+    paddingRight: 12,
+    lineHeight: 18,
   },
   companyName: {
     ...Typography.styles.body,
@@ -989,16 +1129,15 @@ const styles = StyleSheet.create({
   },
   jobTypeChip: {
     backgroundColor: '#E8F5E9',
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 8,
     alignSelf: 'flex-start',
   },
   jobTypeText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600',
-    color: '#388E3C',
-    textTransform: 'capitalize',
+    color: '#4CAF50',
   },
   industryChip: {
     backgroundColor: Colors.background.secondary,
@@ -1016,8 +1155,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     color: Colors.textPrimary,
-    marginBottom: Spacing.sm,
+    marginBottom: 6,
     lineHeight: 18,
+    paddingRight: 12,
   },
   description: {
     ...Typography.styles.body,
@@ -1117,14 +1257,17 @@ const styles = StyleSheet.create({
   cardFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: Spacing.sm,
+    alignItems: 'flex-end',
+    marginTop: 2,
+    paddingTop: 2,
   },
   zipCode: {
     fontSize: 12,
     fontWeight: '500',
-    color: Colors.primary.main,
+    color: '#3B82F6',
     textDecorationLine: 'underline',
+    flexShrink: 1,
+    marginLeft: 8,
   },
   postedDate: {
     ...Typography.styles.caption,

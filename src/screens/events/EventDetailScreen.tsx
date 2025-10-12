@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import EventsService, { Event } from '../../services/EventsService';
 import { Spacing } from '../../styles/designSystem';
+import { SocialShareBar } from '../../components/events';
 
 type RouteParams = {
   EventDetail: {
@@ -29,6 +30,8 @@ const EventDetailScreen: React.FC = () => {
   const route = useRoute<RouteProp<RouteParams, 'EventDetail'>>();
   const insets = useSafeAreaInsets();
   const { eventId } = route.params;
+
+  console.log('🔷 EventDetailScreen mounted with eventId:', eventId);
 
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
@@ -50,9 +53,12 @@ const EventDetailScreen: React.FC = () => {
   const loadEvent = async () => {
     try {
       setLoading(true);
+      console.log('🔷 EventDetailScreen: Loading event with ID:', eventId);
       const response = await EventsService.getEventById(eventId);
+      console.log('🔷 EventDetailScreen: Event loaded successfully:', response.event?.title);
       setEvent(response.event);
     } catch (error) {
+      console.error('❌ EventDetailScreen: Failed to load event:', error);
       Alert.alert('Error', 'Failed to load event');
       navigation.goBack();
     } finally {
@@ -111,6 +117,13 @@ const EventDetailScreen: React.FC = () => {
     ]);
   };
 
+  const formatDateShort = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+    });
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       weekday: 'long',
@@ -145,40 +158,133 @@ const EventDetailScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <ScrollView>
+      {/* Hero Image with Overlay Actions */}
+      <View style={styles.heroContainer}>
         <Image
           source={{ uri: event.flyer_url }}
-          style={styles.flyerImage}
-          resizeMode="contain"
+          style={styles.heroImage}
+          resizeMode="cover"
         />
+        
+        {/* Overlay Action Bar */}
+        <View style={[styles.overlayActionBar, { paddingTop: insets.top }]}>
+          <TouchableOpacity
+            style={styles.overlayButton}
+            onPress={() => navigation.goBack()}
+            accessibilityLabel="Go back"
+          >
+            <Text style={styles.overlayButtonText}>←</Text>
+          </TouchableOpacity>
 
-        <View style={styles.content}>
-          <Text style={styles.title}>{event.title}</Text>
-
-          <View style={styles.dateTimeContainer}>
-            <View style={styles.dateTimeRow}>
-              <Text style={styles.icon}>📅</Text>
-              <Text style={styles.dateTimeText}>
-                {formatDate(event.event_date)}
-              </Text>
+          <View style={styles.overlayStats}>
+            <View style={styles.statItem}>
+              <Text style={styles.statIcon}>👁️</Text>
+              <Text style={styles.statText}>{event.view_count || 0}</Text>
             </View>
-            <View style={styles.dateTimeRow}>
-              <Text style={styles.icon}>🕐</Text>
-              <Text style={styles.dateTimeText}>
-                {formatTime(event.event_date)}
-              </Text>
+            <View style={styles.statItem}>
+              <Text style={styles.statIcon}>↗️</Text>
+              <Text style={styles.statText}>{event.share_count || 0}</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Text style={styles.statIcon}>❤️</Text>
+              <Text style={styles.statText}>{event.like_count || 0}</Text>
             </View>
           </View>
 
+          <TouchableOpacity
+            style={styles.overlayButton}
+            onPress={() => {/* TODO: Implement flag functionality */}}
+            accessibilityLabel="Flag event"
+          >
+            <Text style={styles.overlayButtonText}>🚩</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <ScrollView style={styles.scrollContent}>
+        {/* Event Info Card */}
+        <View style={styles.eventInfoCard}>
+          <View style={styles.titleRow}>
+            <Text style={styles.title}>{event.title}</Text>
+            <Text style={styles.zipCode}>{event.zip_code}</Text>
+          </View>
+          
+          <Text style={styles.date}>{formatDateShort(event.event_date)}</Text>
+          
+          <View style={styles.priceBadge}>
+            <Text style={styles.priceText}>
+              {event.is_free ? 'Free' : 'Paid'}
+            </Text>
+          </View>
+        </View>
+
+        {/* Primary CTA Buttons */}
+        <View style={styles.ctaContainer}>
+          {event.has_rsvped ? (
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={handleCancelRsvp}
+              accessibilityLabel="Cancel RSVP"
+            >
+              <Text style={styles.cancelButtonText}>Cancel RSVP</Text>
+            </TouchableOpacity>
+          ) : (
+            <>
+              {event.cta_link && (
+                <TouchableOpacity
+                  style={styles.ctaButton}
+                  onPress={() => Linking.openURL(event.cta_link!)}
+                  accessibilityLabel="Event Info"
+                >
+                  <Text style={styles.ctaButtonText}>Event Info</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity
+                style={[
+                  styles.ctaButton,
+                  isFull && styles.ctaButtonDisabled,
+                  event.cta_link && styles.ctaButtonSecondary
+                ]}
+                onPress={() => setShowRsvpModal(true)}
+                disabled={isFull}
+                accessibilityLabel={isFull ? 'Event Full' : 'Reserve Now'}
+              >
+                <Text style={styles.ctaButtonText}>
+                  {isFull ? 'Event Full' : 'Reserve Now!'}
+                </Text>
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
+
+        {/* Event Details */}
+        <View style={styles.detailsContainer}>
+          <View style={styles.detailSection}>
+            <Text style={styles.detailLabel}>Date:</Text>
+            <Text style={styles.detailText}>
+              {event.display_date_range_formatted || 
+               `${formatDate(event.event_date)} ${formatTime(event.event_date)}`}
+            </Text>
+          </View>
+
           {event.venue_name && (
-            <View style={styles.locationContainer}>
-              <Text style={styles.icon}>📍</Text>
-              <View>
-                <Text style={styles.venueName}>{event.venue_name}</Text>
-                {event.address && (
-                  <Text style={styles.address}>{event.address}</Text>
-                )}
-              </View>
+            <View style={styles.detailSection}>
+              <Text style={styles.detailLabel}>Address:</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  if (event.latitude && event.longitude) {
+                    const url = `maps://maps.google.com/maps?daddr=${event.latitude},${event.longitude}`;
+                    Linking.openURL(url);
+                  }
+                }}
+                accessibilityLabel="Open in Maps"
+                accessibilityHint="Opens the event location in Maps app"
+              >
+                <Text style={[styles.detailText, styles.linkText]}>
+                  {event.venue_name}
+                  {event.address && `, ${event.address}`}
+                </Text>
+              </TouchableOpacity>
             </View>
           )}
 
@@ -200,37 +306,69 @@ const EventDetailScreen: React.FC = () => {
               </View>
             </View>
           )}
-
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>About</Text>
-            <Text style={styles.sectionText}>{event.description}</Text>
-          </View>
-
-          {event.host && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Host</Text>
-              <Text style={styles.sectionText}>{event.host}</Text>
-            </View>
-          )}
         </View>
+
+        {/* About Event Section */}
+        <View style={styles.aboutSection}>
+          <Text style={styles.sectionTitle}>About Event</Text>
+          <Text style={styles.sectionText}>{event.description}</Text>
+        </View>
+
+        {/* Host Section */}
+        {event.host && (
+          <View style={styles.hostSection}>
+            <Text style={styles.sectionTitle}>Host</Text>
+            <Text style={styles.sectionText}>{event.host}</Text>
+          </View>
+        )}
+
+        {/* Related Events */}
+        {event.related_events && event.related_events.length > 0 && (
+          <View style={styles.relatedSection}>
+            <Text style={styles.sectionTitle}>Related Events</Text>
+            {event.related_events.map((relatedEvent) => (
+              <TouchableOpacity
+                key={relatedEvent.id}
+                style={styles.relatedEventItem}
+                onPress={() => navigation.navigate('EventDetail', { eventId: relatedEvent.id })}
+                accessibilityLabel={`View ${relatedEvent.title}`}
+              >
+                <Image
+                  source={{ uri: relatedEvent.flyer_url }}
+                  style={styles.relatedEventImage}
+                  resizeMode="cover"
+                />
+                <View style={styles.relatedEventInfo}>
+                  <Text style={styles.relatedEventTitle}>{relatedEvent.title}</Text>
+                  <Text style={styles.relatedEventDate}>
+                    {formatDate(relatedEvent.event_date)}
+                  </Text>
+                  {relatedEvent.venue_name && (
+                    <Text style={styles.relatedEventVenue}>{relatedEvent.venue_name}</Text>
+                  )}
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
       </ScrollView>
 
+      {/* Social Share Bar */}
+      <SocialShareBar
+        event={event}
+        onShare={(platform) => EventsService.shareEvent(event, platform as any)}
+      />
+
       <View style={[styles.actionBar, { paddingBottom: insets.bottom + 10 }]}>
-        {event.has_rsvped ? (
+        {!event.has_rsvped && (
           <TouchableOpacity
-            style={styles.cancelButton}
-            onPress={handleCancelRsvp}
-          >
-            <Text style={styles.cancelButtonText}>Cancel RSVP</Text>
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity
-            style={[styles.rsvpButton, isFull && styles.rsvpButtonDisabled]}
+            style={[styles.joinButton, isFull && styles.joinButtonDisabled]}
             onPress={() => setShowRsvpModal(true)}
             disabled={isFull}
+            accessibilityLabel={isFull ? 'Event Full' : 'Join us!'}
           >
-            <Text style={styles.rsvpButtonText}>
-              {isFull ? 'Event Full' : 'RSVP Now'}
+            <Text style={styles.joinButtonText}>
+              {isFull ? 'Event Full' : 'Join us!'}
             </Text>
           </TouchableOpacity>
         )}
@@ -325,55 +463,242 @@ const EventDetailScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F2F2F7' },
-  loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  flyerImage: { width: '100%', height: 500, backgroundColor: '#F1F1F1' },
-  content: { backgroundColor: '#FFFFFF', padding: Spacing.lg },
+  container: { 
+    flex: 1, 
+    backgroundColor: '#F2F2F7' 
+  },
+  loadingContainer: { 
+    flex: 1, 
+    alignItems: 'center', 
+    justifyContent: 'center' 
+  },
+  heroContainer: {
+    position: 'relative',
+    height: 400,
+  },
+  heroImage: { 
+    width: '100%', 
+    height: '100%', 
+    backgroundColor: '#F1F1F1' 
+  },
+  overlayActionBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+  },
+  overlayButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  overlayButtonText: {
+    fontSize: 20,
+    color: '#292B2D',
+    fontWeight: 'bold',
+  },
+  overlayStats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: Spacing.sm,
+  },
+  statIcon: {
+    fontSize: 16,
+    marginRight: 4,
+  },
+  statText: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  scrollContent: {
+    flex: 1,
+  },
+  eventInfoCard: {
+    backgroundColor: '#FFFFFF',
+    padding: Spacing.lg,
+    marginBottom: Spacing.md,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: Spacing.sm,
+  },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
     color: '#292B2D',
+    flex: 1,
+    marginRight: Spacing.md,
+  },
+  zipCode: {
+    fontSize: 16,
+    color: '#00B8A9', // Teal color from design
+    fontWeight: '600',
+  },
+  date: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: Spacing.sm,
+  },
+  priceBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#74E1A0', // Mint green for free
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  priceText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  ctaContainer: {
+    paddingHorizontal: Spacing.lg,
+    marginBottom: Spacing.lg,
+  },
+  ctaButton: {
+    backgroundColor: '#1E7A5F', // Primary green from design
+    borderRadius: 12,
+    paddingVertical: Spacing.md,
+    alignItems: 'center',
+  },
+  ctaButtonSecondary: {
+    marginTop: Spacing.md,
+  },
+  ctaButtonDisabled: { 
+    opacity: 0.5 
+  },
+  ctaButtonText: { 
+    fontSize: 18, 
+    fontWeight: 'bold', 
+    color: '#FFFFFF' 
+  },
+  detailsContainer: {
+    backgroundColor: '#FFFFFF',
+    padding: Spacing.lg,
     marginBottom: Spacing.md,
   },
-  dateTimeContainer: { marginBottom: Spacing.md },
-  dateTimeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  detailSection: {
+    marginBottom: Spacing.md,
+  },
+  detailLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1E7A5F',
     marginBottom: Spacing.xs,
   },
-  icon: { fontSize: 18, marginRight: Spacing.sm },
-  dateTimeText: { fontSize: 16, color: '#666' },
-  locationContainer: { flexDirection: 'row', marginBottom: Spacing.md },
-  venueName: { fontSize: 16, fontWeight: '600', color: '#292B2D' },
-  address: { fontSize: 14, color: '#666', marginTop: 4 },
+  detailText: {
+    fontSize: 16,
+    color: '#292B2D',
+    lineHeight: 22,
+  },
+  linkText: {
+    color: '#00B8A9',
+    textDecorationLine: 'underline',
+  },
   capacityContainer: {
-    backgroundColor: '#F1F1F1',
+    backgroundColor: '#F8F9FA',
     borderRadius: 12,
     padding: Spacing.md,
-    marginBottom: Spacing.md,
+    marginTop: Spacing.md,
   },
   capacityHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: Spacing.sm,
   },
-  capacityLabel: { fontSize: 14, fontWeight: '600', color: '#292B2D' },
-  capacityCount: { fontSize: 14, color: '#666' },
+  capacityLabel: { 
+    fontSize: 14, 
+    fontWeight: '600', 
+    color: '#292B2D' 
+  },
+  capacityCount: { 
+    fontSize: 14, 
+    color: '#666' 
+  },
   capacityBar: {
     height: 8,
     backgroundColor: '#E0E0E0',
     borderRadius: 4,
     overflow: 'hidden',
   },
-  capacityProgress: { height: '100%', backgroundColor: '#74E1A0' },
-  section: { marginBottom: Spacing.lg },
+  capacityProgress: { 
+    height: '100%', 
+    backgroundColor: '#74E1A0' 
+  },
+  aboutSection: {
+    backgroundColor: '#FFFFFF',
+    padding: Spacing.lg,
+    marginBottom: Spacing.md,
+  },
+  hostSection: {
+    backgroundColor: '#FFFFFF',
+    padding: Spacing.lg,
+    marginBottom: Spacing.md,
+  },
+  relatedSection: {
+    backgroundColor: '#FFFFFF',
+    padding: Spacing.lg,
+    marginBottom: Spacing.lg,
+  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#292B2D',
-    marginBottom: Spacing.sm,
+    color: '#1E7A5F',
+    marginBottom: Spacing.md,
   },
-  sectionText: { fontSize: 16, color: '#666', lineHeight: 24 },
+  sectionText: { 
+    fontSize: 16, 
+    color: '#292B2D', 
+    lineHeight: 24 
+  },
+  relatedEventItem: {
+    flexDirection: 'row',
+    marginBottom: Spacing.md,
+    padding: Spacing.sm,
+    borderRadius: 12,
+    backgroundColor: '#F8F9FA',
+  },
+  relatedEventImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+    marginRight: Spacing.md,
+  },
+  relatedEventInfo: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  relatedEventTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#292B2D',
+    marginBottom: 4,
+  },
+  relatedEventDate: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 2,
+  },
+  relatedEventVenue: {
+    fontSize: 14,
+    color: '#666',
+  },
   actionBar: {
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
@@ -381,22 +706,35 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.md,
   },
-  rsvpButton: {
-    backgroundColor: '#74E1A0',
+  joinButton: {
+    backgroundColor: '#1E7A5F',
     borderRadius: 12,
     paddingVertical: Spacing.md,
     alignItems: 'center',
   },
-  rsvpButtonDisabled: { opacity: 0.5 },
-  rsvpButtonText: { fontSize: 18, fontWeight: 'bold', color: '#FFFFFF' },
+  joinButtonDisabled: { 
+    opacity: 0.5 
+  },
+  joinButtonText: { 
+    fontSize: 18, 
+    fontWeight: 'bold', 
+    color: '#FFFFFF' 
+  },
   cancelButton: {
     backgroundColor: '#F44336',
     borderRadius: 12,
     paddingVertical: Spacing.md,
     alignItems: 'center',
   },
-  cancelButtonText: { fontSize: 18, fontWeight: 'bold', color: '#FFFFFF' },
-  modalContainer: { flex: 1, backgroundColor: '#F2F2F7' },
+  cancelButtonText: { 
+    fontSize: 18, 
+    fontWeight: 'bold', 
+    color: '#FFFFFF' 
+  },
+  modalContainer: { 
+    flex: 1, 
+    backgroundColor: '#F2F2F7' 
+  },
   modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -407,10 +745,22 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#E0E0E0',
   },
-  modalClose: { fontSize: 28, color: '#666' },
-  modalTitle: { fontSize: 18, fontWeight: 'bold', color: '#292B2D' },
-  modalContent: { flex: 1, padding: Spacing.lg },
-  formGroup: { marginBottom: Spacing.lg },
+  modalClose: { 
+    fontSize: 28, 
+    color: '#666' 
+  },
+  modalTitle: { 
+    fontSize: 18, 
+    fontWeight: 'bold', 
+    color: '#292B2D' 
+  },
+  modalContent: { 
+    flex: 1, 
+    padding: Spacing.lg 
+  },
+  formGroup: { 
+    marginBottom: Spacing.lg 
+  },
   label: {
     fontSize: 16,
     fontWeight: '600',
@@ -426,15 +776,24 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E0E0E0',
   },
-  textArea: { minHeight: 80, textAlignVertical: 'top' },
+  textArea: { 
+    minHeight: 80, 
+    textAlignVertical: 'top' 
+  },
   submitButton: {
     backgroundColor: '#74E1A0',
     borderRadius: 12,
     paddingVertical: Spacing.md,
     alignItems: 'center',
   },
-  submitButtonDisabled: { opacity: 0.6 },
-  submitButtonText: { fontSize: 18, fontWeight: 'bold', color: '#FFFFFF' },
+  submitButtonDisabled: { 
+    opacity: 0.6 
+  },
+  submitButtonText: { 
+    fontSize: 18, 
+    fontWeight: 'bold', 
+    color: '#FFFFFF' 
+  },
 });
 
 export default EventDetailScreen;

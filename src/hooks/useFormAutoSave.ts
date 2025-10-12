@@ -123,14 +123,19 @@ export const useFormAutoSave = (
     }
   }, [formData, currentStep, isFormComplete, enabled]);
 
-  // Trigger save with debouncing
-  const triggerSave = useCallback(() => {
+  // Trigger save with debouncing - use ref to avoid recreating
+  const triggerSaveRef = useRef<() => void>();
+  triggerSaveRef.current = () => {
     if (debounceTimer.current) {
       clearTimeout(debounceTimer.current);
     }
 
     debounceTimer.current = setTimeout(debouncedSave, debounceMs);
-  }, [debouncedSave, debounceMs]);
+  };
+
+  const triggerSave = useCallback(() => {
+    triggerSaveRef.current?.();
+  }, []); // Empty deps - stable callback
 
   // Save immediately without debouncing
   const saveNow = useCallback(async () => {
@@ -141,12 +146,12 @@ export const useFormAutoSave = (
     await debouncedSave();
   }, [debouncedSave]);
 
-  // Auto-save when form data changes
+  // Auto-save when form data changes - now with stable triggerSave
   useEffect(() => {
     if (enabled && isInitializedRef.current) {
-      triggerSave();
+      triggerSaveRef.current?.();
     }
-  }, [formData, triggerSave, enabled]);
+  }, [formData, enabled]); // Removed triggerSave from deps
 
   // Save when step changes
   useEffect(() => {
@@ -180,27 +185,42 @@ export const useFormAutoSave = (
     };
   }, [saveOnAppBackground, saveNow]);
 
-  // Start auto-save service
+  // Start auto-save service - use refs to avoid recreating on every change
+  const formDataRef = useRef(formData);
+  const currentStepRef = useRef(currentStep);
+  const isFormCompleteRef = useRef(isFormComplete);
+
+  // Update refs on change
+  useEffect(() => {
+    formDataRef.current = formData;
+    currentStepRef.current = currentStep;
+    isFormCompleteRef.current = isFormComplete;
+  }, [formData, currentStep, isFormComplete]);
+
+  // Start auto-save service - now stable
   useEffect(() => {
     if (enabled) {
       formPersistenceService.startAutoSave(
-        () => formData,
-        () => currentStep,
-        () => isFormComplete,
+        () => formDataRef.current,
+        () => currentStepRef.current,
+        () => isFormCompleteRef.current,
       );
     }
 
     return () => {
       formPersistenceService.stopAutoSave();
     };
-  }, [enabled, formData, currentStep, isFormComplete]);
+  }, [enabled]); // Only depends on enabled flag
 
-  // Cleanup debounce timer
+  // Cleanup debounce timer and service on unmount
   useEffect(() => {
     return () => {
+      // Clear debounce timer
       if (debounceTimer.current) {
         clearTimeout(debounceTimer.current);
       }
+      // Cleanup service resources
+      formPersistenceService.cleanup();
     };
   }, []);
 

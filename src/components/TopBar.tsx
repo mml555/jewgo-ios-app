@@ -21,9 +21,10 @@ import {
 interface TopBarProps {
   onQueryChange: (query: string) => void;
   debounceMs?: number;
+  placeholder?: string;
 }
 
-const TopBar: React.FC<TopBarProps> = ({ onQueryChange, debounceMs = 250 }) => {
+const TopBar: React.FC<TopBarProps> = ({ onQueryChange, debounceMs = 250, placeholder }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const insets = useSafeAreaInsets();
@@ -85,7 +86,7 @@ const TopBar: React.FC<TopBarProps> = ({ onQueryChange, debounceMs = 250 }) => {
               styles.searchInput,
               isSearchFocused && styles.searchInputFocused,
             ]}
-            placeholder="Search places, events..."
+            placeholder={placeholder || "Search places, events..."}
             placeholderTextColor="#8E8E93"
             value={searchQuery}
             onChangeText={handleSearchChange}

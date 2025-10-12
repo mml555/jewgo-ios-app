@@ -22,7 +22,6 @@ import { useReviews } from '../hooks/useReviews';
 import { useFavorites } from '../hooks/useFavorites';
 import { DistanceDisplay } from '../components/DistanceDisplay';
 import { useLocationSimple } from '../hooks/useLocationSimple';
-import EateryIcon from '../components/EateryIcon';
 import FacebookIcon from '../components/FacebookIcon';
 import InstagramIcon from '../components/InstagramIcon';
 import TikTokIcon from '../components/TikTokIcon';
@@ -32,6 +31,7 @@ import WriteReviewModal from '../components/WriteReviewModal';
 import ImageCarousel from '../components/ImageCarousel';
 import DetailHeaderBar from '../components/DetailHeaderBar';
 import BusinessSpecials from '../components/BusinessSpecials';
+import { SkeletonDetail } from '../components/SkeletonLoader';
 import {
   Colors,
   Typography,
@@ -554,13 +554,10 @@ const ListingDetailScreen: React.FC = () => {
     };
   };
 
-  if (loading) {
+  if (loading && !item) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Colors.primary.main} />
-          <Text style={styles.loadingText}>Loading...</Text>
-        </View>
+        <SkeletonDetail />
       </SafeAreaView>
     );
   }

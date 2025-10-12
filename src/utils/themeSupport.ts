@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { AccessibilityInfo, Appearance, ColorSchemeName } from 'react-native';
 import { Colors } from '../styles/designSystem';
 import { debugLog, warnLog } from './logger';
@@ -178,12 +178,10 @@ export const subscribeToThemeChanges = (
 // React hook for using accessible theme
 export const useAccessibleTheme = (): AccessibleTheme => {
   const [theme, setTheme] = useState<AccessibleTheme>(currentTheme);
+  const isInitialMount = useRef(true);
 
   useEffect(() => {
-    // Initial theme update
-    updateTheme();
-
-    // Subscribe to theme changes
+    // Subscribe to theme changes first
     const unsubscribe = subscribeToThemeChanges(setTheme);
 
     // Listen for system changes
@@ -198,12 +196,21 @@ export const useAccessibleTheme = (): AccessibleTheme => {
       },
     );
 
+    // Update theme only after listeners are set up, and only if not already updated
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      // Only update if theme hasn't been initialized
+      if (currentTheme.colors === Colors) {
+        updateTheme();
+      }
+    }
+
     return () => {
       unsubscribe();
       appearanceSubscription?.remove();
       accessibilitySubscription?.remove();
     };
-  }, []);
+  }, []); // Empty deps - only run once
 
   return theme;
 };

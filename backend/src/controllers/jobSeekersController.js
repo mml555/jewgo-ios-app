@@ -286,10 +286,15 @@ class JobSeekersController {
       const result = await db.query(query, params);
 
       res.json({
-        profiles: result.rows,
-        pagination: {
-          page: parseInt(page, 10),
-          limit: parseInt(limit, 10),
+        success: true,
+        data: {
+          job_seekers: result.rows,
+          pagination: {
+            page: parseInt(page, 10),
+            limit: parseInt(limit, 10),
+            total: result.rows.length,
+            pages: Math.ceil(result.rows.length / parseInt(limit, 10)),
+          },
         },
       });
     } catch (error) {
@@ -308,6 +313,9 @@ class JobSeekersController {
     try {
       const { id } = req.params;
       const userId = req.user?.id;
+      
+      // Check if userId is a valid UUID (not a guest token)
+      const isValidUUID = userId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId);
 
       const result = await db.query(
         `SELECT 
@@ -316,7 +324,7 @@ class JobSeekersController {
           jt.name as job_type_name,
           el.name as experience_level_name,
           ${
-            userId
+            isValidUUID
               ? `(SELECT COUNT(*) > 0 FROM saved_seeker_profiles WHERE employer_id = $2 AND job_seeker_profile_id = jsp.id) as is_saved`
               : 'false as is_saved'
           }
@@ -325,7 +333,7 @@ class JobSeekersController {
         LEFT JOIN job_types jt ON jsp.preferred_job_type_id = jt.id
         LEFT JOIN experience_levels el ON jsp.experience_level_id = el.id
         WHERE jsp.id = $1`,
-        userId ? [id, userId] : [id],
+        isValidUUID ? [id, userId] : [id],
       );
 
       if (result.rows.length === 0) {
@@ -340,7 +348,10 @@ class JobSeekersController {
         [id],
       );
 
-      res.json({ profile: result.rows[0] });
+      res.json({ 
+        success: true,
+        data: result.rows[0] 
+      });
     } catch (error) {
       logger.error('Error getting job seeker profile:', error);
       res

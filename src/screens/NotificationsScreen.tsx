@@ -15,9 +15,6 @@ import {
   Shadows,
   TouchTargets,
 } from '../styles/designSystem';
-import EateryIcon from '../components/EateryIcon';
-import StoreIcon from '../components/StoreIcon';
-import SpecialsIcon from '../components/SpecialsIcon';
 import { debugLog } from '../utils/logger';
 
 const NotificationsScreen: React.FC = () => {

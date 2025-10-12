@@ -22,6 +22,7 @@ import JobsService, {
 } from '../../services/JobsService';
 import { Spacing } from '../../styles/designSystem';
 import { AppStackParamList } from '../../types/navigation';
+import { FALLBACK_INDUSTRIES, FALLBACK_JOB_TYPES } from '../../utils/fallbackData';
 
 type JobSeekerProfilesScreenNavigationProp =
   StackNavigationProp<AppStackParamList>;
@@ -144,6 +145,13 @@ const JobSeekerProfilesScreen: React.FC = () => {
       setJobTypes(jobTypesRes.jobTypes);
     } catch (error) {
       console.error('Error loading lookup data:', error);
+      
+      // Provide fallback data
+      setIndustries(FALLBACK_INDUSTRIES);
+      setJobTypes(FALLBACK_JOB_TYPES);
+      
+      // Show a subtle notification that we're using offline data
+      console.log('Using fallback data due to API connectivity issues');
     }
   };
 
@@ -237,7 +245,7 @@ const JobSeekerProfilesScreen: React.FC = () => {
     <TouchableOpacity
       style={styles.profileCard}
       onPress={() =>
-        navigation.navigate('JobSeekerDetail', { jobSeekerId: item.id })
+        navigation.navigate('JobSeekerDetailV2', { profileId: item.id })
       }
       activeOpacity={0.7}
     >

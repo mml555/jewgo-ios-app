@@ -53,6 +53,11 @@ export interface FavoriteToggleResponse {
 
 class FavoritesService {
   private baseUrl = '/favorites';
+  
+  // Cache for entity data to prevent duplicate API requests
+  private entityCache: Map<string, { data: any; timestamp: number }> = new Map();
+  private readonly CACHE_DURATION = 60000; // 1 minute cache
+  private pendingRequests: Map<string, Promise<any>> = new Map(); // Request deduplication
 
   /**
    * Check if user is authenticated (has access to server favorites)
@@ -65,6 +70,62 @@ class FavoritesService {
       return authService.isAuthenticated();
     } catch (error) {
       return false;
+    }
+  }
+
+  /**
+   * Get entity data with caching and deduplication
+   */
+  private async getEntityWithCache(entityId: string): Promise<any> {
+    const now = Date.now();
+    
+    // Check cache first
+    const cached = this.entityCache.get(entityId);
+    if (cached && now - cached.timestamp < this.CACHE_DURATION) {
+      return cached.data;
+    }
+
+    // Check if request is already pending
+    const pending = this.pendingRequests.get(entityId);
+    if (pending) {
+      return pending;
+    }
+
+    // Make new request
+    const requestPromise = (async () => {
+      try {
+        const entityResponse = await (apiService as any).request(
+          `/entities/${entityId}`,
+        );
+        
+        const data = entityResponse.success
+          ? entityResponse.data.entity || entityResponse.data
+          : null;
+        
+        // Cache the result
+        this.entityCache.set(entityId, { data, timestamp: now });
+        
+        return data;
+      } finally {
+        // Remove from pending requests
+        this.pendingRequests.delete(entityId);
+      }
+    })();
+
+    // Store pending request
+    this.pendingRequests.set(entityId, requestPromise);
+    
+    return requestPromise;
+  }
+
+  /**
+   * Clear entity cache (useful after updates)
+   */
+  private clearEntityCache(entityId?: string): void {
+    if (entityId) {
+      this.entityCache.delete(entityId);
+    } else {
+      this.entityCache.clear();
     }
   }
 
@@ -93,24 +154,12 @@ class FavoritesService {
         const paginatedFavorites = localFavorites.slice(offset, offset + limit);
 
         // Convert LocalFavorite to Favorite format and enhance with current entity data
+        // Use batching and caching to prevent duplicate requests
         const favorites: Favorite[] = await Promise.all(
           paginatedFavorites.map(async local => {
             try {
-              // Try to fetch current entity data to get updated images and info
-              const entityResponse = await (apiService as any).request(
-                `/entities/${local.entity_id}`,
-              );
-              const entity = entityResponse.success
-                ? entityResponse.data.entity || entityResponse.data
-                : null;
-
-              // debugLog(`🖼️ Entity fetch for ${local.entity_name}:`, {
-              //   success: entityResponse.success,
-              //   hasEntity: !!entity,
-              //   hasImages: !!(entity?.images && entity.images.length > 0),
-              //   imageCount: entity?.images?.length || 0,
-              //   firstImageUrl: entity?.images?.[0]?.url || 'none'
-              // });
+              // Use cached entity fetch method
+              const entity = await this.getEntityWithCache(local.entity_id);
 
               // Map entity types to match database
               const entityTypeMap: { [key: string]: string } = {

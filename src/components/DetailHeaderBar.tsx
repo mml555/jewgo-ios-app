@@ -7,13 +7,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../styles/designSystem';
-import BackIcon from './icons/BackIcon';
-import FlagIcon from './icons/FlagIcon';
-import EyeIcon from './icons/EyeIcon';
-import ShareIcon from './icons/ShareIcon';
-import HeartIcon from './HeartIcon';
-import SearchIcon from './icons/SearchIcon';
-import GiftIcon from './icons/GiftIcon';
+import Icon from './Icon';
 
 interface DetailHeaderBarProps {
   pressedButtons: Set<string>;
@@ -70,7 +64,7 @@ const DetailHeaderBar: React.FC<DetailHeaderBarProps> = ({
           onPressOut={() => handlePressOut('back')}
           activeOpacity={0.7}
         >
-          <BackIcon size={20} color={Colors.text.primary} />
+          <Icon name="arrow-left" size={20} color={Colors.text.primary} />
         </TouchableOpacity>
         
         <TouchableOpacity 
@@ -83,20 +77,20 @@ const DetailHeaderBar: React.FC<DetailHeaderBarProps> = ({
           onPressOut={() => handlePressOut('report')}
           activeOpacity={0.7}
         >
-          <FlagIcon size={18} color={Colors.status.error} />
+          <Icon name="flag" size={18} color={Colors.status.error} />
         </TouchableOpacity>
         
         {/* Center Content - View Count or Claims Left */}
         {centerContent?.type === 'view_count' && (
           <View style={styles.viewCountGroup}>
-            <EyeIcon size={14} color={Colors.primary.main} />
+            <Icon name="eye" size={14} color={Colors.primary.main} />
             <Text style={styles.viewCount}>{formatCount(centerContent.count)}</Text>
           </View>
         )}
         
         {centerContent?.type === 'claims_left' && (
           <View style={styles.claimsCountGroup}>
-            <GiftIcon size={14} color={Colors.text.secondary} />
+            <Icon name="tag" size={14} color={Colors.text.secondary} />
             <Text style={styles.claimsCount}>{formatCount(centerContent.count)}</Text>
           </View>
         )}
@@ -115,7 +109,7 @@ const DetailHeaderBar: React.FC<DetailHeaderBarProps> = ({
               activeOpacity={0.7}
             >
               <View style={styles.headerButtonGroup}>
-                <ShareIcon size={16} color={Colors.text.primary} />
+                <Icon name="share-2" size={16} color={Colors.text.primary} />
                 <Text style={styles.headerButtonCount}>{formatCount(rightContent.shareCount)}</Text>
               </View>
             </TouchableOpacity>
@@ -131,7 +125,8 @@ const DetailHeaderBar: React.FC<DetailHeaderBarProps> = ({
               activeOpacity={0.7}
             >
               <View style={styles.headerButtonGroup}>
-                <HeartIcon 
+                <Icon 
+                  name="heart"
                   size={16} 
                   color={rightContent.isFavorited ? Colors.status.error : Colors.gray400}
                   filled={rightContent.isFavorited}
@@ -154,7 +149,7 @@ const DetailHeaderBar: React.FC<DetailHeaderBarProps> = ({
               onPressOut={() => handlePressOut('search')}
               activeOpacity={0.7}
             >
-              <SearchIcon size={16} color={Colors.text.primary} />
+              <Icon name="search" size={16} color={Colors.text.primary} />
             </TouchableOpacity>
             
             <TouchableOpacity 
@@ -167,7 +162,8 @@ const DetailHeaderBar: React.FC<DetailHeaderBarProps> = ({
               onPressOut={() => handlePressOut('favorite')}
               activeOpacity={0.7}
             >
-              <HeartIcon 
+              <Icon 
+                name="heart"
                 size={20} 
                 color={rightContent.isFavorited ? Colors.status.error : Colors.gray400}
                 filled={rightContent.isFavorited}

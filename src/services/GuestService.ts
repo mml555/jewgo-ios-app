@@ -57,7 +57,10 @@ class GuestService {
         // Check if session is still valid
         if (new Date(session.expiresAt) > new Date()) {
           this.guestSession = session;
-          debugLog('🔐 GuestService: Restored valid session from storage');
+          // Only log occasionally to avoid console spam
+          if (__DEV__ && Math.random() < 0.01) {
+            debugLog('🔐 GuestService: Restored valid session from storage');
+          }
           return;
         }
 
@@ -77,9 +80,12 @@ class GuestService {
   async createGuestSession(retryCount: number = 0): Promise<GuestSession> {
     // If already creating a session, return the existing promise
     if (this.isCreatingSession && this.creationPromise) {
-      debugLog(
-        '🔐 GuestService: Session creation already in progress, waiting...',
-      );
+      // Only log occasionally to avoid console spam
+      if (__DEV__ && Math.random() < 0.01) {
+        debugLog(
+          '🔐 GuestService: Session creation already in progress, waiting...',
+        );
+      }
       return this.creationPromise;
     }
 
@@ -88,7 +94,10 @@ class GuestService {
       this.guestSession &&
       new Date(this.guestSession.expiresAt) > new Date()
     ) {
-      debugLog('🔐 GuestService: Using existing valid session');
+      // Only log occasionally to avoid console spam
+      if (__DEV__ && Math.random() < 0.01) {
+        debugLog('🔐 GuestService: Using existing valid session');
+      }
       return this.guestSession;
     }
 
@@ -110,18 +119,21 @@ class GuestService {
     maxRetries: number = 3,
   ): Promise<GuestSession> {
     try {
-      debugLog(
-        '🔐 GuestService: Creating guest session... (attempt ' +
-          (retryCount + 1) +
-          ')',
-      );
+      // Only log occasionally to avoid console spam
+      if (__DEV__ && Math.random() < 0.1) {
+        debugLog(
+          '🔐 GuestService: Creating guest session... (attempt ' +
+            (retryCount + 1) +
+            ')',
+        );
+      }
       const deviceInfo = await this.getDeviceInfo();
-      debugLog('🔐 GuestService: Device info:', deviceInfo);
+      // Removed excessive logging
 
       // Use config service for API URL
       const config = configService.getConfig();
       const apiUrl = config.apiBaseUrl;
-      debugLog('🔐 GuestService: API URL:', apiUrl);
+      // Removed excessive logging
 
       const response = await fetch(`${apiUrl}/guest/create`, {
         method: 'POST',
@@ -157,7 +169,7 @@ class GuestService {
       }
 
       const data = await response.json();
-      debugLog('🔐 GuestService: API Response:', data);
+      // Removed excessive logging
       const guestSession = data.data;
 
       // Store guest session
@@ -171,10 +183,13 @@ class GuestService {
       );
 
       this.guestSession = guestSession;
-      debugLog(
-        '🔐 GuestService: Guest session created successfully:',
-        guestSession.guestUser.id,
-      );
+      // Only log occasionally to avoid console spam
+      if (__DEV__ && Math.random() < 0.1) {
+        debugLog(
+          '🔐 GuestService: Guest session created successfully:',
+          guestSession.guestUser.id,
+        );
+      }
       return guestSession;
     } catch (error: any) {
       // Only retry on network errors, not on other errors
@@ -282,10 +297,12 @@ class GuestService {
   // ==============================================
 
   isGuestAuthenticated(): boolean {
-    return (
+    const isAuthenticated = (
       this.guestSession !== null &&
       new Date(this.guestSession.expiresAt) > new Date()
     );
+    // Removed excessive logging that was causing memory issues
+    return isAuthenticated;
   }
 
   getGuestUser(): GuestUser | null {

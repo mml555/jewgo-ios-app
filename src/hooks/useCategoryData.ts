@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { apiService, Listing } from '../services/api';
-import MikvahIcon from '../components/MikvahIcon';
 import { debugLog, errorLog, warnLog } from '../utils/logger';
+import { useAuth } from '../contexts/AuthContext';
 
 // Helper function to get the correct image URL from database or fallback to placeholder
 const getImageUrl = (listing: Listing): string => {
@@ -235,6 +235,7 @@ export const useCategoryData = ({
   query = '',
   pageSize = 20,
 }: UseCategoryDataOptions): UseCategoryDataReturn => {
+  const { hasAnyAuth, isInitializing } = useAuth();
   const [data, setData] = useState<CategoryItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -245,6 +246,15 @@ export const useCategoryData = ({
   const loadingRef = useRef(false);
   const queryRef = useRef(query);
   const initialLoadRef = useRef(false);
+  
+  // Use ref to store current page to prevent recreating loadMore
+  const currentPageRef = useRef(currentPage);
+  const hasMoreRef = useRef(hasMore);
+  
+  useEffect(() => {
+    currentPageRef.current = currentPage;
+    hasMoreRef.current = hasMore;
+  }, [currentPage, hasMore]);
 
   // Load cached data or reset when category or query changes
   useEffect(() => {
@@ -271,23 +281,48 @@ export const useCategoryData = ({
     }
   }, [categoryKey, query]);
 
-  // Load initial data
-  useEffect(() => {
-    if (
-      data.length === 0 &&
-      !loading &&
-      !refreshing &&
-      !loadingRef.current &&
-      !initialLoadRef.current
-    ) {
-      initialLoadRef.current = true;
-      loadMore();
-    } else {
+  // Memoized transformation function to avoid recreating on every render
+  const transformListing = useCallback((listing: Listing): CategoryItem => {
+    // Create a complete, safe data structure with all required fields
+    const safeItem: CategoryItem = {
+      id: String(listing.id || ''),
+      title: String(listing.title || 'Unknown'),
+      description: String(
+        listing.description || 'No description available',
+      ),
+      imageUrl: String(getImageUrl(listing)),
+      category: String(listing.category_name || 'unknown'),
+      rating: Number(parseFloat(listing.rating) || 0),
+      zip_code: String(listing.zip_code || '00000'),
+      // Add coordinates directly to the item
+      latitude: listing.latitude ? Number(listing.latitude) : undefined,
+      longitude: listing.longitude
+        ? Number(listing.longitude)
+        : undefined,
+      // Provide all optional fields with safe defaults
+      price: '$$',
+      isOpen: true,
+      openWeekends: true,
+      kosherLevel: 'glatt',
+      hasParking: false,
+      hasWifi: false,
+      hasAccessibility: false,
+      hasDelivery: false,
+    };
+
+    // Add coordinate only if valid
+    if (listing.latitude && listing.longitude) {
+      safeItem.coordinate = {
+        latitude: Number(listing.latitude),
+        longitude: Number(listing.longitude),
+      };
     }
-  }, [categoryKey, query]); // Removed data.length, loading, refreshing to prevent infinite loop
+
+    return safeItem;
+  }, []);
 
   const loadMore = useCallback(async () => {
-    if (loadingRef.current || !hasMore) {
+    if (loadingRef.current || !hasMoreRef.current) {
       return;
     }
 
@@ -297,7 +332,7 @@ export const useCategoryData = ({
 
     try {
       // Calculate offset based on current page and page size
-      const offset = (currentPage - 1) * pageSize;
+      const offset = (currentPageRef.current - 1) * pageSize;
 
       // Try to fetch from API first with category-specific call and pagination
       const response = await apiService.getListingsByCategory(
@@ -328,47 +363,8 @@ export const useCategoryData = ({
           );
         }
 
-        // Convert API listings to our CategoryItem format
-        const newData: CategoryItem[] = filteredListings.map(
-          (listing: Listing) => {
-            // Create a complete, safe data structure with all required fields
-            const safeItem: CategoryItem = {
-              id: String(listing.id || ''),
-              title: String(listing.title || 'Unknown'),
-              description: String(
-                listing.description || 'No description available',
-              ),
-              imageUrl: String(getImageUrl(listing)),
-              category: String(listing.category_name || 'unknown'),
-              rating: Number(parseFloat(listing.rating) || 0),
-              zip_code: String(listing.zip_code || '00000'),
-              // Add coordinates directly to the item
-              latitude: listing.latitude ? Number(listing.latitude) : undefined,
-              longitude: listing.longitude
-                ? Number(listing.longitude)
-                : undefined,
-              // Provide all optional fields with safe defaults
-              price: '$$',
-              isOpen: true,
-              openWeekends: true,
-              kosherLevel: 'glatt',
-              hasParking: false,
-              hasWifi: false,
-              hasAccessibility: false,
-              hasDelivery: false,
-            };
-
-            // Add coordinate only if valid
-            if (listing.latitude && listing.longitude) {
-              safeItem.coordinate = {
-                latitude: Number(listing.latitude),
-                longitude: Number(listing.longitude),
-              };
-            }
-
-            return safeItem;
-          },
-        );
+        // Convert API listings to our CategoryItem format using memoized function
+        const newData: CategoryItem[] = filteredListings.map(transformListing);
 
         // Processed data successfully
 
@@ -431,7 +427,22 @@ export const useCategoryData = ({
       setLoading(false);
       loadingRef.current = false;
     }
-  }, [categoryKey, pageSize, hasMore]); // Removed currentPage to prevent infinite loop
+  }, [categoryKey, pageSize, transformListing]); // Use refs for currentPage and hasMore to avoid recreating
+
+  // Load initial data - use ref to track if we need to load
+  useEffect(() => {
+    // Removed excessive logging to prevent memory issues
+    // Only load if we haven't loaded for this category/query combination
+    // and authentication is ready (not initializing and has some form of auth)
+    if (!initialLoadRef.current && data.length === 0 && !loadingRef.current && !isInitializing && hasAnyAuth) {
+      // Only log very occasionally to reduce console noise
+      if (__DEV__ && Math.random() < 0.1) {
+        debugLog('🔐 useCategoryData: Starting data load for', categoryKey);
+      }
+      initialLoadRef.current = true;
+      loadMore();
+    }
+  }, [categoryKey, query, loadMore, isInitializing, hasAnyAuth]); // Now with proper dependencies
 
   const refresh = useCallback(async () => {
     if (loadingRef.current) return;
@@ -470,47 +481,8 @@ export const useCategoryData = ({
           );
         }
 
-        // Convert API listings to our CategoryItem format
-        const newData: CategoryItem[] = filteredListings.map(
-          (listing: Listing) => {
-            // Create a complete, safe data structure with all required fields
-            const safeItem: CategoryItem = {
-              id: String(listing.id || ''),
-              title: String(listing.title || 'Unknown'),
-              description: String(
-                listing.description || 'No description available',
-              ),
-              imageUrl: String(getImageUrl(listing)),
-              category: String(listing.category_name || 'unknown'),
-              rating: Number(parseFloat(listing.rating) || 0),
-              zip_code: String(listing.zip_code || '00000'),
-              // Add coordinates directly to the item
-              latitude: listing.latitude ? Number(listing.latitude) : undefined,
-              longitude: listing.longitude
-                ? Number(listing.longitude)
-                : undefined,
-              // Provide all optional fields with safe defaults
-              price: '$$',
-              isOpen: true,
-              openWeekends: true,
-              kosherLevel: 'glatt',
-              hasParking: false,
-              hasWifi: false,
-              hasAccessibility: false,
-              hasDelivery: false,
-            };
-
-            // Add coordinate only if valid
-            if (listing.latitude && listing.longitude) {
-              safeItem.coordinate = {
-                latitude: Number(listing.latitude),
-                longitude: Number(listing.longitude),
-              };
-            }
-
-            return safeItem;
-          },
-        );
+        // Convert API listings to our CategoryItem format using memoized function
+        const newData: CategoryItem[] = filteredListings.map(transformListing);
 
         if (newData.length === 0) {
           setData([]);
@@ -535,7 +507,7 @@ export const useCategoryData = ({
     } finally {
       setRefreshing(false);
     }
-  }, [categoryKey, pageSize]);
+  }, [categoryKey, pageSize, transformListing]);
 
   return {
     data,

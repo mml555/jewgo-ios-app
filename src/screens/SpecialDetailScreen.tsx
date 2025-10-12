@@ -24,7 +24,7 @@ import FacebookIcon from '../components/FacebookIcon';
 import InstagramIcon from '../components/InstagramIcon';
 import TikTokIcon from '../components/TikTokIcon';
 import WhatsAppIcon from '../components/WhatsAppIcon';
-import MapPinIcon from '../components/MapPinIcon';
+import Icon from '../components/Icon';
 import ImageCarousel from '../components/ImageCarousel';
 import DetailHeaderBar from '../components/DetailHeaderBar';
 import {
@@ -422,7 +422,7 @@ const SpecialDetailScreen: React.FC = () => {
               onPress={() => handleBusinessPress(special.businessId)}
               activeOpacity={0.7}
             >
-              <MapPinIcon size={16} color={Colors.primary.main} />
+              <Icon name="map-pin" size={16} color={Colors.primary.main} />
               <Text style={styles.businessName}>{special.business_name}</Text>
             </TouchableOpacity>
           </View>

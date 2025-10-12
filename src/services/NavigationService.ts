@@ -200,6 +200,15 @@ class NavigationService {
       this.navigate('JobSeeking' as keyof AppStackParamList),
     navigateToJobSeekers: () =>
       this.navigate('JobSeekers' as keyof AppStackParamList),
+    // Events navigation
+    navigateToEvents: () =>
+      this.navigate('Events' as keyof AppStackParamList),
+    navigateToEventDetail: (params: { eventId: string }) =>
+      this.navigate('EventDetail' as keyof AppStackParamList, params),
+    navigateToCreateEvent: () =>
+      this.navigate('CreateEvent' as keyof AppStackParamList),
+    navigateToMyEvents: () =>
+      this.navigate('MyEvents' as keyof AppStackParamList),
   };
 
   /**

@@ -227,7 +227,7 @@ class JobSeekersService {
         queryParams.append('sort_order', params.sort_order);
 
       const queryString = queryParams.toString();
-      const endpoint = `/job-seekers${queryString ? `?${queryString}` : ''}`;
+      const endpoint = `/jobs/seekers${queryString ? `?${queryString}` : ''}`;
 
       debugLog(
         '🔍 JobSeekersService: Fetching job seekers with params:',
@@ -284,7 +284,7 @@ class JobSeekersService {
       }
 
       const response = await this.request<JobSeekerResponse>(
-        `/job-seekers/${id}`,
+        `/jobs/seekers/${id}`,
       );
 
       debugLog(
@@ -327,7 +327,7 @@ class JobSeekersService {
     jobSeekerData: Partial<JobSeeker>,
   ): Promise<JobSeekerResponse> {
     try {
-      const response = await this.request<JobSeekerResponse>('/job-seekers', {
+      const response = await this.request<JobSeekerResponse>('/jobs/seekers', {
         method: 'POST',
         body: JSON.stringify(jobSeekerData),
       });
@@ -352,7 +352,7 @@ class JobSeekersService {
   ): Promise<JobSeekerResponse> {
     try {
       const response = await this.request<JobSeekerResponse>(
-        `/job-seekers/${id}`,
+        `/jobs/seekers/${id}`,
         {
           method: 'PUT',
           body: JSON.stringify(jobSeekerData),
@@ -381,7 +381,7 @@ class JobSeekersService {
         success: boolean;
         message?: string;
         error?: string;
-      }>(`/job-seekers/${id}`, {
+      }>(`/jobs/seekers/${id}`, {
         method: 'DELETE',
       });
 
@@ -405,7 +405,7 @@ class JobSeekersService {
   async markFoundWork(id: string, notes?: string): Promise<JobSeekerResponse> {
     try {
       const response = await this.request<JobSeekerResponse>(
-        `/job-seekers/${id}/mark-found-work`,
+        `/jobs/seekers/${id}/mark-found-work`,
         {
           method: 'POST',
           body: JSON.stringify({ notes }),
@@ -429,7 +429,7 @@ class JobSeekersService {
   async repostJobSeeker(id: string): Promise<JobSeekerResponse> {
     try {
       const response = await this.request<JobSeekerResponse>(
-        `/job-seekers/${id}/repost`,
+        `/jobs/seekers/${id}/repost`,
         {
           method: 'POST',
         },
@@ -457,7 +457,7 @@ class JobSeekersService {
         success: boolean;
         data?: any;
         error?: string;
-      }>(`/job-seekers/user/${userId}/limits`);
+      }>(`/jobs/seekers/user/${userId}/limits`);
 
       return response;
     } catch (error) {
