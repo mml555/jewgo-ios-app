@@ -1077,7 +1077,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary.main,
     marginHorizontal: Spacing.md,
     marginTop: Spacing.sm,
-    marginBottom: Spacing.sm,
+    marginBottom: Spacing.lg,
     borderRadius: BorderRadius.lg,
     ...Shadows.sm,
     zIndex: 10, // Ensure banner is above other content
@@ -1129,6 +1129,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.infoLight,
     paddingVertical: 8,
     paddingHorizontal: 16,
+    marginBottom: Spacing.lg,
     borderBottomWidth: 1,
     borderBottomColor: Colors.info,
     alignItems: 'center',
