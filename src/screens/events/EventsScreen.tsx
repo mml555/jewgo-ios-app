@@ -28,6 +28,7 @@ import {
   EventFilterBar,
   AdvancedFiltersModal,
 } from '../../components/events';
+import { imageCacheService } from '../../services/ImageCacheService';
 
 type EventsScreenNavigationProp = StackNavigationProp<AppStackParamList>;
 
@@ -61,7 +62,10 @@ const EventsListHeader = memo(
           accessibilityLabel="Search events"
         />
         {searchQuery.length > 0 && (
-          <TouchableOpacity onPress={() => setSearchQuery('')} accessibilityLabel="Clear search">
+          <TouchableOpacity
+            onPress={() => setSearchQuery('')}
+            accessibilityLabel="Clear search"
+          >
             <Text style={styles.clearButton}>✕</Text>
           </TouchableOpacity>
         )}
@@ -86,7 +90,9 @@ const EventsListHeader = memo(
           accessibilityHint="Create and publish a new event"
         >
           <Text style={styles.actionButtonIcon}>+</Text>
-          <Text style={[styles.actionButtonText, styles.addEventButtonText]}>Add a Event</Text>
+          <Text style={[styles.actionButtonText, styles.addEventButtonText]}>
+            Add a Event
+          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -148,45 +154,82 @@ const EventsScreen: React.FC = () => {
   }, []);
 
   // Load events - properly memoized with useCallback
+  // Use refs for filters to avoid recreation on every filter change
+  const searchQueryRef = useRef(searchQuery);
+  const filtersRef = useRef(filters);
+
+  useEffect(() => {
+    searchQueryRef.current = searchQuery;
+    filtersRef.current = filters;
+  }, [searchQuery, filters]);
+
   const loadEvents = useCallback(async (pageNum = 1, append = false) => {
     try {
       // Cancel any in-flight request
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
-      
-      // Create new abort controller
-      abortControllerRef.current = new AbortController();
 
-      if (!append) setLoading(true);
+      // Create new abort controller
+      const newAbortController = new AbortController();
+      abortControllerRef.current = newAbortController;
+
+      // Check if already aborted (component unmounting)
+      if (newAbortController.signal.aborted) return;
+
+      if (!append && isMountedRef.current) {
+        setLoading(true);
+      }
 
       const searchFilters: EventFilters = {
-        ...filters,
-        search: searchQuery || undefined,
+        ...filtersRef.current,
+        search: searchQueryRef.current || undefined,
         page: pageNum,
         limit: 20,
-        sortBy: filters.sortBy || 'event_date',
-        sortOrder: filters.sortOrder || 'ASC',
+        sortBy: filtersRef.current.sortBy || 'event_date',
+        sortOrder: filtersRef.current.sortOrder || 'ASC',
       };
 
       const response = await EventsService.getEvents(searchFilters);
 
-      // Check if component is still mounted before updating state
-      if (!isMountedRef.current) return;
-
-      // Use functional setState to avoid dependency on events state
-      if (append) {
-        setEvents(prevEvents => [...prevEvents, ...response.events]);
-      } else {
-        setEvents(response.events);
+      // Check if request was aborted or component unmounted
+      if (newAbortController.signal.aborted || !isMountedRef.current) {
+        return;
       }
 
-      setHasMore(response.events.length === 20);
-      setPage(pageNum);
+      // Prefetch images for the loaded events
+      const imageUrls = response.events
+        .map(event => event.flyer_thumbnail_url || event.flyer_url)
+        .filter(Boolean) as string[];
+
+      if (imageUrls.length > 0) {
+        // Prefetch first batch with high priority, rest with medium
+        if (imageUrls.length > 0) {
+          imageCacheService.prefetchImage(imageUrls[0], 'high');
+        }
+        if (imageUrls.length > 1) {
+          imageCacheService.prefetchImages(imageUrls.slice(1, 6), 'medium');
+        }
+        if (imageUrls.length > 6) {
+          imageCacheService.prefetchImages(imageUrls.slice(6), 'low');
+        }
+      }
+
+      // Use functional setState to avoid dependency on events state
+      if (isMountedRef.current) {
+        if (append) {
+          setEvents(prevEvents => [...prevEvents, ...response.events]);
+        } else {
+          setEvents(response.events);
+        }
+
+        setHasMore(response.events.length === 20);
+        setPage(pageNum);
+      }
     } catch (error: any) {
       // Ignore abort errors
       if (error.name === 'AbortError') return;
-      
+
       console.error('Error loading events:', error);
       if (isMountedRef.current) {
         Alert.alert('Error', 'Failed to load events');
@@ -197,7 +240,7 @@ const EventsScreen: React.FC = () => {
         setRefreshing(false);
       }
     }
-  }, [searchQuery, filters]);
+  }, []); // Empty deps - use refs for values
 
   // Load initial categories and types
   useEffect(() => {
@@ -205,10 +248,10 @@ const EventsScreen: React.FC = () => {
     loadEventTypes();
   }, [loadCategories, loadEventTypes]);
 
-  // Load events when dependencies change
+  // Load events when search or filters change
   useEffect(() => {
     loadEvents(1, false);
-  }, [loadEvents]);
+  }, [searchQuery, filters, loadEvents]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -253,29 +296,50 @@ const EventsScreen: React.FC = () => {
   }, []);
 
   const getActiveFiltersCount = useCallback(() => {
-    return Object.values(filters).filter(value => 
-      value !== undefined && value !== null && value !== ''
+    return Object.values(filters).filter(
+      value => value !== undefined && value !== null && value !== '',
     ).length;
   }, [filters]);
 
-  const renderEventCard = ({ item }: { item: Event }) => (
-    <EventCard
-      event={item}
-      onPress={() => navigation.navigate('EventDetail', { eventId: item.id })}
-      onFavoritePress={() => handleFavoritePress(item.id)}
-      isFavorited={false} // TODO: Get from state
-    />
+  // Memoize the event card renderer
+  const renderEventCard = useCallback(
+    ({ item }: { item: Event }) => (
+      <EventCard
+        event={item}
+        onPress={() => navigation.navigate('EventDetail', { eventId: item.id })}
+        onFavoritePress={() => handleFavoritePress(item.id)}
+        isFavorited={false} // TODO: Get from state
+      />
+    ),
+    [navigation, handleFavoritePress],
   );
+
+  // Handle viewable items change for prefetching
+  const onViewableItemsChanged = useCallback(({ viewableItems }: any) => {
+    // Prefetch images for events that are about to come into view
+    const upcomingItems = viewableItems.slice(-3); // Last 3 visible items
+    upcomingItems.forEach((item: any) => {
+      const event = item.item as Event;
+      const imageUrl = event.flyer_thumbnail_url || event.flyer_url;
+      if (imageUrl) {
+        imageCacheService.prefetchImage(imageUrl, 'medium');
+      }
+    });
+  }, []);
+
+  const viewabilityConfig = {
+    itemVisiblePercentThreshold: 50,
+    minimumViewTime: 100,
+  };
 
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
       <Text style={styles.emptyIcon}>📅</Text>
       <Text style={styles.emptyTitle}>No events found</Text>
       <Text style={styles.emptySubtitle}>
-        {getActiveFiltersCount() > 0 
+        {getActiveFiltersCount() > 0
           ? 'Try adjusting your filters or search terms'
-          : 'Check back later for upcoming events'
-        }
+          : 'Check back later for upcoming events'}
       </Text>
     </View>
   );
@@ -286,10 +350,12 @@ const EventsScreen: React.FC = () => {
       <EventFilterBar
         categories={categories}
         selectedCategory={filters.category || null}
-        onCategorySelect={(categoryKey) => setFilters(prev => ({ 
-          ...prev, 
-          category: categoryKey || undefined 
-        }))}
+        onCategorySelect={categoryKey =>
+          setFilters(prev => ({
+            ...prev,
+            category: categoryKey || undefined,
+          }))
+        }
         activeFiltersCount={getActiveFiltersCount()}
         onAdvancedFiltersPress={handleAdvancedFiltersPress}
       />
@@ -327,6 +393,20 @@ const EventsScreen: React.FC = () => {
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5}
         contentContainerStyle={styles.listContent}
+        // Performance optimizations
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={10}
+        updateCellsBatchingPeriod={50}
+        initialNumToRender={10}
+        windowSize={10}
+        getItemLayout={(data, index) => ({
+          length: 280, // Approximate height of EventCard (200px image + 80px content)
+          offset: 280 * index,
+          index,
+        })}
+        // Prefetch images as user scrolls
+        onViewableItemsChanged={onViewableItemsChanged}
+        viewabilityConfig={viewabilityConfig}
       />
 
       {/* Advanced Filters Modal */}

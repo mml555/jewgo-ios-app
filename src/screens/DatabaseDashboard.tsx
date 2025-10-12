@@ -463,8 +463,8 @@ const DatabaseDashboard: React.FC = () => {
 
                 <View style={styles.entityFooter}>
                   <Text style={styles.entityRating}>
-                    ⭐ {entity.rating.toFixed(1)} ({entity.review_count}{' '}
-                    reviews)
+                    ⭐ {(Number(entity.rating) || 0).toFixed(1)} (
+                    {entity.review_count || 0} reviews)
                   </Text>
                   <View style={styles.entityActions}>
                     <TouchableOpacity

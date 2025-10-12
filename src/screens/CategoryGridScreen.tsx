@@ -1,4 +1,10 @@
-import React, { useCallback, useMemo, useEffect, useState, useRef } from 'react';
+import React, {
+  useCallback,
+  useMemo,
+  useEffect,
+  useState,
+  useRef,
+} from 'react';
 import {
   View,
   Text,
@@ -73,111 +79,150 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
   const lastFetchParamsRef = useRef<string>('');
   const eventsAbortControllerRef = useRef<AbortController | null>(null);
   const isMountedRef = useRef(true);
-  
+
+  // Use refs to avoid dependency issues
+  const queryRef = useRef(query);
+  const eventsFiltersRef = useRef(eventsFilters);
+
+  useEffect(() => {
+    queryRef.current = query;
+    eventsFiltersRef.current = eventsFilters;
+  }, [query, eventsFilters]);
+
   // Memoized fetch function to avoid recreating on every render
-  const fetchEventsData = useCallback(async (page = 1, isRefresh = false, isLoadMore = false) => {
-    if (categoryKey !== 'events') return;
-    
-    // Create a stable key from params to detect actual changes
-    const paramsKey = JSON.stringify({ query, eventsFilters, page });
-    
-    // Prevent duplicate fetches for the same params (but allow load more)
-    if (!isRefresh && !isLoadMore && lastFetchParamsRef.current === paramsKey) {
-      return;
-    }
-    
-    // Prevent concurrent fetches
-    if (isFetchingEventsRef.current) return;
-    
-    try {
-      // Cancel any in-flight request
-      if (eventsAbortControllerRef.current) {
-        eventsAbortControllerRef.current.abort();
-      }
-      
-      // Create new abort controller
-      eventsAbortControllerRef.current = new AbortController();
-      
-      isFetchingEventsRef.current = true;
-      lastFetchParamsRef.current = paramsKey;
-      
-      if (isRefresh) {
-        setEventsRefreshing(true);
-      } else {
-        setEventsLoading(true);
-      }
-      setEventsError(null);
+  const fetchEventsData = useCallback(
+    async (page = 1, isRefresh = false, isLoadMore = false) => {
+      if (categoryKey !== 'events') return;
 
-      const apiFilters: EventFilters = {
+      // Create a stable key from params to detect actual changes
+      const paramsKey = JSON.stringify({
+        query: queryRef.current,
+        eventsFilters: eventsFiltersRef.current,
         page,
-        limit: 20,
-        sortBy: 'event_date',
-        sortOrder: 'ASC',
-        ...eventsFilters, // Include any advanced filters
-      };
-
-      if (query) {
-        apiFilters.search = query;
-      }
-
-      const result = await EventsService.getEvents(apiFilters);
-      
-      // Check if component is still mounted before updating state
-      if (!isMountedRef.current) return;
-      
-      if (isRefresh || page === 1) {
-        setEventsData(result.events);
-      } else {
-        setEventsData(prev => [...prev, ...result.events]);
-      }
-      
-      setEventsHasMore(result.events.length === 20);
-      setEventsPage(page);
-      
-      debugLog('✅ Events fetched successfully:', {
-        count: result.events.length,
-        page,
-        hasMore: result.events.length === 20,
       });
-    } catch (error: any) {
-      // Ignore abort errors
-      if (error.name === 'AbortError') {
-        debugLog('⚠️ Events fetch aborted (expected during navigation/filters)');
+
+      // Prevent duplicate fetches for the same params (but allow load more)
+      if (
+        !isRefresh &&
+        !isLoadMore &&
+        lastFetchParamsRef.current === paramsKey
+      ) {
         return;
       }
-      
-      errorLog('❌ Error fetching events:', {
-        message: error?.message || 'Unknown error',
-        status: error?.status,
-        page,
-        filters: apiFilters,
-        error: error,
-      });
-      
-      if (isMountedRef.current) {
-        setEventsError(error?.message || 'Failed to load events. Please try again.');
-      }
-    } finally {
-      if (isMountedRef.current) {
-        setEventsLoading(false);
-        setEventsRefreshing(false);
+
+      // Prevent concurrent fetches
+      if (isFetchingEventsRef.current) return;
+
+      try {
+        // Cancel any in-flight request
+        if (eventsAbortControllerRef.current) {
+          eventsAbortControllerRef.current.abort();
+        }
+
+        // Create new abort controller
+        const newAbortController = new AbortController();
+        eventsAbortControllerRef.current = newAbortController;
+
+        // Check if already aborted
+        if (newAbortController.signal.aborted) {
+          return;
+        }
+
+        isFetchingEventsRef.current = true;
+        lastFetchParamsRef.current = paramsKey;
+
+        if (isRefresh && isMountedRef.current) {
+          setEventsRefreshing(true);
+        } else if (isMountedRef.current) {
+          setEventsLoading(true);
+        }
+
+        if (isMountedRef.current) {
+          setEventsError(null);
+        }
+
+        const apiFilters: EventFilters = {
+          page,
+          limit: 20,
+          sortBy: 'event_date',
+          sortOrder: 'ASC',
+          ...eventsFiltersRef.current, // Include any advanced filters
+        };
+
+        if (queryRef.current) {
+          apiFilters.search = queryRef.current;
+        }
+
+        const result = await EventsService.getEvents(apiFilters);
+
+        // Check if request was aborted or component unmounted
+        if (newAbortController.signal.aborted || !isMountedRef.current) {
+          return;
+        }
+
+        if (isRefresh || page === 1) {
+          setEventsData(result.events);
+        } else {
+          setEventsData(prev => [...prev, ...result.events]);
+        }
+
+        setEventsHasMore(result.events.length === 20);
+        setEventsPage(page);
+
+        debugLog('✅ Events fetched successfully:', {
+          count: result.events.length,
+          page,
+          hasMore: result.events.length === 20,
+        });
+      } catch (error: any) {
+        // Ignore abort errors
+        if (error.name === 'AbortError') {
+          debugLog(
+            '⚠️ Events fetch aborted (expected during navigation/filters)',
+          );
+          return;
+        }
+
+        errorLog('❌ Error fetching events:', {
+          message: error?.message || 'Unknown error',
+          status: error?.status,
+          page,
+          error: error,
+        });
+
+        if (isMountedRef.current) {
+          setEventsError(
+            error?.message || 'Failed to load events. Please try again.',
+          );
+        }
+      } finally {
+        // Always reset fetching flag, even if component unmounted
         isFetchingEventsRef.current = false;
+
+        if (isMountedRef.current) {
+          setEventsLoading(false);
+          setEventsRefreshing(false);
+        }
       }
-    }
-  }, [categoryKey, query, eventsFilters]);
-  
+    },
+    [categoryKey],
+  ); // Only depend on categoryKey
+
   // Load events when dependencies change
   useEffect(() => {
     if (categoryKey !== 'events') return;
-    
+
     fetchEventsData(1, false, false);
-  }, [categoryKey, fetchEventsData]);
-  
+  }, [categoryKey, query, eventsFilters, fetchEventsData]);
+
   // Separate function for refresh and load more
-  const fetchEvents = useCallback(async (page = 1, isRefresh = false) => {
-    await fetchEventsData(page, isRefresh, page > 1);
-  }, [fetchEventsData]);
-  
+  const fetchEvents = useCallback(
+    async (page = 1, isRefresh = false) => {
+      await fetchEventsData(page, isRefresh, page > 1);
+    },
+    [fetchEventsData],
+  );
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -693,31 +738,37 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
 
   // Memoized render item to prevent unnecessary re-renders
   // Transform Event to CategoryItem for consistent grid display
-  const transformEventToCategoryItem = useCallback((event: Event): CategoryItem => {
-    return {
-      id: event.id,
-      title: event.title,
-      description: event.description,
-      imageUrl: event.flyer_url || event.flyer_thumbnail_url,
-      category: 'events',
-      rating: undefined,
-      coordinate: event.latitude && event.longitude 
-        ? { latitude: event.latitude, longitude: event.longitude }
-        : undefined,
-      zip_code: event.zip_code,
-      latitude: event.latitude,
-      longitude: event.longitude,
-      price: event.is_free ? 'Free' : 'Paid',
-      isOpen: event.status === 'approved',
-      openWeekends: true,
-      phone: event.contact_phone,
-      address: event.address || event.location_display,
-      city: event.city,
-      state: event.state,
-      // Additional event-specific info in subtitle
-      subtitle: `${EventsService.formatEventDate(event.event_date)} • ${event.venue_name || event.city || ''}`,
-    };
-  }, []);
+  const transformEventToCategoryItem = useCallback(
+    (event: Event): CategoryItem => {
+      return {
+        id: event.id,
+        title: event.title,
+        description: event.description,
+        imageUrl: event.flyer_url || event.flyer_thumbnail_url,
+        category: 'events',
+        rating: undefined,
+        coordinate:
+          event.latitude && event.longitude
+            ? { latitude: event.latitude, longitude: event.longitude }
+            : undefined,
+        zip_code: event.zip_code,
+        latitude: event.latitude,
+        longitude: event.longitude,
+        price: event.is_free ? 'Free' : 'Paid',
+        isOpen: event.status === 'approved',
+        openWeekends: true,
+        phone: event.contact_phone,
+        address: event.address || event.location_display,
+        city: event.city,
+        state: event.state,
+        // Additional event-specific info in subtitle
+        subtitle: `${EventsService.formatEventDate(event.event_date)} • ${
+          event.venue_name || event.city || ''
+        }`,
+      };
+    },
+    [],
+  );
 
   const renderItem = useCallback(
     ({ item }: { item: CategoryItem | Event }) => {
@@ -729,10 +780,14 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
       }
       // Use JobCard for jobs category
       if (categoryKey === 'jobs') {
-        return <JobCard item={item as CategoryItem} categoryKey={categoryKey} />;
+        return (
+          <JobCard item={item as CategoryItem} categoryKey={categoryKey} />
+        );
       }
       // Use CategoryCard for all other categories
-      return <CategoryCard item={item as CategoryItem} categoryKey={categoryKey} />;
+      return (
+        <CategoryCard item={item as CategoryItem} categoryKey={categoryKey} />
+      );
     },
     [categoryKey, transformEventToCategoryItem],
   );
@@ -785,14 +840,25 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
         loadMore();
       }
     }
-  }, [categoryKey, loading, hasMore, loadMore, eventsLoading, eventsHasMore, eventsPage, fetchEvents]);
+  }, [
+    categoryKey,
+    loading,
+    hasMore,
+    loadMore,
+    eventsLoading,
+    eventsHasMore,
+    eventsPage,
+    fetchEvents,
+  ]);
 
   // Memoized refresh control
   const refreshControl = useMemo(
     () => (
       <RefreshControl
         refreshing={categoryKey === 'events' ? eventsRefreshing : refreshing}
-        onRefresh={categoryKey === 'events' ? () => fetchEvents(1, true) : refresh}
+        onRefresh={
+          categoryKey === 'events' ? () => fetchEvents(1, true) : refresh
+        }
         tintColor={Colors.link}
         colors={[Colors.link]}
       />
@@ -803,8 +869,9 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
   // Memoized footer component for loading indicator
   const renderFooter = useCallback(() => {
     const isLoading = categoryKey === 'events' ? eventsLoading : loading;
-    const hasData = categoryKey === 'events' ? eventsData.length > 0 : data.length > 0;
-    
+    const hasData =
+      categoryKey === 'events' ? eventsData.length > 0 : data.length > 0;
+
     if (!isLoading || !hasData) return null;
 
     return (
@@ -819,7 +886,7 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
   const renderEmpty = useCallback(() => {
     const isLoading = categoryKey === 'events' ? eventsLoading : loading;
     const errorMessage = categoryKey === 'events' ? eventsError : error;
-    
+
     if (isLoading) return null;
 
     return (
@@ -828,9 +895,12 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
           {errorMessage ? 'Error loading data' : 'No items found'}
         </Text>
         <Text style={styles.emptyDescription}>
-          {errorMessage || (query
-            ? `No results for "${query}"`
-            : `No ${categoryKey === 'events' ? 'events' : 'items'} available`)}
+          {errorMessage ||
+            (query
+              ? `No results for "${query}"`
+              : `No ${
+                  categoryKey === 'events' ? 'events' : 'items'
+                } available`)}
         </Text>
       </View>
     );
@@ -849,19 +919,17 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
   }, [error]);
 
   // Prefetch details for items in the list
-  usePrefetchDetails(
-    filteredData.slice(0, 5),
-    async (id: string) => {
-      return enhancedApiService.prefetchListing(id);
-    }
-  );
+  usePrefetchDetails(filteredData.slice(0, 5), async (id: string) => {
+    return enhancedApiService.prefetchListing(id);
+  });
 
   // Memoized column wrapper style for 2-column layout
   const columnWrapperStyle = useMemo(() => styles.row, []);
 
   // Show skeleton loader on initial load
-  const isInitialLoading = (categoryKey === 'events' ? eventsLoading : loading) && 
-                           (categoryKey === 'events' ? eventsData.length === 0 : data.length === 0);
+  const isInitialLoading =
+    (categoryKey === 'events' ? eventsLoading : loading) &&
+    (categoryKey === 'events' ? eventsData.length === 0 : data.length === 0);
 
   if (isInitialLoading) {
     return (
@@ -929,8 +997,8 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
       {location && (
         <View style={styles.locationIndicator}>
           <Text style={styles.locationIndicatorText}>
-            📍 Location enabled - showing distances (
-            {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)})
+            📍 Location enabled - showing distances
+            {location.zipCode ? ` (${location.zipCode})` : ''}
           </Text>
         </View>
       )}

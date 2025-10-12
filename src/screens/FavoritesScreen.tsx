@@ -31,6 +31,7 @@ import { CategoryItem } from '../hooks/useCategoryData';
 import CategoryCard, { CategoryCardWithMemo } from '../components/CategoryCard';
 import JobCard from '../components/JobCard';
 import { debugLog, warnLog } from '../utils/logger';
+import Icon from '../components/Icon';
 
 type NavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -473,7 +474,7 @@ const FavoritesScreen: React.FC = () => {
   const renderEmptyState = useCallback(
     () => (
       <View style={styles.emptyState}>
-        <HeartIcon size={64} color={Colors.textSecondary} filled={true} />
+        <Icon name="heart" size={64} color={Colors.textSecondary} />
         <Text style={styles.emptyTitle}>
           {searchQuery || filterType !== 'all'
             ? 'No matching favorites'

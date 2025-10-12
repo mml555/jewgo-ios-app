@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Image,
   ActivityIndicator,
   Alert,
   Modal,
@@ -13,11 +12,15 @@ import {
   Linking,
   Platform,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import EventsService, { Event } from '../../services/EventsService';
 import { Spacing } from '../../styles/designSystem';
 import { SocialShareBar } from '../../components/events';
+import ImageCarousel from '../../components/ImageCarousel';
+import DetailHeaderBar from '../../components/DetailHeaderBar';
+import { useFavorites } from '../../hooks/useFavorites';
+import OptimizedImage from '../../components/OptimizedImage';
 
 type RouteParams = {
   EventDetail: {
@@ -25,18 +28,58 @@ type RouteParams = {
   };
 };
 
+// Memoized Related Event Item to prevent unnecessary re-renders
+const RelatedEventItem = React.memo<{
+  relatedEvent: any;
+  navigation: any;
+  formatDate: (date: string) => string;
+}>(({ relatedEvent, navigation, formatDate }) => {
+  const handlePress = useCallback(() => {
+    navigation.navigate('EventDetail', { eventId: relatedEvent.id });
+  }, [navigation, relatedEvent.id]);
+
+  return (
+    <TouchableOpacity
+      style={styles.relatedEventItem}
+      onPress={handlePress}
+      accessibilityLabel={`View ${relatedEvent.title}`}
+    >
+      <OptimizedImage
+        source={{ uri: relatedEvent.flyer_url }}
+        style={styles.relatedEventImage}
+        containerStyle={styles.relatedEventImageContainer}
+        resizeMode="cover"
+        showLoader={true}
+        priority="low"
+      />
+      <View style={styles.relatedEventInfo}>
+        <Text style={styles.relatedEventTitle}>{relatedEvent.title}</Text>
+        <Text style={styles.relatedEventDate}>
+          {formatDate(relatedEvent.event_date)}
+        </Text>
+        {relatedEvent.venue_name && (
+          <Text style={styles.relatedEventVenue}>
+            {relatedEvent.venue_name}
+          </Text>
+        )}
+      </View>
+    </TouchableOpacity>
+  );
+});
+
+RelatedEventItem.displayName = 'RelatedEventItem';
+
 const EventDetailScreen: React.FC = () => {
   const navigation = useNavigation();
   const route = useRoute<RouteProp<RouteParams, 'EventDetail'>>();
-  const insets = useSafeAreaInsets();
   const { eventId } = route.params;
-
-  console.log('🔷 EventDetailScreen mounted with eventId:', eventId);
+  const { isFavorited, toggleFavorite } = useFavorites();
 
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
   const [showRsvpModal, setShowRsvpModal] = useState(false);
   const [rsvping, setRsvping] = useState(false);
+  const [pressedButtons, setPressedButtons] = useState<Set<string>>(new Set());
 
   // RSVP form
   const [guestCount, setGuestCount] = useState('1');
@@ -46,34 +89,134 @@ const EventDetailScreen: React.FC = () => {
   const [notes, setNotes] = useState('');
   const [dietaryRestrictions, setDietaryRestrictions] = useState('');
 
-  useEffect(() => {
-    loadEvent();
-  }, [eventId]);
+  // Add ref to track mounted state
+  const isMountedRef = React.useRef(true);
+  const abortControllerRef = React.useRef<AbortController | null>(null);
 
-  const loadEvent = async () => {
+  const loadEvent = useCallback(async () => {
     try {
-      setLoading(true);
+      // Cancel any pending request
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+
+      // Create new abort controller
+      const newAbortController = new AbortController();
+      abortControllerRef.current = newAbortController;
+
+      if (isMountedRef.current) {
+        setLoading(true);
+      }
+
       console.log('🔷 EventDetailScreen: Loading event with ID:', eventId);
       const response = await EventsService.getEventById(eventId);
-      console.log('🔷 EventDetailScreen: Event loaded successfully:', response.event?.title);
+
+      // Check if aborted or unmounted
+      if (newAbortController.signal.aborted || !isMountedRef.current) {
+        return;
+      }
+
+      console.log(
+        '🔷 EventDetailScreen: Event loaded successfully:',
+        response.event?.title,
+      );
       setEvent(response.event);
     } catch (error) {
+      // Check if aborted
+      if (abortControllerRef.current?.signal.aborted) {
+        return;
+      }
+
       console.error('❌ EventDetailScreen: Failed to load event:', error);
-      Alert.alert('Error', 'Failed to load event');
-      navigation.goBack();
+      if (isMountedRef.current) {
+        Alert.alert('Error', 'Failed to load event');
+        navigation.goBack();
+      }
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
     }
+  }, [eventId, navigation]);
+
+  useEffect(() => {
+    loadEvent();
+  }, [loadEvent]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      // Abort any pending requests
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
+
+  // Helper functions for button press effects
+  const handlePressIn = (buttonId: string) => {
+    setPressedButtons(prev => new Set(prev).add(buttonId));
   };
 
-  const handleRsvp = async () => {
+  const handlePressOut = (buttonId: string) => {
+    setPressedButtons(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(buttonId);
+      return newSet;
+    });
+  };
+
+  // Format large numbers (e.g., 1234 → 1.2K)
+  const formatCount = (count: number): string => {
+    if (count >= 1000000) {
+      return `${(count / 1000000).toFixed(1)}M`;
+    } else if (count >= 1000) {
+      return `${(count / 1000).toFixed(1)}K`;
+    }
+    return count.toString();
+  };
+
+  const handleShare = useCallback(() => {
+    if (event) {
+      EventsService.shareEvent(event, 'native');
+    }
+  }, [event]);
+
+  const handleFavorite = useCallback(() => {
+    toggleFavorite(eventId, 'event');
+  }, [eventId, toggleFavorite]);
+
+  const handleReport = useCallback(() => {
+    Alert.alert(
+      'Report Event',
+      'Do you want to report this event for inappropriate content?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Report',
+          style: 'destructive',
+          onPress: () => {
+            // TODO: Implement report functionality
+            Alert.alert('Thank you', 'Your report has been submitted.');
+          },
+        },
+      ],
+    );
+  }, []);
+
+  const handleRsvp = useCallback(async () => {
     if (!attendeeName.trim() || !attendeeEmail.trim()) {
       Alert.alert('Required', 'Please enter your name and email');
       return;
     }
 
     try {
-      setRsvping(true);
+      if (isMountedRef.current) {
+        setRsvping(true);
+      }
+
       const response = await EventsService.rsvpToEvent(eventId, {
         guestCount: parseInt(guestCount, 10) || 1,
         attendeeName,
@@ -82,6 +225,9 @@ const EventDetailScreen: React.FC = () => {
         notes,
         dietaryRestrictions,
       });
+
+      // Only update UI if still mounted
+      if (!isMountedRef.current) return;
 
       if (response.waitlisted) {
         Alert.alert('Waitlisted', response.message || 'Added to waitlist');
@@ -92,13 +238,26 @@ const EventDetailScreen: React.FC = () => {
       setShowRsvpModal(false);
       loadEvent();
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to RSVP');
+      if (isMountedRef.current) {
+        Alert.alert('Error', error.message || 'Failed to RSVP');
+      }
     } finally {
-      setRsvping(false);
+      if (isMountedRef.current) {
+        setRsvping(false);
+      }
     }
-  };
+  }, [
+    attendeeName,
+    attendeeEmail,
+    eventId,
+    guestCount,
+    attendeePhone,
+    notes,
+    dietaryRestrictions,
+    loadEvent,
+  ]);
 
-  const handleCancelRsvp = async () => {
+  const handleCancelRsvp = useCallback(async () => {
     Alert.alert('Cancel RSVP', 'Are you sure?', [
       { text: 'No', style: 'cancel' },
       {
@@ -107,110 +266,116 @@ const EventDetailScreen: React.FC = () => {
         onPress: async () => {
           try {
             await EventsService.cancelRsvp(eventId);
+
+            // Only update UI if still mounted
+            if (!isMountedRef.current) return;
+
             Alert.alert('Success', 'RSVP cancelled');
             loadEvent();
           } catch (error: any) {
-            Alert.alert('Error', error.message);
+            if (isMountedRef.current) {
+              Alert.alert('Error', error.message);
+            }
           }
         },
       },
     ]);
-  };
+  }, [eventId, loadEvent]);
 
-  const formatDateShort = (dateString: string) => {
+  const formatDateShort = useCallback((dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       month: 'long',
       day: 'numeric',
     });
-  };
+  }, []);
 
-  const formatDate = (dateString: string) => {
+  const formatDate = useCallback((dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
       day: 'numeric',
     });
-  };
+  }, []);
 
-  const formatTime = (dateString: string) => {
+  const formatTime = useCallback((dateString: string) => {
     return new Date(dateString).toLocaleTimeString('en-US', {
       hour: 'numeric',
       minute: '2-digit',
       hour12: true,
     });
-  };
+  }, []);
+
+  // Memoize expensive calculations - MUST be before early returns!
+  const capacityPercentage = useMemo(() => {
+    return event?.capacity
+      ? Math.round((event.rsvp_count / event.capacity) * 100)
+      : 0;
+  }, [event?.capacity, event?.rsvp_count]);
+
+  const isFull = useMemo(() => {
+    return !!(event?.capacity && event && event.rsvp_count >= event.capacity);
+  }, [event?.capacity, event?.rsvp_count]);
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#74E1A0" />
-      </View>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#74E1A0" />
+          <Text style={styles.loadingText}>Loading event...</Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
   if (!event) return null;
 
-  const capacityPercentage = event.capacity
-    ? Math.round((event.rsvp_count / event.capacity) * 100)
-    : 0;
-  const isFull = !!(event.capacity && event.rsvp_count >= event.capacity);
-
   return (
-    <View style={styles.container}>
-      {/* Hero Image with Overlay Actions */}
-      <View style={styles.heroContainer}>
-        <Image
-          source={{ uri: event.flyer_url }}
-          style={styles.heroImage}
-          resizeMode="cover"
-        />
-        
-        {/* Overlay Action Bar */}
-        <View style={[styles.overlayActionBar, { paddingTop: insets.top }]}>
-          <TouchableOpacity
-            style={styles.overlayButton}
-            onPress={() => navigation.goBack()}
-            accessibilityLabel="Go back"
-          >
-            <Text style={styles.overlayButtonText}>←</Text>
-          </TouchableOpacity>
+    <SafeAreaView style={styles.container}>
+      {/* Header Bar - Reusable Component */}
+      <DetailHeaderBar
+        pressedButtons={pressedButtons}
+        handlePressIn={handlePressIn}
+        handlePressOut={handlePressOut}
+        formatCount={formatCount}
+        onReportPress={handleReport}
+        onSharePress={handleShare}
+        onFavoritePress={handleFavorite}
+        centerContent={{
+          type: 'view_count',
+          count: event.view_count || 0,
+        }}
+        rightContent={{
+          type: 'share_favorite',
+          shareCount: event.share_count || 0,
+          likeCount: event.like_count || 0,
+          isFavorited: isFavorited(eventId, 'event'),
+        }}
+      />
 
-          <View style={styles.overlayStats}>
-            <View style={styles.statItem}>
-              <Text style={styles.statIcon}>👁️</Text>
-              <Text style={styles.statText}>{event.view_count || 0}</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statIcon}>↗️</Text>
-              <Text style={styles.statText}>{event.share_count || 0}</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statIcon}>❤️</Text>
-              <Text style={styles.statText}>{event.like_count || 0}</Text>
-            </View>
-          </View>
-
-          <TouchableOpacity
-            style={styles.overlayButton}
-            onPress={() => {/* TODO: Implement flag functionality */}}
-            accessibilityLabel="Flag event"
-          >
-            <Text style={styles.overlayButtonText}>🚩</Text>
-          </TouchableOpacity>
+      <ScrollView
+        style={styles.scrollContent}
+        contentContainerStyle={styles.scrollContentContainer}
+      >
+        {/* Hero Image Carousel */}
+        <View style={styles.carouselContainer}>
+          <ImageCarousel
+            images={event.flyer_url ? [event.flyer_url] : []}
+            fallbackImageUrl={event.flyer_url}
+            height={400}
+            borderRadius={20}
+          />
         </View>
-      </View>
 
-      <ScrollView style={styles.scrollContent}>
         {/* Event Info Card */}
         <View style={styles.eventInfoCard}>
           <View style={styles.titleRow}>
             <Text style={styles.title}>{event.title}</Text>
             <Text style={styles.zipCode}>{event.zip_code}</Text>
           </View>
-          
+
           <Text style={styles.date}>{formatDateShort(event.event_date)}</Text>
-          
+
           <View style={styles.priceBadge}>
             <Text style={styles.priceText}>
               {event.is_free ? 'Free' : 'Paid'}
@@ -219,8 +384,8 @@ const EventDetailScreen: React.FC = () => {
         </View>
 
         {/* Primary CTA Buttons */}
-        <View style={styles.ctaContainer}>
-          {event.has_rsvped ? (
+        {event.has_rsvped ? (
+          <View style={styles.ctaButtonsWrapper}>
             <TouchableOpacity
               style={styles.cancelButton}
               onPress={handleCancelRsvp}
@@ -228,9 +393,11 @@ const EventDetailScreen: React.FC = () => {
             >
               <Text style={styles.cancelButtonText}>Cancel RSVP</Text>
             </TouchableOpacity>
-          ) : (
-            <>
-              {event.cta_link && (
+          </View>
+        ) : (
+          <>
+            {event.cta_link && (
+              <View style={styles.ctaButtonsWrapper}>
                 <TouchableOpacity
                   style={styles.ctaButton}
                   onPress={() => Linking.openURL(event.cta_link!)}
@@ -238,13 +405,11 @@ const EventDetailScreen: React.FC = () => {
                 >
                   <Text style={styles.ctaButtonText}>Event Info</Text>
                 </TouchableOpacity>
-              )}
+              </View>
+            )}
+            <View style={styles.ctaButtonsWrapper}>
               <TouchableOpacity
-                style={[
-                  styles.ctaButton,
-                  isFull && styles.ctaButtonDisabled,
-                  event.cta_link && styles.ctaButtonSecondary
-                ]}
+                style={[styles.ctaButton, isFull && styles.ctaButtonDisabled]}
                 onPress={() => setShowRsvpModal(true)}
                 disabled={isFull}
                 accessibilityLabel={isFull ? 'Event Full' : 'Reserve Now'}
@@ -253,17 +418,19 @@ const EventDetailScreen: React.FC = () => {
                   {isFull ? 'Event Full' : 'Reserve Now!'}
                 </Text>
               </TouchableOpacity>
-            </>
-          )}
-        </View>
+            </View>
+          </>
+        )}
 
         {/* Event Details */}
         <View style={styles.detailsContainer}>
           <View style={styles.detailSection}>
             <Text style={styles.detailLabel}>Date:</Text>
             <Text style={styles.detailText}>
-              {event.display_date_range_formatted || 
-               `${formatDate(event.event_date)} ${formatTime(event.event_date)}`}
+              {event.display_date_range_formatted ||
+                `${formatDate(event.event_date)} ${formatTime(
+                  event.event_date,
+                )}`}
             </Text>
           </View>
 
@@ -326,60 +493,30 @@ const EventDetailScreen: React.FC = () => {
         {event.related_events && event.related_events.length > 0 && (
           <View style={styles.relatedSection}>
             <Text style={styles.sectionTitle}>Related Events</Text>
-            {event.related_events.map((relatedEvent) => (
-              <TouchableOpacity
+            {event.related_events.slice(0, 3).map(relatedEvent => (
+              <RelatedEventItem
                 key={relatedEvent.id}
-                style={styles.relatedEventItem}
-                onPress={() => navigation.navigate('EventDetail', { eventId: relatedEvent.id })}
-                accessibilityLabel={`View ${relatedEvent.title}`}
-              >
-                <Image
-                  source={{ uri: relatedEvent.flyer_url }}
-                  style={styles.relatedEventImage}
-                  resizeMode="cover"
-                />
-                <View style={styles.relatedEventInfo}>
-                  <Text style={styles.relatedEventTitle}>{relatedEvent.title}</Text>
-                  <Text style={styles.relatedEventDate}>
-                    {formatDate(relatedEvent.event_date)}
-                  </Text>
-                  {relatedEvent.venue_name && (
-                    <Text style={styles.relatedEventVenue}>{relatedEvent.venue_name}</Text>
-                  )}
-                </View>
-              </TouchableOpacity>
+                relatedEvent={relatedEvent}
+                navigation={navigation}
+                formatDate={formatDate}
+              />
             ))}
           </View>
         )}
+
+        {/* Social Share Bar */}
+        <SocialShareBar
+          event={event}
+          onShare={platform => EventsService.shareEvent(event, platform as any)}
+        />
       </ScrollView>
-
-      {/* Social Share Bar */}
-      <SocialShareBar
-        event={event}
-        onShare={(platform) => EventsService.shareEvent(event, platform as any)}
-      />
-
-      <View style={[styles.actionBar, { paddingBottom: insets.bottom + 10 }]}>
-        {!event.has_rsvped && (
-          <TouchableOpacity
-            style={[styles.joinButton, isFull && styles.joinButtonDisabled]}
-            onPress={() => setShowRsvpModal(true)}
-            disabled={isFull}
-            accessibilityLabel={isFull ? 'Event Full' : 'Join us!'}
-          >
-            <Text style={styles.joinButtonText}>
-              {isFull ? 'Event Full' : 'Join us!'}
-            </Text>
-          </TouchableOpacity>
-        )}
-      </View>
 
       <Modal
         visible={showRsvpModal}
         animationType="slide"
         presentationStyle="pageSheet"
       >
-        <View style={[styles.modalContainer, { paddingTop: insets.top }]}>
+        <SafeAreaView style={styles.modalContainer} edges={['top']}>
           <View style={styles.modalHeader}>
             <TouchableOpacity onPress={() => setShowRsvpModal(false)}>
               <Text style={styles.modalClose}>✕</Text>
@@ -456,81 +593,52 @@ const EventDetailScreen: React.FC = () => {
               )}
             </TouchableOpacity>
           </ScrollView>
-        </View>
+        </SafeAreaView>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: '#F2F2F7' 
+  container: {
+    flex: 1,
+    backgroundColor: '#F2F2F7',
   },
-  loadingContainer: { 
-    flex: 1, 
-    alignItems: 'center', 
-    justifyContent: 'center' 
-  },
-  heroContainer: {
-    position: 'relative',
-    height: 400,
-  },
-  heroImage: { 
-    width: '100%', 
-    height: '100%', 
-    backgroundColor: '#F1F1F1' 
-  },
-  overlayActionBar: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-  },
-  overlayButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+  loadingContainer: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#F2F2F7',
   },
-  overlayButtonText: {
-    fontSize: 20,
-    color: '#292B2D',
-    fontWeight: 'bold',
-  },
-  overlayStats: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  statItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginHorizontal: Spacing.sm,
-  },
-  statIcon: {
+  loadingText: {
+    marginTop: 16,
     fontSize: 16,
-    marginRight: 4,
+    color: '#666',
   },
-  statText: {
-    fontSize: 14,
-    color: '#FFFFFF',
-    fontWeight: '600',
+  carouselContainer: {
+    marginHorizontal: Spacing.md,
+    marginBottom: Spacing.md,
   },
   scrollContent: {
     flex: 1,
   },
+  scrollContentContainer: {
+    paddingBottom: Spacing.xl,
+  },
   eventInfoCard: {
     backgroundColor: '#FFFFFF',
     padding: Spacing.lg,
+    marginHorizontal: Spacing.md,
     marginBottom: Spacing.md,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   titleRow: {
     flexDirection: 'row',
@@ -567,9 +675,20 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#FFFFFF',
   },
-  ctaContainer: {
-    paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.lg,
+  ctaButtonsWrapper: {
+    backgroundColor: '#FFFFFF',
+    padding: Spacing.lg,
+    marginHorizontal: Spacing.md,
+    marginBottom: Spacing.md,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   ctaButton: {
     backgroundColor: '#1E7A5F', // Primary green from design
@@ -577,21 +696,28 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.md,
     alignItems: 'center',
   },
-  ctaButtonSecondary: {
-    marginTop: Spacing.md,
+  ctaButtonDisabled: {
+    opacity: 0.5,
   },
-  ctaButtonDisabled: { 
-    opacity: 0.5 
-  },
-  ctaButtonText: { 
-    fontSize: 18, 
-    fontWeight: 'bold', 
-    color: '#FFFFFF' 
+  ctaButtonText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
   },
   detailsContainer: {
     backgroundColor: '#FFFFFF',
     padding: Spacing.lg,
+    marginHorizontal: Spacing.md,
     marginBottom: Spacing.md,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   detailSection: {
     marginBottom: Spacing.md,
@@ -622,14 +748,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: Spacing.sm,
   },
-  capacityLabel: { 
-    fontSize: 14, 
-    fontWeight: '600', 
-    color: '#292B2D' 
+  capacityLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#292B2D',
   },
-  capacityCount: { 
-    fontSize: 14, 
-    color: '#666' 
+  capacityCount: {
+    fontSize: 14,
+    color: '#666',
   },
   capacityBar: {
     height: 8,
@@ -637,24 +763,54 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     overflow: 'hidden',
   },
-  capacityProgress: { 
-    height: '100%', 
-    backgroundColor: '#74E1A0' 
+  capacityProgress: {
+    height: '100%',
+    backgroundColor: '#74E1A0',
   },
   aboutSection: {
     backgroundColor: '#FFFFFF',
     padding: Spacing.lg,
+    marginHorizontal: Spacing.md,
     marginBottom: Spacing.md,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   hostSection: {
     backgroundColor: '#FFFFFF',
     padding: Spacing.lg,
+    marginHorizontal: Spacing.md,
     marginBottom: Spacing.md,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   relatedSection: {
     backgroundColor: '#FFFFFF',
     padding: Spacing.lg,
+    marginHorizontal: Spacing.md,
     marginBottom: Spacing.lg,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   sectionTitle: {
     fontSize: 18,
@@ -662,10 +818,10 @@ const styles = StyleSheet.create({
     color: '#1E7A5F',
     marginBottom: Spacing.md,
   },
-  sectionText: { 
-    fontSize: 16, 
-    color: '#292B2D', 
-    lineHeight: 24 
+  sectionText: {
+    fontSize: 16,
+    color: '#292B2D',
+    lineHeight: 24,
   },
   relatedEventItem: {
     flexDirection: 'row',
@@ -674,11 +830,17 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: '#F8F9FA',
   },
-  relatedEventImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 8,
+  relatedEventImageContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 12,
     marginRight: Spacing.md,
+    backgroundColor: '#F1F1F1',
+  },
+  relatedEventImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 12,
   },
   relatedEventInfo: {
     flex: 1,
@@ -699,41 +861,23 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
   },
-  actionBar: {
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.md,
-  },
-  joinButton: {
-    backgroundColor: '#1E7A5F',
-    borderRadius: 12,
-    paddingVertical: Spacing.md,
-    alignItems: 'center',
-  },
-  joinButtonDisabled: { 
-    opacity: 0.5 
-  },
-  joinButtonText: { 
-    fontSize: 18, 
-    fontWeight: 'bold', 
-    color: '#FFFFFF' 
-  },
   cancelButton: {
     backgroundColor: '#F44336',
     borderRadius: 12,
     paddingVertical: Spacing.md,
     alignItems: 'center',
   },
-  cancelButtonText: { 
-    fontSize: 18, 
-    fontWeight: 'bold', 
-    color: '#FFFFFF' 
+  cancelButtonText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
   },
-  modalContainer: { 
-    flex: 1, 
-    backgroundColor: '#F2F2F7' 
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#F2F2F7',
+  },
+  modalContent: {
+    flex: 1,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -745,21 +889,18 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#E0E0E0',
   },
-  modalClose: { 
-    fontSize: 28, 
-    color: '#666' 
+  modalClose: {
+    fontSize: 28,
+    color: '#666',
   },
-  modalTitle: { 
-    fontSize: 18, 
-    fontWeight: 'bold', 
-    color: '#292B2D' 
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#292B2D',
   },
-  modalContent: { 
-    flex: 1, 
-    padding: Spacing.lg 
-  },
-  formGroup: { 
-    marginBottom: Spacing.lg 
+  formGroup: {
+    marginBottom: Spacing.lg,
+    paddingHorizontal: Spacing.lg,
   },
   label: {
     fontSize: 16,
@@ -776,23 +917,25 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E0E0E0',
   },
-  textArea: { 
-    minHeight: 80, 
-    textAlignVertical: 'top' 
+  textArea: {
+    minHeight: 80,
+    textAlignVertical: 'top',
   },
   submitButton: {
     backgroundColor: '#74E1A0',
     borderRadius: 12,
     paddingVertical: Spacing.md,
     alignItems: 'center',
+    marginHorizontal: Spacing.lg,
+    marginBottom: Spacing.lg,
   },
-  submitButtonDisabled: { 
-    opacity: 0.6 
+  submitButtonDisabled: {
+    opacity: 0.6,
   },
-  submitButtonText: { 
-    fontSize: 18, 
-    fontWeight: 'bold', 
-    color: '#FFFFFF' 
+  submitButtonText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
   },
 });
 

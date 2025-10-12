@@ -25,6 +25,7 @@ import { debugLog, errorLog } from '../utils/logger';
 import { apiService } from '../services/api';
 import jobSeekersService from '../services/JobSeekersService';
 import Icon from '../components/Icon';
+import FastButton from '../components/FastButton';
 
 interface JobListing {
   id: string;
@@ -97,7 +98,13 @@ const INDUSTRIES = [
 
 const EnhancedJobsScreen: React.FC = () => {
   const navigation = useNavigation();
-  const { location } = useLocation();
+  const {
+    location,
+    requestLocationPermission,
+    permissionGranted,
+    getCurrentLocation,
+    loading: locationLoading,
+  } = useLocation();
   const { accuracyAuthorization } = useLocationSimple();
   const [activeTab, setActiveTab] = useState<TabType>('jobs');
   const [jobListings, setJobListings] = useState<JobListing[]>([]);
@@ -114,122 +121,186 @@ const EnhancedJobsScreen: React.FC = () => {
   const [selectedIndustries, setSelectedIndustries] = useState<string[]>([]);
   const [zipCodeFilter, setZipCodeFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   // Track if rate limited to prevent infinite loops
   const [isRateLimited, setIsRateLimited] = useState(false);
 
+  // Handle location permission request
+  const handleLocationPermissionRequest = useCallback(async () => {
+    try {
+      const granted = await requestLocationPermission();
+
+      if (granted) {
+        Alert.alert(
+          'Location Enabled!',
+          'You can now see distances to nearby jobs.',
+          [{ text: 'Great!' }],
+        );
+      } else {
+        Alert.alert(
+          'Location Permission Denied',
+          'To see distances to jobs, please enable location access in your device settings.',
+          [{ text: 'OK' }],
+        );
+      }
+    } catch (error) {
+      errorLog('Error requesting location permission:', error);
+      Alert.alert(
+        'Error',
+        'Failed to request location permission. Please check your device settings.',
+        [{ text: 'OK' }],
+      );
+    }
+  }, [requestLocationPermission]);
+
+  // Handle manual location refresh
+  const handleLocationRefresh = useCallback(async () => {
+    try {
+      debugLog('🔥 Manual location refresh requested');
+      const newLocation = await getCurrentLocation();
+      if (newLocation) {
+        debugLog('🔥 Manual location refresh successful:', newLocation);
+        Alert.alert(
+          'Location Updated!',
+          `Your location has been updated. You can now see distances to nearby jobs.`,
+          [{ text: 'Great!' }],
+        );
+      } else {
+        debugLog('🔥 Manual location refresh failed - no location returned');
+        Alert.alert(
+          'Location Update Failed',
+          'Unable to get your current location. Please check your device settings and try again.',
+          [{ text: 'OK' }],
+        );
+      }
+    } catch (error) {
+      errorLog('Error refreshing location:', error);
+      Alert.alert(
+        'Error',
+        'Failed to refresh location. Please check your device settings.',
+        [{ text: 'OK' }],
+      );
+    }
+  }, [getCurrentLocation]);
+
   // Mock data - in real app this would come from API
   // CRITICAL: Memoized to prevent infinite loop in loadData useCallback
-  const mockJobListings: JobListing[] = React.useMemo(() => [
-    {
-      id: '1',
-      title: 'Assistant Princa...',
-      company_name: 'Tech Solutions Inc',
-      description:
-        'Join our team as a full-stack developer working on cutting-edge web applications.',
-      industry: 'Technology',
-      job_type: 'Full Time',
-      compensation_structure: 'salary',
-      salary_rate: '$100k-$110k plus commissi...',
-      zip_code: '33169',
-      city: undefined, // Show zip code instead of city
-      state: undefined,
-      latitude: 25.7617,
-      longitude: -80.1918,
-      contact_email: 'hr@techsolutions.com',
-      contact_phone: '(555) 123-4567',
-      cta_link: 'https://techsolutions.com/apply',
-      is_remote: false,
-      location_type: 'on-site',
-      posted_date: '2024-01-15',
-      status: 'active',
-    },
-    {
-      id: '2',
-      title: 'Warehouse Mana..',
-      company_name: 'Jewish Community Center',
-      description:
-        'Lead marketing initiatives for our community programs and events.',
-      industry: 'Non-profit',
-      job_type: 'Part Time',
-      compensation_structure: 'hourly',
-      salary_rate: '$18 Per Hour',
-      zip_code: '33110',
-      city: undefined, // Show zip code instead of city
-      state: undefined,
-      latitude: 25.9331,
-      longitude: -80.1628,
-      contact_email: 'jobs@jcc.org',
-      is_remote: false,
-      location_type: 'on-site',
-      posted_date: '2024-01-14',
-      status: 'active',
-    },
-    {
-      id: '3',
-      title: 'Call Agent at Skyli..',
-      company_name: 'Kosher Foods Co',
-      description:
-        'Provide excellent customer service for our kosher food products.',
-      industry: 'Food Service',
-      job_type: 'Remote',
-      compensation_structure: 'salary',
-      salary_rate: '$45K Per Year',
-      zip_code: '33122',
-      city: undefined, // Show zip code instead of city
-      state: undefined,
-      contact_email: 'support@kosherfoods.com',
-      is_remote: true,
-      location_type: 'remote',
-      posted_date: '2024-01-13',
-      status: 'active',
-    },
-  ], []);
+  const mockJobListings: JobListing[] = React.useMemo(
+    () => [
+      {
+        id: '1',
+        title: 'Assistant Princa...',
+        company_name: 'Tech Solutions Inc',
+        description:
+          'Join our team as a full-stack developer working on cutting-edge web applications.',
+        industry: 'Technology',
+        job_type: 'Full Time',
+        compensation_structure: 'salary',
+        salary_rate: '$100k-$110k plus commissi...',
+        zip_code: '33169',
+        city: undefined, // Show zip code instead of city
+        state: undefined,
+        latitude: 25.7617,
+        longitude: -80.1918,
+        contact_email: 'hr@techsolutions.com',
+        contact_phone: '(555) 123-4567',
+        cta_link: 'https://techsolutions.com/apply',
+        is_remote: false,
+        location_type: 'on-site',
+        posted_date: '2024-01-15',
+        status: 'active',
+      },
+      {
+        id: '2',
+        title: 'Warehouse Mana..',
+        company_name: 'Jewish Community Center',
+        description:
+          'Lead marketing initiatives for our community programs and events.',
+        industry: 'Non-profit',
+        job_type: 'Part Time',
+        compensation_structure: 'hourly',
+        salary_rate: '$18 Per Hour',
+        zip_code: '33110',
+        city: undefined, // Show zip code instead of city
+        state: undefined,
+        latitude: 25.9331,
+        longitude: -80.1628,
+        contact_email: 'jobs@jcc.org',
+        is_remote: false,
+        location_type: 'on-site',
+        posted_date: '2024-01-14',
+        status: 'active',
+      },
+      {
+        id: '3',
+        title: 'Call Agent at Skyli..',
+        company_name: 'Kosher Foods Co',
+        description:
+          'Provide excellent customer service for our kosher food products.',
+        industry: 'Food Service',
+        job_type: 'Remote',
+        compensation_structure: 'salary',
+        salary_rate: '$45K Per Year',
+        zip_code: '33122',
+        city: undefined, // Show zip code instead of city
+        state: undefined,
+        contact_email: 'support@kosherfoods.com',
+        is_remote: true,
+        location_type: 'remote',
+        posted_date: '2024-01-13',
+        status: 'active',
+      },
+    ],
+    [],
+  );
 
-  const mockJobSeekerListings: JobSeekerListing[] = React.useMemo(() => [
-    {
-      id: '1',
-      full_name: 'Dovi Brody',
-      title: 'Looking for an E-commer...',
-      age: 28,
-      gender: 'male',
-      preferred_industry: 'Technology',
-      job_type: 'Full Time',
-      zip_code: '33169',
-      city: undefined, // Show zip code instead of city
-      state: undefined,
-      latitude: 25.7617,
-      longitude: -80.1918,
-      contact_email: 'dovi.brody@email.com',
-      contact_phone: '(555) 123-4567',
-      headshot_url: 'https://example.com/dovi.jpg',
-      bio: 'Looking for an e-commerce role with growth opportunities.',
-      meeting_link: 'https://zoom.us/j/dovi-brody',
-      experience_years: 3,
-      skills: ['React', 'TypeScript', 'Node.js', 'Python'],
-      availability: 'Immediate',
-      created_at: '2024-01-15',
-    },
-    {
-      id: '2',
-      full_name: 'Ruvy G.',
-      title: 'Open to any office job in',
-      age: 32,
-      gender: 'male',
-      preferred_industry: 'General',
-      job_type: 'Part Time',
-      zip_code: '33110',
-      city: undefined, // Show zip code instead of city
-      state: undefined,
-      latitude: 25.9331,
-      longitude: -80.1628,
-      contact_email: 'ruvy.g@email.com',
-      experience_years: 5,
-      skills: ['Office Management', 'Administration', 'Customer Service'],
-      availability: '2 weeks notice',
-      created_at: '2024-01-14',
-    },
-  ], []);
+  const mockJobSeekerListings: JobSeekerListing[] = React.useMemo(
+    () => [
+      {
+        id: '1',
+        full_name: 'Dovi Brody',
+        title: 'Looking for an E-commer...',
+        age: 28,
+        gender: 'male',
+        preferred_industry: 'Technology',
+        job_type: 'Full Time',
+        zip_code: '33169',
+        city: undefined, // Show zip code instead of city
+        state: undefined,
+        latitude: 25.7617,
+        longitude: -80.1918,
+        contact_email: 'dovi.brody@email.com',
+        contact_phone: '(555) 123-4567',
+        headshot_url: 'https://example.com/dovi.jpg',
+        bio: 'Looking for an e-commerce role with growth opportunities.',
+        meeting_link: 'https://zoom.us/j/dovi-brody',
+        experience_years: 3,
+        skills: ['React', 'TypeScript', 'Node.js', 'Python'],
+        availability: 'Immediate',
+        created_at: '2024-01-15',
+      },
+      {
+        id: '2',
+        full_name: 'Ruvy G.',
+        title: 'Open to any office job in',
+        age: 32,
+        gender: 'male',
+        preferred_industry: 'General',
+        job_type: 'Part Time',
+        zip_code: '33110',
+        city: undefined, // Show zip code instead of city
+        state: undefined,
+        latitude: 25.9331,
+        longitude: -80.1628,
+        contact_email: 'ruvy.g@email.com',
+        experience_years: 5,
+        skills: ['Office Management', 'Administration', 'Customer Service'],
+        availability: '2 weeks notice',
+        created_at: '2024-01-14',
+      },
+    ],
+    [],
+  );
 
   const loadData = useCallback(async () => {
     // Don't retry if we're rate limited
@@ -261,7 +332,9 @@ const EnhancedJobsScreen: React.FC = () => {
               salaryRate = job.compensation_display;
             } else if (job.compensation_min && job.compensation_max) {
               if (job.compensation_type === 'hourly') {
-                salaryRate = `$${(job.compensation_min / 100).toFixed(2)}-$${(job.compensation_max / 100).toFixed(2)}/hr`;
+                salaryRate = `$${(job.compensation_min / 100).toFixed(2)}-$${(
+                  job.compensation_max / 100
+                ).toFixed(2)}/hr`;
               } else {
                 const minK = Math.floor(job.compensation_min / 100 / 1000);
                 const maxK = Math.floor(job.compensation_max / 100 / 1000);
@@ -271,7 +344,9 @@ const EnhancedJobsScreen: React.FC = () => {
               if (job.compensation_type === 'hourly') {
                 salaryRate = `$${(job.compensation_min / 100).toFixed(2)}/hr+`;
               } else {
-                salaryRate = `$${Math.floor(job.compensation_min / 100 / 1000)}K+`;
+                salaryRate = `$${Math.floor(
+                  job.compensation_min / 100 / 1000,
+                )}K+`;
               }
             }
 
@@ -282,7 +357,10 @@ const EnhancedJobsScreen: React.FC = () => {
               description: job.description,
               industry: job.industry_name || job.category || 'Other',
               job_type: job.job_type_name || job.job_type || 'Full-time',
-              compensation_structure: job.compensation_structure_name || job.compensation_type || 'Salary',
+              compensation_structure:
+                job.compensation_structure_name ||
+                job.compensation_type ||
+                'Salary',
               salary_rate: salaryRate,
               zip_code: job.zip_code,
               city: job.city,
@@ -303,10 +381,7 @@ const EnhancedJobsScreen: React.FC = () => {
           setIsRateLimited(false); // Clear rate limit on success
         } else {
           // No mock data fallback - show empty state
-          debugLog(
-            'No job listings found in database. Response:',
-            response,
-          );
+          debugLog('No job listings found in database. Response:', response);
           setJobListings([]);
         }
       } else {
@@ -321,54 +396,72 @@ const EnhancedJobsScreen: React.FC = () => {
         if (response.success && response.data?.job_seekers) {
           debugLog('Found job seekers:', response.data.job_seekers.length);
           debugLog('First job seeker:', response.data.job_seekers[0]);
-          debugLog('First job seeker name field:', response.data.job_seekers[0]?.name);
-          debugLog('First job seeker title field:', response.data.job_seekers[0]?.title);
-          
+          debugLog(
+            'First job seeker name field:',
+            response.data.job_seekers[0]?.name,
+          );
+          debugLog(
+            'First job seeker title field:',
+            response.data.job_seekers[0]?.title,
+          );
+
           // Transform API job seekers to frontend format
-          const transformedSeekers = response.data.job_seekers.map((seeker: any) => {
-            // Create a meaningful title from bio or use a default
-            let title = 'Open to opportunities';
-            if (seeker.bio) {
-              // Extract the first part of the bio as a title
-              const bioWords = seeker.bio.split(' ');
-              if (bioWords.length >= 3) {
-                title = bioWords.slice(0, 3).join(' ');
-              } else {
-                title = seeker.bio;
+          const transformedSeekers = response.data.job_seekers.map(
+            (seeker: any) => {
+              // Create a meaningful title from bio or use a default
+              let title = 'Open to opportunities';
+              if (seeker.bio) {
+                // Extract the first part of the bio as a title
+                const bioWords = seeker.bio.split(' ');
+                if (bioWords.length >= 3) {
+                  title = bioWords.slice(0, 3).join(' ');
+                } else {
+                  title = seeker.bio;
+                }
               }
-            }
-            
-            return {
-              id: seeker.id,
-              full_name: seeker.name || seeker.full_name || 'Job Seeker',
-              title: seeker.title || title,
-              bio: seeker.bio || seeker.summary,
-              location: seeker.location || `${seeker.city}, ${seeker.state}`,
-              zip_code: seeker.zip_code,
-              latitude: seeker.latitude ? parseFloat(seeker.latitude) : undefined,
-              longitude: seeker.longitude ? parseFloat(seeker.longitude) : undefined,
-              experience_years: seeker.experience_years || 0,
-              experience_level: seeker.experience_level,
-              skills: Array.isArray(seeker.skills) ? seeker.skills : [],
-              availability: seeker.availability || 'Available',
-              headshot_url: seeker.headshot_url,
-              resume_url: seeker.resume_url,
-              contact_email: seeker.contact_email || seeker.email,
-              contact_phone: seeker.contact_phone || seeker.phone,
-              linkedin_url: seeker.linkedin_url,
-              portfolio_url: seeker.portfolio_url,
-              is_remote_ok: seeker.is_remote_ok || seeker.willing_to_remote,
-              willing_to_relocate: seeker.willing_to_relocate,
-              created_at: seeker.created_at,
-              is_favorited: false,
-            };
-          });
-          
+
+              return {
+                id: seeker.id,
+                full_name: seeker.name || seeker.full_name || 'Job Seeker',
+                title: seeker.title || title,
+                bio: seeker.bio || seeker.summary,
+                location: seeker.location || `${seeker.city}, ${seeker.state}`,
+                zip_code: seeker.zip_code,
+                latitude: seeker.latitude
+                  ? parseFloat(seeker.latitude)
+                  : undefined,
+                longitude: seeker.longitude
+                  ? parseFloat(seeker.longitude)
+                  : undefined,
+                experience_years: seeker.experience_years || 0,
+                experience_level: seeker.experience_level,
+                skills: Array.isArray(seeker.skills) ? seeker.skills : [],
+                availability: seeker.availability || 'Available',
+                headshot_url: seeker.headshot_url,
+                resume_url: seeker.resume_url,
+                contact_email: seeker.contact_email || seeker.email,
+                contact_phone: seeker.contact_phone || seeker.phone,
+                linkedin_url: seeker.linkedin_url,
+                portfolio_url: seeker.portfolio_url,
+                is_remote_ok: seeker.is_remote_ok || seeker.willing_to_remote,
+                willing_to_relocate: seeker.willing_to_relocate,
+                created_at: seeker.created_at,
+                is_favorited: false,
+              };
+            },
+          );
+
           debugLog('Transformed job seekers:', transformedSeekers);
-          debugLog('First transformed seeker full_name:', transformedSeekers[0]?.full_name);
-          debugLog('First transformed seeker title:', transformedSeekers[0]?.title);
+          debugLog(
+            'First transformed seeker full_name:',
+            transformedSeekers[0]?.full_name,
+          );
+          debugLog(
+            'First transformed seeker title:',
+            transformedSeekers[0]?.title,
+          );
           debugLog('First transformed seeker bio:', transformedSeekers[0]?.bio);
-          
+
           setJobSeekerListings(transformedSeekers);
           setIsRateLimited(false); // Clear rate limit on success
         } else {
@@ -378,7 +471,7 @@ const EnhancedJobsScreen: React.FC = () => {
       }
     } catch (error: any) {
       errorLog('Error loading data:', error);
-      
+
       // Check if rate limited or blocked
       const errorMessage = error?.message || String(error);
       if (
@@ -390,7 +483,7 @@ const EnhancedJobsScreen: React.FC = () => {
         setIsRateLimited(true);
         errorLog('Rate limited - stopping requests');
       }
-      
+
       // No mock data fallback on error - show empty state
       if (activeTab === 'jobs') {
         setJobListings([]);
@@ -483,7 +576,6 @@ const EnhancedJobsScreen: React.FC = () => {
     setSearchQuery('');
   };
 
-
   const renderTabBar = () => {
     debugLog('🎯 Rendering tab bar with activeTab:', activeTab);
     debugLog('🎯 activeTab === "jobs":', activeTab === 'jobs');
@@ -530,10 +622,17 @@ const EnhancedJobsScreen: React.FC = () => {
             activeOpacity={0.7}
             accessible={true}
             accessibilityRole="button"
-            accessibilityLabel={activeTab === 'seekers' ? "Create job seeker profile" : "Create job listing"}
+            accessibilityLabel={
+              activeTab === 'seekers'
+                ? 'Create job seeker profile'
+                : 'Create job listing'
+            }
             accessibilityHint="Opens form to create a new listing"
           >
-            <Text style={[styles.tabText, styles.plusTabText]} numberOfLines={1}>
+            <Text
+              style={[styles.tabText, styles.plusTabText]}
+              numberOfLines={1}
+            >
               {activeTab === 'seekers' ? "I'm Seeking +" : "I'm Hiring +"}
             </Text>
           </TouchableOpacity>
@@ -557,7 +656,7 @@ const EnhancedJobsScreen: React.FC = () => {
             </Text>
           </TouchableOpacity>
         </View>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.filterButton}
           onPress={() => setShowFilters(!showFilters)}
           accessible={true}
@@ -665,36 +764,39 @@ const EnhancedJobsScreen: React.FC = () => {
   };
 
   // Format location - prioritize distance, then zip code
-  const formatLocation = useCallback((item: JobListing): string => {
-    // If we have user location and job coordinates, calculate distance
-    if (location && item.latitude && item.longitude) {
-      const distanceMiles = calculateDistance(
-        location.latitude,
-        location.longitude,
-        Number(item.latitude),
-        Number(item.longitude),
-      );
-      
-      // Only show distance if within reasonable range (< 1000 miles)
-      if (distanceMiles < 1000) {
-        if (distanceMiles < 1) {
-          return `${Math.round(distanceMiles * 5280)} ft away`;
-        } else if (distanceMiles < 100) {
-          return `${distanceMiles.toFixed(1)} mi away`;
-        } else {
-          return `${Math.round(distanceMiles)} mi away`;
+  const formatLocation = useCallback(
+    (item: JobListing): string => {
+      // If we have user location and job coordinates, calculate distance
+      if (location && item.latitude && item.longitude) {
+        const distanceMiles = calculateDistance(
+          location.latitude,
+          location.longitude,
+          Number(item.latitude),
+          Number(item.longitude),
+        );
+
+        // Only show distance if within reasonable range (< 1000 miles)
+        if (distanceMiles < 1000) {
+          if (distanceMiles < 1) {
+            return `${Math.round(distanceMiles * 5280)} ft away`;
+          } else if (distanceMiles < 100) {
+            return `${distanceMiles.toFixed(1)} mi away`;
+          } else {
+            return `${Math.round(distanceMiles)} mi away`;
+          }
         }
       }
-    }
-    
-    // Otherwise show zip code
-    return item.zip_code ? String(item.zip_code) : 'Remote';
-  }, [location]);
+
+      // Otherwise show zip code
+      return item.zip_code ? String(item.zip_code) : 'Remote';
+    },
+    [location],
+  );
 
   const renderJobCard = ({ item }: { item: JobListing }) => {
     const isFavorited = favorites.has(item.id) || item.is_favorited;
     const displayJobType = normalizeEmploymentType(item.job_type);
-    
+
     // Calculate distance in meters for DistanceDisplay component
     let distanceMeters: number | null = null;
     if (location && item.latitude && item.longitude) {
@@ -765,7 +867,9 @@ const EnhancedJobsScreen: React.FC = () => {
     const isFavorited = favorites.has(item.id) || item.is_favorited;
     // Show zip code instead of city for job seekers
     const displayLocation = item.zip_code || 'Location not specified';
-    const displayJobType = item.job_type ? normalizeEmploymentType(item.job_type) : 'Any';
+    const displayJobType = item.job_type
+      ? normalizeEmploymentType(item.job_type)
+      : 'Any';
 
     return (
       <TouchableOpacity
@@ -854,6 +958,64 @@ const EnhancedJobsScreen: React.FC = () => {
     <View style={styles.container}>
       {renderTabBar()}
       {renderFilters()}
+
+      {/* Location Permission Banner */}
+      {!location && !permissionGranted && (
+        <View style={styles.locationPermissionBanner}>
+          <View style={styles.bannerContent}>
+            <Text style={styles.bannerIcon}>📍</Text>
+            <View style={styles.bannerTextContainer}>
+              <Text style={styles.bannerTitle}>Enable Location</Text>
+              <Text style={styles.bannerSubtitle}>
+                See distances to nearby jobs
+              </Text>
+            </View>
+            <FastButton
+              title="Enable"
+              onPress={handleLocationPermissionRequest}
+              variant="outline"
+              size="small"
+              style={styles.bannerButtonStyle}
+              textStyle={styles.bannerButtonText}
+            />
+          </View>
+        </View>
+      )}
+
+      {/* Location Permission Granted but No Location Banner */}
+      {!location && permissionGranted && (
+        <View style={styles.locationPermissionBanner}>
+          <View style={styles.bannerContent}>
+            <Text style={styles.bannerIcon}>🔄</Text>
+            <View style={styles.bannerTextContainer}>
+              <Text style={styles.bannerTitle}>Refresh Location</Text>
+              <Text style={styles.bannerSubtitle}>
+                Tap to get your current location
+              </Text>
+            </View>
+            <FastButton
+              title={locationLoading ? 'Getting...' : 'Refresh'}
+              onPress={handleLocationRefresh}
+              variant="outline"
+              size="small"
+              disabled={locationLoading}
+              loading={locationLoading}
+              style={styles.bannerButtonStyle}
+              textStyle={styles.bannerButtonText}
+            />
+          </View>
+        </View>
+      )}
+
+      {/* Location Enabled Indicator */}
+      {location && (
+        <View style={styles.locationIndicator}>
+          <Text style={styles.locationIndicatorText}>
+            📍 Location enabled - showing distances
+            {location.zipCode ? ` (${location.zipCode})` : ''}
+          </Text>
+        </View>
+      )}
 
       <FlatList
         data={currentData as any}
@@ -1302,6 +1464,62 @@ const styles = StyleSheet.create({
   footer: {
     paddingVertical: Spacing.lg,
     alignItems: 'center',
+  },
+  locationPermissionBanner: {
+    backgroundColor: Colors.primary.main,
+    marginHorizontal: Spacing.md,
+    marginTop: Spacing.sm,
+    marginBottom: Spacing.sm,
+    borderRadius: BorderRadius.lg,
+    ...Shadows.sm,
+    zIndex: 10,
+  },
+  bannerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.md,
+  },
+  bannerIcon: {
+    fontSize: 20,
+    marginRight: Spacing.sm,
+  },
+  bannerTextContainer: {
+    flex: 1,
+  },
+  bannerTitle: {
+    ...Typography.styles.bodyLarge,
+    color: Colors.white,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  bannerSubtitle: {
+    ...Typography.styles.caption,
+    color: Colors.white,
+    opacity: 0.9,
+  },
+  bannerButtonStyle: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    minHeight: 32,
+  },
+  bannerButtonText: {
+    color: Colors.white,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  locationIndicator: {
+    backgroundColor: Colors.infoLight,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.info,
+    alignItems: 'center',
+  },
+  locationIndicatorText: {
+    fontSize: 12,
+    color: Colors.info,
+    fontWeight: '500',
   },
 });
 

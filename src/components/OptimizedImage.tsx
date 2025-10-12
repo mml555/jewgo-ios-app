@@ -1,4 +1,4 @@
-import React, { useState, useEffect, memo } from 'react';
+import React, { useState, memo } from 'react';
 import {
   Image,
   View,
@@ -10,7 +10,6 @@ import {
   ViewStyle,
 } from 'react-native';
 import { Colors } from '../styles/designSystem';
-import { imageCacheService } from '../services/ImageCacheService';
 
 interface OptimizedImageProps extends Omit<ImageProps, 'source'> {
   source: { uri: string } | number;
@@ -27,86 +26,105 @@ interface OptimizedImageProps extends Omit<ImageProps, 'source'> {
 
 /**
  * OptimizedImage - Enhanced image component with caching and loading states
- * 
+ *
  * Features:
  * - Automatic prefetching based on priority
  * - Loading state with spinner
  * - Error handling with fallback
  * - Memoized to prevent unnecessary re-renders
  */
-const OptimizedImage: React.FC<OptimizedImageProps> = memo(({
-  source,
-  style,
-  containerStyle,
-  showLoader = true,
-  loaderColor = typeof Colors.primary === 'string' ? Colors.primary : Colors.primary.main,
-  fallbackSource,
-  onLoadStart,
-  onLoadEnd,
-  onError,
-  priority = 'medium',
-  ...imageProps
-}) => {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
-  const [imageSource, setImageSource] = useState(source);
+const OptimizedImage: React.FC<OptimizedImageProps> = memo(
+  ({
+    source,
+    style,
+    containerStyle,
+    showLoader = true,
+    loaderColor = typeof Colors.primary === 'string'
+      ? Colors.primary
+      : Colors.primary.main,
+    fallbackSource,
+    onLoadStart,
+    onLoadEnd,
+    onError,
+    priority = 'medium',
+    ...imageProps
+  }) => {
+    // Batch state updates using a single state object
+    const [imageState, setImageState] = useState({
+      loading: false,
+      error: false,
+      imageSource: source,
+    });
 
-  // Extract URI from source
-  const uri = typeof source === 'object' && 'uri' in source ? source.uri : null;
+    // Use ref to track mounted state
+    const isMountedRef = React.useRef(true);
 
-  // Prefetch image on mount if URI exists
-  useEffect(() => {
-    if (uri && !imageCacheService.isCached(uri)) {
-      imageCacheService.prefetchImage(uri, priority);
-    }
-  }, [uri, priority]);
+    // Cleanup on unmount
+    React.useEffect(() => {
+      isMountedRef.current = true;
+      return () => {
+        isMountedRef.current = false;
+      };
+    }, []);
 
-  const handleLoadStart = () => {
-    setLoading(true);
-    onLoadStart?.();
-  };
+    const handleLoadStart = React.useCallback(() => {
+      if (isMountedRef.current) {
+        setImageState(prev => ({ ...prev, loading: true }));
+      }
+      onLoadStart?.();
+    }, [onLoadStart]);
 
-  const handleLoadEnd = () => {
-    setLoading(false);
-    setError(false);
-    onLoadEnd?.();
-  };
+    const handleLoadEnd = React.useCallback(() => {
+      if (isMountedRef.current) {
+        // Batch state update
+        setImageState(prev => ({
+          ...prev,
+          loading: false,
+          error: false,
+        }));
+      }
+      onLoadEnd?.();
+    }, [onLoadEnd]);
 
-  const handleError = () => {
-    setLoading(false);
-    setError(true);
-    
-    // Use fallback if available
-    if (fallbackSource) {
-      setImageSource(fallbackSource);
-    }
-    
-    onError?.();
-  };
+    const handleError = React.useCallback(() => {
+      if (isMountedRef.current) {
+        // Batch state update
+        setImageState(prev => ({
+          ...prev,
+          loading: false,
+          error: true,
+          imageSource: fallbackSource || prev.imageSource,
+        }));
+      }
+      onError?.();
+    }, [fallbackSource, onError]);
 
-  return (
-    <View style={[styles.container, containerStyle]}>
-      <Image
-        {...imageProps}
-        source={imageSource}
-        style={style}
-        onLoadStart={handleLoadStart}
-        onLoadEnd={handleLoadEnd}
-        onError={handleError}
-      />
-      
-      {/* Loading Indicator */}
-      {showLoader && loading && !error && (
-        <View style={styles.loaderContainer}>
-          <ActivityIndicator 
-            size="small" 
-            color={typeof loaderColor === 'string' ? loaderColor : loaderColor.main} 
-          />
-        </View>
-      )}
-    </View>
-  );
-});
+    return (
+      <View style={[styles.container, containerStyle]} pointerEvents="none">
+        <Image
+          {...imageProps}
+          source={imageState.imageSource}
+          style={style}
+          onLoadStart={handleLoadStart}
+          onLoadEnd={handleLoadEnd}
+          onError={handleError}
+        />
+
+        {/* Loading Indicator */}
+        {showLoader && imageState.loading && !imageState.error && (
+          <View style={styles.loaderContainer}>
+            <ActivityIndicator
+              size="small"
+              color={
+                typeof loaderColor === 'string' ? loaderColor : loaderColor.main
+              }
+            />
+          </View>
+        )}
+      </View>
+    );
+  },
+);
 
 OptimizedImage.displayName = 'OptimizedImage';
 
@@ -123,4 +141,3 @@ const styles = StyleSheet.create({
 });
 
 export default OptimizedImage;
-

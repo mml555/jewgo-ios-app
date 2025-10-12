@@ -1,11 +1,5 @@
 import React, { memo } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Alert,
-} from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { Event } from '../../services/EventsService';
 import { Spacing } from '../../styles/designSystem';
 import Icon from '../Icon';
@@ -18,70 +12,78 @@ interface SocialShareBarProps {
   onShare: (platform: string) => void;
 }
 
-const SocialShareBar: React.FC<SocialShareBarProps> = memo(({
-  event,
-  onShare,
-}) => {
-  const handleShare = async (platform: string) => {
-    try {
-      await onShare(platform);
-    } catch (error) {
-      Alert.alert('Error', 'Unable to share event');
-    }
-  };
+const SocialShareBar: React.FC<SocialShareBarProps> = memo(
+  ({ event, onShare }) => {
+    const handleShare = async (platform: string) => {
+      try {
+        await onShare(platform);
+      } catch (error) {
+        Alert.alert('Error', 'Unable to share event');
+      }
+    };
 
-  const renderSocialIcon = (platform: string) => {
-    const iconSize = 24;
-    const iconColor = '#FFFFFF';
+    const renderSocialIcon = (platform: string) => {
+      const iconSize = 24;
+      const iconColor = '#FFFFFF';
 
-    switch (platform) {
-      case 'email':
-        return <Icon name="mail" size={iconSize} color={iconColor} />;
-      case 'whatsapp':
-        return <WhatsAppIcon size={iconSize} color={iconColor} />;
-      case 'instagram':
-        return <InstagramIcon size={iconSize} color={iconColor} />;
-      case 'facebook':
-        return <FacebookIcon size={iconSize} color={iconColor} />;
-      default:
-        return null;
-    }
-  };
+      switch (platform) {
+        case 'email':
+          return <Icon name="mail" size={iconSize} color={iconColor} />;
+        case 'whatsapp':
+          return <WhatsAppIcon size={iconSize} color={iconColor} />;
+        case 'instagram':
+          return <InstagramIcon size={iconSize} color={iconColor} />;
+        case 'facebook':
+          return <FacebookIcon size={iconSize} color={iconColor} />;
+        default:
+          return null;
+      }
+    };
 
-  const socialPlatforms = [
-    { platform: 'email', label: 'Email' },
-    { platform: 'whatsapp', label: 'WhatsApp' },
-    { platform: 'instagram', label: 'Instagram' },
-    { platform: 'facebook', label: 'Facebook' },
-  ];
+    const socialPlatforms = [
+      { platform: 'email', label: 'Email' },
+      { platform: 'whatsapp', label: 'WhatsApp' },
+      { platform: 'instagram', label: 'Instagram' },
+      { platform: 'facebook', label: 'Facebook' },
+    ];
 
-  return (
-    <View style={styles.container}>
-      <View style={styles.iconsContainer}>
-        {socialPlatforms.map(({ platform, label }) => (
-          <TouchableOpacity
-            key={platform}
-            style={styles.iconButton}
-            onPress={() => handleShare(platform)}
-            accessibilityRole="button"
-            accessibilityLabel={`Share event on ${label}`}
-            accessibilityHint={`Tap to share ${event.title} on ${label}`}
-          >
-            {renderSocialIcon(platform)}
-          </TouchableOpacity>
-        ))}
+    return (
+      <View style={styles.container}>
+        <View style={styles.iconsContainer}>
+          {socialPlatforms.map(({ platform, label }) => (
+            <TouchableOpacity
+              key={platform}
+              style={styles.iconButton}
+              onPress={() => handleShare(platform)}
+              accessibilityRole="button"
+              accessibilityLabel={`Share event on ${label}`}
+              accessibilityHint={`Tap to share ${event.title} on ${label}`}
+            >
+              {renderSocialIcon(platform)}
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
-    </View>
-  );
-});
+    );
+  },
+);
 
 const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
-    paddingVertical: Spacing.md,
+    paddingVertical: Spacing.lg,
     backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
+    marginHorizontal: Spacing.md,
+    marginBottom: Spacing.md,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   iconsContainer: {
     flexDirection: 'row',

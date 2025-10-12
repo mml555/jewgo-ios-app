@@ -34,6 +34,7 @@ import {
 import { useFavorites } from '../hooks/useFavorites';
 import { infoLog } from '../utils/logger';
 import guestService from '../services/GuestService';
+import Icon from '../components/Icon';
 
 type NavigationProp = StackNavigationProp<AppStackParamList, 'SpecialDetail'>;
 
@@ -431,7 +432,7 @@ const SpecialsScreen: React.FC<SpecialsScreenProps> = ({ route }) => {
 
     return (
       <View style={styles.emptyContainer}>
-        <SpecialsIcon size={64} color={Colors.gray400} />
+        <Icon name="tag" size={64} color={Colors.gray400} />
         <Text style={styles.emptyTitle}>No Specials Available</Text>
         <Text style={styles.emptyDescription}>
           Check back soon for exclusive deals and offers from your favorite
@@ -459,7 +460,7 @@ const SpecialsScreen: React.FC<SpecialsScreenProps> = ({ route }) => {
               onPressOut={() => handlePressOut('back')}
               activeOpacity={0.7}
             >
-              <BackIcon size={20} color={Colors.text.primary} />
+              <Icon name="arrow-left" size={20} color={Colors.text.primary} />
             </TouchableOpacity>
 
             <View style={styles.headerTitle}>
@@ -483,7 +484,7 @@ const SpecialsScreen: React.FC<SpecialsScreenProps> = ({ route }) => {
               onPressOut={() => handlePressOut('search')}
               activeOpacity={0.7}
             >
-              <SearchIcon size={16} color={Colors.text.primary} />
+              <Icon name="search" size={16} color={Colors.text.primary} />
             </TouchableOpacity>
           </View>
         </View>
@@ -565,7 +566,7 @@ const SpecialsScreen: React.FC<SpecialsScreenProps> = ({ route }) => {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.errorContainer}>
-          <SpecialsIcon size={64} color={Colors.gray400} />
+          <Icon name="tag" size={64} color={Colors.gray400} />
           <Text style={styles.errorTitle}>Unable to Load Specials</Text>
           <Text style={styles.errorDescription}>{error}</Text>
           <TouchableOpacity

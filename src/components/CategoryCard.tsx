@@ -9,7 +9,6 @@ import React, {
 import {
   View,
   Text,
-  Image,
   StyleSheet,
   TouchableOpacity,
   Pressable,
@@ -33,6 +32,8 @@ import { debugLog, errorLog, warnLog } from '../utils/logger';
 import { DistanceDisplay } from './DistanceDisplay';
 import { useLocationSimple } from '../hooks/useLocationSimple';
 import { useStableCallback } from '../utils/performanceOptimization';
+import OptimizedImage from './OptimizedImage';
+import { imageCacheService } from '../services/ImageCacheService';
 
 interface CategoryCardProps {
   item: CategoryItem;
@@ -78,37 +79,66 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
   // Use refs to prevent unnecessary re-renders and memory leaks
   const imageErrorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isMountedRef = useRef(true);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Cleanup on unmount
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
+      // Clear image error timeout
       if (imageErrorTimeoutRef.current) {
         clearTimeout(imageErrorTimeoutRef.current);
         imageErrorTimeoutRef.current = null;
+      }
+      // Abort any pending async operations
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
       }
     };
   }, []);
 
   // Check favorite status on mount (only if not initially favorited)
   useEffect(() => {
-    if (isInitiallyFavorited === undefined) {
-      const checkStatus = async () => {
+    // Skip if we already have initial favorited status
+    if (isInitiallyFavorited !== undefined) {
+      return;
+    }
+
+    // Create abort controller for this async operation
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+
+    const checkStatus = async () => {
+      try {
+        // Check if already aborted before starting
+        if (abortController.signal.aborted) return;
+
         const status = await checkFavoriteStatus(item.id);
-        // Only update state if component is still mounted
-        if (isMountedRef.current) {
+
+        // Only update state if component is still mounted and not aborted
+        if (isMountedRef.current && !abortController.signal.aborted) {
           if (__DEV__) {
             // debugLog('🔄 CategoryCard checking favorite status for', item.title, ':', status);
           }
           setIsFavorited(status);
         }
-      };
-      checkStatus();
-    } else if (__DEV__) {
-      // debugLog('🔄 CategoryCard using initial favorite status for', item.title, ':', isInitiallyFavorited);
-    }
-  }, [item.id, checkFavoriteStatus, isInitiallyFavorited]);
+      } catch (error) {
+        // Silently handle errors (component may have unmounted)
+        if (!abortController.signal.aborted && __DEV__) {
+          console.warn('Error checking favorite status:', error);
+        }
+      }
+    };
+
+    checkStatus();
+
+    // Cleanup function for this effect
+    return () => {
+      abortController.abort();
+    };
+  }, [item.id, isInitiallyFavorited]); // Removed checkFavoriteStatus to prevent recreation
 
   // Calculate real distance if user location is available (in meters) - optimized
   const realDistanceMeters = useMemo(() => {
@@ -143,14 +173,31 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
     }
   }, [location?.latitude, location?.longitude, item.latitude, item.longitude]);
 
-  // Memoized press handler to prevent unnecessary re-renders
+  // Track if already navigating to prevent duplicates
+  const isNavigatingRef = useRef(false);
+
+  // Memoized press handler with navigation guard
   const handlePress = useCallback(() => {
-    console.log('🔷 CategoryCard pressed:', { 
-      categoryKey, 
-      itemId: item.id, 
-      title: item.title 
+    // Prevent duplicate navigation if already navigating
+    if (isNavigatingRef.current) {
+      console.log(
+        '🔷 CategoryCard: Navigation already in progress, ignoring tap',
+      );
+      return;
+    }
+
+    isNavigatingRef.current = true;
+    // Reset after navigation animation completes (typically 300-500ms)
+    setTimeout(() => {
+      isNavigatingRef.current = false;
+    }, 500);
+
+    console.log('🔷 CategoryCard pressed:', {
+      categoryKey,
+      itemId: item.id,
+      title: item.title,
     });
-    
+
     // Events category navigates to EventDetail screen
     if (categoryKey === 'events') {
       console.log('🔷 Navigating to EventDetail with eventId:', item.id);
@@ -222,15 +269,15 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
   }, [item, categoryKey, isFavorited, toggleFavorite, onFavoriteToggle]);
 
   return (
-    <TouchableOpacity
-      style={[
+    <Pressable
+      style={({ pressed }) => [
         styles.container,
         categoryKey === 'jobs'
           ? styles.containerWithBackground
           : styles.containerTransparent,
+        pressed && styles.pressed, // Immediate visual feedback
       ]}
       onPress={handlePress}
-      activeOpacity={0.8}
       accessible={true}
       accessibilityRole="button"
       accessibilityLabel={`${item.title}, ${item.description}`}
@@ -238,21 +285,18 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
     >
       <View style={styles.imageContainer}>
         {!imageError && item.imageUrl ? (
-          <Image
+          <OptimizedImage
             key={`${item.imageUrl}-${retryCount}`} // Force re-render on retry
             source={{ uri: item.imageUrl }}
             style={styles.image}
             resizeMode="cover"
+            showLoader={true}
+            priority={categoryKey === 'events' ? 'high' : 'medium'}
             accessible={true}
             accessibilityLabel={`Image for ${item.title}`}
-            onError={error => {
+            onError={() => {
               if (__DEV__) {
-                debugLog(
-                  '🖼️ Image load error for',
-                  item.title,
-                  ':',
-                  error.nativeEvent.error,
-                );
+                debugLog('🖼️ Image load error for', item.title);
               }
 
               // Clear any existing timeout
@@ -263,18 +307,24 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
               if (retryCount < 2) {
                 // Retry loading the image up to 2 times
                 imageErrorTimeoutRef.current = setTimeout(() => {
-                  setRetryCount(prev => prev + 1);
-                  setImageError(false);
+                  if (isMountedRef.current) {
+                    setRetryCount(prev => prev + 1);
+                    setImageError(false);
+                  }
                 }, 1000 * (retryCount + 1)); // Exponential backoff
               } else {
-                setImageError(true);
+                if (isMountedRef.current) {
+                  setImageError(true);
+                }
               }
             }}
-            onLoad={() => {
+            onLoadEnd={() => {
               if (__DEV__) {
                 // debugLog('🖼️ Image loaded successfully for', item.title);
               }
-              setImageError(false);
+              if (isMountedRef.current) {
+                setImageError(false);
+              }
             }}
           />
         ) : (
@@ -376,7 +426,7 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
           )}
         </View>
       </View>
-    </TouchableOpacity>
+    </Pressable>
   );
 };
 
@@ -398,6 +448,10 @@ const styles = StyleSheet.create({
   containerTransparent: {
     backgroundColor: Colors.background.secondary, // Use solid color for shadow calculation
     ...Shadows.sm, // Shadow requires solid background
+  },
+  pressed: {
+    opacity: 0.7,
+    transform: [{ scale: 0.98 }],
   },
   imageContainer: {
     position: 'relative',

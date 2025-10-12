@@ -120,6 +120,11 @@ const LiveMapScreen: React.FC = () => {
   });
   const [isUserInteracting, setIsUserInteracting] = useState(false);
 
+  // Refs for debouncing region and marker updates
+  const regionUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const markerUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isMountedRef = useRef(true);
+
   // Categories configuration - matching the keys from ActionBar
   const categories = [
     { key: 'all', label: 'All', emoji: '📍', color: '#74e1a0' },
@@ -616,32 +621,47 @@ const LiveMapScreen: React.FC = () => {
         if (data.type === 'marker_click') {
           handleMarkerPress(data.listing);
         } else if (data.type === 'region_changed') {
-          // Don't update state on every region change to prevent re-renders
-          // Only update if the change is significant and user is not interacting
-          if (!isUserInteracting) {
-            const newRegion = data.region;
-            const currentRegion = mapRegion;
-            const latDiff = Math.abs(
-              newRegion.latitude - currentRegion.latitude,
-            );
-            const lngDiff = Math.abs(
-              newRegion.longitude - currentRegion.longitude,
-            );
-
-            if (latDiff > 0.01 || lngDiff > 0.01) {
-              setMapRegion(newRegion);
-            }
+          // Debounce region updates to prevent excessive re-renders
+          if (regionUpdateTimeoutRef.current) {
+            clearTimeout(regionUpdateTimeoutRef.current);
           }
+
+          regionUpdateTimeoutRef.current = setTimeout(() => {
+            // Only update if the change is significant and user is not interacting
+            if (!isUserInteracting && isMountedRef.current) {
+              const newRegion = data.region;
+              const currentRegion = mapRegion;
+              const latDiff = Math.abs(
+                newRegion.latitude - currentRegion.latitude,
+              );
+              const lngDiff = Math.abs(
+                newRegion.longitude - currentRegion.longitude,
+              );
+
+              // Only update if moved significantly (0.01 degrees ≈ 1km)
+              if (latDiff > 0.01 || lngDiff > 0.01) {
+                setMapRegion(newRegion);
+              }
+            }
+          }, 300); // 300ms debounce
         } else if (data.type === 'map_loaded') {
-          setMapLoaded(true);
+          if (isMountedRef.current) {
+            setMapLoaded(true);
+          }
         } else if (data.type === 'user_interaction_start') {
-          setIsUserInteracting(true);
+          if (isMountedRef.current) {
+            setIsUserInteracting(true);
+          }
         } else if (data.type === 'user_interaction_end') {
-          setIsUserInteracting(false);
+          if (isMountedRef.current) {
+            setIsUserInteracting(false);
+          }
         }
-      } catch (error) {}
+      } catch (error) {
+        // Silently handle parse errors
+      }
     },
-    [handleMarkerPress, mapRegion],
+    [handleMarkerPress, mapRegion, isUserInteracting],
   );
 
   // Memoize marker data to prevent unnecessary updates
@@ -717,6 +737,21 @@ const LiveMapScreen: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [permissionGranted]); // Don't add getCurrentLocation to avoid infinite loop
 
+  // Cleanup on unmount
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      // Clear all pending timeouts
+      if (regionUpdateTimeoutRef.current) {
+        clearTimeout(regionUpdateTimeoutRef.current);
+      }
+      if (markerUpdateTimeoutRef.current) {
+        clearTimeout(markerUpdateTimeoutRef.current);
+      }
+    };
+  }, []);
+
   // Send marker updates to WebView when markerData changes (with debouncing)
   useEffect(() => {
     if (webViewRef.current && markerData.length > 0 && mapLoaded) {
@@ -725,14 +760,23 @@ const LiveMapScreen: React.FC = () => {
         listings: markerData,
       });
 
+      // Clear previous timeout
+      if (markerUpdateTimeoutRef.current) {
+        clearTimeout(markerUpdateTimeoutRef.current);
+      }
+
       // Debounce marker updates to prevent flickering
-      const timeoutId = setTimeout(() => {
-        if (webViewRef.current) {
+      markerUpdateTimeoutRef.current = setTimeout(() => {
+        if (webViewRef.current && isMountedRef.current) {
           webViewRef.current.postMessage(message);
         }
       }, 300); // 300ms debounce
 
-      return () => clearTimeout(timeoutId);
+      return () => {
+        if (markerUpdateTimeoutRef.current) {
+          clearTimeout(markerUpdateTimeoutRef.current);
+        }
+      };
     }
   }, [markerData.length, mapLoaded]); // Simplified dependencies to prevent infinite loop
 

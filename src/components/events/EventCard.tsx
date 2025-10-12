@@ -2,13 +2,13 @@ import React, { memo } from 'react';
 import {
   View,
   Text,
-  Image,
   StyleSheet,
   TouchableOpacity,
   Platform,
 } from 'react-native';
 import { Event } from '../../services/EventsService';
 import { Spacing } from '../../styles/designSystem';
+import OptimizedImage from '../OptimizedImage';
 
 interface EventCardProps {
   event: Event;
@@ -17,84 +17,91 @@ interface EventCardProps {
   isFavorited?: boolean;
 }
 
-const EventCard: React.FC<EventCardProps> = memo(({
-  event,
-  onPress,
-  onFavoritePress,
-  isFavorited = false,
-}) => {
-  const formatEventDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-    });
-  };
+const EventCard: React.FC<EventCardProps> = memo(
+  ({ event, onPress, onFavoritePress, isFavorited = false }) => {
+    const formatEventDate = (dateString: string) => {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+      });
+    };
 
-  const getPriceColor = () => {
-    return event.is_free ? '#74E1A0' : '#FF9F66'; // Mint green for free, orange for paid
-  };
+    const getPriceColor = () => {
+      return event.is_free ? '#74E1A0' : '#FF9F66'; // Mint green for free, orange for paid
+    };
 
-  return (
-    <TouchableOpacity
-      style={styles.card}
-      onPress={onPress}
-      activeOpacity={0.7}
-      testID="event-card"
-      accessibilityRole="button"
-      accessibilityLabel={`Event: ${event.title}`}
-      accessibilityHint="Tap to view event details"
-    >
-      {/* Event Flyer Image */}
-      <Image
-        source={{ uri: event.flyer_thumbnail_url || event.flyer_url }}
-        style={styles.flyerImage}
-        resizeMode="cover"
-        accessibilityIgnoresInvertColors={false}
-      />
+    return (
+      <TouchableOpacity
+        style={styles.card}
+        onPress={onPress}
+        activeOpacity={0.7}
+        testID="event-card"
+        accessibilityRole="button"
+        accessibilityLabel={`Event: ${event.title}`}
+        accessibilityHint="Tap to view event details"
+      >
+        {/* Event Flyer Image - Optimized with loading states */}
+        <OptimizedImage
+          source={{ uri: event.flyer_thumbnail_url || event.flyer_url }}
+          style={styles.flyerImage}
+          containerStyle={styles.imageContainer}
+          resizeMode="cover"
+          showLoader={true}
+          priority="high"
+          accessible={true}
+          accessibilityIgnoresInvertColors={false}
+        />
 
-      {/* Category Pill Overlay */}
-      <View style={styles.categoryPill}>
-        <Text style={styles.categoryPillText}>{event.category_name}</Text>
-      </View>
-
-      {/* Heart Icon Overlay */}
-      {onFavoritePress && (
-        <TouchableOpacity
-          style={styles.heartIcon}
-          onPress={onFavoritePress}
-          testID="heart-icon"
-          accessibilityRole="button"
-          accessibilityLabel={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
-        >
-          <Text style={styles.heartIconText}>{isFavorited ? '❤️' : '🤍'}</Text>
-        </TouchableOpacity>
-      )}
-
-      {/* Event Content */}
-      <View style={styles.content}>
-        {/* Title */}
-        <Text style={styles.title} numberOfLines={2}>
-          {event.title}
-        </Text>
-
-        {/* Date and Zip Code Row */}
-        <View style={styles.metaRow}>
-          <Text style={styles.date}>{formatEventDate(event.event_date)}</Text>
-          <Text style={styles.zipCode}>{event.zip_code}</Text>
+        {/* Category Pill Overlay */}
+        <View style={styles.categoryPill}>
+          <Text style={styles.categoryPillText}>{event.category_name}</Text>
         </View>
 
-        {/* Price Badge */}
-        <View style={[styles.priceBadge, { backgroundColor: getPriceColor() }]}>
-          <Text style={styles.priceText}>
-            {event.is_free ? 'Free' : 'Paid'}
+        {/* Heart Icon Overlay */}
+        {onFavoritePress && (
+          <TouchableOpacity
+            style={styles.heartIcon}
+            onPress={onFavoritePress}
+            testID="heart-icon"
+            accessibilityRole="button"
+            accessibilityLabel={
+              isFavorited ? 'Remove from favorites' : 'Add to favorites'
+            }
+          >
+            <Text style={styles.heartIconText}>
+              {isFavorited ? '❤️' : '🤍'}
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        {/* Event Content */}
+        <View style={styles.content}>
+          {/* Title */}
+          <Text style={styles.title} numberOfLines={2}>
+            {event.title}
           </Text>
+
+          {/* Date and Zip Code Row */}
+          <View style={styles.metaRow}>
+            <Text style={styles.date}>{formatEventDate(event.event_date)}</Text>
+            <Text style={styles.zipCode}>{event.zip_code}</Text>
+          </View>
+
+          {/* Price Badge */}
+          <View
+            style={[styles.priceBadge, { backgroundColor: getPriceColor() }]}
+          >
+            <Text style={styles.priceText}>
+              {event.is_free ? 'Free' : 'Paid'}
+            </Text>
+          </View>
         </View>
-      </View>
-    </TouchableOpacity>
-  );
-});
+      </TouchableOpacity>
+    );
+  },
+);
 
 const styles = StyleSheet.create({
   card: {
@@ -115,10 +122,14 @@ const styles = StyleSheet.create({
       },
     }),
   },
-  flyerImage: {
+  imageContainer: {
     width: '100%',
     height: 200,
     backgroundColor: '#F1F1F1',
+  },
+  flyerImage: {
+    width: '100%',
+    height: 200,
   },
   categoryPill: {
     position: 'absolute',
