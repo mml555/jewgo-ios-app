@@ -3,7 +3,6 @@ import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import TopBar from '../components/TopBar';
 import CategoryRail from '../components/CategoryRail';
-import ActionBar from '../components/ActionBar';
 import CategoryGridScreen from './CategoryGridScreen';
 import EnhancedJobsScreen from './EnhancedJobsScreen';
 import { Colors } from '../styles/designSystem';
@@ -16,6 +15,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
   const [activeCategory, setActiveCategory] = useState('mikvah');
   const [searchQuery, setSearchQuery] = useState('');
   const [jobMode, setJobMode] = useState<'seeking' | 'hiring'>('hiring');
+  const [scrollY, setScrollY] = useState(0);
 
   const handleSearchChange = useCallback(
     (query: string) => {
@@ -40,6 +40,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
     // For now, we'll just log the action
   }, []);
 
+  const handleScroll = useCallback((offsetY: number) => {
+    setScrollY(offsetY);
+  }, []);
+
+  const isCompact = scrollY > 50;
+
   const getCategoryDisplayName = useCallback((categoryKey: string) => {
     const categoryMap: { [key: string]: string } = {
       mikvah: 'Mikvah',
@@ -56,29 +62,26 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
   return (
     <View style={styles.container}>
       {/* Always show TopBar with search */}
-      <TopBar 
-        onQueryChange={handleSearchChange} 
-        placeholder={activeCategory === 'jobs' ? 'Find a job' : 'Search places, events...'}
+      <TopBar
+        onQueryChange={handleSearchChange}
+        placeholder={
+          activeCategory === 'jobs' ? 'Find a job' : 'Search places, events...'
+        }
       />
       <CategoryRail
         activeCategory={activeCategory}
         onCategoryChange={handleCategoryChange}
+        compact={isCompact}
       />
-      {/* Hide ActionBar for jobs category since EnhancedJobsScreen has its own tabs */}
-      {activeCategory !== 'jobs' && (
-        <ActionBar
-          onActionPress={handleActionPress}
-          currentCategory={activeCategory}
-          jobMode={undefined}
-        />
-      )}
       {activeCategory === 'jobs' ? (
-        <EnhancedJobsScreen />
+        <EnhancedJobsScreen onScroll={handleScroll} />
       ) : (
         <CategoryGridScreen
           categoryKey={activeCategory}
           query={searchQuery}
           jobMode={activeCategory === 'jobs' ? jobMode : undefined}
+          onScroll={handleScroll}
+          onActionPress={handleActionPress}
         />
       )}
     </View>

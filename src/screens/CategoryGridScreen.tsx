@@ -22,6 +22,7 @@ import { useLocation, calculateDistance } from '../hooks/useLocation';
 import CategoryCard from '../components/CategoryCard';
 import JobCard from '../components/JobCard';
 import FastButton from '../components/FastButton';
+import ActionBar from '../components/ActionBar';
 import { SkeletonGrid } from '../components/SkeletonLoader';
 import {
   Colors,
@@ -41,12 +42,16 @@ interface CategoryGridScreenProps {
   categoryKey: string;
   query?: string;
   jobMode?: 'seeking' | 'hiring';
+  onScroll?: (offsetY: number) => void;
+  onActionPress?: (action: string) => void;
 }
 
 const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
   categoryKey,
   query = '',
   jobMode = 'hiring',
+  onScroll,
+  onActionPress,
 }) => {
   const navigation = useNavigation();
   const { filters } = useFilters();
@@ -829,6 +834,15 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
     [navigation, categoryKey],
   );
 
+  // Handle scroll to report position to parent
+  const handleScrollEvent = useCallback(
+    (event: any) => {
+      const offsetY = event.nativeEvent.contentOffset.y;
+      onScroll?.(offsetY);
+    },
+    [onScroll],
+  );
+
   // Handle end reached for infinite scroll
   const handleEndReached = useCallback(() => {
     if (categoryKey === 'events') {
@@ -918,6 +932,86 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
     );
   }, [error]);
 
+  // Render ActionBar and location banners as list header
+  const renderListHeader = useCallback(() => {
+    return (
+      <>
+        <ActionBar
+          onActionPress={onActionPress}
+          currentCategory={categoryKey}
+          jobMode={jobMode}
+        />
+
+        {/* Location Permission Banner */}
+        {!location && !permissionGranted && (
+          <View style={styles.locationPermissionBanner}>
+            <View style={styles.bannerContent}>
+              <Text style={styles.bannerIcon}>📍</Text>
+              <View style={styles.bannerTextContainer}>
+                <Text style={styles.bannerTitle}>Enable Location</Text>
+                <Text style={styles.bannerSubtitle}>
+                  See distances to nearby businesses
+                </Text>
+              </View>
+              <FastButton
+                title="Enable"
+                onPress={handleLocationPermissionRequest}
+                variant="outline"
+                size="small"
+                style={styles.bannerButtonStyle}
+                textStyle={styles.bannerButtonText}
+              />
+            </View>
+          </View>
+        )}
+
+        {/* Location Permission Granted but No Location Banner */}
+        {!location && permissionGranted && (
+          <View style={styles.locationPermissionBanner}>
+            <View style={styles.bannerContent}>
+              <Text style={styles.bannerIcon}>🔄</Text>
+              <View style={styles.bannerTextContainer}>
+                <Text style={styles.bannerTitle}>Refresh Location</Text>
+                <Text style={styles.bannerSubtitle}>
+                  Tap to get your current location
+                </Text>
+              </View>
+              <FastButton
+                title={locationLoading ? 'Getting...' : 'Refresh'}
+                onPress={handleLocationRefresh}
+                variant="outline"
+                size="small"
+                disabled={locationLoading}
+                loading={locationLoading}
+                style={styles.bannerButtonStyle}
+                textStyle={styles.bannerButtonText}
+              />
+            </View>
+          </View>
+        )}
+
+        {/* Location Enabled Indicator */}
+        {location && (
+          <View style={styles.locationIndicator}>
+            <Text style={styles.locationIndicatorText}>
+              📍 Location enabled - showing distances
+              {location.zipCode ? ` (${location.zipCode})` : ''}
+            </Text>
+          </View>
+        )}
+      </>
+    );
+  }, [
+    onActionPress,
+    categoryKey,
+    jobMode,
+    location,
+    permissionGranted,
+    locationLoading,
+    handleLocationPermissionRequest,
+    handleLocationRefresh,
+  ]);
+
   // Prefetch details for items in the list
   usePrefetchDetails(filteredData.slice(0, 5), async (id: string) => {
     return enhancedApiService.prefetchListing(id);
@@ -945,64 +1039,6 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
 
   return (
     <View style={styles.container}>
-      {/* Location Permission Banner */}
-      {!location && !permissionGranted && (
-        <View style={styles.locationPermissionBanner}>
-          <View style={styles.bannerContent}>
-            <Text style={styles.bannerIcon}>📍</Text>
-            <View style={styles.bannerTextContainer}>
-              <Text style={styles.bannerTitle}>Enable Location</Text>
-              <Text style={styles.bannerSubtitle}>
-                See distances to nearby businesses
-              </Text>
-            </View>
-            <FastButton
-              title="Enable"
-              onPress={handleLocationPermissionRequest}
-              variant="outline"
-              size="small"
-              style={styles.bannerButtonStyle}
-              textStyle={styles.bannerButtonText}
-            />
-          </View>
-        </View>
-      )}
-
-      {/* Location Permission Granted but No Location Banner */}
-      {!location && permissionGranted && (
-        <View style={styles.locationPermissionBanner}>
-          <View style={styles.bannerContent}>
-            <Text style={styles.bannerIcon}>🔄</Text>
-            <View style={styles.bannerTextContainer}>
-              <Text style={styles.bannerTitle}>Refresh Location</Text>
-              <Text style={styles.bannerSubtitle}>
-                Tap to get your current location
-              </Text>
-            </View>
-            <FastButton
-              title={locationLoading ? 'Getting...' : 'Refresh'}
-              onPress={handleLocationRefresh}
-              variant="outline"
-              size="small"
-              disabled={locationLoading}
-              loading={locationLoading}
-              style={styles.bannerButtonStyle}
-              textStyle={styles.bannerButtonText}
-            />
-          </View>
-        </View>
-      )}
-
-      {/* Location Enabled Indicator */}
-      {location && (
-        <View style={styles.locationIndicator}>
-          <Text style={styles.locationIndicatorText}>
-            📍 Location enabled - showing distances
-            {location.zipCode ? ` (${location.zipCode})` : ''}
-          </Text>
-        </View>
-      )}
-
       <FlatList
         key="grid-list"
         data={filteredData}
@@ -1014,6 +1050,9 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
         refreshControl={refreshControl}
         onEndReached={handleEndReached}
         onEndReachedThreshold={0.5}
+        onScroll={handleScrollEvent}
+        scrollEventThrottle={16}
+        ListHeaderComponent={renderListHeader}
         ListFooterComponent={renderFooter}
         ListEmptyComponent={renderEmpty}
         removeClippedSubviews={true}

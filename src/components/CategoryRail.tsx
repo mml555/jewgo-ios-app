@@ -12,6 +12,7 @@ import Icon, { IconName } from './Icon';
 interface CategoryRailProps {
   activeCategory: string;
   onCategoryChange: (category: string) => void;
+  compact?: boolean;
 }
 
 interface Category {
@@ -39,6 +40,7 @@ const CONTAINER_PADDING = 16;
 const CategoryRail: React.FC<CategoryRailProps> = ({
   activeCategory,
   onCategoryChange,
+  compact = false,
 }) => {
   const [scrollX, setScrollX] = useState(0);
   const scrollViewRef = useRef<ScrollView>(null);
@@ -49,7 +51,11 @@ const CategoryRail: React.FC<CategoryRailProps> = ({
 
       return (
         <TouchableOpacity
-          style={[styles.chip, isActive && styles.chipActive]}
+          style={[
+            styles.chip,
+            compact && styles.chipCompact,
+            isActive && styles.chipActive,
+          ]}
           onPress={() => onCategoryChange(item.id)}
           accessible={true}
           accessibilityRole="button"
@@ -57,20 +63,28 @@ const CategoryRail: React.FC<CategoryRailProps> = ({
           accessibilityHint={`Filter content by ${item.name}`}
           accessibilityState={{ selected: isActive }}
         >
-          <View style={styles.iconContainer}>
-            <Icon
-              name={item.iconName}
-              size={24}
-              color={isActive ? '#FFFFFF' : '#374151'} // Spec: white icon on active, charcoal on inactive
-            />
-          </View>
-          <Text style={[styles.chipText, isActive && styles.chipTextActive]}>
+          {!compact && (
+            <View style={styles.iconContainer}>
+              <Icon
+                name={item.iconName}
+                size={24}
+                color={isActive ? '#FFFFFF' : '#374151'} // Spec: white icon on active, charcoal on inactive
+              />
+            </View>
+          )}
+          <Text
+            style={[
+              styles.chipText,
+              compact && styles.chipTextCompact,
+              isActive && styles.chipTextActive,
+            ]}
+          >
             {item.name}
           </Text>
         </TouchableOpacity>
       );
     },
-    [activeCategory, onCategoryChange],
+    [activeCategory, onCategoryChange, compact],
   );
 
   // Memoize the key extractor
@@ -87,11 +101,14 @@ const CategoryRail: React.FC<CategoryRailProps> = ({
 
   // Calculate the position of the green indicator based on active category and scroll position
   const getIndicatorPosition = useCallback(() => {
-    const activeIndex = CATEGORIES.findIndex(category => category.id === activeCategory);
+    const activeIndex = CATEGORIES.findIndex(
+      category => category.id === activeCategory,
+    );
     if (activeIndex === -1) return CONTAINER_PADDING + (CHIP_WIDTH - 32) / 2;
-    
+
     // Calculate the left edge of the active button
-    const buttonLeftEdge = CONTAINER_PADDING + (CHIP_WIDTH + CHIP_SPACING) * activeIndex - scrollX;
+    const buttonLeftEdge =
+      CONTAINER_PADDING + (CHIP_WIDTH + CHIP_SPACING) * activeIndex - scrollX;
     // Center the 32px indicator under the 80px button - fine-tune centering
     const centeredPosition = buttonLeftEdge + 8; // Start earlier, further left for perfect centering
     return Math.max(CONTAINER_PADDING, centeredPosition);
@@ -103,14 +120,20 @@ const CategoryRail: React.FC<CategoryRailProps> = ({
   }, []);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, compact && styles.containerCompact]}>
       <ScrollView
         ref={scrollViewRef}
         horizontal
         showsHorizontalScrollIndicator={false}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-        style={styles.scrollViewStyle}
+        contentContainerStyle={[
+          styles.scrollContent,
+          compact && styles.scrollContentCompact,
+        ]}
+        style={[
+          styles.scrollViewStyle,
+          compact && styles.scrollViewStyleCompact,
+        ]}
         decelerationRate="fast"
         snapToInterval={snapToInterval}
         snapToAlignment="start"
@@ -129,7 +152,9 @@ const CategoryRail: React.FC<CategoryRailProps> = ({
       {/* Static scrollbar positioned below the buttons */}
       <View style={styles.staticScrollbar}>
         {/* Green indicator under the selected category */}
-        <View style={[styles.scrollbarIndicator, { left: getIndicatorPosition() }]} />
+        <View
+          style={[styles.scrollbarIndicator, { left: getIndicatorPosition() }]}
+        />
       </View>
     </View>
   );
@@ -143,15 +168,24 @@ const styles = StyleSheet.create({
     height: 90, // Increased height to accommodate static scrollbar
     position: 'relative',
   },
+  containerCompact: {
+    height: 50, // Reduced height for compact mode
+  },
   scrollViewStyle: {
     flexGrow: 0, // Prevent ScrollView from expanding unnecessarily
     height: 72, // Height for the category buttons
+  },
+  scrollViewStyleCompact: {
+    height: 42, // Reduced height for compact mode
   },
   scrollContent: {
     paddingHorizontal: CONTAINER_PADDING,
     paddingVertical: 12,
     alignItems: 'center', // Center content vertically within the fixed height
     flexDirection: 'row', // Ensure horizontal layout for ScrollView
+  },
+  scrollContentCompact: {
+    paddingVertical: 6, // Reduced vertical padding for compact mode
   },
   staticScrollbar: {
     position: 'absolute',
@@ -200,6 +234,12 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  chipCompact: {
+    minHeight: 32, // Reduced height for compact mode
+    paddingVertical: 4,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+  },
   iconContainer: {
     height: 24,
     width: 24,
@@ -221,6 +261,10 @@ const styles = StyleSheet.create({
   chipTextActive: {
     color: '#FFFFFF',
     fontWeight: '600',
+  },
+  chipTextCompact: {
+    fontSize: 13, // Slightly smaller text for compact mode
+    marginTop: 0,
   },
   separator: {
     width: CHIP_SPACING,

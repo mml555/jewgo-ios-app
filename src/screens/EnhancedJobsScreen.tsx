@@ -96,7 +96,13 @@ const INDUSTRIES = [
   'Other',
 ];
 
-const EnhancedJobsScreen: React.FC = () => {
+interface EnhancedJobsScreenProps {
+  onScroll?: (offsetY: number) => void;
+}
+
+const EnhancedJobsScreen: React.FC<EnhancedJobsScreenProps> = ({
+  onScroll,
+}) => {
   const navigation = useNavigation();
   const {
     location,
@@ -931,6 +937,91 @@ const EnhancedJobsScreen: React.FC = () => {
     );
   };
 
+  // Handle scroll to report position to parent
+  const handleScrollEvent = useCallback(
+    (event: any) => {
+      const offsetY = event.nativeEvent.contentOffset.y;
+      onScroll?.(offsetY);
+    },
+    [onScroll],
+  );
+
+  // Render header with tabs, filters, and location banners
+  const renderListHeader = useCallback(() => {
+    return (
+      <>
+        {renderTabBar()}
+        {renderFilters()}
+
+        {/* Location Permission Banner */}
+        {!location && !permissionGranted && (
+          <View style={styles.locationPermissionBanner}>
+            <View style={styles.bannerContent}>
+              <Text style={styles.bannerIcon}>📍</Text>
+              <View style={styles.bannerTextContainer}>
+                <Text style={styles.bannerTitle}>Enable Location</Text>
+                <Text style={styles.bannerSubtitle}>
+                  See distances to nearby jobs
+                </Text>
+              </View>
+              <FastButton
+                title="Enable"
+                onPress={handleLocationPermissionRequest}
+                variant="outline"
+                size="small"
+                style={styles.bannerButtonStyle}
+                textStyle={styles.bannerButtonText}
+              />
+            </View>
+          </View>
+        )}
+
+        {/* Location Permission Granted but No Location Banner */}
+        {!location && permissionGranted && (
+          <View style={styles.locationPermissionBanner}>
+            <View style={styles.bannerContent}>
+              <Text style={styles.bannerIcon}>🔄</Text>
+              <View style={styles.bannerTextContainer}>
+                <Text style={styles.bannerTitle}>Refresh Location</Text>
+                <Text style={styles.bannerSubtitle}>
+                  Tap to get your current location
+                </Text>
+              </View>
+              <FastButton
+                title={locationLoading ? 'Getting...' : 'Refresh'}
+                onPress={handleLocationRefresh}
+                variant="outline"
+                size="small"
+                disabled={locationLoading}
+                loading={locationLoading}
+                style={styles.bannerButtonStyle}
+                textStyle={styles.bannerButtonText}
+              />
+            </View>
+          </View>
+        )}
+
+        {/* Location Enabled Indicator */}
+        {location && (
+          <View style={styles.locationIndicator}>
+            <Text style={styles.locationIndicatorText}>
+              📍 Location enabled - showing distances
+              {location.zipCode ? ` (${location.zipCode})` : ''}
+            </Text>
+          </View>
+        )}
+      </>
+    );
+  }, [
+    location,
+    permissionGranted,
+    locationLoading,
+    handleLocationPermissionRequest,
+    handleLocationRefresh,
+    renderTabBar,
+    renderFilters,
+  ]);
+
   const currentData = activeTab === 'jobs' ? jobListings : jobSeekerListings;
   debugLog(`🔍 Current tab: ${activeTab}, showing ${currentData.length} items`);
   debugLog(`🔍 Job listings count: ${jobListings.length}`);
@@ -956,67 +1047,6 @@ const EnhancedJobsScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      {renderTabBar()}
-      {renderFilters()}
-
-      {/* Location Permission Banner */}
-      {!location && !permissionGranted && (
-        <View style={styles.locationPermissionBanner}>
-          <View style={styles.bannerContent}>
-            <Text style={styles.bannerIcon}>📍</Text>
-            <View style={styles.bannerTextContainer}>
-              <Text style={styles.bannerTitle}>Enable Location</Text>
-              <Text style={styles.bannerSubtitle}>
-                See distances to nearby jobs
-              </Text>
-            </View>
-            <FastButton
-              title="Enable"
-              onPress={handleLocationPermissionRequest}
-              variant="outline"
-              size="small"
-              style={styles.bannerButtonStyle}
-              textStyle={styles.bannerButtonText}
-            />
-          </View>
-        </View>
-      )}
-
-      {/* Location Permission Granted but No Location Banner */}
-      {!location && permissionGranted && (
-        <View style={styles.locationPermissionBanner}>
-          <View style={styles.bannerContent}>
-            <Text style={styles.bannerIcon}>🔄</Text>
-            <View style={styles.bannerTextContainer}>
-              <Text style={styles.bannerTitle}>Refresh Location</Text>
-              <Text style={styles.bannerSubtitle}>
-                Tap to get your current location
-              </Text>
-            </View>
-            <FastButton
-              title={locationLoading ? 'Getting...' : 'Refresh'}
-              onPress={handleLocationRefresh}
-              variant="outline"
-              size="small"
-              disabled={locationLoading}
-              loading={locationLoading}
-              style={styles.bannerButtonStyle}
-              textStyle={styles.bannerButtonText}
-            />
-          </View>
-        </View>
-      )}
-
-      {/* Location Enabled Indicator */}
-      {location && (
-        <View style={styles.locationIndicator}>
-          <Text style={styles.locationIndicatorText}>
-            📍 Location enabled - showing distances
-            {location.zipCode ? ` (${location.zipCode})` : ''}
-          </Text>
-        </View>
-      )}
-
       <FlatList
         data={currentData as any}
         renderItem={
@@ -1034,6 +1064,9 @@ const EnhancedJobsScreen: React.FC = () => {
             tintColor={Colors.primary.main}
           />
         }
+        onScroll={handleScrollEvent}
+        scrollEventThrottle={16}
+        ListHeaderComponent={renderListHeader}
         ListFooterComponent={renderFooter}
         ListEmptyComponent={renderEmpty}
         showsVerticalScrollIndicator={false}

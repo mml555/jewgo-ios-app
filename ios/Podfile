@@ -32,33 +32,11 @@ target 'JewgoAppFinal' do
       # :ccache_enabled => true
     )
     
-    # Add react-native-vector-icons fonts to Xcode project
-    require 'xcodeproj'
-    
-    fonts_dir = File.join(installer.sandbox.root, '../JewgoAppFinal')
-    fonts = ['Feather.ttf', 'Ionicons.ttf', 'MaterialCommunityIcons.ttf', 'MaterialIcons.ttf']
-    project_path = File.join(installer.sandbox.root, '../JewgoAppFinal.xcodeproj')
-    project = Xcodeproj::Project.open(project_path)
-    
-    # Copy fonts to project directory
-    fonts.each do |font|
-      source = File.join(installer.sandbox.root, "../../node_modules/react-native-vector-icons/Fonts/#{font}")
-      dest = File.join(fonts_dir, font)
-      FileUtils.cp(source, dest) unless File.exist?(dest)
-    end
-    
-    # Add fonts to Xcode project resources
-    target = project.targets.first
-    fonts_group = project.main_group.find_subpath('JewgoAppFinal', true)
-    
-    fonts.each do |font|
-      font_path = File.join(fonts_dir, font)
-      unless target.resources_build_phase.files.any? { |f| f.file_ref && f.file_ref.path == font }
-        file_ref = fonts_group.new_reference(font)
-        target.resources_build_phase.add_file_reference(file_ref)
+    # Fix deployment target warnings
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each do |config|
+        config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.0'
       end
     end
-    
-    project.save
   end
 end
