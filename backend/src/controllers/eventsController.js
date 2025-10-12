@@ -1,6 +1,10 @@
 const db = require('../database/connection');
 const logger = require('../utils/logger');
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+
+// Initialize Stripe only if API key is provided (optional for development/testing)
+const stripe = process.env.STRIPE_SECRET_KEY
+  ? require('stripe')(process.env.STRIPE_SECRET_KEY)
+  : null;
 
 class EventsController {
   // ============================================================================
@@ -30,29 +34,33 @@ class EventsController {
   // NEW HELPER METHODS FOR ENHANCED FEATURES
   // ============================================================================
 
-  static formatEventDateRange(startDate, endDate, timezone = 'America/New_York') {
+  static formatEventDateRange(
+    startDate,
+    endDate,
+    timezone = 'America/New_York',
+  ) {
     try {
       const start = new Date(startDate);
       const end = endDate ? new Date(endDate) : start;
-      
+
       const startDateStr = start.toLocaleDateString('en-US', {
         month: 'long',
         day: 'numeric',
-        timeZone: timezone
+        timeZone: timezone,
       });
-      
+
       const startTimeStr = start.toLocaleTimeString('en-US', {
         hour: 'numeric',
         minute: '2-digit',
         hour12: true,
-        timeZone: timezone
+        timeZone: timezone,
       });
-      
+
       const startDayStr = start.toLocaleDateString('en-US', {
         weekday: 'long',
-        timeZone: timezone
+        timeZone: timezone,
       });
-      
+
       if (start.toDateString() === end.toDateString()) {
         // Single day event
         return `${startDateStr} ${startDayStr} ${startTimeStr}`;
@@ -61,7 +69,7 @@ class EventsController {
         const endDateStr = end.toLocaleDateString('en-US', {
           month: 'long',
           day: 'numeric',
-          timeZone: timezone
+          timeZone: timezone,
         });
         return `${startDateStr}-${endDateStr} ${startDayStr} ${startTimeStr}`;
       }
@@ -75,20 +83,20 @@ class EventsController {
     const eventUrl = `${baseUrl}/events/${eventId}`;
     const encodedTitle = encodeURIComponent(title);
     const encodedUrl = encodeURIComponent(eventUrl);
-    
+
     return {
       whatsapp: `whatsapp://send?text=${encodedTitle}%20-%20${encodedUrl}`,
       facebook: `fb://share?link=${encodedUrl}`,
       twitter: `twitter://post?message=${encodedTitle}%20-%20${encodedUrl}`,
       email: `mailto:?subject=${encodedTitle}&body=${encodedUrl}`,
-      copy_link: eventUrl
+      copy_link: eventUrl,
     };
   }
 
   static async getEventCategories() {
     try {
       const result = await db.query(
-        'SELECT * FROM event_categories WHERE is_active = true ORDER BY sort_order'
+        'SELECT * FROM event_categories WHERE is_active = true ORDER BY sort_order',
       );
       return result.rows;
     } catch (error) {
@@ -100,7 +108,7 @@ class EventsController {
   static async getEventTypes() {
     try {
       const result = await db.query(
-        'SELECT * FROM event_types WHERE is_active = true ORDER BY sort_order'
+        'SELECT * FROM event_types WHERE is_active = true ORDER BY sort_order',
       );
       return result.rows;
     } catch (error) {
@@ -244,6 +252,13 @@ class EventsController {
       // If paid event, create payment intent
       let paymentIntent = null;
       if (isPaid) {
+        if (!stripe) {
+          logger.error('❌ Stripe not configured but paid event requested');
+          return res.status(500).json({
+            success: false,
+            error: 'Payment processing not available',
+          });
+        }
         paymentIntent = await stripe.paymentIntents.create({
           amount: 999, // $9.99
           currency: 'usd',
@@ -490,9 +505,10 @@ class EventsController {
     try {
       const { id } = req.params;
       const userId = req.user?.id;
-      
+
       // Strip "guest_" prefix if present - guest IDs aren't valid UUIDs for database queries
-      const cleanUserId = userId && !userId.startsWith('guest_') ? userId : null;
+      const cleanUserId =
+        userId && !userId.startsWith('guest_') ? userId : null;
 
       // Query directly from events table instead of view to avoid GROUP BY issues
       let query = `
@@ -630,12 +646,10 @@ class EventsController {
 
       if (event.status !== 'approved') {
         await client.query('ROLLBACK');
-        return res
-          .status(400)
-          .json({
-            error: 'Event is not accepting RSVPs',
-            code: 'EVENT_NOT_ACTIVE',
-          });
+        return res.status(400).json({
+          error: 'Event is not accepting RSVPs',
+          code: 'EVENT_NOT_ACTIVE',
+        });
       }
 
       // Check capacity
@@ -964,6 +978,16 @@ class EventsController {
       }
 
       // Verify payment with Stripe
+      if (!stripe) {
+        logger.error(
+          '❌ Stripe not configured but payment verification requested',
+        );
+        await client.query('ROLLBACK');
+        return res.status(500).json({
+          success: false,
+          error: 'Payment processing not available',
+        });
+      }
       const paymentIntent = await stripe.paymentIntents.retrieve(
         paymentIntentId,
       );
