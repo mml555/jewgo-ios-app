@@ -2,7 +2,12 @@ import React, { Component, ReactNode, ErrorInfo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { errorLog } from '../utils/logger';
 import CrashReportingService from '../services/CrashReporting';
-import { Colors, Typography, Spacing, BorderRadius } from '../styles/designSystem';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+} from '../styles/designSystem';
 
 interface ScreenErrorBoundaryProps {
   children: ReactNode;
@@ -18,11 +23,14 @@ interface ScreenErrorBoundaryState {
 
 /**
  * Screen-Level Error Boundary Component
- * 
+ *
  * Lighter-weight error boundary for individual screens.
  * Provides navigation fallback instead of full app error.
  */
-class ScreenErrorBoundary extends Component<ScreenErrorBoundaryProps, ScreenErrorBoundaryState> {
+class ScreenErrorBoundary extends Component<
+  ScreenErrorBoundaryProps,
+  ScreenErrorBoundaryState
+> {
   constructor(props: ScreenErrorBoundaryProps) {
     super(props);
     this.state = {
@@ -31,20 +39,25 @@ class ScreenErrorBoundary extends Component<ScreenErrorBoundaryProps, ScreenErro
     };
   }
 
-  static getDerivedStateFromError(error: Error): Partial<ScreenErrorBoundaryState> {
+  static getDerivedStateFromError(
+    error: Error,
+  ): Partial<ScreenErrorBoundaryState> {
     return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     const { screenName } = this.props;
-    
+
     // Log error
-    errorLog(`ScreenErrorBoundary (${screenName || 'Unknown'}) caught an error:`, error);
+    errorLog(
+      `ScreenErrorBoundary (${screenName || 'Unknown'}) caught an error:`,
+      error,
+    );
 
     // Log to crash reporting
     try {
       const instance = CrashReportingService.getInstance();
-      instance.logError(error, {
+      instance.reportError(error, 'javascript_error', 'high', {
         componentStack: errorInfo.componentStack,
         type: 'screen_error_boundary',
         screen: screenName || 'unknown',
@@ -84,7 +97,9 @@ class ScreenErrorBoundary extends Component<ScreenErrorBoundaryProps, ScreenErro
 
           {__DEV__ && this.state.error && (
             <View style={styles.errorBox}>
-              <Text style={styles.errorText}>{this.state.error.toString()}</Text>
+              <Text style={styles.errorText}>
+                {this.state.error.toString()}
+              </Text>
             </View>
           )}
 
@@ -93,7 +108,9 @@ class ScreenErrorBoundary extends Component<ScreenErrorBoundaryProps, ScreenErro
           </TouchableOpacity>
 
           <Text style={styles.hint}>
-            {this.props.screenName ? `Screen: ${this.props.screenName}` : 'Try going back'}
+            {this.props.screenName
+              ? `Screen: ${this.props.screenName}`
+              : 'Try going back'}
           </Text>
         </View>
       );
@@ -109,7 +126,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: Spacing.xl,
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.background.primary,
   },
   icon: {
     fontSize: 64,
@@ -141,7 +158,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Courier',
   },
   button: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
     paddingHorizontal: Spacing.xl,
     paddingVertical: Spacing.md,
     borderRadius: BorderRadius.md,
@@ -160,4 +177,3 @@ const styles = StyleSheet.create({
 });
 
 export default ScreenErrorBoundary;
-

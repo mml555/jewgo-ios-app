@@ -124,7 +124,7 @@ export const useFormAutoSave = (
   }, [formData, currentStep, isFormComplete, enabled]);
 
   // Trigger save with debouncing - use ref to avoid recreating
-  const triggerSaveRef = useRef<() => void>();
+  const triggerSaveRef = useRef<() => void>(() => {});
   triggerSaveRef.current = () => {
     if (debounceTimer.current) {
       clearTimeout(debounceTimer.current);

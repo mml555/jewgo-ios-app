@@ -535,7 +535,20 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
   const filteredData = useMemo(() => {
     // Use events data for events category
     if (categoryKey === 'events') {
-      return eventsData;
+      return eventsData.map(
+        (event: Event): CategoryItem => ({
+          id: event.id,
+          title: event.title,
+          description: event.description,
+          imageUrl: event.flyer_url || event.flyer_thumbnail_url || '',
+          category: 'events',
+          rating: undefined,
+          coordinate:
+            event.latitude && event.longitude
+              ? { latitude: event.latitude, longitude: event.longitude }
+              : undefined,
+        }),
+      );
     }
 
     // Use job seekers data if in seeking mode, otherwise use regular data
@@ -749,7 +762,7 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
         id: event.id,
         title: event.title,
         description: event.description,
-        imageUrl: event.flyer_url || event.flyer_thumbnail_url,
+        imageUrl: event.flyer_url || event.flyer_thumbnail_url || '',
         category: 'events',
         rating: undefined,
         coordinate:
@@ -762,14 +775,6 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
         price: event.is_free ? 'Free' : 'Paid',
         isOpen: event.status === 'approved',
         openWeekends: true,
-        phone: event.contact_phone,
-        address: event.address || event.location_display,
-        city: event.city,
-        state: event.state,
-        // Additional event-specific info in subtitle
-        subtitle: `${EventsService.formatEventDate(event.event_date)} • ${
-          event.venue_name || event.city || ''
-        }`,
       };
     },
     [],
@@ -1216,7 +1221,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     backgroundColor: Colors.primary.main,
     borderRadius: BorderRadius.md,
-    ...Shadows.small,
+    ...Shadows.sm,
   },
   advancedFiltersIcon: {
     fontSize: 16,

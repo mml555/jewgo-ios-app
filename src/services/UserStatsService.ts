@@ -1,4 +1,4 @@
-import { apiClient } from './api';
+import { apiService } from './api';
 import { errorLog, debugLog } from '../utils/logger';
 
 export interface UserStats {
@@ -38,7 +38,7 @@ class UserStatsService {
     try {
       debugLog('UserStatsService: Fetching user statistics from backend');
 
-      const response = await apiClient.get('/users/stats');
+      const response = await apiService.get('/users/stats');
 
       debugLog('UserStatsService: Backend response:', response);
 
@@ -86,19 +86,22 @@ class UserStatsService {
     try {
       debugLog('UserStatsService: Fetching user listings from backend');
 
-      const response = await apiClient.get('/users/listings');
+      const response = await apiService.get('/users/listings');
 
       debugLog('UserStatsService: Backend response:', response);
 
       if (response.success && response.data) {
         // Backend returns data array directly
-        const listingsData = Array.isArray(response.data) 
-          ? response.data 
+        const listingsData = Array.isArray(response.data)
+          ? response.data
           : response.data.data || [];
 
-        debugLog('UserStatsService: Successfully fetched user listings from DB', {
-          count: listingsData.length,
-        });
+        debugLog(
+          'UserStatsService: Successfully fetched user listings from DB',
+          {
+            count: listingsData.length,
+          },
+        );
 
         return {
           success: true,
@@ -172,4 +175,3 @@ class UserStatsService {
 }
 
 export default new UserStatsService();
-

@@ -3,7 +3,7 @@ import { errorLog, warnLog, debugLog } from '../utils/logger';
 
 /**
  * SafeAsyncStorage - A robust wrapper around AsyncStorage
- * 
+ *
  * Provides:
  * - Automatic error handling for all operations
  * - Fallback values on failures
@@ -17,7 +17,10 @@ class SafeAsyncStorage {
    * @param fallback Fallback value if item doesn't exist or operation fails
    * @returns The stored value or fallback
    */
-  async getItem(key: string, fallback: string | null = null): Promise<string | null> {
+  async getItem(
+    key: string,
+    fallback: string | null = null,
+  ): Promise<string | null> {
     try {
       const value = await AsyncStorage.getItem(key);
       return value !== null ? value : fallback;
@@ -67,7 +70,7 @@ class SafeAsyncStorage {
   async getJSON<T>(key: string, fallback: T | null = null): Promise<T | null> {
     try {
       const value = await AsyncStorage.getItem(key);
-      
+
       if (value === null) {
         return fallback;
       }
@@ -76,7 +79,10 @@ class SafeAsyncStorage {
         const parsed = JSON.parse(value);
         return parsed as T;
       } catch (parseError) {
-        warnLog(`SafeAsyncStorage.getJSON parse failed for key "${key}":`, parseError);
+        warnLog(
+          `SafeAsyncStorage.getJSON parse failed for key "${key}":`,
+          parseError,
+        );
         // Try to remove corrupted data
         await this.removeItem(key);
         return fallback;
@@ -113,11 +119,11 @@ class SafeAsyncStorage {
     try {
       const result = await AsyncStorage.multiGet(keys);
       const mapped: Record<string, string | null> = {};
-      
+
       result.forEach(([key, value]) => {
         mapped[key] = value;
       });
-      
+
       return mapped;
     } catch (error) {
       errorLog('SafeAsyncStorage.multiGet failed:', error);
@@ -184,7 +190,7 @@ class SafeAsyncStorage {
   async getAllKeys(): Promise<string[]> {
     try {
       const keys = await AsyncStorage.getAllKeys();
-      return keys;
+      return [...keys];
     } catch (error) {
       errorLog('SafeAsyncStorage.getAllKeys failed:', error);
       return [];
@@ -197,7 +203,10 @@ class SafeAsyncStorage {
    * @param value Object to merge
    * @returns true if successful, false otherwise
    */
-  async mergeJSON<T extends object>(key: string, value: Partial<T>): Promise<boolean> {
+  async mergeJSON<T extends object>(
+    key: string,
+    value: Partial<T>,
+  ): Promise<boolean> {
     try {
       const existing = await this.getJSON<T>(key, {} as T);
       const merged = { ...existing, ...value };
@@ -214,4 +223,3 @@ export const safeAsyncStorage = new SafeAsyncStorage();
 
 // Also export the class for testing/custom instances
 export default SafeAsyncStorage;
-

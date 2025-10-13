@@ -4,7 +4,12 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const compression = require('compression');
 const logger = require('./utils/logger');
-const { rateLimiters, getStats, clearBlockedIPs, resetCounts } = require('./middleware/rateLimiter');
+const {
+  rateLimiters,
+  getStats,
+  clearBlockedIPs,
+  resetCounts,
+} = require('./middleware/rateLimiter');
 require('dotenv').config();
 
 // Import database connection
@@ -616,10 +621,18 @@ process.on('SIGTERM', async () => {
 });
 
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   logger.startup(`Jewgo API server running on port ${PORT}`);
   logger.info(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-  logger.info(`🔐 Auth system: ${authSystem.healthCheck().status}`);
+
+  // Check auth system health
+  try {
+    const health = await authSystem.healthCheck();
+    logger.info(`🔐 Auth system: ${health.status}`);
+  } catch (error) {
+    logger.error(`🔐 Auth system: error - ${error.message}`);
+  }
+
   logger.info(`🔗 Health check: http://localhost:${PORT}/health`);
   logger.info(`🔑 Auth endpoints: http://localhost:${PORT}/api/v5/auth`);
   logger.info(`👥 RBAC endpoints: http://localhost:${PORT}/api/v5/rbac`);

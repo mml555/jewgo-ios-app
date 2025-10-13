@@ -23,17 +23,17 @@ const RootNavigator: React.FC = () => {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {hasAnyAuth ? (
         <Stack.Screen name="App">
-          {(props) => (
+          {() => (
             <ScreenErrorBoundary screenName="AppNavigator">
-              <AppNavigator {...props} />
+              <AppNavigator />
             </ScreenErrorBoundary>
           )}
         </Stack.Screen>
       ) : (
         <Stack.Screen name="Auth">
-          {(props) => (
+          {() => (
             <ScreenErrorBoundary screenName="AuthNavigator">
-              <AuthNavigator {...props} />
+              <AuthNavigator />
             </ScreenErrorBoundary>
           )}
         </Stack.Screen>

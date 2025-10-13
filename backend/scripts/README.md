@@ -18,6 +18,30 @@ node scripts/generate-secrets.js
 
 ---
 
+### 🔐 Generate JWT Secrets (Quick)
+
+Quick script to generate only JWT secrets for Render deployment.
+
+```bash
+./scripts/generate-jwt-secrets.sh
+```
+
+**Output**:
+
+- `JWT_SECRET` (64 characters)
+- `JWT_REFRESH_SECRET` (64 characters)
+- `MAGIC_LINK_SECRET` (optional, 32 characters)
+
+**When to use**:
+
+- Quick Render deployment setup
+- Need to regenerate JWT secrets
+- Forgot to save original secrets
+
+**Difference from generate-secrets.js**: Faster, shell-only, focused on JWT secrets.
+
+---
+
 ### 🗄️ Setup Database
 
 Initialize database with schema and sample data.
@@ -65,6 +89,44 @@ One-command deploy to Railway.
 - Authenticates with Railway
 - Links to your project
 - Deploys latest code
+
+---
+
+### 🗄️ Initialize Render Database
+
+Initialize database schema on Render platform.
+
+```bash
+# Set DATABASE_URL from Render database connection string
+export DATABASE_URL="postgresql://user:pass@host:port/dbname?sslmode=require"
+
+# Run initialization
+./scripts/render-init-db.sh
+```
+
+**What it does**:
+
+- Creates PostgreSQL extensions (PostGIS, pg_trgm)
+- Creates all application tables (users, entities, events, etc.)
+- Creates indexes for performance
+- Sets up RBAC (roles, permissions)
+- Sets up guest authentication system
+- Seeds initial data
+- Runs all migrations
+- Verifies setup with statistics
+
+**When to use**:
+
+- First-time Render deployment
+- After creating new Render database
+- Database needs to be reset
+- Migrations need to be applied
+
+**Requirements**:
+
+- `DATABASE_URL` environment variable set
+- `psql` PostgreSQL client installed
+- Database already created on Render
 
 ---
 
@@ -127,7 +189,7 @@ Press `Ctrl+C` to stop monitoring.
 
 ## Quick Start Workflow
 
-### 1. First Time Deployment
+### 1. First Time Deployment (Railway)
 
 ```bash
 # Step 1: Generate secrets
@@ -141,6 +203,29 @@ railway run ./scripts/setup-database.sh $DATABASE_URL
 
 # Step 4: Verify deployment
 ./scripts/health-check.sh https://your-app.railway.app
+```
+
+### 1b. First Time Deployment (Render)
+
+```bash
+# Step 1: Generate JWT secrets
+./scripts/generate-jwt-secrets.sh
+# Copy output to clipboard
+
+# Step 2: Create service on Render Dashboard
+# - Go to https://dashboard.render.com
+# - Create PostgreSQL database: jewgo-postgres
+# - Create Web Service from GitHub repo
+# - Set root directory to /backend
+# - Add environment variables (paste JWT secrets from Step 1)
+
+# Step 3: Initialize database (after database is created)
+# Get DATABASE_URL from Render database dashboard
+export DATABASE_URL="<connection-string-from-render>"
+./scripts/render-init-db.sh
+
+# Step 4: Verify deployment
+./scripts/health-check.sh https://your-app.onrender.com
 ```
 
 ### 2. Update Deployment
@@ -274,10 +359,19 @@ docker-compose up
 
 ## Additional Resources
 
-- [Railway Deployment Guide](../../docs/deployment/IOS_TESTING_SETUP.md)
-- [Quick Start Guide](../../docs/deployment/QUICK_START.md)
+### Deployment Guides
+
+- **Render Quick Fix**: [RENDER_QUICK_FIX.md](../../RENDER_QUICK_FIX.md) ← **Start here for Render issues**
+- **Render Detailed Fix**: [RENDER_DEPLOYMENT_FIX.md](../../RENDER_DEPLOYMENT_FIX.md)
+- **Railway Deployment**: [IOS_TESTING_SETUP.md](../../docs/deployment/IOS_TESTING_SETUP.md)
+- **Quick Start**: [QUICK_START.md](../../docs/deployment/QUICK_START.md)
+- **Deployment Checklist**: [DEPLOYMENT_CHECKLIST.md](../../docs/deployment/DEPLOYMENT_CHECKLIST.md)
+
+### Platform Documentation
+
 - [Railway Documentation](https://docs.railway.app)
 - [Render Documentation](https://render.com/docs)
+- [PostgreSQL Docs](https://www.postgresql.org/docs/)
 
 ---
 

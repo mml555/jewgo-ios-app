@@ -58,26 +58,12 @@ interface SpecialEditorState {
 const EditSpecialScreen: React.FC = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  
+
   // Validate route params
   const params = route.params as EditSpecialRouteParams | undefined;
-  
-  useEffect(() => {
-    if (!params?.storeId) {
-      Alert.alert(
-        'Error',
-        'Missing store information. Please try again.',
-        [{ text: 'OK', onPress: () => navigation.goBack() }]
-      );
-    }
-  }, [params, navigation]);
-  
-  if (!params?.storeId) {
-    return <LoadingScreen />;
-  }
-  
-  const { specialId, storeId } = params;
+  const { specialId, storeId } = params || {};
 
+  // Initialize hooks BEFORE any conditional returns
   const [loading, setLoading] = useState(!!specialId); // Only load if editing existing
   const [saving, setSaving] = useState(false);
   const [editorState, setEditorState] = useState<SpecialEditorState>({
@@ -101,6 +87,15 @@ const EditSpecialScreen: React.FC = () => {
 
   const isEditing = !!specialId;
   const pageTitle = isEditing ? 'Edit Special' : 'Create Special';
+
+  // Validation effect
+  useEffect(() => {
+    if (!storeId) {
+      Alert.alert('Error', 'Missing store information. Please try again.', [
+        { text: 'OK', onPress: () => navigation.goBack() },
+      ]);
+    }
+  }, [storeId, navigation]);
 
   // Load existing special data if editing
   useEffect(() => {
@@ -221,6 +216,11 @@ const EditSpecialScreen: React.FC = () => {
     },
     [],
   );
+
+  // If validation fails, show loading screen
+  if (!storeId) {
+    return <LoadingScreen />;
+  }
 
   if (loading) {
     return (

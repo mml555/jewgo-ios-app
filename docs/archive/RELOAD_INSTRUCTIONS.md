@@ -12,6 +12,7 @@ Metro bundler is running with cache reset.
 ### Next Steps for Frontend:
 
 #### For iOS:
+
 ```bash
 # Option 1: Run in simulator
 npx react-native run-ios
@@ -24,6 +25,7 @@ npx react-native run-ios --device "iPhone Name"
 ```
 
 #### For Android:
+
 ```bash
 # Option 1: Run in emulator
 npx react-native run-android
@@ -39,10 +41,12 @@ npx react-native run-android
 ### Option 1: Manual Deploy (Recommended)
 
 1. **Go to Render Dashboard**:
+
    - Visit: https://dashboard.render.com
    - Find your service: `jewgo-backend` (or similar name)
 
 2. **Trigger Manual Deploy**:
+
    - Click on your service
    - Click "Manual Deploy" → "Deploy latest commit"
    - Or click "Deploy" → "Clear build cache & deploy"
@@ -121,13 +125,15 @@ curl https://your-app.onrender.com/api/status
 2. **Deploy Backend** - Use one of the methods above
 3. **Wait for Backend** - 2-5 minutes for Render deploy
 4. **Run Frontend App**:
+
    ```bash
    # iOS
    npx react-native run-ios
-   
+
    # OR Android
    npx react-native run-android
    ```
+
 5. **Test Critical Flows**:
    - Login/Authentication
    - Navigation between screens
@@ -141,6 +147,7 @@ curl https://your-app.onrender.com/api/status
 ### Check Render Logs
 
 Look for common issues:
+
 - Database connection errors
 - Environment variable missing
 - Port binding issues
@@ -214,17 +221,20 @@ curl https://your-app.onrender.com/health
 ## 💡 Tips
 
 ### Metro Bundler
+
 - If Metro stops, run: `npx react-native start --reset-cache`
 - Clear cache if issues: `npx react-native start --reset-cache`
 - Check port 8081 is not in use
 
 ### Render Backend
+
 - First deploy after code changes takes longer (build + deploy)
 - Subsequent deploys are faster
 - Free tier may spin down after inactivity (takes ~30 sec to wake)
 - Check "Deploys" tab for deploy history
 
 ### Testing New Fixes
+
 - Test navigation with missing params (should show alert)
 - Test offline mode (should not crash)
 - Test form persistence (should save/restore)
@@ -239,6 +249,6 @@ curl https://your-app.onrender.com/health
 ---
 
 Need help? Check the logs:
+
 - Metro: `tail -f logs/metro.log`
 - Render: Dashboard → Logs tab
-

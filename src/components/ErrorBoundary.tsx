@@ -1,8 +1,19 @@
 import React, { Component, ReactNode, ErrorInfo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+} from 'react-native';
 import { errorLog } from '../utils/logger';
 import crashReportingService from '../services/CrashReporting';
-import { Colors, Typography, Spacing, BorderRadius } from '../styles/designSystem';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+} from '../styles/designSystem';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -19,7 +30,7 @@ interface ErrorBoundaryState {
 
 /**
  * Global Error Boundary Component
- * 
+ *
  * Catches JavaScript errors anywhere in the component tree,
  * logs the errors, and displays a fallback UI.
  */
@@ -46,7 +57,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
     // Log to crash reporting service
     try {
       const instance = crashReportingService.getInstance();
-      instance.logError(error, {
+      instance.reportError(error, 'javascript_error', 'high', {
         componentStack: errorInfo.componentStack,
         type: 'react_error_boundary',
       });
@@ -98,13 +109,16 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
           <ScrollView contentContainerStyle={styles.content}>
             <Text style={styles.title}>Oops! Something went wrong</Text>
             <Text style={styles.message}>
-              We're sorry for the inconvenience. The app encountered an unexpected error.
+              We're sorry for the inconvenience. The app encountered an
+              unexpected error.
             </Text>
 
             {__DEV__ && this.state.error && (
               <View style={styles.errorDetails}>
                 <Text style={styles.errorTitle}>Error Details (Dev Only):</Text>
-                <Text style={styles.errorText}>{this.state.error.toString()}</Text>
+                <Text style={styles.errorText}>
+                  {this.state.error.toString()}
+                </Text>
                 {this.state.errorInfo && (
                   <Text style={styles.errorStack}>
                     {this.state.errorInfo.componentStack}
@@ -132,7 +146,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.background.primary,
   },
   content: {
     flexGrow: 1,
@@ -178,7 +192,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Courier',
   },
   button: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary.main,
     paddingHorizontal: Spacing.xl,
     paddingVertical: Spacing.md,
     borderRadius: BorderRadius.md,
@@ -197,4 +211,3 @@ const styles = StyleSheet.create({
 });
 
 export default ErrorBoundary;
-

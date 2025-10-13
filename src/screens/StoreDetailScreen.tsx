@@ -17,6 +17,7 @@ import { ShtetlStore, Product } from '../types/shtetl';
 import ShtetlStoreGrid from '../components/ShtetlStoreGrid';
 import ProductCard from '../components/ProductCard';
 import LoadingScreen from './LoadingScreen';
+import Icon from '../components/Icon';
 import {
   Colors,
   Typography,
@@ -34,26 +35,12 @@ const { width: screenWidth } = Dimensions.get('window');
 const StoreDetailScreen: React.FC = () => {
   const route = useRoute();
   const navigation = useNavigation();
-  
+
   // Validate route params
   const params = route.params as StoreDetailParams | undefined;
-  
-  useEffect(() => {
-    if (!params?.storeId) {
-      Alert.alert(
-        'Error',
-        'Missing store information. Please try again.',
-        [{ text: 'OK', onPress: () => navigation.goBack() }]
-      );
-    }
-  }, [params, navigation]);
-  
-  if (!params?.storeId) {
-    return <LoadingScreen />;
-  }
-  
-  const { storeId } = params;
+  const storeId = params?.storeId || '';
 
+  // All hooks must be called before any conditional returns
   const [store, setStore] = useState<ShtetlStore | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -192,8 +179,23 @@ const StoreDetailScreen: React.FC = () => {
   }, [store]);
 
   useEffect(() => {
-    loadStoreData();
-  }, [loadStoreData]);
+    if (storeId) {
+      loadStoreData();
+    }
+  }, [loadStoreData, storeId]);
+
+  useEffect(() => {
+    if (!params?.storeId) {
+      Alert.alert('Error', 'Missing store information. Please try again.', [
+        { text: 'OK', onPress: () => navigation.goBack() },
+      ]);
+    }
+  }, [params, navigation]);
+
+  // Early return after all hooks
+  if (!params?.storeId) {
+    return <LoadingScreen />;
+  }
 
   const renderHeader = () => {
     if (!store) return null;
@@ -245,7 +247,7 @@ const StoreDetailScreen: React.FC = () => {
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.favoriteButton}>
-              <HeartIcon size={20} color={Colors.white} filled={true} />
+              <Icon name="heart" size={20} color={Colors.white} />
             </TouchableOpacity>
           </View>
         </View>

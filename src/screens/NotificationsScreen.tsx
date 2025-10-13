@@ -30,7 +30,6 @@ const NotificationsScreen: React.FC = () => {
     {
       id: '2',
       title: 'New Restaurant Added',
-      icon: EateryIcon,
       description: 'Kosher Deli & Market has been added to your area',
       time: '5 hours ago',
       isRead: false,
@@ -39,7 +38,6 @@ const NotificationsScreen: React.FC = () => {
     {
       id: '3',
       title: 'Special Offer Available',
-      icon: SpecialsIcon,
       description: '20% off your next meal at Kosher Deli & Market',
       time: '1 day ago',
       isRead: true,
@@ -56,7 +54,6 @@ const NotificationsScreen: React.FC = () => {
     {
       id: '5',
       title: 'Grocery Delivery Available',
-      icon: StoreIcon,
       description: 'Kosher Grocery now offers delivery to your area',
       time: '3 days ago',
       isRead: true,
@@ -115,16 +112,8 @@ const NotificationsScreen: React.FC = () => {
   };
 
   const getNotificationIconComponent = (type: string) => {
-    switch (type) {
-      case 'business':
-        return StoreIcon;
-      case 'service':
-        return StoreIcon;
-      case 'offer':
-        return SpecialsIcon;
-      default:
-        return null;
-    }
+    // Return null for now - icons will be rendered as emojis via getNotificationIcon
+    return null;
   };
 
   const unreadCount = notifications.filter(n => !n.isRead).length;

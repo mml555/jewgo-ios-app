@@ -43,7 +43,9 @@ const ClaimsTracker: React.FC<ClaimsTrackerProps> = ({
   }, [userId]);
 
   // Load user's claimed specials - stable with ref
-  const loadClaimsRef = useRef<(showLoading?: boolean) => Promise<void>>();
+  const loadClaimsRef = useRef<(showLoading?: boolean) => Promise<void>>(
+    async () => {},
+  );
   loadClaimsRef.current = async (showLoading = true) => {
     try {
       if (showLoading) setLoading(true);

@@ -585,7 +585,7 @@ const JobSeekerDetailScreen: React.FC = () => {
         <View style={styles.jobSeekerDetailsCard}>
           <Text style={styles.jobSeekerName}>{jobSeeker.full_name}</Text>
           <Text style={styles.jobSeekerTitle}>{jobSeeker.title}</Text>
-          
+
           <View style={styles.jobSeekerDetailsFooter}>
             <View style={styles.experienceTag}>
               <Text style={styles.experienceText}>
@@ -601,12 +601,16 @@ const JobSeekerDetailScreen: React.FC = () => {
         {/* About Job Seeker Card */}
         <View style={styles.aboutJobSeekerCard}>
           <Text style={styles.cardTitle}>About candidate</Text>
-          <Text style={styles.jobSeekerDescription}>{jobSeeker.summary || 'No summary available'}</Text>
+          <Text style={styles.jobSeekerDescription}>
+            {jobSeeker.summary || 'No summary available'}
+          </Text>
         </View>
 
         {/* Contact Information Card */}
         <View style={styles.contactCard}>
-          <Text style={styles.cardTitle}>Reach out to us! ({jobSeeker.full_name})</Text>
+          <Text style={styles.cardTitle}>
+            Reach out to us! ({jobSeeker.full_name})
+          </Text>
           <Text style={styles.contactInstructions}>
             Please call us or text on whatsapp or email for more information
           </Text>
@@ -632,7 +636,7 @@ const JobSeekerDetailScreen: React.FC = () => {
           >
             <Text style={styles.actionButtonIcon}>📱</Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity
             style={styles.actionButton}
             onPress={() => handleContact('email')}
@@ -640,7 +644,7 @@ const JobSeekerDetailScreen: React.FC = () => {
           >
             <Text style={styles.actionButtonIcon}>📧</Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity
             style={styles.actionButton}
             onPress={() => handleContact('linkedin')}
@@ -972,7 +976,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     padding: 18,
     borderRadius: 16,
-    ...Shadows.small,
+    ...Shadows.sm,
   },
   jobSeekerName: {
     fontSize: 22,
@@ -1018,7 +1022,7 @@ const styles = StyleSheet.create({
     marginVertical: 12,
     padding: 18,
     borderRadius: 16,
-    ...Shadows.small,
+    ...Shadows.sm,
   },
   cardTitle: {
     fontSize: 17,
@@ -1042,7 +1046,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     padding: 18,
     borderRadius: 16,
-    ...Shadows.small,
+    ...Shadows.sm,
   },
   contactInstructions: {
     fontSize: 14,
@@ -1059,7 +1063,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 12,
     alignItems: 'center',
-    ...Shadows.small,
+    ...Shadows.sm,
   },
   pdfButtonText: {
     fontSize: 15,

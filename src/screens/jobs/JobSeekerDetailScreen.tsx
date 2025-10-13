@@ -14,7 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import JobsService, { JobSeekerProfile } from '../../services/JobsService';
 import DetailHeaderBar from '../../components/DetailHeaderBar';
-import { 
+import {
   Colors,
   Spacing,
   Typography,
@@ -27,8 +27,10 @@ const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 // Enhanced responsive scaling
 const scale = (size: number) => Math.max(screenWidth / 375, 0.8) * size;
-const verticalScale = (size: number) => Math.max(screenHeight / 812, 0.8) * size;
-const moderateScale = (size: number, factor = 0.5) => size + (scale(size) - size) * factor;
+const verticalScale = (size: number) =>
+  Math.max(screenHeight / 812, 0.8) * size;
+const moderateScale = (size: number, factor = 0.5) =>
+  size + (scale(size) - size) * factor;
 
 // Screen size detection
 const isSmallScreen = screenHeight < 700;
@@ -72,14 +74,17 @@ const JobSeekerDetailScreen: React.FC = () => {
       console.log('🔍 Response keys:', Object.keys(response));
       console.log('🔍 Response.profile exists:', !!response.profile);
       console.log('🔍 Response.profile type:', typeof response.profile);
-      
+
       if (response.profile) {
         setProfile(response.profile);
         setIsSaved(response.profile.is_saved || false);
         console.log('✅ Profile loaded successfully:', response.profile.name);
       } else {
         console.log('❌ No profile data in response');
-        console.log('❌ Full response object:', JSON.stringify(response, null, 2));
+        console.log(
+          '❌ Full response object:',
+          JSON.stringify(response, null, 2),
+        );
         Alert.alert('Error', 'No profile data found');
       }
     } catch (error) {
@@ -158,7 +163,10 @@ const JobSeekerDetailScreen: React.FC = () => {
   };
 
   const handleReportPress = () => {
-    Alert.alert('Report Profile', 'Report this job seeker profile for inappropriate content.');
+    Alert.alert(
+      'Report Profile',
+      'Report this job seeker profile for inappropriate content.',
+    );
   };
 
   const handleSharePress = () => {
@@ -169,8 +177,10 @@ const JobSeekerDetailScreen: React.FC = () => {
   const getRelativeTime = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
-    const diffInDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
-    
+    const diffInDays = Math.floor(
+      (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24),
+    );
+
     if (diffInDays === 0) return 'Today';
     if (diffInDays === 1) return 'Yesterday';
     if (diffInDays < 7) return `${diffInDays} days ago`;
@@ -197,9 +207,13 @@ const JobSeekerDetailScreen: React.FC = () => {
           <Text style={styles.errorEmoji}>⚠️</Text>
           <Text style={styles.errorTitle}>Profile not found</Text>
           <Text style={styles.errorDescription}>
-            The job seeker profile you're looking for doesn't exist or has been removed.
+            The job seeker profile you're looking for doesn't exist or has been
+            removed.
           </Text>
-          <TouchableOpacity style={styles.retryButton} onPress={() => navigation.goBack()}>
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={() => navigation.goBack()}
+          >
             <Text style={styles.retryButtonText}>Go Back</Text>
           </TouchableOpacity>
         </View>
@@ -227,7 +241,6 @@ const JobSeekerDetailScreen: React.FC = () => {
     contact_phone: profile.contact_phone,
   });
 
-
   return (
     <SafeAreaView style={styles.container}>
       {/* Detail Header Bar */}
@@ -241,13 +254,13 @@ const JobSeekerDetailScreen: React.FC = () => {
         onFavoritePress={handleSave}
         centerContent={{
           type: 'view_count',
-          count: profile.view_count || 0
+          count: profile.view_count || 0,
         }}
         rightContent={{
           type: 'share_favorite',
           shareCount: profile.view_count || 0,
           likeCount: profile.view_count || 0,
-          isFavorited: isSaved
+          isFavorited: isSaved,
         }}
       />
 
@@ -279,17 +292,24 @@ const JobSeekerDetailScreen: React.FC = () => {
 
           <Text style={styles.profileName}>{profile.name}</Text>
           <Text style={styles.profileTitle}>
-            Looking for {profile.industry_name || profile.job_type_name || 'opportunities'}
+            Looking for{' '}
+            {profile.industry_name || profile.job_type_name || 'opportunities'}
           </Text>
           <View style={styles.profileFooter}>
             <View style={styles.jobTypeTag}>
               <Text style={styles.jobTypeText}>
-                {profile.availability === 'immediate' ? 'Full Time' : 
-                profile.availability === '2-weeks' ? 'Part Time' : 
-                profile.availability === 'flexible' ? 'Contract' : 'Available'}
+                {profile.availability === 'immediate'
+                  ? 'Full Time'
+                  : profile.availability === '2-weeks'
+                  ? 'Part Time'
+                  : profile.availability === 'flexible'
+                  ? 'Contract'
+                  : 'Available'}
               </Text>
             </View>
-            <Text style={styles.profileId}>{profile.zip_code || profile.id?.slice(-5) || 'ID'}</Text>
+            <Text style={styles.profileId}>
+              {profile.zip_code || profile.id?.slice(-5) || 'ID'}
+            </Text>
           </View>
         </View>
 
@@ -320,14 +340,22 @@ const JobSeekerDetailScreen: React.FC = () => {
 
         {/* Contact Card */}
         <View style={styles.contactCard}>
-          <Text style={styles.contactTitle}>Reach out to me! ({profile.name?.split(' ')[0] || 'candidate'})</Text>
-          <Text style={styles.contactInstruction}>Please call me or text on whatsapp</Text>
+          <Text style={styles.contactTitle}>
+            Reach out to me! ({profile.name?.split(' ')[0] || 'candidate'})
+          </Text>
+          <Text style={styles.contactInstruction}>
+            Please call me or text on whatsapp
+          </Text>
         </View>
 
         {/* Resume Button */}
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.resumeButton}
-          onPress={() => profile.resume_url ? openLink(profile.resume_url) : Alert.alert('Resume', 'Resume not available')}
+          onPress={() =>
+            profile.resume_url
+              ? openLink(profile.resume_url)
+              : Alert.alert('Resume', 'Resume not available')
+          }
         >
           <Text style={styles.resumeButtonText}>📄 View PDF Resume</Text>
         </TouchableOpacity>
@@ -345,24 +373,31 @@ const JobSeekerDetailScreen: React.FC = () => {
           >
             <Text style={styles.actionButtonIcon}>📱</Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity
             style={styles.actionButton}
             onPress={() => {
               if (profile.contact_email) {
-                Linking.openURL(`mailto:${profile.contact_email}?subject=Interested in your profile`);
+                Linking.openURL(
+                  `mailto:${profile.contact_email}?subject=Interested in your profile`,
+                );
               }
             }}
             activeOpacity={0.7}
           >
             <Text style={styles.actionButtonIcon}>📧</Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity
             style={styles.actionButton}
             onPress={() => {
               if (profile.contact_phone) {
-                Linking.openURL(`https://wa.me/${profile.contact_phone.replace(/[^\d]/g, '')}`);
+                Linking.openURL(
+                  `https://wa.me/${profile.contact_phone.replace(
+                    /[^\d]/g,
+                    '',
+                  )}`,
+                );
               }
             }}
             activeOpacity={0.7}
@@ -439,7 +474,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     padding: scale(18),
     borderRadius: moderateScale(14),
-    ...Shadows.small,
+    ...Shadows.sm,
   },
   profileName: {
     fontSize: moderateScale(20),
@@ -495,7 +530,7 @@ const styles = StyleSheet.create({
     borderRadius: scale(20),
     borderWidth: 2,
     borderColor: Colors.white,
-    ...Shadows.small,
+    ...Shadows.sm,
   },
   placeholderImage: {
     backgroundColor: '#666666',
@@ -517,7 +552,7 @@ const styles = StyleSheet.create({
     marginBottom: verticalScale(4),
     padding: scale(18),
     borderRadius: moderateScale(14),
-    ...Shadows.small,
+    ...Shadows.sm,
   },
   aboutTitle: {
     fontSize: moderateScale(17),
@@ -540,7 +575,7 @@ const styles = StyleSheet.create({
     borderRadius: moderateScale(14),
     marginTop: verticalScale(4),
     marginBottom: verticalScale(12),
-    ...Shadows.small,
+    ...Shadows.sm,
   },
   skillsTitle: {
     fontSize: moderateScale(17),
@@ -572,7 +607,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     padding: scale(18),
     borderRadius: moderateScale(14),
-    ...Shadows.small,
+    ...Shadows.sm,
   },
   contactTitle: {
     fontSize: moderateScale(17),
@@ -591,7 +626,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     minHeight: verticalScale(52),
     justifyContent: 'center',
-    ...Shadows.small,
+    ...Shadows.sm,
   },
   resumeButtonText: {
     fontSize: moderateScale(15),

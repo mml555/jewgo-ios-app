@@ -7,6 +7,7 @@
 ## Quick Reference
 
 ### Import Replacement
+
 ```typescript
 // OLD
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -18,6 +19,7 @@ import { safeAsyncStorage } from './SafeAsyncStorage';
 ### Common Patterns
 
 #### Pattern 1: Get String
+
 ```typescript
 // OLD
 const value = await AsyncStorage.getItem(KEY);
@@ -29,6 +31,7 @@ const value = await safeAsyncStorage.getItem(KEY, 'default');
 ```
 
 #### Pattern 2: Set String
+
 ```typescript
 // OLD
 await AsyncStorage.setItem(KEY, value);
@@ -38,6 +41,7 @@ await safeAsyncStorage.setItem(KEY, value);
 ```
 
 #### Pattern 3: Get JSON
+
 ```typescript
 // OLD
 const stored = await AsyncStorage.getItem(KEY);
@@ -50,6 +54,7 @@ const data = await safeAsyncStorage.getJSON<Type>(KEY, defaultValue);
 ```
 
 #### Pattern 4: Set JSON
+
 ```typescript
 // OLD
 await AsyncStorage.setItem(KEY, JSON.stringify(object));
@@ -59,6 +64,7 @@ await safeAsyncStorage.setJSON(KEY, object);
 ```
 
 #### Pattern 5: Remove
+
 ```typescript
 // OLD
 await AsyncStorage.removeItem(KEY);
@@ -68,6 +74,7 @@ await safeAsyncStorage.removeItem(KEY);
 ```
 
 #### Pattern 6: Clear All
+
 ```typescript
 // OLD
 await AsyncStorage.clear();
@@ -86,18 +93,15 @@ await safeAsyncStorage.clear();
 **Status**: Import updated, need to update 7 calls
 
 **Lines to update**:
+
 - Line 51: `await AsyncStorage.getItem(this.GUEST_TOKEN_KEY)`
   - → `await safeAsyncStorage.getItem(this.GUEST_TOKEN_KEY)`
-  
 - Line 52: `await AsyncStorage.getItem(this.GUEST_SESSION_KEY)`
   - → `await safeAsyncStorage.getItem(this.GUEST_SESSION_KEY)`
-  
 - Lines 176-180: Two setItem calls with JSON.stringify
   - → Use `safeAsyncStorage.setItem()` or `setJSON()` as appropriate
-  
 - Lines 287-288: Two removeItem calls
   - → `await safeAsyncStorage.removeItem(key)`
-  
 - Line 318: `await AsyncStorage.getItem(this.GUEST_TOKEN_KEY)`
   - → `await safeAsyncStorage.getItem(this.GUEST_TOKEN_KEY)`
 
@@ -107,6 +111,7 @@ await safeAsyncStorage.clear();
 **Why Critical**: Handles form autosave, data loss prevention
 
 **Typical usage**: Lots of JSON get/set operations
+
 - Look for patterns like `JSON.parse(await AsyncStorage.getItem(...))`
 - Replace with `await safeAsyncStorage.getJSON<Type>(...)`
 
@@ -157,6 +162,7 @@ await safeAsyncStorage.clear();
 For each service file:
 
 ### Step 1: Update Import
+
 ```bash
 # Find the line
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -166,6 +172,7 @@ import { safeAsyncStorage } from './SafeAsyncStorage';
 ```
 
 ### Step 2: Find All AsyncStorage Calls
+
 ```bash
 # Use grep to find all calls in a file
 grep -n "AsyncStorage\." path/to/file.ts
@@ -176,6 +183,7 @@ grep -n "AsyncStorage\." path/to/file.ts
 Read the context around each call and apply the appropriate pattern from above.
 
 ### Step 4: Test
+
 ```bash
 # Run linter
 npx eslint src/services/[filename].ts --fix
@@ -223,6 +231,7 @@ After migrating each service:
 ## Common Pitfalls
 
 ### ❌ DON'T Do This:
+
 ```typescript
 // This will cause issues
 const data = await safeAsyncStorage.getItem(KEY);
@@ -230,18 +239,21 @@ const obj = JSON.parse(data); // ❌ data might be null!
 ```
 
 ### ✅ DO This Instead:
+
 ```typescript
 const obj = await safeAsyncStorage.getJSON<MyType>(KEY);
 // obj is already parsed, null-safe
 ```
 
 ### ❌ DON'T Do This:
+
 ```typescript
 await safeAsyncStorage.setItem(KEY, JSON.stringify(obj));
 // Unnecessary stringify
 ```
 
 ### ✅ DO This Instead:
+
 ```typescript
 await safeAsyncStorage.setJSON(KEY, obj);
 // Handles stringify internally
@@ -287,4 +299,3 @@ If you encounter errors during migration:
 
 **Status**: 2/11 services complete (AuthService, GuestService import updated)  
 **Remaining**: 9 services, ~45 AsyncStorage calls
-

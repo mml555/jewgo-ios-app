@@ -61,7 +61,9 @@ export const useFavorites = (): UseFavoritesReturn => {
   const FOCUS_RELOAD_DELAY = 2000; // Only reload on focus if >2s since last load
 
   // Use ref to store loading function to avoid recreating callbacks
-  const loadFavoritesRef = useRef<(reset?: boolean) => Promise<void>>();
+  const loadFavoritesRef = useRef<
+    (reset?: boolean, forcedReload?: boolean) => Promise<void>
+  >(async () => {});
   const currentOffsetRef = useRef(currentOffset);
   const loadingRef = useRef(loading);
   const lastLoadTimeRef = useRef(lastLoadTime);
@@ -75,7 +77,10 @@ export const useFavorites = (): UseFavoritesReturn => {
     loadingMoreRef.current = loadingMore;
   }, [currentOffset, loading, lastLoadTime, loadingMore]);
 
-  loadFavoritesRef.current = async (reset: boolean = true, forcedReload: boolean = false) => {
+  loadFavoritesRef.current = async (
+    reset: boolean = true,
+    forcedReload: boolean = false,
+  ) => {
     try {
       // Prevent multiple simultaneous calls
       if ((loadingRef.current || loadingMoreRef.current) && !forcedReload) {
@@ -87,9 +92,17 @@ export const useFavorites = (): UseFavoritesReturn => {
 
       // Debounce rapid calls
       const now = Date.now();
-      if (reset && now - lastLoadTimeRef.current < DEBOUNCE_DELAY && !forcedReload) {
+      if (
+        reset &&
+        now - lastLoadTimeRef.current < DEBOUNCE_DELAY &&
+        !forcedReload
+      ) {
         if (__DEV__) {
-          debugLog('🚫 Debouncing favorites load - too soon since last load:', now - lastLoadTimeRef.current, 'ms');
+          debugLog(
+            '🚫 Debouncing favorites load - too soon since last load:',
+            now - lastLoadTimeRef.current,
+            'ms',
+          );
         }
         return;
       }
@@ -155,9 +168,12 @@ export const useFavorites = (): UseFavoritesReturn => {
     }
   };
 
-  const loadFavorites = useCallback(async (reset: boolean = true, forcedReload: boolean = false) => {
-    await loadFavoritesRef.current?.(reset, forcedReload);
-  }, []);
+  const loadFavorites = useCallback(
+    async (reset: boolean = true, forcedReload: boolean = false) => {
+      await loadFavoritesRef.current?.(reset, forcedReload);
+    },
+    [],
+  );
 
   // Load favorites on mount only
   useEffect(() => {
@@ -173,10 +189,14 @@ export const useFavorites = (): UseFavoritesReturn => {
     const unsubscribe = navigation.addListener('focus', () => {
       const now = Date.now();
       const timeSinceLastLoad = now - lastLoadTimeRef.current;
-      
+
       if (timeSinceLastLoad > FOCUS_RELOAD_DELAY) {
         if (__DEV__) {
-          debugLog('🔄 Reloading favorites on focus - last load was', timeSinceLastLoad, 'ms ago');
+          debugLog(
+            '🔄 Reloading favorites on focus - last load was',
+            timeSinceLastLoad,
+            'ms ago',
+          );
         }
         loadFavoritesRef.current?.(true, false); // Don't force, use normal debouncing
       } else if (__DEV__) {
@@ -193,11 +213,15 @@ export const useFavorites = (): UseFavoritesReturn => {
     const unsubscribe = favoritesEventService.addListener(() => {
       const now = Date.now();
       const timeSinceLastLoad = now - lastLoadTimeRef.current;
-      
+
       // Only reload if enough time has passed OR this is likely a user action
       if (timeSinceLastLoad > DEBOUNCE_DELAY) {
         if (__DEV__) {
-          debugLog('🔄 Reloading favorites on event - last load was', timeSinceLastLoad, 'ms ago');
+          debugLog(
+            '🔄 Reloading favorites on event - last load was',
+            timeSinceLastLoad,
+            'ms ago',
+          );
         }
         loadFavoritesRef.current?.(true, false);
       } else if (__DEV__) {

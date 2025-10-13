@@ -2,9 +2,26 @@
 
 A React Native iOS application for the Jewish community, providing easy access to local Jewish businesses, services, and community resources.
 
+## 📚 Documentation
+
+- **[Complete Documentation Index](docs/INDEX.md)** - Find all project documentation
+- **[Deployment Status](DEPLOYMENT_STATUS.md)** - Current deployment status
+- **[Testing Guide](TESTING_GUIDE.md)** - How to run tests
+- **[Deployment Guide](RENDER_NEON_QUICK_FIX.md)** - Deploy to production (Render + Neon)
+
+**Quick Links**:
+
+- [Deployment Checklist](docs/deployment/DEPLOYMENT_CHECKLIST.md)
+- [Backend Scripts](backend/scripts/README.md)
+- [Database Setup](database/README_EVENTS_SEEDING.md)
+- [Architecture Guide](docs/developer/ARCHITECTURE.md)
+
+---
+
 ## 🏗️ Features
 
 ### Core Functionality
+
 - **Bottom Tab Navigation**: Home, Favorites, Specials, Notifications, Profile
 - **Search Functionality**: Debounced search with real-time filtering
 - **Category System**: 8 categories (Mikvah, Eatery, Shul, Stores, Shuk, Shtetl, Events, Jobs)
@@ -13,12 +30,14 @@ A React Native iOS application for the Jewish community, providing easy access t
 - **Detailed Views**: Comprehensive listing detail pages
 
 ### User Interface
+
 - **Custom Branding**: JEWGO logo and app icon integration
 - **Modern Design**: Clean, iOS-native interface
 - **Accessibility**: Full accessibility support with proper labels and touch targets
 - **Performance**: Optimized with React.memo, useCallback, and efficient rendering
 
 ### Listing Features
+
 - **Image Carousels**: Swipeable image galleries
 - **Reviews System**: Comprehensive review modal with sorting and pagination
 - **Hours Display**: Dynamic hours with open/closed status
@@ -38,6 +57,7 @@ A React Native iOS application for the Jewish community, providing easy access t
 ## 📱 Screenshots
 
 The app features:
+
 - Custom JEWGO branding with green color scheme
 - Category-based browsing with horizontal scroll
 - Action buttons for Live Map, Add Category, and Filters
@@ -47,6 +67,7 @@ The app features:
 ## 🚀 Getting Started
 
 ### Prerequisites
+
 - Node.js 18+
 - Docker Desktop
 - Xcode 16+ (for iOS development)
@@ -55,17 +76,20 @@ The app features:
 ### Quick Start (Recommended)
 
 **One command to start everything:**
+
 ```bash
 ./scripts/start-dev.sh
 ```
 
 This script will automatically:
+
 - ✅ Start Docker services (PostgreSQL, Redis, Mailhog)
 - ✅ Start backend API server
 - ✅ Start Metro bundler
 - ✅ Build and launch iOS app
 
 **Stop everything:**
+
 ```bash
 ./scripts/stop-dev.sh
 ```
@@ -73,17 +97,20 @@ This script will automatically:
 ### Manual Installation
 
 1. **Clone the repository**
+
    ```bash
    git clone https://github.com/yourusername/jewgo-ios-app.git
    cd jewgo-ios-app
    ```
 
 2. **Start Docker services**
+
    ```bash
    docker-compose up -d
    ```
 
 3. **Install and start backend**
+
    ```bash
    cd backend
    npm install
@@ -91,6 +118,7 @@ This script will automatically:
    ```
 
 4. **Install and start frontend**
+
    ```bash
    cd ..
    npm install
@@ -139,6 +167,7 @@ src/
 ## 🎨 Design System
 
 ### Colors
+
 - **Primary Green**: `#74e1a0` (JEWGO logo)
 - **Light Green**: `#a5ffc6` (App icon)
 - **Dark Background**: `#292b2d` (Logo background)
@@ -146,10 +175,12 @@ src/
 - **Text**: `#000000` (Primary), `#666666` (Secondary)
 
 ### Typography
+
 - **System Font**: iOS San Francisco font family
 - **Sizes**: 12px (small), 14px (body), 16px (large), 18px+ (headers)
 
 ### Components
+
 - **Cards**: Rounded corners, subtle shadows, floating design
 - **Buttons**: Pill-shaped with proper touch targets (44px minimum)
 - **Icons**: Unicode characters and custom SVG components
@@ -157,12 +188,14 @@ src/
 ## 🔧 Configuration
 
 ### iOS Setup
+
 - **Deployment Target**: iOS 13.0+
 - **Xcode Version**: 16+
 - **Simulator**: iPhone 16 (tested)
 - **App Icon**: Custom JEWGO logo integrated
 
 ### Dependencies
+
 - `react-native-svg`: Custom logo rendering
 - `react-native-safe-area-context`: Safe area handling
 - `react-native-screens`: Navigation optimization
@@ -171,6 +204,7 @@ src/
 ## 📋 Features in Detail
 
 ### Category System
+
 - **Mikvah**: Ritual baths and facilities
 - **Eatery**: Kosher restaurants and food
 - **Shul**: Synagogues and prayer spaces
@@ -181,12 +215,14 @@ src/
 - **Jobs**: Employment opportunities
 
 ### Search & Filtering
+
 - **Real-time Search**: 250ms debounced input
 - **Category Filtering**: Dynamic content based on selection
 - **Infinite Scroll**: Efficient pagination
 - **Pull-to-Refresh**: Manual data refresh
 
 ### Listing Details
+
 - **Image Gallery**: Up to 5 swipeable images
 - **Reviews Modal**: Sortable reviews with pagination
 - **Hours Display**: Current status with weekly schedule
@@ -195,21 +231,107 @@ src/
 
 ## 🚀 Deployment
 
-### App Store Preparation
-- App icon assets generated for all required sizes
-- Proper iOS bundle configuration
-- Accessibility compliance
-- Performance optimizations
+**Current Production Setup**: Render (Backend) + Neon (Database)
 
-### Build Process
+### Quick Deployment
+
+**Backend URL**: https://jewgo-app-oyoh.onrender.com
+
+**Need to deploy or fix issues?**
+
+1. **[Render + Neon Quick Fix](RENDER_NEON_QUICK_FIX.md)** - Fix deployment issues (20 min)
+2. **[Deployment Checklist](docs/deployment/DEPLOYMENT_CHECKLIST.md)** - Complete deployment guide
+3. **[Backend Scripts](backend/scripts/README.md)** - Deployment automation scripts
+
+### iOS App Store
+
 ```bash
 # Development build
 npx react-native run-ios
 
 # Production build (requires Xcode)
-# Open ios/JewgoAppFinal.xcworkspace in Xcode
-# Select Product > Archive for App Store submission
+# 1. Open ios/JewgoAppFinal.xcworkspace in Xcode
+# 2. Select Product > Archive for App Store submission
+# 3. Follow App Store Connect upload process
 ```
+
+**App Store Readiness**:
+
+- ✅ App icon assets (all sizes)
+- ✅ iOS bundle configuration
+- ✅ Accessibility compliance
+- ✅ Performance optimized
+- ✅ Error handling & crash prevention
+
+### Backend Deployment
+
+**Platform**: Render + Neon PostgreSQL
+
+**Quick Commands**:
+
+```bash
+# Generate JWT secrets
+./backend/scripts/generate-jwt-secrets.sh
+
+# Initialize Neon database
+export DATABASE_URL="<neon-connection-string>"
+./backend/scripts/render-init-db.sh
+
+# Health check
+./backend/scripts/health-check.sh https://jewgo-app-oyoh.onrender.com
+```
+
+See **[Backend Scripts README](backend/scripts/README.md)** for full documentation.
+
+## 🧪 Testing
+
+```bash
+# Run all tests
+npm test
+
+# Run specific test file
+npm test -- CategoryGridScreen.test.tsx
+
+# Run with coverage
+npm test -- --coverage
+
+# Run integration tests
+npm run test:integration
+```
+
+See **[Testing Guide](TESTING_GUIDE.md)** for detailed testing documentation.
+
+---
+
+## 📁 Project Structure
+
+```
+jewgo-ios-app/
+├── src/                    # React Native source code
+│   ├── components/         # Reusable components
+│   ├── screens/            # Screen components
+│   ├── navigation/         # Navigation configuration
+│   ├── services/           # API and business logic
+│   ├── hooks/              # Custom React hooks
+│   ├── types/              # TypeScript type definitions
+│   └── utils/              # Utility functions
+├── backend/                # Node.js backend API
+│   ├── src/                # Backend source code
+│   ├── scripts/            # Deployment & utility scripts
+│   └── migrations/         # Database migrations
+├── database/               # Database setup & migrations
+│   ├── init/               # Initial schema
+│   └── migrations/         # Schema changes
+├── docs/                   # Project documentation
+│   ├── deployment/         # Deployment guides
+│   ├── developer/          # Developer documentation
+│   ├── database/           # Database documentation
+│   └── archive/            # Historical docs
+└── ios/                    # iOS native code
+
+```
+
+---
 
 ## 🤝 Contributing
 
@@ -218,6 +340,13 @@ npx react-native run-ios
 3. Commit your changes (`git commit -m 'Add amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
+
+**Developer Resources**:
+
+- [Architecture Guide](docs/developer/ARCHITECTURE.md)
+- [Component Guide](docs/developer/COMPONENTS.md)
+- [Code Style Guide](docs/developer/CODE_STYLE.md)
+- [Git Workflow](docs/developer/GIT_WORKFLOW.md)
 
 ## 📄 License
 

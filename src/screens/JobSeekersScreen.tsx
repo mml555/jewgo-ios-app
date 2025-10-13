@@ -21,6 +21,7 @@ import {
 import { useLocation, calculateDistance } from '../hooks/useLocation';
 import { DistanceDisplay } from '../components/DistanceDisplay';
 import ActionBar from '../components/ActionBar';
+import Icon from '../components/Icon';
 import { debugLog, errorLog } from '../utils/logger';
 import jobSeekersService, {
   JobSeeker,
@@ -224,10 +225,10 @@ const JobSeekersScreen: React.FC = () => {
             accessibilityHint="Tap to toggle favorite status"
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <HeartIcon
+            <Icon
+              name="heart"
               size={18}
               color={isFavorited ? Colors.error : Colors.textSecondary}
-              filled={isFavorited}
             />
           </TouchableOpacity>
 

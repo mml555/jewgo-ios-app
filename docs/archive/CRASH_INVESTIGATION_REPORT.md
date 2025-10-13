@@ -25,6 +25,7 @@ I've conducted a comprehensive investigation of all potential crash-causing issu
 **Location**: Multiple screens
 
 **Files Affected**:
+
 - `src/screens/StoreDetailScreen.tsx` (Line 36)
 - `src/screens/ProductDetailScreen.tsx` (Line 34)
 - `src/screens/ProductManagementScreen.tsx` (Line 37)
@@ -36,6 +37,7 @@ I've conducted a comprehensive investigation of all potential crash-causing issu
 - `src/screens/AddCategoryScreen.tsx` (Line 302)
 
 **Issue**:
+
 ```typescript
 // Unsafe: No validation if params exist or have required fields
 const { storeId } = route.params as StoreDetailParams;
@@ -43,10 +45,12 @@ const { productId, storeId } = route.params as ProductDetailParams;
 ```
 
 **Impact**: If navigation occurs without required params, app crashes with:
+
 - `Cannot read property 'storeId' of undefined`
 - `TypeError: undefined is not an object`
 
 **Recommendation**:
+
 ```typescript
 // Safe: Validate params before use
 const { storeId } = (route.params as StoreDetailParams) || {};
@@ -67,6 +71,7 @@ if (!storeId) {
 **Location**: `src/services/JobsService.ts` (Lines 181-183)
 
 **Issue**:
+
 ```typescript
 // Throws error that may not be caught
 if (response.status === 403 || response.status === 401) {
@@ -77,6 +82,7 @@ if (response.status === 403 || response.status === 401) {
 **Impact**: When API returns 401/403, throws exception that could crash UI if not caught in calling code.
 
 **Recommendation**:
+
 - Return error response instead of throwing
 - Implement global error boundary
 - Add automatic token refresh logic
@@ -92,6 +98,7 @@ if (response.status === 403 || response.status === 401) {
 **Location**: 11 service files use AsyncStorage
 
 **Files**:
+
 - `src/services/GuestService.ts`
 - `src/services/FormPersistence.ts`
 - `src/services/LocationService.ts`
@@ -113,6 +120,7 @@ if (response.status === 403 || response.status === 401) {
 **Location**: Multiple files with setTimeout/setInterval (14 instances found)
 
 **Files**:
+
 - `src/hooks/useLocation.ts` (Lines 32, 466)
 - `src/screens/LiveMapScreen.tsx` (Lines 472, 484, 629, 769)
 - `src/components/CategoryCard.tsx` (Lines 191, 309)
@@ -136,6 +144,7 @@ if (response.status === 403 || response.status === 401) {
 **Location**: `src/components/Icon.tsx`
 
 **Previous Issue**:
+
 ```typescript
 } catch (error) {
   throw error;  // ❌ THIS WAS CAUSING THE CRASH
@@ -143,6 +152,7 @@ if (response.status === 403 || response.status === 401) {
 ```
 
 **Fix Applied**:
+
 ```typescript
 } catch (error) {
   console.warn('Font preload attempted but encountered issue:', error);
@@ -164,6 +174,7 @@ if (response.status === 403 || response.status === 401) {
 **Issue**: 792 console.log/debugLog/errorLog statements across 114 files
 
 **Impact**:
+
 - Memory pressure from string concatenation
 - Performance overhead in loops
 - Console buffer overflow
@@ -180,6 +191,7 @@ if (response.status === 403 || response.status === 401) {
 **Issue**: Infinite reverse geocoding loop every 100ms
 
 **Fix Applied** (`src/hooks/useLocation.ts`):
+
 - `enableHighAccuracy`: true → false
 - `distanceFilter`: 10m → 100m
 - `interval`: 5s → 30s
@@ -195,6 +207,7 @@ if (response.status === 403 || response.status === 401) {
 **Status**: Fixed on Oct 12, 2025
 
 **Issues Fixed**:
+
 - Event card navigation lag (6s → <500ms)
 - Multiple re-renders on navigation
 - Unmemoized callbacks
@@ -212,6 +225,7 @@ if (response.status === 403 || response.status === 401) {
 **Issue**: No React Error Boundaries implemented
 
 **Recommendation**: Add ErrorBoundary components:
+
 ```typescript
 <ErrorBoundary fallback={<ErrorScreen />}>
   <RootNavigator />
@@ -230,6 +244,7 @@ if (response.status === 403 || response.status === 401) {
 **Issue**: URL parsing in try-catch but may throw in navigation calls
 
 **Current Code**:
+
 ```typescript
 try {
   const parsedUrl = new URL(url);
@@ -248,6 +263,7 @@ try {
 ### 1. ✅ Proper Error Handling in Services
 
 **Good Examples**:
+
 - `src/services/AuthService.ts`: Comprehensive try-catch blocks
 - `src/services/api.ts`: Proper error responses
 - `src/contexts/AuthContext.tsx`: Graceful error handling
@@ -255,6 +271,7 @@ try {
 ### 2. ✅ Memory Leak Prevention
 
 **Good Examples**:
+
 - `src/hooks/useFormAutoSave.ts`: Proper cleanup of timers and subscriptions
 - `src/components/CategoryCard.tsx`: Cleanup of timeout refs
 - `src/App.tsx`: Cleanup of deep link subscriptions
@@ -266,6 +283,7 @@ All TypeScript files pass linting with no errors.
 ### 4. ✅ Authentication Flow
 
 Proper handling of:
+
 - Guest sessions
 - User authentication
 - Token refresh
@@ -275,16 +293,16 @@ Proper handling of:
 
 ## 📊 Risk Matrix
 
-| Issue | Severity | Likelihood | Impact | Status |
-|-------|----------|------------|--------|--------|
-| Route params crash | HIGH | Medium | App crash | ⚠️ Not Fixed |
-| 401/403 throwing | HIGH | Medium | App crash | ⚠️ Not Fixed |
-| Icon font crash | CRITICAL | Low | App crash | ✅ Fixed |
-| Timer leaks | MEDIUM | Medium | Crash after hours | ⚠️ Partial |
-| AsyncStorage errors | MEDIUM | Low | Background crash | ⚠️ Not Fixed |
-| Location loop | CRITICAL | Low | Battery drain | ✅ Fixed |
-| Performance lag | MEDIUM | Low | Poor UX | ✅ Fixed |
-| Excessive logging | LOW | High | Memory pressure | ⚠️ Not Fixed |
+| Issue               | Severity | Likelihood | Impact            | Status       |
+| ------------------- | -------- | ---------- | ----------------- | ------------ |
+| Route params crash  | HIGH     | Medium     | App crash         | ⚠️ Not Fixed |
+| 401/403 throwing    | HIGH     | Medium     | App crash         | ⚠️ Not Fixed |
+| Icon font crash     | CRITICAL | Low        | App crash         | ✅ Fixed     |
+| Timer leaks         | MEDIUM   | Medium     | Crash after hours | ⚠️ Partial   |
+| AsyncStorage errors | MEDIUM   | Low        | Background crash  | ⚠️ Not Fixed |
+| Location loop       | CRITICAL | Low        | Battery drain     | ✅ Fixed     |
+| Performance lag     | MEDIUM   | Low        | Poor UX           | ✅ Fixed     |
+| Excessive logging   | LOW      | High       | Memory pressure   | ⚠️ Not Fixed |
 
 ---
 
@@ -293,11 +311,13 @@ Proper handling of:
 ### Priority 1: HIGH (Fix Immediately)
 
 1. **Add Route Parameter Validation**
+
    - Add null checks for route.params in all screens
    - Navigate back or show error if params missing
    - Estimated: 2-3 hours
 
 2. **Handle 401/403 Gracefully**
+
    - Return error objects instead of throwing
    - Add automatic retry/refresh logic
    - Show user-friendly messages
@@ -312,6 +332,7 @@ Proper handling of:
 ### Priority 2: MEDIUM (Fix Soon)
 
 4. **Verify Timer Cleanup**
+
    - Audit all setTimeout/setInterval calls
    - Ensure cleanup in useEffect returns
    - Add tests for memory leaks
@@ -326,8 +347,9 @@ Proper handling of:
 ### Priority 3: LOW (Nice to Have)
 
 6. **Reduce Logging**
+
    - Remove excessive console.log
-   - Gate debug logs behind __DEV__
+   - Gate debug logs behind **DEV**
    - Use conditional probability (Math.random())
    - Estimated: 3-4 hours
 
@@ -343,6 +365,7 @@ Proper handling of:
 ### Crash Testing Scenarios
 
 1. **Navigation Testing**
+
    ```typescript
    // Test missing params
    navigation.navigate('StoreDetail', {});
@@ -350,12 +373,14 @@ Proper handling of:
    ```
 
 2. **Auth Error Testing**
+
    ```typescript
    // Force 401/403 responses
    // Verify app doesn't crash
    ```
 
 3. **Memory Leak Testing**
+
    ```bash
    # Run app for 1+ hour
    # Monitor memory usage
@@ -373,6 +398,7 @@ Proper handling of:
 ## 📈 Metrics
 
 ### Code Health
+
 - **Total Files Analyzed**: 200+
 - **Linter Errors**: 0 ✅
 - **Console Logs**: 792 ⚠️
@@ -381,6 +407,7 @@ Proper handling of:
 - **Error Handlers**: 419 (try/catch blocks)
 
 ### Recent Fixes
+
 - iOS crash fix (Oct 13, 2025) ✅
 - Location loop fix (Oct 12, 2025) ✅
 - Performance optimization (Oct 12, 2025) ✅
@@ -391,6 +418,7 @@ Proper handling of:
 ## 📝 Code Examples
 
 ### ✅ Good Pattern: Safe Route Params
+
 ```typescript
 const params = route.params as MyParams | undefined;
 if (!params?.requiredId) {
@@ -401,12 +429,13 @@ if (!params?.requiredId) {
 ```
 
 ### ✅ Good Pattern: Error Boundary
+
 ```typescript
 class ErrorBoundary extends React.Component {
   componentDidCatch(error, errorInfo) {
     crashReportingService.logError(error, errorInfo);
   }
-  
+
   render() {
     if (this.state.hasError) {
       return <ErrorScreen onRetry={() => this.setState({ hasError: false })} />;
@@ -417,17 +446,19 @@ class ErrorBoundary extends React.Component {
 ```
 
 ### ✅ Good Pattern: Timer Cleanup
+
 ```typescript
 useEffect(() => {
   const timer = setTimeout(() => {
     // Do something
   }, 1000);
-  
+
   return () => clearTimeout(timer);
 }, []);
 ```
 
 ### ✅ Good Pattern: AsyncStorage Error Handling
+
 ```typescript
 try {
   const value = await AsyncStorage.getItem(key);
@@ -466,4 +497,3 @@ The app is **generally stable** with most critical crashes already fixed. The ma
 
 **Investigation Completed**: October 13, 2025  
 **Next Review**: After implementing Priority 1 fixes
-

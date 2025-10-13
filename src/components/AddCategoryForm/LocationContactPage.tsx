@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, TextInput, StyleSheet, ScrollView } from 'react-native';
+import Icon from '../Icon';
 
 interface LocationContactPageProps {
   formData: any;
@@ -114,7 +115,7 @@ const LocationContactPage: React.FC<LocationContactPageProps> = ({
       {/* Header Section */}
       <View style={styles.headerSection}>
         <View style={styles.headerEmojiContainer}>
-          <MapIcon size={24} color="#333" />
+          <Icon name="map-pin" size={24} color="#333" />
         </View>
         <Text style={styles.headerTitle}>Location & Contact</Text>
         <Text style={styles.headerSubtitle}>

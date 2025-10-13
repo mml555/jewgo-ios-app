@@ -564,6 +564,34 @@ const styles = StyleSheet.create({
   stepContainerDisabled: {
     opacity: 0.6,
   },
+  stepIndicator: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: Colors.gray300,
+    backgroundColor: Colors.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing.xs,
+  },
+  stepIndicatorCompleted: {
+    backgroundColor: Colors.success,
+    borderColor: Colors.success,
+  },
+  stepIndicatorCurrent: {
+    borderColor: Colors.primary.main,
+    backgroundColor: Colors.primary.main + '10',
+  },
+  stepIndicatorError: {
+    borderColor: Colors.error,
+    backgroundColor: Colors.error + '10',
+  },
+  stepCheckmark: {
+    color: Colors.white,
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
   stepNumber: {
     width: 32,
     height: 32,
@@ -572,6 +600,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: Spacing.xs,
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: Colors.textSecondary,
+  },
+  stepNumberCurrent: {
+    color: Colors.primary.main,
+  },
+  stepNumberError: {
+    color: Colors.error,
   },
   stepNumberText: {
     ...Typography.styles.body,
@@ -606,6 +643,22 @@ const styles = StyleSheet.create({
   stepSubtitleCurrent: {
     color: Colors.success,
   },
+  errorBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: Colors.error,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorBadgeText: {
+    color: Colors.white,
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
   stepProgressContainer: {
     width: '100%',
     marginTop: Spacing.xs,
@@ -627,6 +680,15 @@ const styles = StyleSheet.create({
     ...Typography.styles.caption,
     fontSize: 9,
     color: Colors.textTertiary,
+  },
+  stepConnector: {
+    width: 2,
+    height: 20,
+    backgroundColor: Colors.gray300,
+    marginVertical: 4,
+  },
+  stepConnectorCompleted: {
+    backgroundColor: Colors.success,
   },
   connector: {
     width: 20,

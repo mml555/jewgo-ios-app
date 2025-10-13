@@ -117,7 +117,8 @@ const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 // Responsive sizing based on screen dimensions
 const scale = (size: number) => (screenWidth / 375) * size; // Base width: 375 (iPhone SE)
 const verticalScale = (size: number) => (screenHeight / 812) * size; // Base height: 812 (iPhone 12)
-const moderateScale = (size: number, factor = 0.5) => size + (scale(size) - size) * factor;
+const moderateScale = (size: number, factor = 0.5) =>
+  size + (scale(size) - size) * factor;
 
 // Section Header Component
 interface SectionHeaderProps {
@@ -492,11 +493,12 @@ const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
         <View style={styles.jobDetailsCard}>
           <Text style={styles.jobTitle}>{job.title}</Text>
           <Text style={styles.jobSalary}>{getCompensationText()}</Text>
-          
+
           <View style={styles.jobDetailsFooter}>
             <View style={styles.jobTypeTag}>
               <Text style={styles.jobTypeText}>
-                {job.job_type.charAt(0).toUpperCase() + job.job_type.slice(1).replace('-', ' ')}
+                {job.job_type.charAt(0).toUpperCase() +
+                  job.job_type.slice(1).replace('-', ' ')}
               </Text>
             </View>
             <Text style={styles.jobLocation}>
@@ -507,8 +509,10 @@ const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
 
         {/* About Job Card */}
         <View style={styles.aboutJobCard}>
-          <Text style={[styles.cardTitle, { textAlign: 'center' }]}>About job</Text>
-          <ScrollView 
+          <Text style={[styles.cardTitle, { textAlign: 'center' }]}>
+            About job
+          </Text>
+          <ScrollView
             style={styles.descriptionScroll}
             contentContainerStyle={styles.descriptionContent}
             showsVerticalScrollIndicator={false}
@@ -520,7 +524,9 @@ const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
 
         {/* Contact Information Card */}
         <View style={styles.contactCard}>
-          <Text style={[styles.cardTitle, { textAlign: 'center' }]}>Reach out to us! ({job.poster_name || 'benjy'})</Text>
+          <Text style={[styles.cardTitle, { textAlign: 'center' }]}>
+            Reach out to us! ({job.poster_name || 'benjy'})
+          </Text>
           <Text style={styles.contactInstructions}>
             Please call us or text on whatsapp or email your resume to us
           </Text>
@@ -532,7 +538,9 @@ const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
             style={styles.pdfButtonContainer}
             onPress={async () => {
               try {
-                const supported = await Linking.canOpenURL(job.application_url!);
+                const supported = await Linking.canOpenURL(
+                  job.application_url!,
+                );
                 if (supported) {
                   await Linking.openURL(job.application_url!);
                 } else {
@@ -545,7 +553,9 @@ const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
             }}
             activeOpacity={0.7}
           >
-            <Text style={styles.pdfButtonText}>📄 View Job Application PDF</Text>
+            <Text style={styles.pdfButtonText}>
+              📄 View Job Application PDF
+            </Text>
           </TouchableOpacity>
         )}
 
@@ -562,24 +572,28 @@ const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
           >
             <Text style={styles.actionButtonIcon}>📱</Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity
             style={styles.actionButton}
             onPress={() => {
               if (job.contact_email) {
-                Linking.openURL(`mailto:${job.contact_email}?subject=Application for ${job.title}`);
+                Linking.openURL(
+                  `mailto:${job.contact_email}?subject=Application for ${job.title}`,
+                );
               }
             }}
             activeOpacity={0.7}
           >
             <Text style={styles.actionButtonIcon}>📧</Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity
             style={styles.actionButton}
             onPress={() => {
               if (job.contact_phone) {
-                Linking.openURL(`https://wa.me/${job.contact_phone.replace(/[^\d]/g, '')}`);
+                Linking.openURL(
+                  `https://wa.me/${job.contact_phone.replace(/[^\d]/g, '')}`,
+                );
               }
             }}
             activeOpacity={0.7}
@@ -651,7 +665,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     padding: scale(18),
     borderRadius: moderateScale(14),
-    ...Shadows.small,
+    ...Shadows.sm,
   },
   jobTitle: {
     fontSize: moderateScale(20),
@@ -698,7 +712,7 @@ const styles = StyleSheet.create({
     marginVertical: verticalScale(12),
     padding: scale(18),
     borderRadius: moderateScale(14),
-    ...Shadows.small,
+    ...Shadows.sm,
   },
   cardTitle: {
     fontSize: moderateScale(17),
@@ -725,7 +739,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     padding: scale(18),
     borderRadius: moderateScale(14),
-    ...Shadows.small,
+    ...Shadows.sm,
   },
   contactInstructions: {
     fontSize: moderateScale(14),
@@ -743,7 +757,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     minHeight: verticalScale(52),
     justifyContent: 'center',
-    ...Shadows.small,
+    ...Shadows.sm,
   },
   pdfButtonText: {
     fontSize: moderateScale(15),
