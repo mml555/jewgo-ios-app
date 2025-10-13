@@ -49,7 +49,9 @@ class GuestService {
   async initialize(): Promise<void> {
     try {
       const storedToken = await safeAsyncStorage.getItem(this.GUEST_TOKEN_KEY);
-      const storedSession = await safeAsyncStorage.getJSON<GuestSession>(this.GUEST_SESSION_KEY);
+      const storedSession = await safeAsyncStorage.getJSON<GuestSession>(
+        this.GUEST_SESSION_KEY,
+      );
 
       if (storedToken && storedSession) {
         // Check if session is still valid
@@ -175,10 +177,7 @@ class GuestService {
         this.GUEST_TOKEN_KEY,
         guestSession.sessionToken,
       );
-      await safeAsyncStorage.setJSON(
-        this.GUEST_SESSION_KEY,
-        guestSession,
-      );
+      await safeAsyncStorage.setJSON(this.GUEST_SESSION_KEY, guestSession);
 
       this.guestSession = guestSession;
       // Only log occasionally to avoid console spam
@@ -219,7 +218,7 @@ class GuestService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-Guest-Token': token,
+          Authorization: `Bearer ${token}`,
         },
       });
 
@@ -248,7 +247,7 @@ class GuestService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-Guest-Token': token,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ additionalHours }),
       });
@@ -269,7 +268,7 @@ class GuestService {
         await fetch(`${apiUrl}/guest/revoke`, {
           method: 'DELETE',
           headers: {
-            'X-Guest-Token': token,
+            Authorization: `Bearer ${token}`,
           },
         });
       }
@@ -295,10 +294,9 @@ class GuestService {
   // ==============================================
 
   isGuestAuthenticated(): boolean {
-    const isAuthenticated = (
+    const isAuthenticated =
       this.guestSession !== null &&
-      new Date(this.guestSession.expiresAt) > new Date()
-    );
+      new Date(this.guestSession.expiresAt) > new Date();
     // Removed excessive logging that was causing memory issues
     return isAuthenticated;
   }
@@ -361,7 +359,7 @@ class GuestService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-Guest-Token': token,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(userData),
       });
@@ -446,7 +444,7 @@ class GuestService {
 
     const headers = {
       ...options.headers,
-      'X-Guest-Token': token,
+      Authorization: `Bearer ${token}`,
     };
 
     return fetch(url, {
@@ -468,7 +466,7 @@ class GuestService {
         token ? 'present' : 'missing',
       );
     }
-    return token ? { 'X-Guest-Token': token } : {};
+    return token ? { Authorization: `Bearer ${token}` } : {};
   }
 }
 
