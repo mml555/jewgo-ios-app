@@ -13,6 +13,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { errorLog } from '../utils/logger';
+import { Typography } from '../styles/designSystem';
+import { configService } from '../config/ConfigService';
 // Using emoji icons instead of vector icons to avoid dependencies
 
 // Types for database entities
@@ -81,7 +83,8 @@ const DatabaseDashboard: React.FC = () => {
       setLoading(true);
       const startTime = Date.now();
 
-      const response = await fetch('http://127.0.0.1:3001/health', {
+      const apiUrl = configService.getApiUrl().replace('/api/v5', '');
+      const response = await fetch(`${apiUrl}/health`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -121,15 +124,13 @@ const DatabaseDashboard: React.FC = () => {
   // Fetch database statistics
   const fetchStats = useCallback(async () => {
     try {
-      const response = await fetch(
-        'http://127.0.0.1:3001/api/v5/dashboard/entities/stats',
-        {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+      const apiUrl = configService.getApiUrl();
+      const response = await fetch(`${apiUrl}/dashboard/entities/stats`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
         },
-      );
+      });
 
       if (response.ok) {
         const data = await response.json();
@@ -144,8 +145,9 @@ const DatabaseDashboard: React.FC = () => {
   const fetchEntities = useCallback(async () => {
     try {
       setLoading(true);
+      const apiUrl = configService.getApiUrl();
       const response = await fetch(
-        'http://127.0.0.1:3001/api/v5/dashboard/entities/recent?limit=100',
+        `${apiUrl}/dashboard/entities/recent?limit=100`,
         {
           method: 'GET',
           headers: {
@@ -176,16 +178,14 @@ const DatabaseDashboard: React.FC = () => {
   const updateEntity = useCallback(
     async (entityId: string, updates: Partial<DatabaseEntity>) => {
       try {
-        const response = await fetch(
-          `http://127.0.0.1:3001/api/v5/entities/${entityId}`,
-          {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(updates),
+        const apiUrl = configService.getApiUrl();
+        const response = await fetch(`${apiUrl}/entities/${entityId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
           },
-        );
+          body: JSON.stringify(updates),
+        });
 
         if (response.ok) {
           Alert.alert('Success', 'Entity updated successfully');
@@ -220,15 +220,13 @@ const DatabaseDashboard: React.FC = () => {
             style: 'destructive',
             onPress: async () => {
               try {
-                const response = await fetch(
-                  `http://127.0.0.1:3001/api/v5/entities/${entityId}`,
-                  {
-                    method: 'DELETE',
-                    headers: {
-                      'Content-Type': 'application/json',
-                    },
+                const apiUrl = configService.getApiUrl();
+                const response = await fetch(`${apiUrl}/entities/${entityId}`, {
+                  method: 'DELETE',
+                  headers: {
+                    'Content-Type': 'application/json',
                   },
-                );
+                });
 
                 if (response.ok) {
                   Alert.alert('Success', 'Entity deleted successfully');
@@ -911,6 +909,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     color: '#333',
+    fontFamily: Typography.fontFamily,
   },
   closeButton: {
     padding: 8,
