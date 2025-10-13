@@ -12,6 +12,7 @@ import {
 import { errorLog } from '../utils/logger';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import LoadingScreen from './LoadingScreen';
 import {
   Colors,
   Typography,
@@ -31,7 +32,25 @@ interface StoreSpecialsRouteParams {
 const StoreSpecialsScreen: React.FC = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const { storeId } = route.params as StoreSpecialsRouteParams;
+  
+  // Validate route params
+  const params = route.params as StoreSpecialsRouteParams | undefined;
+  
+  useEffect(() => {
+    if (!params?.storeId) {
+      Alert.alert(
+        'Error',
+        'Missing store information. Please try again.',
+        [{ text: 'OK', onPress: () => navigation.goBack() }]
+      );
+    }
+  }, [params, navigation]);
+  
+  if (!params?.storeId) {
+    return <LoadingScreen />;
+  }
+  
+  const { storeId } = params;
 
   const [store, setStore] = useState<ShtetlStore | null>(null);
   const [specials, setSpecials] = useState<Special[]>([]);

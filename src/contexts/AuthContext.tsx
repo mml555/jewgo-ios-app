@@ -67,7 +67,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Memoize authentication state to prevent excessive re-checks
   const isAuthenticated = useMemo(() => !!user && authService.isAuthenticated(), [user]);
-  const isGuestAuthenticated = useMemo(() => guestService.isGuestAuthenticated(), [guestUser]);
+  const isGuestAuthenticated = useMemo(() => {
+    // Check both state and service to ensure synchronization
+    return !!guestUser && guestService.isGuestAuthenticated();
+  }, [guestUser]);
   const hasAnyAuth = useMemo(() => isAuthenticated || isGuestAuthenticated, [isAuthenticated, isGuestAuthenticated]);
 
   // ==============================================
@@ -106,20 +109,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (__DEV__ && Math.random() < 0.1) {
           debugLog('🔐 AuthContext: Restored guest session from storage');
         }
-      } else {
-        // If no authentication exists, create a guest session automatically
-        // This ensures the app works even if users bypass the Welcome screen
-        // Only log occasionally to avoid console spam
-        if (__DEV__ && Math.random() < 0.1) {
-          debugLog('🔐 AuthContext: No authentication found, creating guest session...');
-        }
-        try {
-          await createGuestSession();
-        } catch (error) {
-          errorLog('Failed to create automatic guest session:', error);
-          // Continue without guest session - API service will handle this gracefully
-        }
       }
+      // Note: Do NOT auto-create guest sessions here
+      // Let the user explicitly choose to continue as guest from the Welcome screen
+      // This prevents auto-login after logout
     } catch (error) {
       errorLog('Auth initialization error:', error);
       setUser(null);
@@ -176,17 +169,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const logout = async () => {
     try {
       setIsLoading(true);
-      await authService.logout();
+      
+      // Clear states first to trigger immediate UI update
       setUser(null);
-
+      setGuestUser(null);
+      
+      // Then clear services
+      await authService.logout();
+      
       // Also clear guest session if exists
       if (guestService.isGuestAuthenticated()) {
         await guestService.revokeSession();
-        setGuestUser(null);
       }
     } catch (error) {
       errorLog('Logout error:', error);
-      // Even if logout fails on server, clear local state
+      // Even if logout fails on server, ensure local state is cleared
       setUser(null);
       setGuestUser(null);
     } finally {
@@ -264,11 +261,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const revokeGuestSession = async () => {
     try {
       setIsLoading(true);
-      await guestService.revokeSession();
+      // Clear state first to trigger immediate UI update
       setGuestUser(null);
+      // Then clear the service
+      await guestService.revokeSession();
     } catch (error) {
       errorLog('Revoke guest session error:', error);
-      throw error;
+      // Even if service revoke fails, keep state cleared
+      setGuestUser(null);
     } finally {
       setIsLoading(false);
     }

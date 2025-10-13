@@ -18,6 +18,7 @@ import { errorLog } from '../utils/logger';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { Product, CreateProductForm } from '../types/shtetl';
 import ProductCard from '../components/ProductCard';
+import LoadingScreen from './LoadingScreen';
 import {
   Colors,
   Typography,
@@ -34,7 +35,25 @@ interface ProductManagementParams {
 const ProductManagementScreen: React.FC = () => {
   const route = useRoute();
   const navigation = useNavigation();
-  const { storeId } = route.params as ProductManagementParams;
+  
+  // Validate route params
+  const params = route.params as ProductManagementParams | undefined;
+  
+  useEffect(() => {
+    if (!params?.storeId) {
+      Alert.alert(
+        'Error',
+        'Missing store information. Please try again.',
+        [{ text: 'OK', onPress: () => navigation.goBack() }]
+      );
+    }
+  }, [params, navigation]);
+  
+  if (!params?.storeId) {
+    return <LoadingScreen />;
+  }
+  
+  const { storeId } = params;
 
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);

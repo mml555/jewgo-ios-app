@@ -91,6 +91,11 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
         clearTimeout(imageErrorTimeoutRef.current);
         imageErrorTimeoutRef.current = null;
       }
+      // Clear navigation timeout
+      if (navigationTimeoutRef.current) {
+        clearTimeout(navigationTimeoutRef.current);
+        navigationTimeoutRef.current = null;
+      }
       // Abort any pending async operations
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
@@ -175,6 +180,7 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
 
   // Track if already navigating to prevent duplicates
   const isNavigatingRef = useRef(false);
+  const navigationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Memoized press handler with navigation guard
   const handlePress = useCallback(() => {
@@ -187,9 +193,16 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
     }
 
     isNavigatingRef.current = true;
+    
+    // Clear any existing navigation timeout
+    if (navigationTimeoutRef.current) {
+      clearTimeout(navigationTimeoutRef.current);
+    }
+    
     // Reset after navigation animation completes (typically 300-500ms)
-    setTimeout(() => {
+    navigationTimeoutRef.current = setTimeout(() => {
       isNavigatingRef.current = false;
+      navigationTimeoutRef.current = null;
     }, 500);
 
     console.log('🔷 CategoryCard pressed:', {
@@ -446,8 +459,8 @@ const styles = StyleSheet.create({
     ...Shadows.sm, // Shadow only on solid background
   },
   containerTransparent: {
-    backgroundColor: Colors.background.secondary, // Use solid color for shadow calculation
-    ...Shadows.sm, // Shadow requires solid background
+    backgroundColor: 'transparent', // Transparent background for non-job cards
+    // No shadow on transparent cards
   },
   pressed: {
     opacity: 0.7,

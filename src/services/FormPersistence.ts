@@ -1,4 +1,4 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { safeAsyncStorage } from './SafeAsyncStorage';
 import { ListingFormData } from '../screens/AddCategoryScreen';
 import { debugLog, errorLog } from '../utils/logger';
 
@@ -102,8 +102,8 @@ export class FormPersistenceService {
 
       // Save data and metadata
       await Promise.all([
-        AsyncStorage.setItem(FORM_STORAGE_KEY, JSON.stringify(mergedData)),
-        AsyncStorage.setItem(FORM_METADATA_KEY, JSON.stringify(metadata)),
+        safeAsyncStorage.setJSON(FORM_STORAGE_KEY, mergedData),
+        safeAsyncStorage.setJSON(FORM_METADATA_KEY, metadata),
       ]);
 
       // Save to history for recovery
@@ -122,10 +122,8 @@ export class FormPersistenceService {
   // Load form data from AsyncStorage
   async loadFormData(): Promise<ListingFormData | null> {
     try {
-      const data = await AsyncStorage.getItem(FORM_STORAGE_KEY);
-      if (!data) return null;
-
-      const parsedData = JSON.parse(data) as ListingFormData;
+      const parsedData = await safeAsyncStorage.getJSON<ListingFormData>(FORM_STORAGE_KEY);
+      if (!parsedData) return null;
 
       // Perform schema migration if needed
       return await this.migrateFormData(parsedData);
@@ -138,8 +136,7 @@ export class FormPersistenceService {
   // Get form metadata
   async getMetadata(): Promise<FormMetadata | null> {
     try {
-      const metadata = await AsyncStorage.getItem(FORM_METADATA_KEY);
-      return metadata ? JSON.parse(metadata) : null;
+      return await safeAsyncStorage.getJSON<FormMetadata>(FORM_METADATA_KEY);
     } catch (error) {
       errorLog('Error loading form metadata:', error);
       return null;
@@ -153,8 +150,8 @@ export class FormPersistenceService {
       this.clearStatusResetTimer();
       
       await Promise.all([
-        AsyncStorage.removeItem(FORM_STORAGE_KEY),
-        AsyncStorage.removeItem(FORM_METADATA_KEY),
+        safeAsyncStorage.removeItem(FORM_STORAGE_KEY),
+        safeAsyncStorage.removeItem(FORM_METADATA_KEY),
       ]);
 
       // Clear history as well
@@ -176,7 +173,7 @@ export class FormPersistenceService {
   // Check if form has saved data
   async hasSavedData(): Promise<boolean> {
     try {
-      const data = await AsyncStorage.getItem(FORM_STORAGE_KEY);
+      const data = await safeAsyncStorage.getItem(FORM_STORAGE_KEY);
       return data !== null;
     } catch (error) {
       errorLog('Error checking for saved data:', error);
@@ -253,13 +250,9 @@ export class FormPersistenceService {
   ): Promise<void> {
     try {
       const historyKey = `${FORM_STORAGE_KEY}_history`;
-      const existingHistory = await AsyncStorage.getItem(historyKey);
+      const existingHistory = await safeAsyncStorage.getJSON<Array<{ data: ListingFormData; metadata: FormMetadata }>>(historyKey);
       let history: Array<{ data: ListingFormData; metadata: FormMetadata }> =
-        [];
-
-      if (existingHistory) {
-        history = JSON.parse(existingHistory);
-      }
+        existingHistory || [];
 
       // Add new save to history
       history.unshift({ data: formData, metadata });
@@ -269,7 +262,7 @@ export class FormPersistenceService {
         history = history.slice(0, MAX_SAVE_HISTORY);
       }
 
-      await AsyncStorage.setItem(historyKey, JSON.stringify(history));
+      await safeAsyncStorage.setJSON(historyKey, history);
     } catch (error) {
       errorLog('Error saving to history:', error);
       // Don't throw - history is not critical
@@ -282,8 +275,7 @@ export class FormPersistenceService {
   > {
     try {
       const historyKey = `${FORM_STORAGE_KEY}_history`;
-      const history = await AsyncStorage.getItem(historyKey);
-      return history ? JSON.parse(history) : [];
+      return await safeAsyncStorage.getJSON<Array<{ data: ListingFormData; metadata: FormMetadata }>>(historyKey) || [];
     } catch (error) {
       errorLog('Error loading save history:', error);
       return [];
@@ -294,7 +286,7 @@ export class FormPersistenceService {
   private async clearHistory(): Promise<void> {
     try {
       const historyKey = `${FORM_STORAGE_KEY}_history`;
-      await AsyncStorage.removeItem(historyKey);
+      await safeAsyncStorage.removeItem(historyKey);
     } catch (error) {
       errorLog('Error clearing history:', error);
       // Don't throw - not critical
@@ -349,7 +341,7 @@ export class FormPersistenceService {
     // Update version after migration
     if (metadata) {
       metadata.version = this.currentVersion;
-      await AsyncStorage.setItem(FORM_METADATA_KEY, JSON.stringify(metadata));
+      await safeAsyncStorage.setJSON(FORM_METADATA_KEY, metadata);
     }
 
     return migratedData as ListingFormData;
@@ -422,10 +414,7 @@ export class FormPersistenceService {
       // Restore history if available
       if (imported.history) {
         const historyKey = `${FORM_STORAGE_KEY}_history`;
-        await AsyncStorage.setItem(
-          historyKey,
-          JSON.stringify(imported.history),
-        );
+        await safeAsyncStorage.setJSON(historyKey, imported.history);
       }
     } catch (error) {
       errorLog('Error importing form data:', error);

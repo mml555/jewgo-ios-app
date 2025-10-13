@@ -13,8 +13,8 @@ jest.mock('react-native-safe-area-context', () => ({
 
 describe('AdvancedFiltersModal', () => {
   const mockCategories: EventCategory[] = [
-    { id: '1', key: 'religious', name: 'Religious & Spiritual', sort_order: 1 },
-    { id: '2', key: 'education', name: 'Education & Workshops', sort_order: 2 },
+    { id: '1', key: 'religious', name: 'Religious & Spiritual', icon_name: 'star-of-david', sort_order: 1 },
+    { id: '2', key: 'education', name: 'Education & Workshops', icon_name: 'book', sort_order: 2 },
   ];
 
   const mockEventTypes: EventType[] = [

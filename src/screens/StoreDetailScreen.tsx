@@ -16,6 +16,7 @@ import { errorLog } from '../utils/logger';
 import { ShtetlStore, Product } from '../types/shtetl';
 import ShtetlStoreGrid from '../components/ShtetlStoreGrid';
 import ProductCard from '../components/ProductCard';
+import LoadingScreen from './LoadingScreen';
 import {
   Colors,
   Typography,
@@ -33,7 +34,25 @@ const { width: screenWidth } = Dimensions.get('window');
 const StoreDetailScreen: React.FC = () => {
   const route = useRoute();
   const navigation = useNavigation();
-  const { storeId } = route.params as StoreDetailParams;
+  
+  // Validate route params
+  const params = route.params as StoreDetailParams | undefined;
+  
+  useEffect(() => {
+    if (!params?.storeId) {
+      Alert.alert(
+        'Error',
+        'Missing store information. Please try again.',
+        [{ text: 'OK', onPress: () => navigation.goBack() }]
+      );
+    }
+  }, [params, navigation]);
+  
+  if (!params?.storeId) {
+    return <LoadingScreen />;
+  }
+  
+  const { storeId } = params;
 
   const [store, setStore] = useState<ShtetlStore | null>(null);
   const [products, setProducts] = useState<Product[]>([]);

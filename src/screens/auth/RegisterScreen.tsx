@@ -19,6 +19,7 @@ import { useNavigation } from '@react-navigation/native';
 import ReCaptchaComponent from '../../components/auth/ReCaptchaComponent';
 import GoogleSignInButton from '../../components/auth/GoogleSignInButton';
 import MagicLinkForm from '../../components/auth/MagicLinkForm';
+import JewgoLogo from '../../components/JewgoLogo';
 import { configService } from '../../config/ConfigService';
 import {
   Colors,
@@ -232,9 +233,7 @@ const RegisterScreen: React.FC = () => {
       >
         {/* JewGo Logo */}
         <View style={styles.logoContainer}>
-          <View style={styles.logoPlaceholder}>
-            <Text style={styles.logoText}>JewGo</Text>
-          </View>
+          <JewgoLogo width={80} height={80} />
         </View>
 
         {/* Main Card */}
@@ -655,21 +654,6 @@ const styles = StyleSheet.create({
   logoContainer: {
     alignItems: 'center',
     marginBottom: Spacing['2xl'],
-  },
-  logoPlaceholder: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: Colors.jewgoGreen,
-    justifyContent: 'center',
-    alignItems: 'center',
-    ...Shadows.md,
-  },
-  logoText: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: Colors.white,
-    fontFamily: Typography.fontFamilyBold,
   },
   card: {
     backgroundColor: Colors.white,

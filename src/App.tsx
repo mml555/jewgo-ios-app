@@ -9,6 +9,7 @@ import { debugLog } from './utils/logger';
 import navigationService from './services/NavigationService';
 import eventsDeepLinkService from './services/EventsDeepLinkService';
 import { preloadIconFonts } from './components/Icon';
+import ErrorBoundary from './components/ErrorBoundary';
 
 // Note: defaultProps is deprecated in newer React Native versions
 // Font family should be set through StyleSheet or individual component styles
@@ -22,28 +23,30 @@ export default function App(): React.JSX.Element {
       
       // Glyph availability probe (dev only)
       if (__DEV__) {
-        const Feather = require('react-native-vector-icons/Feather').default;
-        const MaterialCommunityIcons = require('react-native-vector-icons/MaterialCommunityIcons').default;
-        const Ionicons = require('react-native-vector-icons/Ionicons').default;
-        
-        debugLog('🔍 Icon Font Probe:');
-        debugLog('  Feather family:', Feather.getFontFamily());
-        debugLog('  Has Feather "heart"?', !!(Feather as any).getRawGlyphMap?.().heart);
-        debugLog('  Has Feather "arrow-left"?', !!(Feather as any).getRawGlyphMap?.()['arrow-left']);
-        
-        debugLog('  MDI family:', MaterialCommunityIcons.getFontFamily());
-        debugLog('  Has MDI "synagogue"?', !!(MaterialCommunityIcons as any).getRawGlyphMap?.().synagogue);
-        debugLog('  Has MDI "pool"?', !!(MaterialCommunityIcons as any).getRawGlyphMap?.().pool);
-        debugLog('  Has MDI "tag"?', !!(MaterialCommunityIcons as any).getRawGlyphMap?.().tag);
-        
-        debugLog('  Ionicons family:', Ionicons.getFontFamily());
-        debugLog('  Has Ionicons "restaurant"?', !!(Ionicons as any).getRawGlyphMap?.().restaurant);
+        try {
+          const Feather = require('react-native-vector-icons/Feather').default;
+          const MaterialCommunityIcons = require('react-native-vector-icons/MaterialCommunityIcons').default;
+          const Ionicons = require('react-native-vector-icons/Ionicons').default;
+          
+          debugLog('🔍 Icon Font Probe:');
+          debugLog('  Feather family:', Feather.getFontFamily());
+          debugLog('  Has Feather "heart"?', !!(Feather as any).getRawGlyphMap?.().heart);
+          debugLog('  Has Feather "arrow-left"?', !!(Feather as any).getRawGlyphMap?.()['arrow-left']);
+          
+          debugLog('  MDI family:', MaterialCommunityIcons.getFontFamily());
+          debugLog('  Has MDI "synagogue"?', !!(MaterialCommunityIcons as any).getRawGlyphMap?.().synagogue);
+          debugLog('  Has MDI "pool"?', !!(MaterialCommunityIcons as any).getRawGlyphMap?.().pool);
+          debugLog('  Has MDI "tag"?', !!(MaterialCommunityIcons as any).getRawGlyphMap?.().tag);
+          
+          debugLog('  Ionicons family:', Ionicons.getFontFamily());
+          debugLog('  Has Ionicons "restaurant"?', !!(Ionicons as any).getRawGlyphMap?.().restaurant);
+        } catch (probeError) {
+          debugLog('⚠️ Icon font probe failed (non-critical):', probeError);
+        }
       }
     }).catch((error) => {
-      debugLog('⚠️ Icon fonts preload failed:', error);
-      debugLog('⚠️ Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
-      debugLog('⚠️ Error message:', error?.message || 'No message');
-      debugLog('⚠️ Error stack:', error?.stack || 'No stack');
+      // Log warning but don't crash - fonts will load automatically
+      debugLog('⚠️ Icon fonts preload failed (non-critical):', error?.message || error);
     });
 
     // Configuration is loaded and validated in the constructor
@@ -69,13 +72,15 @@ export default function App(): React.JSX.Element {
   }, []);
 
   return (
-    <SafeAreaProvider>
-      <AuthProvider>
-        <NavigationContainer ref={(ref) => navigationService.setNavigationRef(ref)}>
-          <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-          <RootNavigator />
-        </NavigationContainer>
-      </AuthProvider>
-    </SafeAreaProvider>
+    <ErrorBoundary>
+      <SafeAreaProvider>
+        <AuthProvider>
+          <NavigationContainer ref={(ref) => navigationService.setNavigationRef(ref)}>
+            <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+            <RootNavigator />
+          </NavigationContainer>
+        </AuthProvider>
+      </SafeAreaProvider>
+    </ErrorBoundary>
   );
 }

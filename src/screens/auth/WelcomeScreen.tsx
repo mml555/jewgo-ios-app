@@ -5,13 +5,10 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Image,
-  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { useAuth } from '../../contexts/AuthContext';
-import { errorLog } from '../../utils/logger';
+import JewgoLogo from '../../components/JewgoLogo';
 import {
   Colors,
   Typography,
@@ -19,11 +16,8 @@ import {
   Shadows,
 } from '../../styles/designSystem';
 
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
-
 const WelcomeScreen: React.FC = () => {
   const navigation = useNavigation();
-  const { createGuestSession, isLoading } = useAuth();
 
   const handleSignIn = () => {
     navigation.navigate('Login' as never);
@@ -33,14 +27,8 @@ const WelcomeScreen: React.FC = () => {
     navigation.navigate('Register' as never);
   };
 
-  const handleGuestAccess = async () => {
-    try {
-      await createGuestSession();
-      // Navigation will be handled by auth state change
-    } catch (error: any) {
-      errorLog('Guest session error:', error);
-      // Handle error - maybe show a toast or alert
-    }
+  const handleGuestAccess = () => {
+    navigation.navigate('GuestContinue' as never);
   };
 
   return (
@@ -52,7 +40,7 @@ const WelcomeScreen: React.FC = () => {
         {/* Header Section */}
         <View style={styles.header}>
           <View style={styles.logoContainer}>
-            <Text style={styles.logoText}>🕍</Text>
+            <JewgoLogo width={80} height={80} />
             <Text style={styles.appName}>Jewgo</Text>
           </View>
           <Text style={styles.tagline}>
@@ -93,7 +81,6 @@ const WelcomeScreen: React.FC = () => {
           <TouchableOpacity
             style={styles.primaryButton}
             onPress={handleSignUp}
-            disabled={isLoading}
             activeOpacity={0.8}
           >
             <Text style={styles.primaryButtonText}>Create Account</Text>
@@ -102,7 +89,6 @@ const WelcomeScreen: React.FC = () => {
           <TouchableOpacity
             style={styles.secondaryButton}
             onPress={handleSignIn}
-            disabled={isLoading}
             activeOpacity={0.8}
           >
             <Text style={styles.secondaryButtonText}>Sign In</Text>
@@ -111,7 +97,6 @@ const WelcomeScreen: React.FC = () => {
           <TouchableOpacity
             style={styles.guestButton}
             onPress={handleGuestAccess}
-            disabled={isLoading}
             activeOpacity={0.8}
           >
             <Text style={styles.guestButtonText}>Continue as Guest</Text>
@@ -128,7 +113,7 @@ const WelcomeScreen: React.FC = () => {
           </View>
 
           <View style={styles.benefitItem}>
-            <HeartIcon size={24} color={Colors.primary.main} filled={true} />
+            <Text style={styles.benefitIcon}>❤️</Text>
             <Text style={styles.benefitText}>Save your favorite places</Text>
           </View>
 
@@ -176,16 +161,13 @@ const styles = StyleSheet.create({
   logoContainer: {
     alignItems: 'center',
     marginBottom: Spacing.md,
-  },
-  logoText: {
-    fontSize: 64,
-    marginBottom: Spacing.xs,
+    gap: Spacing.md,
   },
   appName: {
     fontSize: 36,
     fontWeight: 'bold',
     color: Colors.primary.main,
-    marginBottom: Spacing.sm,
+    marginTop: Spacing.sm,
   },
   tagline: {
     fontSize: 18,

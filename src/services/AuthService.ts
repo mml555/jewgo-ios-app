@@ -1,4 +1,4 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { safeAsyncStorage } from './SafeAsyncStorage';
 import { configService } from '../config/ConfigService';
 import { errorLog } from '../utils/logger';
 
@@ -341,13 +341,12 @@ class AuthService {
     this.refreshToken = tokens.refreshToken;
 
     // Store tokens securely
-    await AsyncStorage.setItem('auth_tokens', JSON.stringify(tokens));
+    await safeAsyncStorage.setJSON('auth_tokens', tokens);
   }
 
   async getStoredTokens(): Promise<AuthTokens | null> {
     try {
-      const stored = await AsyncStorage.getItem('auth_tokens');
-      return stored ? JSON.parse(stored) : null;
+      return await safeAsyncStorage.getJSON<AuthTokens>('auth_tokens');
     } catch (error) {
       errorLog('Error retrieving stored tokens:', error);
       return null;
@@ -367,7 +366,7 @@ class AuthService {
 
   async clearStoredTokens(): Promise<void> {
     try {
-      await AsyncStorage.removeItem('auth_tokens');
+      await safeAsyncStorage.removeItem('auth_tokens');
     } catch (error) {
       errorLog('Error clearing stored tokens:', error);
     }

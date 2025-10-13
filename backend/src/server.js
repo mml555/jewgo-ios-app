@@ -31,6 +31,7 @@ const nearbyRoutes = require('./routes/nearby');
 const eventsRoutes = require('./routes/events');
 const claimsRoutes = require('./routes/claims');
 const adminRoutes = require('./routes/admin');
+const userStatsRoutes = require('./routes/userStats');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -323,6 +324,12 @@ app.use(
   '/api/v5/admin',
   authSystem.getAuthMiddleware().requireAuthOrGuest(),
   adminRoutes,
+);
+// User stats endpoints - require authentication
+app.use(
+  '/api/v5/users',
+  authSystem.getAuthMiddleware().requireAuthOrGuest(),
+  userStatsRoutes,
 );
 app.use('/api/v1', nearbyRoutes); // New optimized nearby API
 // Public dashboard endpoints (no authentication required)

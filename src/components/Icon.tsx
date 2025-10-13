@@ -48,7 +48,21 @@ export type IconName =
   | 'flag'
   | 'info'
   | 'map'
-  | 'map-pin';
+  | 'map-pin'
+  | 'bar-chart-2'       // Dashboard & Analytics
+  | 'credit-card'       // Payment Info
+  | 'chevron-right'     // Navigation arrows
+  | 'chevron-left'      // Back navigation
+  | 'refresh-cw'        // Refresh/Reload
+  | 'x'                 // Close/Cancel
+  | 'settings'          // Settings/Gear icon
+  | 'store'             // Store/Shop icon
+  | 'package'           // Products/Packages
+  | 'message-circle'    // Messages/Chat
+  | 'log-out'           // Logout
+  | 'check'             // Checkmark
+  | 'lock'              // Privacy/Security
+  | 'help-circle';      // Help & Support
 
 type IconMeta = { lib: IconLibrary; name: string };
 
@@ -79,12 +93,26 @@ const ICONS: Record<IconName, IconMeta> = {
   'info':           { lib: 'Feather', name: 'info' },
   'map':            { lib: 'Feather', name: 'map' },
   'map-pin':        { lib: 'Feather', name: 'map-pin' },
+  'bar-chart-2':    { lib: 'Feather', name: 'bar-chart-2' },
+  'credit-card':    { lib: 'Feather', name: 'credit-card' },
+  'chevron-right':  { lib: 'Feather', name: 'chevron-right' },
+  'chevron-left':   { lib: 'Feather', name: 'chevron-left' },
+  'refresh-cw':     { lib: 'Feather', name: 'refresh-cw' },
+  'x':              { lib: 'Feather', name: 'x' },
+  'settings':       { lib: 'Feather', name: 'settings' },
+  'package':        { lib: 'Feather', name: 'package' },
+  'message-circle': { lib: 'Feather', name: 'message-circle' },
+  'log-out':        { lib: 'Feather', name: 'log-out' },
+  'check':          { lib: 'Feather', name: 'check' },
+  'lock':           { lib: 'Feather', name: 'lock' },
+  'help-circle':    { lib: 'Feather', name: 'help-circle' },
 
   // MaterialCommunityIcons (MDI)
   'tag':            { lib: 'MaterialCommunityIcons', name: 'tag' },
   'pool':           { lib: 'MaterialCommunityIcons', name: 'pool' },
   'email-alert':    { lib: 'MaterialCommunityIcons', name: 'email-alert' },
   'alert-circle':   { lib: 'MaterialCommunityIcons', name: 'alert-circle' },
+  'store':          { lib: 'MaterialCommunityIcons', name: 'store' },
 
   // MaterialIcons
   'synagogue':      { lib: 'MaterialIcons', name: 'synagogue' },
@@ -106,6 +134,8 @@ export interface IconProps {
   accessibilityLabel?: string;
   /** Test hook */
   testID?: string;
+  /** Whether to show filled version (for icons that support it) */
+  filled?: boolean;
 }
 
 /**
@@ -139,7 +169,7 @@ export async function preloadIconFonts(): Promise<void> {
   } catch (error) {
     // Log but don't fail - fonts might load automatically anyway
     console.warn('Font preload attempted but encountered issue:', error);
-    throw error;
+    // Don't throw - allow app initialization to continue
   }
 }
 

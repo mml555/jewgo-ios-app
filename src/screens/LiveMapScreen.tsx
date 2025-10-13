@@ -103,7 +103,9 @@ const LiveMapScreen: React.FC = () => {
   } = useLocation();
 
   // Get current category from route params, default to 'mikvah'
-  const currentCategory = (route.params as any)?.category || 'mikvah';
+  // Safely extract category from params
+  const params = route.params as { category?: string } | undefined;
+  const currentCategory = params?.category || 'mikvah';
   const [selectedCategory, setSelectedCategory] =
     useState<string>(currentCategory);
   const [selectedListing, setSelectedListing] = useState<MapListing | null>(

@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import AuthNavigator from './AuthNavigator';
 import AppNavigator from './AppNavigator';
 import LoadingScreen from '../screens/LoadingScreen';
+import ScreenErrorBoundary from '../components/ScreenErrorBoundary';
 
 const Stack = createStackNavigator<RootStackParamList>();
 
@@ -21,9 +22,21 @@ const RootNavigator: React.FC = () => {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {hasAnyAuth ? (
-        <Stack.Screen name="App" component={AppNavigator} />
+        <Stack.Screen name="App">
+          {(props) => (
+            <ScreenErrorBoundary screenName="AppNavigator">
+              <AppNavigator {...props} />
+            </ScreenErrorBoundary>
+          )}
+        </Stack.Screen>
       ) : (
-        <Stack.Screen name="Auth" component={AuthNavigator} />
+        <Stack.Screen name="Auth">
+          {(props) => (
+            <ScreenErrorBoundary screenName="AuthNavigator">
+              <AuthNavigator {...props} />
+            </ScreenErrorBoundary>
+          )}
+        </Stack.Screen>
       )}
     </Stack.Navigator>
   );

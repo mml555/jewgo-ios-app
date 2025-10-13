@@ -19,6 +19,8 @@ import StoreSpecialsScreen from '../screens/StoreSpecialsScreen';
 import EditSpecialScreen from '../screens/EditSpecialScreen';
 import DatabaseDashboard from '../screens/DatabaseDashboard';
 import SettingsScreen from '../screens/SettingsScreen';
+import DashboardAnalyticsScreen from '../screens/DashboardAnalyticsScreen';
+import PaymentInfoScreen from '../screens/PaymentInfoScreen';
 import JobDetailScreen from '../screens/JobDetailScreen';
 import JobSeekingScreen from '../screens/JobSeekingScreen';
 import JobSeekersScreen from '../screens/JobSeekersScreen';
@@ -179,6 +181,22 @@ const AppNavigator: React.FC = () => {
       <Stack.Screen
         name="Settings"
         component={SettingsScreen}
+        options={{
+          headerShown: false,
+          presentation: 'card',
+        }}
+      />
+      <Stack.Screen
+        name="DashboardAnalytics"
+        component={DashboardAnalyticsScreen}
+        options={{
+          headerShown: false,
+          presentation: 'card',
+        }}
+      />
+      <Stack.Screen
+        name="PaymentInfo"
+        component={PaymentInfoScreen}
         options={{
           headerShown: false,
           presentation: 'card',

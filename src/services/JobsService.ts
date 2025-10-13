@@ -168,21 +168,33 @@ class JobsService {
         .json()
         .catch(() => ({ error: 'Request failed' }));
       
-      // Handle rate limiting gracefully
+      // Handle rate limiting gracefully - return error instead of throwing
       if (response.status === 429) {
         const retryAfter = response.headers.get('Retry-After');
         const errorMessage = retryAfter
           ? `Rate limit exceeded. Please try again in ${retryAfter} seconds.`
           : 'Rate limit exceeded. Please try again later.';
-        throw new Error(errorMessage);
+        return {
+          success: false,
+          error: errorMessage,
+          code: 'RATE_LIMIT_EXCEEDED',
+        };
       }
       
-      // Handle access blocked errors
+      // Handle authentication errors - return error instead of throwing
       if (response.status === 403 || response.status === 401) {
-        throw new Error('Access temporarily blocked');
+        return {
+          success: false,
+          error: 'Authentication required. Please log in again.',
+          code: 'AUTH_REQUIRED',
+        };
       }
       
-      throw new Error(error.error || `HTTP ${response.status}`);
+      // Return error response instead of throwing
+      return {
+        success: false,
+        error: error.error || `HTTP ${response.status}`,
+      };
     }
 
     return response.json();

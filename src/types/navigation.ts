@@ -52,6 +52,10 @@ export type AppStackParamList = {
   DatabaseDashboard: undefined;
   // Settings screen
   Settings: undefined;
+  // Dashboard & Analytics
+  DashboardAnalytics: undefined;
+  // Payment Info
+  PaymentInfo: undefined;
   // Job screens
   JobDetail: {
     jobId: string;
@@ -109,6 +113,7 @@ export type AuthStackParamList = {
   Login: undefined;
   Register: undefined;
   ForgotPassword: undefined;
+  GuestContinue: undefined;
 };
 
 // Tab Navigator - handles bottom tab screens

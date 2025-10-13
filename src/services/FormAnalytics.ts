@@ -1,4 +1,4 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { safeAsyncStorage } from './SafeAsyncStorage';
 import { errorLog } from '../utils/logger';
 
 export interface FormAnalyticsEvent {
@@ -484,7 +484,7 @@ class FormAnalyticsService {
         events.splice(0, events.length - this.MAX_EVENTS);
       }
 
-      await AsyncStorage.setItem(this.STORAGE_KEY, JSON.stringify(events));
+      await safeAsyncStorage.setItem(this.STORAGE_KEY, JSON.stringify(events));
     } catch (error) {
       errorLog('Error tracking analytics event:', error);
     }
@@ -492,7 +492,7 @@ class FormAnalyticsService {
 
   private async getStoredEvents(): Promise<FormAnalyticsEvent[]> {
     try {
-      const stored = await AsyncStorage.getItem(this.STORAGE_KEY);
+      const stored = await safeAsyncStorage.getItem(this.STORAGE_KEY);
       return stored ? JSON.parse(stored) : [];
     } catch (error) {
       errorLog('Error retrieving analytics events:', error);
@@ -504,7 +504,7 @@ class FormAnalyticsService {
     if (!this.currentSession) return;
 
     try {
-      await AsyncStorage.setItem(
+      await safeAsyncStorage.setItem(
         this.SESSION_KEY,
         JSON.stringify(this.currentSession),
       );
@@ -521,7 +521,7 @@ class FormAnalyticsService {
         sessions.push(this.currentSession);
       }
 
-      await AsyncStorage.setItem('@form_sessions', JSON.stringify(sessions));
+      await safeAsyncStorage.setItem('@form_sessions', JSON.stringify(sessions));
     } catch (error) {
       errorLog('Error saving current session:', error);
     }
@@ -529,7 +529,7 @@ class FormAnalyticsService {
 
   private async getStoredSessions(): Promise<FormSession[]> {
     try {
-      const stored = await AsyncStorage.getItem('@form_sessions');
+      const stored = await safeAsyncStorage.getItem('@form_sessions');
       return stored ? JSON.parse(stored) : [];
     } catch (error) {
       errorLog('Error retrieving sessions:', error);
@@ -539,7 +539,7 @@ class FormAnalyticsService {
 
   private async endSession(): Promise<void> {
     try {
-      await AsyncStorage.removeItem(this.SESSION_KEY);
+      await safeAsyncStorage.removeItem(this.SESSION_KEY);
       this.currentSession = null;
       this.stepStartTime = 0;
     } catch (error) {
@@ -565,7 +565,7 @@ class FormAnalyticsService {
   // Restore session from storage (for app restart recovery)
   async restoreSession(): Promise<FormSession | null> {
     try {
-      const stored = await AsyncStorage.getItem(this.SESSION_KEY);
+      const stored = await safeAsyncStorage.getItem(this.SESSION_KEY);
       if (stored) {
         this.currentSession = JSON.parse(stored);
         this.stepStartTime = Date.now(); // Reset step timer
@@ -580,7 +580,7 @@ class FormAnalyticsService {
   // Clear all analytics data (for testing or privacy)
   async clearAllData(): Promise<void> {
     try {
-      await AsyncStorage.multiRemove([
+      await safeAsyncStorage.multiRemove([
         this.STORAGE_KEY,
         this.SESSION_KEY,
         '@form_sessions',

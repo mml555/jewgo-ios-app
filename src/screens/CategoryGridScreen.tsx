@@ -1075,9 +1075,9 @@ const styles = StyleSheet.create({
   },
   locationPermissionBanner: {
     backgroundColor: Colors.primary.main,
-    marginHorizontal: Spacing.md,
+    marginHorizontal: 8,
     marginTop: Spacing.sm,
-    marginBottom: Spacing.lg,
+    marginBottom: 8,
     borderRadius: BorderRadius.lg,
     ...Shadows.sm,
     zIndex: 10, // Ensure banner is above other content
@@ -1129,9 +1129,12 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.infoLight,
     paddingVertical: 8,
     paddingHorizontal: 16,
-    marginBottom: Spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.info,
+    marginHorizontal: 8,
+    marginTop: Spacing.sm,
+    marginBottom: 8,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    borderColor: Colors.info,
     alignItems: 'center',
   },
   locationIndicatorText: {

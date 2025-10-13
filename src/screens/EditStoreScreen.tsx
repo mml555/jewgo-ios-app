@@ -14,6 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { errorLog } from '../utils/logger';
+import LoadingScreen from './LoadingScreen';
 import {
   Colors,
   Typography,
@@ -64,7 +65,25 @@ const kosherLevels = [
 const EditStoreScreen: React.FC = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const { storeId } = route.params as EditStoreRouteParams;
+  
+  // Validate route params
+  const params = route.params as EditStoreRouteParams | undefined;
+  
+  useEffect(() => {
+    if (!params?.storeId) {
+      Alert.alert(
+        'Error',
+        'Missing store information. Please try again.',
+        [{ text: 'OK', onPress: () => navigation.goBack() }]
+      );
+    }
+  }, [params, navigation]);
+  
+  if (!params?.storeId) {
+    return <LoadingScreen />;
+  }
+  
+  const { storeId } = params;
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

@@ -1,5 +1,5 @@
 import { configService } from '../config/ConfigService';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { safeAsyncStorage } from './SafeAsyncStorage';
 
 const API_BASE_URL = configService.getApiUrl();
 
@@ -37,7 +37,7 @@ export interface ContentFlag {
 
 class AdminService {
   private static async getAuthToken(): Promise<string | null> {
-    return await AsyncStorage.getItem('authToken');
+    return await safeAsyncStorage.getItem('authToken');
   }
 
   private static async makeRequest(

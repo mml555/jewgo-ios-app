@@ -14,6 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { errorLog } from '../utils/logger';
+import LoadingScreen from './LoadingScreen';
 import {
   Colors,
   Typography,
@@ -57,7 +58,25 @@ interface SpecialEditorState {
 const EditSpecialScreen: React.FC = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const { specialId, storeId } = route.params as EditSpecialRouteParams;
+  
+  // Validate route params
+  const params = route.params as EditSpecialRouteParams | undefined;
+  
+  useEffect(() => {
+    if (!params?.storeId) {
+      Alert.alert(
+        'Error',
+        'Missing store information. Please try again.',
+        [{ text: 'OK', onPress: () => navigation.goBack() }]
+      );
+    }
+  }, [params, navigation]);
+  
+  if (!params?.storeId) {
+    return <LoadingScreen />;
+  }
+  
+  const { specialId, storeId } = params;
 
   const [loading, setLoading] = useState(!!specialId); // Only load if editing existing
   const [saving, setSaving] = useState(false);

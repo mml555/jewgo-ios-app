@@ -13,6 +13,7 @@ import {
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { Product } from '../types/shtetl';
 import { errorLog } from '../utils/logger';
+import LoadingScreen from './LoadingScreen';
 import {
   Colors,
   Typography,
@@ -31,7 +32,25 @@ const { width: screenWidth } = Dimensions.get('window');
 const ProductDetailScreen: React.FC = () => {
   const route = useRoute();
   const navigation = useNavigation();
-  const { productId, storeId } = route.params as ProductDetailParams;
+  
+  // Validate route params
+  const params = route.params as ProductDetailParams | undefined;
+  
+  useEffect(() => {
+    if (!params?.productId || !params?.storeId) {
+      Alert.alert(
+        'Error',
+        'Missing product information. Please try again.',
+        [{ text: 'OK', onPress: () => navigation.goBack() }]
+      );
+    }
+  }, [params, navigation]);
+  
+  if (!params?.productId || !params?.storeId) {
+    return <LoadingScreen />;
+  }
+  
+  const { productId, storeId } = params;
 
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);

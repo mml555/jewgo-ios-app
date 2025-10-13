@@ -1,4 +1,4 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { safeAsyncStorage } from './SafeAsyncStorage';
 import { Platform } from 'react-native';
 import { errorLog, warnLog } from '../utils/logger';
 
@@ -224,7 +224,7 @@ class CrashReportingService {
   // Get stored crash reports
   async getStoredReports(): Promise<CrashReport[]> {
     try {
-      const stored = await AsyncStorage.getItem(this.STORAGE_KEY);
+      const stored = await safeAsyncStorage.getItem(this.STORAGE_KEY);
       return stored ? JSON.parse(stored) : [];
     } catch (error) {
       errorLog('Error retrieving crash reports:', error);
@@ -306,7 +306,7 @@ class CrashReportingService {
         report => report.timestamp > cutoffTime,
       );
 
-      await AsyncStorage.setItem(
+      await safeAsyncStorage.setItem(
         this.STORAGE_KEY,
         JSON.stringify(recentReports),
       );
@@ -384,7 +384,7 @@ class CrashReportingService {
         reports.splice(0, reports.length - this.MAX_STORED_REPORTS);
       }
 
-      await AsyncStorage.setItem(this.STORAGE_KEY, JSON.stringify(reports));
+      await safeAsyncStorage.setItem(this.STORAGE_KEY, JSON.stringify(reports));
     } catch (error) {
       errorLog('Error storing crash report:', error);
     }

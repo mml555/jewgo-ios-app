@@ -299,7 +299,9 @@ const AddCategoryScreen: React.FC = () => {
     null,
   );
 
-  const category = (route.params as any)?.category || 'Place';
+  // Safely extract category from params, default to 'Place'
+  const params = route.params as { category?: string } | undefined;
+  const category = params?.category || 'Place';
   const totalPages = 5;
 
   // Analytics and crash reporting services

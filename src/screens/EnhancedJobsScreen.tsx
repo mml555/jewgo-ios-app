@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  RefreshControl,
   ActivityIndicator,
+  Alert,
+  FlatList,
+  RefreshControl,
+  StyleSheet,
+  Text,
   TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import {
@@ -1257,12 +1258,13 @@ const styles = StyleSheet.create({
   },
   row: {
     justifyContent: 'space-between',
-    gap: 8, // Reduced gutter between cards for longer cards
+    paddingHorizontal: 8, // Consistent horizontal padding for each row
+    marginBottom: 8, // Consistent vertical spacing between rows
   },
   grid: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    gap: 12, // Reduced row gap for even spacing
+    paddingHorizontal: 0,
+    paddingTop: Spacing.sm,
+    paddingBottom: 20,
   },
   cardContainer: {
     flex: 1,
@@ -1500,9 +1502,9 @@ const styles = StyleSheet.create({
   },
   locationPermissionBanner: {
     backgroundColor: Colors.primary.main,
-    marginHorizontal: Spacing.md,
+    marginHorizontal: 8,
     marginTop: Spacing.sm,
-    marginBottom: Spacing.lg,
+    marginBottom: 8,
     borderRadius: BorderRadius.lg,
     ...Shadows.sm,
     zIndex: 10,
@@ -1545,9 +1547,12 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.infoLight,
     paddingVertical: 8,
     paddingHorizontal: 16,
-    marginBottom: Spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.info,
+    marginHorizontal: 8,
+    marginTop: Spacing.sm,
+    marginBottom: 8,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    borderColor: Colors.info,
     alignItems: 'center',
   },
   locationIndicatorText: {

@@ -3,7 +3,7 @@
  * Implements security and privacy guardrails for location data
  */
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { safeAsyncStorage } from './SafeAsyncStorage';
 import { errorLog, warnLog, debugLog } from '../utils/logger';
 
 export interface LocationPrivacyConfig {
@@ -123,7 +123,7 @@ class LocationPrivacyService {
 
   private async loadConsent(): Promise<void> {
     try {
-      const consentData = await AsyncStorage.getItem(
+      const consentData = await safeAsyncStorage.getItem(
         'location_privacy_consent',
       );
       if (consentData) {
@@ -136,7 +136,7 @@ class LocationPrivacyService {
 
   private async saveConsent(consent: PrivacyConsent): Promise<void> {
     try {
-      await AsyncStorage.setItem(
+      await safeAsyncStorage.setItem(
         'location_privacy_consent',
         JSON.stringify(consent),
       );
@@ -233,7 +233,7 @@ class LocationPrivacyService {
 
   private async loadLocationHistory(): Promise<void> {
     try {
-      const historyData = await AsyncStorage.getItem('location_history');
+      const historyData = await safeAsyncStorage.getItem('location_history');
       if (historyData) {
         this.locationHistory = JSON.parse(historyData);
       }
@@ -246,7 +246,7 @@ class LocationPrivacyService {
     try {
       // Only save if user has consented
       if (this.consent?.locationLogging) {
-        await AsyncStorage.setItem(
+        await safeAsyncStorage.setItem(
           'location_history',
           JSON.stringify(this.locationHistory),
         );
@@ -283,8 +283,8 @@ class LocationPrivacyService {
 
   async deleteLocationData(): Promise<void> {
     this.locationHistory = [];
-    await AsyncStorage.removeItem('location_history');
-    await AsyncStorage.removeItem('location_privacy_consent');
+    await safeAsyncStorage.removeItem('location_history');
+    await safeAsyncStorage.removeItem('location_privacy_consent');
     this.consent = null;
   }
 

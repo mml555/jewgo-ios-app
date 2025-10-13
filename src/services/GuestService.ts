@@ -1,4 +1,4 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { safeAsyncStorage } from './SafeAsyncStorage';
 import { configService } from '../config/ConfigService';
 import { warnLog, errorLog, debugLog } from '../utils/logger';
 
@@ -48,15 +48,13 @@ class GuestService {
 
   async initialize(): Promise<void> {
     try {
-      const storedToken = await AsyncStorage.getItem(this.GUEST_TOKEN_KEY);
-      const storedSession = await AsyncStorage.getItem(this.GUEST_SESSION_KEY);
+      const storedToken = await safeAsyncStorage.getItem(this.GUEST_TOKEN_KEY);
+      const storedSession = await safeAsyncStorage.getJSON<GuestSession>(this.GUEST_SESSION_KEY);
 
       if (storedToken && storedSession) {
-        const session = JSON.parse(storedSession);
-
         // Check if session is still valid
-        if (new Date(session.expiresAt) > new Date()) {
-          this.guestSession = session;
+        if (new Date(storedSession.expiresAt) > new Date()) {
+          this.guestSession = storedSession;
           // Only log occasionally to avoid console spam
           if (__DEV__ && Math.random() < 0.01) {
             debugLog('🔐 GuestService: Restored valid session from storage');
@@ -173,13 +171,13 @@ class GuestService {
       const guestSession = data.data;
 
       // Store guest session
-      await AsyncStorage.setItem(
+      await safeAsyncStorage.setItem(
         this.GUEST_TOKEN_KEY,
         guestSession.sessionToken,
       );
-      await AsyncStorage.setItem(
+      await safeAsyncStorage.setJSON(
         this.GUEST_SESSION_KEY,
-        JSON.stringify(guestSession),
+        guestSession,
       );
 
       this.guestSession = guestSession;
@@ -284,8 +282,8 @@ class GuestService {
 
   async clearGuestSession(): Promise<void> {
     try {
-      await AsyncStorage.removeItem(this.GUEST_TOKEN_KEY);
-      await AsyncStorage.removeItem(this.GUEST_SESSION_KEY);
+      await safeAsyncStorage.removeItem(this.GUEST_TOKEN_KEY);
+      await safeAsyncStorage.removeItem(this.GUEST_SESSION_KEY);
       this.guestSession = null;
     } catch (error) {
       errorLog('Clear guest session error:', error);
@@ -315,7 +313,7 @@ class GuestService {
 
   async getGuestToken(): Promise<string | null> {
     try {
-      const token = await AsyncStorage.getItem(this.GUEST_TOKEN_KEY);
+      const token = await safeAsyncStorage.getItem(this.GUEST_TOKEN_KEY);
       // Only log occasionally to avoid console spam (1% of the time)
       if (__DEV__ && Math.random() < 0.01) {
         debugLog(

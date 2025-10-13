@@ -6,7 +6,7 @@ import {
   Permission,
 } from 'react-native-permissions';
 import { Platform, Alert, Linking } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { safeAsyncStorage } from './SafeAsyncStorage';
 import { debugLog, warnLog } from '../utils/logger';
 
 // Types
@@ -88,7 +88,7 @@ class LocationService {
   // Load cached location
   private async loadCachedLocation(): Promise<void> {
     try {
-      const cached = await AsyncStorage.getItem(LOCATION_CACHE_KEY);
+      const cached = await safeAsyncStorage.getItem(LOCATION_CACHE_KEY);
       if (cached) {
         const locationData: LocationData = JSON.parse(cached);
         const age = Date.now() - locationData.timestamp;
@@ -105,7 +105,7 @@ class LocationService {
   // Cache location
   private async cacheLocation(location: LocationData): Promise<void> {
     try {
-      await AsyncStorage.setItem(LOCATION_CACHE_KEY, JSON.stringify(location));
+      await safeAsyncStorage.setItem(LOCATION_CACHE_KEY, JSON.stringify(location));
       this.updateState({ lastKnownLocation: location });
     } catch (error) {
       warnLog('Failed to cache location:', error);
@@ -421,7 +421,7 @@ class LocationService {
     // If it's been more than 5 minutes, invalidate cache
     if (timeSinceLastUpdate > 5 * 60 * 1000) {
       this.updateState({ lastKnownLocation: null });
-      await AsyncStorage.removeItem(LOCATION_CACHE_KEY);
+      await safeAsyncStorage.removeItem(LOCATION_CACHE_KEY);
     }
   }
 }

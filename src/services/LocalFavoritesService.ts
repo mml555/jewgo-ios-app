@@ -1,4 +1,4 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { safeAsyncStorage } from './SafeAsyncStorage';
 import { debugLog, errorLog } from '../utils/logger';
 
 export interface LocalFavorite {
@@ -24,7 +24,7 @@ export class LocalFavoritesService {
    */
   static async getLocalFavorites(): Promise<LocalFavorite[]> {
     try {
-      const stored = await AsyncStorage.getItem(LOCAL_FAVORITES_KEY);
+      const stored = await safeAsyncStorage.getItem(LOCAL_FAVORITES_KEY);
       return stored ? JSON.parse(stored) : [];
     } catch (error) {
       errorLog('Error getting local favorites:', error);
@@ -75,7 +75,7 @@ export class LocalFavoritesService {
       };
 
       favorites.push(newFavorite);
-      await AsyncStorage.setItem(
+      await safeAsyncStorage.setItem(
         LOCAL_FAVORITES_KEY,
         JSON.stringify(favorites),
       );
@@ -98,7 +98,7 @@ export class LocalFavoritesService {
         fav => fav.entity_id !== entityId,
       );
 
-      await AsyncStorage.setItem(
+      await safeAsyncStorage.setItem(
         LOCAL_FAVORITES_KEY,
         JSON.stringify(updatedFavorites),
       );
@@ -142,7 +142,7 @@ export class LocalFavoritesService {
    */
   static async clearLocalFavorites(): Promise<boolean> {
     try {
-      await AsyncStorage.removeItem(LOCAL_FAVORITES_KEY);
+      await safeAsyncStorage.removeItem(LOCAL_FAVORITES_KEY);
       debugLog('✅ Cleared all local favorites');
       return true;
     } catch (error) {

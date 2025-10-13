@@ -16,6 +16,7 @@ import {
 import { errorLog } from '../utils/logger';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
+import LoadingScreen from './LoadingScreen';
 import { useLocation, calculateDistance } from '../hooks/useLocation';
 import { apiService, DetailedListing, Review } from '../services/api';
 import { useReviews } from '../hooks/useReviews';
@@ -53,7 +54,26 @@ const { width: screenWidth } = Dimensions.get('window');
 const ListingDetailScreen: React.FC = () => {
   const route = useRoute();
   const navigation = useNavigation();
-  const { itemId, categoryKey } = route.params as ListingDetailParams;
+  
+  // Validate route params
+  const params = route.params as ListingDetailParams | undefined;
+  
+  useEffect(() => {
+    if (!params?.itemId || !params?.categoryKey) {
+      Alert.alert(
+        'Error',
+        'Missing listing information. Please try again.',
+        [{ text: 'OK', onPress: () => navigation.goBack() }]
+      );
+    }
+  }, [params, navigation]);
+  
+  if (!params?.itemId || !params?.categoryKey) {
+    return <LoadingScreen />;
+  }
+  
+  const { itemId, categoryKey } = params;
+  
   const { location, getCurrentLocation } = useLocation();
   const { accuracyAuthorization } = useLocationSimple();
   const {
