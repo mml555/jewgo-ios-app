@@ -29,9 +29,26 @@ export class ConfigService {
   }
 
   private loadConfig(): EnvironmentConfig {
-    // Use Render backend for both development and production
-    const apiBaseUrl =
-      Config.API_BASE_URL || 'https://jewgo-app-oyoh.onrender.com/api/v5';
+    // ALWAYS use Render backend - ignore localhost configurations
+    // This ensures the mobile app connects to the production backend
+    const RENDER_BACKEND_URL = 'https://jewgo-app-oyoh.onrender.com/api/v5';
+
+    // If Config.API_BASE_URL is set and NOT localhost, use it, otherwise use Render
+    let apiBaseUrl = RENDER_BACKEND_URL;
+    if (
+      Config.API_BASE_URL &&
+      !Config.API_BASE_URL.includes('localhost') &&
+      !Config.API_BASE_URL.includes('127.0.0.1') &&
+      !Config.API_BASE_URL.includes('0.0.0.0')
+    ) {
+      apiBaseUrl = Config.API_BASE_URL;
+      debugLog('🌐 Using custom API URL:', apiBaseUrl);
+    } else {
+      debugLog('🌐 Using Render backend:', RENDER_BACKEND_URL);
+      if (Config.API_BASE_URL) {
+        warnLog('⚠️ Ignoring localhost API URL:', Config.API_BASE_URL);
+      }
+    }
 
     return {
       nodeEnv:
