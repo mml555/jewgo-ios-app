@@ -292,12 +292,45 @@ class AuthMiddleware {
     return async (req, res, next) => {
       try {
         const authHeader = req.headers.authorization;
-        const guestToken = req.headers['x-guest-token'];
+        const guestTokenHeader = req.headers['x-guest-token'];
 
-        // Try regular authentication first
+        let token = null;
+
+        // Extract token from Authorization header or x-guest-token header
         if (authHeader && authHeader.startsWith('Bearer ')) {
+          token = authHeader.substring(7);
+        } else if (guestTokenHeader) {
+          token = guestTokenHeader;
+        }
+
+        // If we have a token, try both authentication methods
+        if (token) {
+          // Try guest authentication first (guest tokens are more common for public endpoints)
+          if (this.guestService) {
+            try {
+              const guestSession = await this.guestService.validateGuestSession(
+                token,
+              );
+              if (guestSession && guestSession.isValid) {
+                req.user = {
+                  id: guestSession.guestUser.id,
+                  type: 'guest',
+                  sessionId: guestSession.sessionId,
+                };
+                req.session = {
+                  id: guestSession.sessionId,
+                  type: 'guest',
+                };
+                return next();
+              }
+            } catch (error) {
+              // Not a valid guest token, try JWT
+              logger.debug('Guest auth failed, trying JWT:', error.message);
+            }
+          }
+
+          // Try JWT authentication
           try {
-            const token = authHeader.substring(7);
             const decoded = await this.verifyToken(token);
 
             const user = await this.authService.getUserById(decoded.sub);
@@ -314,31 +347,7 @@ class AuthMiddleware {
               return next();
             }
           } catch (error) {
-            // Continue to guest authentication
-            logger.warn('User auth failed, trying guest auth:', error.message);
-          }
-        }
-
-        // Try guest authentication
-        if (this.guestService && guestToken) {
-          try {
-            const guestSession = await this.guestService.validateGuestSession(
-              guestToken,
-            );
-            if (guestSession && guestSession.isValid) {
-              req.user = {
-                id: guestSession.guestUser.id,
-                type: 'guest',
-                sessionId: guestSession.sessionId,
-              };
-              req.session = {
-                id: guestSession.sessionId,
-                type: 'guest',
-              };
-              return next();
-            }
-          } catch (error) {
-            logger.warn('Guest auth failed:', error.message);
+            logger.debug('JWT auth failed:', error.message);
           }
         }
 
