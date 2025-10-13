@@ -133,9 +133,12 @@ class GuestService {
       // Use config service for API URL
       const config = configService.getConfig();
       const apiUrl = config.apiBaseUrl;
-      // Removed excessive logging
+      const fullUrl = `${apiUrl}/guest/create`;
 
-      const response = await fetch(`${apiUrl}/guest/create`, {
+      // Log the URL we're trying to connect to (for debugging)
+      debugLog(`🔐 GuestService: Connecting to: ${fullUrl}`);
+
+      const response = await fetch(fullUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -189,23 +192,38 @@ class GuestService {
       }
       return guestSession;
     } catch (error: any) {
+      // Log detailed error information for debugging
+      errorLog('🔐 GuestService: Full error details:', {
+        message: error?.message || 'Unknown error',
+        stack: error?.stack,
+        name: error?.name,
+        code: error?.code,
+        status: error?.status,
+        response: error?.response,
+      });
+
       // Only retry on network errors, not on other errors
       if (
         retryCount < maxRetries &&
-        error.message?.includes('Network request failed')
+        (error.message?.includes('Network request failed') ||
+          error.message?.includes('fetch') ||
+          error.name === 'TypeError')
       ) {
         const backoffDelay = Math.pow(2, retryCount) * 1000;
         warnLog(
           `🔐 GuestService: Network error, retrying in ${
             backoffDelay / 1000
-          }s...`,
+          }s... Error: ${error?.message}`,
         );
 
         await new Promise(resolve => setTimeout(resolve, backoffDelay));
         return this._createGuestSessionWithRetry(retryCount + 1, maxRetries);
       }
 
-      errorLog('🔐 GuestService: Create guest session error:', error);
+      errorLog(
+        '🔐 GuestService: Create guest session error:',
+        error?.message || error,
+      );
       throw error;
     }
   }
