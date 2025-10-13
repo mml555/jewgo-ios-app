@@ -5,7 +5,7 @@ import { ApiResponse, DetailedListing } from './api';
 
 /**
  * EnhancedApiService - API service wrapper with caching and optimization
- * 
+ *
  * Features:
  * - Request deduplication
  * - Response caching with TTL
@@ -19,10 +19,10 @@ class EnhancedApiService {
    */
   async getListing(
     itemId: string,
-    options: { forceRefresh?: boolean } = {}
-  ): Promise<ApiResponse<DetailedListing>> {
+    options: { forceRefresh?: boolean } = {},
+  ): Promise<ApiResponse<{ listing: DetailedListing }>> {
     const cacheKey = `listing-${itemId}`;
-    
+
     return apiCacheService.getCachedOrFetch(
       cacheKey,
       () => apiService.getListing(itemId),
@@ -30,7 +30,7 @@ class EnhancedApiService {
         ttl: 5 * 60 * 1000, // 5 minutes
         forceRefresh: options.forceRefresh,
         deduplicate: true,
-      }
+      },
     );
   }
 
@@ -38,20 +38,20 @@ class EnhancedApiService {
    * Get listings with caching
    */
   async getListings(
-    categoryId: number,
-    filters: Record<string, any> = {},
-    options: { forceRefresh?: boolean } = {}
+    limit: number = 100,
+    offset: number = 0,
+    options: { forceRefresh?: boolean } = {},
   ): Promise<ApiResponse<any>> {
-    const cacheKey = `listings-${categoryId}-${JSON.stringify(filters)}`;
-    
+    const cacheKey = `listings-${limit}-${offset}`;
+
     return apiCacheService.getCachedOrFetch(
       cacheKey,
-      () => apiService.getListings(categoryId, filters),
+      () => apiService.getListings(limit, offset),
       {
         ttl: 3 * 60 * 1000, // 3 minutes
         forceRefresh: options.forceRefresh,
         deduplicate: true,
-      }
+      },
     );
   }
 
@@ -60,25 +60,21 @@ class EnhancedApiService {
    */
   async prefetchListing(itemId: string): Promise<void> {
     const cacheKey = `listing-${itemId}`;
-    
+
     await apiCacheService.prefetch(
       cacheKey,
       () => apiService.getListing(itemId),
-      5 * 60 * 1000
+      5 * 60 * 1000,
     );
-    
+
     debugLog(`🚀 Prefetched listing: ${itemId}`);
   }
 
   /**
    * Prefetch multiple listings
    */
-  async prefetchListings(
-    items: Array<{ id: string }>
-  ): Promise<void> {
-    await Promise.all(
-      items.map(({ id }) => this.prefetchListing(id))
-    );
+  async prefetchListings(items: Array<{ id: string }>): Promise<void> {
+    await Promise.all(items.map(({ id }) => this.prefetchListing(id)));
   }
 
   /**
@@ -116,4 +112,3 @@ class EnhancedApiService {
 }
 
 export const enhancedApiService = new EnhancedApiService();
-

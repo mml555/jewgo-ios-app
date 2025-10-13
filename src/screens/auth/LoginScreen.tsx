@@ -15,6 +15,8 @@ import { errorLog } from '../../utils/logger';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigation } from '@react-navigation/native';
 import { Typography } from '../../styles/designSystem';
+import GoogleLogo from '../../assets/icons/social/GoogleLogo';
+import AppleLogo from '../../assets/icons/social/AppleLogo';
 
 const LoginScreen: React.FC = () => {
   const { login, createGuestSession, isLoading } = useAuth();
@@ -215,7 +217,7 @@ const LoginScreen: React.FC = () => {
               activeOpacity={0.8}
             >
               <View style={styles.socialButtonContent}>
-                <Text style={styles.googleIcon}>G</Text>
+                <GoogleLogo size={20} />
                 <Text style={styles.googleButtonText}>Google</Text>
               </View>
             </TouchableOpacity>
@@ -233,7 +235,7 @@ const LoginScreen: React.FC = () => {
               activeOpacity={0.8}
             >
               <View style={styles.socialButtonContent}>
-                <Text style={styles.appleIcon}></Text>
+                <AppleLogo size={20} color="#FFFFFF" />
                 <Text style={styles.appleButtonText}>Login</Text>
               </View>
             </TouchableOpacity>
@@ -251,8 +253,9 @@ const LoginScreen: React.FC = () => {
           {/* Terms and Privacy */}
           <Text style={styles.termsText}>
             By signing in with an account you agree to{'\n'}
-            Jewgo LLC <Text style={styles.termsLink}>Terms of Service</Text> and{' '}
-            <Text style={styles.termsLink}>Privacy Policy</Text>
+            Jewgo LLC <Text style={styles.termsLink}>
+              Terms of Service
+            </Text> and <Text style={styles.termsLink}>Privacy Policy</Text>
           </Text>
         </View>
       </ScrollView>
@@ -415,23 +418,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  googleIcon: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#DB4437',
-    marginRight: 8,
+    gap: 8,
   },
   googleButtonText: {
     fontSize: 16,
     fontWeight: '500',
     color: '#292B2D',
     fontFamily: Typography.fontFamily,
-  },
-  appleIcon: {
-    fontSize: 18,
-    color: '#FFFFFF',
-    marginRight: 8,
   },
   appleButtonText: {
     fontSize: 16,

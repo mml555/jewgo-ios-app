@@ -120,29 +120,6 @@ const verticalScale = (size: number) => (screenHeight / 812) * size; // Base hei
 const moderateScale = (size: number, factor = 0.5) =>
   size + (scale(size) - size) * factor;
 
-// Section Header Component
-interface SectionHeaderProps {
-  icon: string;
-  title: string;
-  count?: number;
-}
-
-const SectionHeader: React.FC<SectionHeaderProps> = ({
-  icon,
-  title,
-  count,
-}) => (
-  <View style={styles.sectionHeader}>
-    <Text style={styles.sectionIcon}>{icon}</Text>
-    <Text style={styles.sectionTitle}>{title}</Text>
-    {count !== undefined && count > 0 && (
-      <View style={styles.countBadge}>
-        <Text style={styles.countBadgeText}>{count}</Text>
-      </View>
-    )}
-  </View>
-);
-
 const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
   navigation,
   route,

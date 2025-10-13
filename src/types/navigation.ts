@@ -109,7 +109,6 @@ export type AppStackParamList = {
 
 // Auth Navigator - handles authentication screens
 export type AuthStackParamList = {
-  Welcome: undefined;
   Login: undefined;
   Register: undefined;
   ForgotPassword: undefined;

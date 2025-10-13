@@ -405,7 +405,7 @@ const EnhancedJobsScreen: React.FC<EnhancedJobsScreenProps> = ({
           debugLog('First job seeker:', response.data.job_seekers[0]);
           debugLog(
             'First job seeker name field:',
-            response.data.job_seekers[0]?.name,
+            response.data.job_seekers[0]?.full_name,
           );
           debugLog(
             'First job seeker title field:',

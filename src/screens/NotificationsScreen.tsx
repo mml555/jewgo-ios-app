@@ -111,11 +111,6 @@ const NotificationsScreen: React.FC = () => {
     }
   };
 
-  const getNotificationIconComponent = (type: string) => {
-    // Return null for now - icons will be rendered as emojis via getNotificationIcon
-    return null;
-  };
-
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
   return (
@@ -177,18 +172,9 @@ const NotificationsScreen: React.FC = () => {
                 activeOpacity={0.7}
               >
                 <View style={styles.notificationIcon}>
-                  {(() => {
-                    const IconComponent = getNotificationIconComponent(
-                      notification.type,
-                    );
-                    return IconComponent ? (
-                      <IconComponent size={24} color="#666" />
-                    ) : (
-                      <Text style={styles.iconText}>
-                        {getNotificationIcon(notification.type)}
-                      </Text>
-                    );
-                  })()}
+                  <Text style={styles.iconText}>
+                    {getNotificationIcon(notification.type)}
+                  </Text>
                 </View>
 
                 <View style={styles.notificationContent}>

@@ -3,6 +3,5 @@ module.exports = {
     ios: {},
     android: {},
   },
-  // Fonts are handled by CocoaPods, no need to link manually
-  assets: [],
+  assets: ['./src/assets/fonts/'],
 };

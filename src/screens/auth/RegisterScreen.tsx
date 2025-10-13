@@ -21,6 +21,8 @@ import GoogleSignInButton from '../../components/auth/GoogleSignInButton';
 import MagicLinkForm from '../../components/auth/MagicLinkForm';
 import JewgoLogo from '../../components/JewgoLogo';
 import { configService } from '../../config/ConfigService';
+import GoogleLogo from '../../assets/icons/social/GoogleLogo';
+import AppleLogo from '../../assets/icons/social/AppleLogo';
 import {
   Colors,
   Typography,
@@ -600,7 +602,7 @@ const RegisterScreen: React.FC = () => {
               disabled={isLoading}
             >
               <View style={styles.socialButtonContent}>
-                <Text style={styles.googleIcon}>G</Text>
+                <GoogleLogo size={20} />
                 <Text style={styles.socialButtonText}>Google</Text>
               </View>
             </TouchableOpacity>
@@ -617,7 +619,7 @@ const RegisterScreen: React.FC = () => {
               disabled={isLoading}
             >
               <View style={styles.socialButtonContent}>
-                <Text style={styles.appleIcon}>🍎</Text>
+                <AppleLogo size={20} color="#FFFFFF" />
                 <Text style={[styles.socialButtonText, styles.appleButtonText]}>
                   Apple
                 </Text>
@@ -915,16 +917,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  googleIcon: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: Colors.black,
-    marginRight: Spacing.xs,
-  },
-  appleIcon: {
-    fontSize: 16,
-    marginRight: Spacing.xs,
+    gap: Spacing.xs,
   },
   socialButtonText: {
     fontSize: 14,

@@ -66,12 +66,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isCreatingGuestSession, setIsCreatingGuestSession] = useState(false);
 
   // Memoize authentication state to prevent excessive re-checks
-  const isAuthenticated = useMemo(() => !!user && authService.isAuthenticated(), [user]);
+  const isAuthenticated = useMemo(
+    () => !!user && authService.isAuthenticated(),
+    [user],
+  );
   const isGuestAuthenticated = useMemo(() => {
     // Check both state and service to ensure synchronization
     return !!guestUser && guestService.isGuestAuthenticated();
   }, [guestUser]);
-  const hasAnyAuth = useMemo(() => isAuthenticated || isGuestAuthenticated, [isAuthenticated, isGuestAuthenticated]);
+  const hasAnyAuth = useMemo(
+    () => isAuthenticated || isGuestAuthenticated,
+    [isAuthenticated, isGuestAuthenticated],
+  );
 
   // ==============================================
   // INITIALIZATION
@@ -111,7 +117,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
       }
       // Note: Do NOT auto-create guest sessions here
-      // Let the user explicitly choose to continue as guest from the Welcome screen
+      // Let the user explicitly choose to continue as guest from the Login screen
       // This prevents auto-login after logout
     } catch (error) {
       errorLog('Auth initialization error:', error);
@@ -169,14 +175,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const logout = async () => {
     try {
       setIsLoading(true);
-      
+
       // Clear states first to trigger immediate UI update
       setUser(null);
       setGuestUser(null);
-      
+
       // Then clear services
       await authService.logout();
-      
+
       // Also clear guest session if exists
       if (guestService.isGuestAuthenticated()) {
         await guestService.revokeSession();

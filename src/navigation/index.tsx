@@ -116,7 +116,6 @@ export const NAVIGATION_CONSTANTS = {
 
   // Auth navigation
   AUTH: {
-    WELCOME: 'Welcome',
     LOGIN: 'Login',
     REGISTER: 'Register',
     FORGOT_PASSWORD: 'ForgotPassword',

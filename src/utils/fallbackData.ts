@@ -1,21 +1,51 @@
 // Fallback data for when API calls fail
 export const FALLBACK_INDUSTRIES = [
-  { id: '1', name: 'Technology', icon: '💻' },
-  { id: '2', name: 'Healthcare', icon: '🏥' },
-  { id: '3', name: 'Finance', icon: '💰' },
-  { id: '4', name: 'Education', icon: '🎓' },
-  { id: '5', name: 'Marketing', icon: '📢' },
-  { id: '6', name: 'Sales', icon: '💼' },
-  { id: '7', name: 'Non-profit', icon: '🤝' },
-  { id: '8', name: 'Other', icon: '🏢' },
+  {
+    id: '1',
+    key: 'technology',
+    name: 'Technology',
+    icon_name: '💻',
+    sort_order: 1,
+  },
+  {
+    id: '2',
+    key: 'healthcare',
+    name: 'Healthcare',
+    icon_name: '🏥',
+    sort_order: 2,
+  },
+  { id: '3', key: 'finance', name: 'Finance', icon_name: '💰', sort_order: 3 },
+  {
+    id: '4',
+    key: 'education',
+    name: 'Education',
+    icon_name: '🎓',
+    sort_order: 4,
+  },
+  {
+    id: '5',
+    key: 'marketing',
+    name: 'Marketing',
+    icon_name: '📢',
+    sort_order: 5,
+  },
+  { id: '6', key: 'sales', name: 'Sales', icon_name: '💼', sort_order: 6 },
+  {
+    id: '7',
+    key: 'nonprofit',
+    name: 'Non-profit',
+    icon_name: '🤝',
+    sort_order: 7,
+  },
+  { id: '8', key: 'other', name: 'Other', icon_name: '🏢', sort_order: 8 },
 ];
 
 export const FALLBACK_JOB_TYPES = [
-  { id: '1', name: 'Full-time' },
-  { id: '2', name: 'Part-time' },
-  { id: '3', name: 'Contract' },
-  { id: '4', name: 'Remote' },
-  { id: '5', name: 'Hybrid' },
+  { id: '1', key: 'full-time', name: 'Full-time', sort_order: 1 },
+  { id: '2', key: 'part-time', name: 'Part-time', sort_order: 2 },
+  { id: '3', key: 'contract', name: 'Contract', sort_order: 3 },
+  { id: '4', key: 'remote', name: 'Remote', sort_order: 4 },
+  { id: '5', key: 'hybrid', name: 'Hybrid', sort_order: 5 },
 ];
 
 export const FALLBACK_COMPENSATION_STRUCTURES = [

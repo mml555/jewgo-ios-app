@@ -144,8 +144,6 @@ class NavigationService {
    * Auth navigation methods
    */
   auth = {
-    navigateToWelcome: () =>
-      this.navigate('Welcome' as keyof AuthStackParamList),
     navigateToLogin: () => this.navigate('Login' as keyof AuthStackParamList),
     navigateToRegister: () =>
       this.navigate('Register' as keyof AuthStackParamList),
@@ -201,8 +199,7 @@ class NavigationService {
     navigateToJobSeekers: () =>
       this.navigate('JobSeekers' as keyof AppStackParamList),
     // Events navigation
-    navigateToEvents: () =>
-      this.navigate('Events' as keyof AppStackParamList),
+    navigateToEvents: () => this.navigate('Events' as keyof AppStackParamList),
     navigateToEventDetail: (params: { eventId: string }) =>
       this.navigate('EventDetail' as keyof AppStackParamList, params),
     navigateToCreateEvent: () =>

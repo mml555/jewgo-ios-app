@@ -9,9 +9,13 @@
 /* Begin PBXBuildFile section */
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		1B312936FEA8465627BB5CD4 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
+		278091D70A014A309C0D625D /* Nunito-Light.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 915CCCA40ECD44358DDC5AD5 /* Nunito-Light.ttf */; };
 		761780ED2CA45674006654EE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
 		7D52DD7D93676E2795688CD6 /* libPods-JewgoAppFinal.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 47C60C292F1653749279DEEF /* libPods-JewgoAppFinal.a */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
+		8F5F1F8ED5F241A7A22EFDE5 /* Nunito-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 23C30B345AB8466794B4E5EA /* Nunito-Regular.ttf */; };
+		B48C9B3A9C3A4B9FABDB7FF3 /* Nunito-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = DBA98A07BBF2473DB2861C1D /* Nunito-SemiBold.ttf */; };
+		EDCCE1720890438794FAE913 /* Nunito-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = D318D5AC342E4619965CCF63 /* Nunito-Bold.ttf */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -20,10 +24,14 @@
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = JewgoAppFinal/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = JewgoAppFinal/Info.plist; sourceTree = "<group>"; };
 		13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = PrivacyInfo.xcprivacy; path = JewgoAppFinal/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		23C30B345AB8466794B4E5EA /* Nunito-Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Nunito-Regular.ttf"; path = "../src/assets/fonts/Nunito-Regular.ttf"; sourceTree = "<group>"; };
 		47C60C292F1653749279DEEF /* libPods-JewgoAppFinal.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-JewgoAppFinal.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		761780EC2CA45674006654EE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = JewgoAppFinal/AppDelegate.swift; sourceTree = "<group>"; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = JewgoAppFinal/LaunchScreen.storyboard; sourceTree = "<group>"; };
+		915CCCA40ECD44358DDC5AD5 /* Nunito-Light.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Nunito-Light.ttf"; path = "../src/assets/fonts/Nunito-Light.ttf"; sourceTree = "<group>"; };
 		94C894E901ABDE434B0A3AD0 /* Pods-JewgoAppFinal.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-JewgoAppFinal.release.xcconfig"; path = "Target Support Files/Pods-JewgoAppFinal/Pods-JewgoAppFinal.release.xcconfig"; sourceTree = "<group>"; };
+		D318D5AC342E4619965CCF63 /* Nunito-Bold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Nunito-Bold.ttf"; path = "../src/assets/fonts/Nunito-Bold.ttf"; sourceTree = "<group>"; };
+		DBA98A07BBF2473DB2861C1D /* Nunito-SemiBold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Nunito-SemiBold.ttf"; path = "../src/assets/fonts/Nunito-SemiBold.ttf"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
@@ -75,6 +83,7 @@
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
 				BBD78D7AC51CEA395F1C20DB /* Pods */,
+				8A624ED8AF314B039BDED791 /* Resources */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -87,6 +96,18 @@
 				13B07F961A680F5B00A75B9A /* JewgoAppFinal.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		8A624ED8AF314B039BDED791 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				D318D5AC342E4619965CCF63 /* Nunito-Bold.ttf */,
+				915CCCA40ECD44358DDC5AD5 /* Nunito-Light.ttf */,
+				23C30B345AB8466794B4E5EA /* Nunito-Regular.ttf */,
+				DBA98A07BBF2473DB2861C1D /* Nunito-SemiBold.ttf */,
+			);
+			name = Resources;
+			path = "";
 			sourceTree = "<group>";
 		};
 		BBD78D7AC51CEA395F1C20DB /* Pods */ = {
@@ -161,6 +182,10 @@
 				81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				1B312936FEA8465627BB5CD4 /* PrivacyInfo.xcprivacy in Resources */,
+				EDCCE1720890438794FAE913 /* Nunito-Bold.ttf in Resources */,
+				278091D70A014A309C0D625D /* Nunito-Light.ttf in Resources */,
+				8F5F1F8ED5F241A7A22EFDE5 /* Nunito-Regular.ttf in Resources */,
+				B48C9B3A9C3A4B9FABDB7FF3 /* Nunito-SemiBold.ttf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

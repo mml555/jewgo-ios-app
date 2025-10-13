@@ -150,7 +150,6 @@ export const useNavigationConstants = () => {
       AUTH: 'Auth' as const,
     },
     AUTH: {
-      WELCOME: 'Welcome' as const,
       LOGIN: 'Login' as const,
       REGISTER: 'Register' as const,
       FORGOT_PASSWORD: 'ForgotPassword' as const,

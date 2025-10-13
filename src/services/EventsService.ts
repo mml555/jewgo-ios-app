@@ -99,7 +99,7 @@ export interface ShareUrls {
   facebook: string;
   twitter: string;
   email: string;
-  copy_link: string;
+  copy: string;
 }
 
 export interface RelatedEvent {
@@ -172,7 +172,9 @@ class EventsService {
   // EVENTS
   // ============================================================================
 
-  static async getEvents(filters?: EventFilters): Promise<{ events: Event[]; pagination: any }> {
+  static async getEvents(
+    filters?: EventFilters,
+  ): Promise<{ events: Event[]; pagination: any }> {
     const params = new URLSearchParams();
 
     if (filters) {
@@ -189,11 +191,18 @@ class EventsService {
     }
 
     const endpoint = `/events?${params.toString()}`;
-    console.log('🔷 EventsService.getEvents - Calling:', `${API_BASE_URL}${endpoint}`);
-    
+    console.log(
+      '🔷 EventsService.getEvents - Calling:',
+      `${API_BASE_URL}${endpoint}`,
+    );
+
     try {
       const result = await this.makeRequest(endpoint);
-      console.log('✅ EventsService.getEvents - Success:', result.events?.length, 'events');
+      console.log(
+        '✅ EventsService.getEvents - Success:',
+        result.events?.length,
+        'events',
+      );
       return result;
     } catch (error) {
       console.error('❌ EventsService.getEvents - Error:', error);
@@ -330,25 +339,45 @@ class EventsService {
   // ============================================================================
 
   static async getCategories(): Promise<{ categories: EventCategory[] }> {
-    console.log('🔷 EventsService.getCategories - Calling:', `${API_BASE_URL}/events/categories`);
+    console.log(
+      '🔷 EventsService.getCategories - Calling:',
+      `${API_BASE_URL}/events/categories`,
+    );
     try {
       const result = await this.makeRequest('/events/categories');
-      console.log('✅ EventsService.getCategories - Success:', result.categories?.length, 'categories');
+      console.log(
+        '✅ EventsService.getCategories - Success:',
+        result.categories?.length,
+        'categories',
+      );
       return result;
     } catch (error: any) {
-      console.error('❌ EventsService.getCategories - Error:', error?.message || error);
+      console.error(
+        '❌ EventsService.getCategories - Error:',
+        error?.message || error,
+      );
       throw new Error(error?.message || 'Failed to load event categories');
     }
   }
 
   static async getEventTypes(): Promise<{ eventTypes: EventType[] }> {
-    console.log('🔷 EventsService.getEventTypes - Calling:', `${API_BASE_URL}/events/types`);
+    console.log(
+      '🔷 EventsService.getEventTypes - Calling:',
+      `${API_BASE_URL}/events/types`,
+    );
     try {
       const result = await this.makeRequest('/events/types');
-      console.log('✅ EventsService.getEventTypes - Success:', result.eventTypes?.length, 'types');
+      console.log(
+        '✅ EventsService.getEventTypes - Success:',
+        result.eventTypes?.length,
+        'types',
+      );
       return result;
     } catch (error: any) {
-      console.error('❌ EventsService.getEventTypes - Error:', error?.message || error);
+      console.error(
+        '❌ EventsService.getEventTypes - Error:',
+        error?.message || error,
+      );
       throw new Error(error?.message || 'Failed to load event types');
     }
   }
@@ -430,7 +459,9 @@ class EventsService {
   static getEventStatus(event: Event): 'upcoming' | 'happening_now' | 'past' {
     const now = new Date();
     const startDate = new Date(event.event_date);
-    const endDate = event.event_end_date ? new Date(event.event_end_date) : startDate;
+    const endDate = event.event_end_date
+      ? new Date(event.event_end_date)
+      : startDate;
 
     if (startDate > now) {
       return 'upcoming';
@@ -461,7 +492,10 @@ class EventsService {
     }
   }
 
-  static async shareEvent(event: Event, platform: 'whatsapp' | 'facebook' | 'twitter' | 'email' | 'copy'): Promise<boolean> {
+  static async shareEvent(
+    event: Event,
+    platform: 'whatsapp' | 'facebook' | 'twitter' | 'email' | 'copy',
+  ): Promise<boolean> {
     try {
       if (!event.share_urls) {
         console.warn('No share URLs available for event');
@@ -484,7 +518,7 @@ class EventsService {
       // Open the share URL
       const { Linking } = require('react-native');
       const canOpen = await Linking.canOpenURL(url);
-      
+
       if (canOpen) {
         await Linking.openURL(url);
         return true;

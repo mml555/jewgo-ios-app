@@ -13,6 +13,7 @@ import { googleOAuthService } from '../../services/GoogleOAuthService';
 import { authService } from '../../services/AuthService';
 import DeviceInfo from 'react-native-device-info';
 import { Colors } from '../../styles/designSystem';
+import GoogleLogo from '../../assets/icons/social/GoogleLogo';
 
 interface GoogleSignInButtonProps {
   onSuccess?: (user: any) => void;
@@ -119,10 +120,10 @@ const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
     >
       <View style={styles.buttonContent}>
         {isLoading ? (
-          <ActivityIndicator color={Colors.textInverse} size="small" />
+          <ActivityIndicator color={Colors.textPrimary} size="small" />
         ) : (
           <>
-            <Text style={styles.googleIcon}>G</Text>
+            {size !== 'icon' && <GoogleLogo size={20} />}
             <Text style={styles.buttonText}>
               {size === 'icon' ? '' : 'Continue with Google'}
             </Text>
@@ -168,7 +169,9 @@ const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
 
 const styles = StyleSheet.create({
   customButton: {
-    backgroundColor: Colors.link,
+    backgroundColor: Colors.white,
+    borderWidth: 1,
+    borderColor: Colors.border.primary,
     borderRadius: 8,
     paddingVertical: 12,
     paddingHorizontal: 16,
@@ -183,7 +186,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.1,
     shadowRadius: 3.84,
-    elevation: 5,
+    elevation: 2,
   },
   wideButton: {
     width: '100%',
@@ -194,7 +197,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 0,
   },
   disabledButton: {
-    backgroundColor: Colors.gray400,
+    backgroundColor: Colors.gray200,
+    borderColor: Colors.gray300,
     shadowOpacity: 0,
     elevation: 0,
   },
@@ -202,23 +206,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  googleIcon: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: Colors.textInverse,
-    marginRight: 8,
-    backgroundColor: Colors.surface,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    textAlign: 'center',
-    lineHeight: 20,
+    gap: 8,
   },
   buttonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: Colors.textInverse,
+    color: Colors.textPrimary,
   },
 });
 

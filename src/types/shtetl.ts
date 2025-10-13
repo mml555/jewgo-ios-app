@@ -22,6 +22,10 @@ export interface ShtetlStore {
   productCount: number;
   createdAt: string;
   updatedAt: string;
+  // Engagement metrics
+  viewCount?: number;
+  likeCount?: number;
+  shareCount?: number;
   // Store-specific fields
   storeType:
     | 'general'

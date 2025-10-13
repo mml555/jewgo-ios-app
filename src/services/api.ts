@@ -179,6 +179,23 @@ class ApiService {
     this.isV5Api = this.baseUrl.includes('/api/v5');
   }
 
+  /**
+   * Generic GET method for making API requests
+   */
+  async get<T = any>(endpoint: string): Promise<ApiResponse<T>> {
+    return this.request<T>(endpoint, { method: 'GET' });
+  }
+
+  /**
+   * Generic POST method for making API requests
+   */
+  async post<T = any>(endpoint: string, data?: any): Promise<ApiResponse<T>> {
+    return this.request<T>(endpoint, {
+      method: 'POST',
+      body: data ? JSON.stringify(data) : undefined,
+    });
+  }
+
   private async request<T>(
     endpoint: string,
     options: RequestInit = {},
@@ -205,7 +222,9 @@ class ApiService {
         // No authentication - try to create guest session automatically
         // Only log very occasionally to reduce console noise
         if (__DEV__ && Math.random() < 0.01) {
-          debugLog('🔐 No authentication found, attempting to create guest session...');
+          debugLog(
+            '🔐 No authentication found, attempting to create guest session...',
+          );
         }
         try {
           await guestService.createGuestSession();
@@ -577,12 +596,22 @@ class ApiService {
           `/jobs/listings?limit=${limit}&page=1`,
         );
 
-        debugLog('🔍 Jobs API raw response:', JSON.stringify(response).substring(0, 200));
-        debugLog('🔍 Response has data.listings?', !!((response as any)?.data?.listings));
+        debugLog(
+          '🔍 Jobs API raw response:',
+          JSON.stringify(response).substring(0, 200),
+        );
+        debugLog(
+          '🔍 Response has data.listings?',
+          !!(response as any)?.data?.listings,
+        );
         debugLog('🔍 Response has success?', !!(response as any).success);
 
         // V5 API returns { success: true, data: { listings: [...] } }
-        if (response && (response as any)?.success && (response as any)?.data?.listings) {
+        if (
+          response &&
+          (response as any)?.success &&
+          (response as any)?.data?.listings
+        ) {
           const jobListings = (response as any).data.listings;
           debugLog('🔍 Found jobs:', jobListings.length);
           debugLog('🔍 First job title:', jobListings[0]?.title);
@@ -596,18 +625,18 @@ class ApiService {
             data: { listings: transformedListings },
           };
         }
-        
+
         // Handle error responses
         if ((response as any).success === false) {
           debugLog('🔍 Jobs API returned error response');
           return response as ApiResponse<{ listings: Listing[] }>;
         }
-        
+
         debugLog('🔍 Jobs response did not match expected format');
       } catch (error) {
         errorLog('Failed to fetch jobs:', error);
       }
-      
+
       // If we get here for jobs category, return error (don't fall through to entity fetch)
       debugLog('🔍 Returning error for jobs category - no valid data found');
       return {

@@ -54,9 +54,15 @@ const DashboardAnalyticsScreen: React.FC = () => {
 
       if (statsResponse.success && statsResponse.data) {
         setStats(statsResponse.data.stats);
-        debugLog('DashboardAnalyticsScreen: Stats loaded from DB', statsResponse.data.stats);
+        debugLog(
+          'DashboardAnalyticsScreen: Stats loaded from DB',
+          statsResponse.data.stats,
+        );
       } else {
-        errorLog('DashboardAnalyticsScreen: Failed to load stats', statsResponse.error);
+        errorLog(
+          'DashboardAnalyticsScreen: Failed to load stats',
+          statsResponse.error,
+        );
         // Keep zeros if backend fails - show real empty state
         setStats({
           reviews: 0,
@@ -154,7 +160,6 @@ const DashboardAnalyticsScreen: React.FC = () => {
     return selectedStore?.category !== 'shtetl';
   };
 
-
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
@@ -166,7 +171,7 @@ const DashboardAnalyticsScreen: React.FC = () => {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Dashboard & Analytics</Text>
         <TouchableOpacity style={styles.backButton} onPress={loadUserData}>
-          <Icon name="refresh" size={20} color={Colors.primary.main} />
+          <Icon name="refresh-cw" size={20} color={Colors.primary.main} />
         </TouchableOpacity>
       </View>
 
@@ -229,25 +234,25 @@ const DashboardAnalyticsScreen: React.FC = () => {
                       <View style={styles.metricPill}>
                         <Icon name="eye" size={16} color={Colors.white} />
                         <Text style={styles.metricPillText}>
-                          {store.viewCount >= 1000
-                            ? `${(store.viewCount / 1000).toFixed(1)}K`
-                            : store.viewCount || 0}
+                          {(store.viewCount ?? 0) >= 1000
+                            ? `${((store.viewCount ?? 0) / 1000).toFixed(1)}K`
+                            : store.viewCount ?? 0}
                         </Text>
                       </View>
 
                       <View style={styles.metricPill}>
                         <Icon name="heart" size={16} color={Colors.white} />
                         <Text style={styles.metricPillText}>
-                          {store.likeCount >= 1000
-                            ? `${(store.likeCount / 1000).toFixed(1)}K`
-                            : store.likeCount || 0}
+                          {(store.likeCount ?? 0) >= 1000
+                            ? `${((store.likeCount ?? 0) / 1000).toFixed(1)}K`
+                            : store.likeCount ?? 0}
                         </Text>
                       </View>
 
                       <View style={styles.metricPill}>
                         <Icon name="share-2" size={16} color={Colors.white} />
                         <Text style={styles.metricPillText}>
-                          {store.shareCount || 0}
+                          {store.shareCount ?? 0}
                         </Text>
                       </View>
                     </View>
@@ -569,4 +574,3 @@ const styles = StyleSheet.create({
 });
 
 export default DashboardAnalyticsScreen;
-

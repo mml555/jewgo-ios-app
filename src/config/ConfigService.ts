@@ -29,10 +29,9 @@ export class ConfigService {
   }
 
   private loadConfig(): EnvironmentConfig {
-    // Force the correct API URL for development - use 127.0.0.1 for iOS simulator compatibility
-    const apiBaseUrl = __DEV__
-      ? 'http://127.0.0.1:3001/api/v5'
-      : Config.API_BASE_URL || 'https://api.jewgo.app/api/v5';
+    // Use Render backend for both development and production
+    const apiBaseUrl =
+      Config.API_BASE_URL || 'https://jewgo-app-oyoh.onrender.com/api/v5';
 
     return {
       nodeEnv:

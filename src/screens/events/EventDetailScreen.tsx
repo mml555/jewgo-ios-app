@@ -11,6 +11,7 @@ import {
   TextInput,
   Linking,
   Platform,
+  Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
@@ -178,14 +179,21 @@ const EventDetailScreen: React.FC = () => {
     return count.toString();
   };
 
-  const handleShare = useCallback(() => {
+  const handleShare = useCallback(async () => {
     if (event) {
-      EventsService.shareEvent(event, 'native');
+      try {
+        await Share.share({
+          message: `Check out this event: ${event.title}`,
+          url: event.cta_link || '',
+        });
+      } catch (error) {
+        console.error('Error sharing event:', error);
+      }
     }
   }, [event]);
 
   const handleFavorite = useCallback(() => {
-    toggleFavorite(eventId, 'event');
+    toggleFavorite(eventId);
   }, [eventId, toggleFavorite]);
 
   const handleReport = useCallback(() => {
@@ -349,7 +357,7 @@ const EventDetailScreen: React.FC = () => {
           type: 'share_favorite',
           shareCount: event.share_count || 0,
           likeCount: event.like_count || 0,
-          isFavorited: isFavorited(eventId, 'event'),
+          isFavorited: isFavorited(eventId),
         }}
       />
 

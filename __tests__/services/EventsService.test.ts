@@ -1,4 +1,7 @@
-import EventsService, { Event, EventFilters } from '../../src/services/EventsService';
+import EventsService, {
+  Event,
+  EventFilters,
+} from '../../src/services/EventsService';
 
 // Mock AsyncStorage
 jest.mock('@react-native-async-storage/async-storage', () => ({
@@ -77,7 +80,7 @@ describe('EventsService', () => {
 
       expect(fetch).toHaveBeenCalledWith(
         expect.stringContaining('/api/v5/events'),
-        expect.any(Object)
+        expect.any(Object),
       );
       expect(result).toEqual(mockResponse);
     });
@@ -104,19 +107,19 @@ describe('EventsService', () => {
 
       expect(fetch).toHaveBeenCalledWith(
         expect.stringContaining('category=religious'),
-        expect.any(Object)
+        expect.any(Object),
       );
       expect(fetch).toHaveBeenCalledWith(
         expect.stringContaining('isFree=true'),
-        expect.any(Object)
+        expect.any(Object),
       );
       expect(fetch).toHaveBeenCalledWith(
         expect.stringContaining('search=test'),
-        expect.any(Object)
+        expect.any(Object),
       );
       expect(fetch).toHaveBeenCalledWith(
         expect.stringContaining('tags=workshop%2Ceducation'),
-        expect.any(Object)
+        expect.any(Object),
       );
     });
 
@@ -144,7 +147,7 @@ describe('EventsService', () => {
 
       expect(fetch).toHaveBeenCalledWith(
         expect.stringContaining('/api/v5/events/1'),
-        expect.any(Object)
+        expect.any(Object),
       );
       expect(result).toEqual(mockResponse);
     });
@@ -196,8 +199,11 @@ describe('EventsService', () => {
       it('returns upcoming for future events', () => {
         const futureDate = new Date();
         futureDate.setDate(futureDate.getDate() + 1);
-        const futureEvent = { ...mockEvent, event_date: futureDate.toISOString() };
-        
+        const futureEvent = {
+          ...mockEvent,
+          event_date: futureDate.toISOString(),
+        };
+
         const result = EventsService.getEventStatus(futureEvent);
         expect(result).toBe('upcoming');
       });
@@ -206,7 +212,7 @@ describe('EventsService', () => {
         const pastDate = new Date();
         pastDate.setDate(pastDate.getDate() - 1);
         const pastEvent = { ...mockEvent, event_date: pastDate.toISOString() };
-        
+
         const result = EventsService.getEventStatus(pastEvent);
         expect(result).toBe('past');
       });
@@ -219,7 +225,7 @@ describe('EventsService', () => {
           event_date: now.toISOString(),
           event_end_date: endDate.toISOString(),
         };
-        
+
         const result = EventsService.getEventStatus(currentEvent);
         expect(result).toBe('happening_now');
       });
@@ -246,7 +252,11 @@ describe('EventsService', () => {
       });
 
       it('returns address when venue name not available', () => {
-        const eventWithoutVenue = { ...mockEvent, venue_name: undefined, address: '123 Main St' };
+        const eventWithoutVenue = {
+          ...mockEvent,
+          venue_name: undefined,
+          address: '123 Main St',
+        };
         const result = EventsService.getEventLocationDisplay(eventWithoutVenue);
         expect(result).toBe('123 Main St');
       });
@@ -259,7 +269,9 @@ describe('EventsService', () => {
           city: 'New York',
           state: 'NY',
         };
-        const result = EventsService.getEventLocationDisplay(eventWithoutVenueOrAddress);
+        const result = EventsService.getEventLocationDisplay(
+          eventWithoutVenueOrAddress,
+        );
         expect(result).toBe('New York, NY');
       });
 
@@ -296,11 +308,14 @@ describe('EventsService', () => {
           facebook: 'fb://share?link=https://jewgo.app/events/1',
           twitter: 'twitter://post?message=Test Event',
           email: 'mailto:?subject=Test Event',
-          copy_link: 'https://jewgo.app/events/1',
+          copy: 'https://jewgo.app/events/1',
         },
       };
 
-      const result = await EventsService.shareEvent(eventWithShareUrls, 'whatsapp');
+      const result = await EventsService.shareEvent(
+        eventWithShareUrls,
+        'whatsapp',
+      );
       expect(result).toBe(true);
     });
 
@@ -317,7 +332,7 @@ describe('EventsService', () => {
           facebook: 'fb://share?link=https://jewgo.app/events/1',
           twitter: 'twitter://post?message=Test Event',
           email: 'mailto:?subject=Test Event',
-          copy_link: 'https://jewgo.app/events/1',
+          copy: 'https://jewgo.app/events/1',
         },
       };
 
