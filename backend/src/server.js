@@ -427,12 +427,21 @@ app.get('/api/v5/dashboard/entities/recent', async (req, res) => {
 
     const query = `
       SELECT 
-        e.*,
-        et.name as entity_type_name,
+        e.id,
+        e.entity_type,
+        e.name,
+        e.description,
+        e.city,
+        e.state,
+        e.rating,
+        e.review_count,
+        e.is_verified,
+        e.is_active,
+        e.created_at,
+        e.updated_at,
         u.first_name,
         u.last_name
       FROM entities e
-      LEFT JOIN entity_types et ON e.entity_type_id = et.id
       LEFT JOIN users u ON e.owner_id = u.id
       WHERE e.is_active = true
       ORDER BY e.created_at DESC
