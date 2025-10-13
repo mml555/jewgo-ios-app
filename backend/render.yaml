@@ -27,36 +27,6 @@ services:
         value: jewgo-auth
       - key: JWT_AUDIENCE
         value: jewgo-api
-      - key: DATABASE_URL
-        fromDatabase:
-          name: jewgo-postgres
-          property: connectionString
-      - key: DB_HOST
-        fromDatabase:
-          name: jewgo-postgres
-          property: host
-      - key: DB_PORT
-        fromDatabase:
-          name: jewgo-postgres
-          property: port
-      - key: DB_NAME
-        fromDatabase:
-          name: jewgo-postgres
-          property: database
-      - key: DB_USER
-        fromDatabase:
-          name: jewgo-postgres
-          property: user
-      - key: DB_PASSWORD
-        fromDatabase:
-          name: jewgo-postgres
-          property: password
+      # DATABASE_URL should be added manually in Render dashboard from your Neon connection string
+      # Format: postgresql://user:password@host:port/database?sslmode=require
     healthCheckPath: /health
-
-databases:
-  # PostgreSQL Database
-  - name: jewgo-postgres
-    databaseName: jewgo_prod
-    user: jewgo_user
-    plan: free
-    region: oregon

@@ -42,17 +42,29 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Initialize database connection
-const dbPool = new Pool({
-  host: process.env.DB_HOST || 'localhost',
-  port: process.env.DB_PORT || 5432,
-  database: process.env.DB_NAME || 'jewgo_dev',
-  user: process.env.DB_USER || 'jewgo_user',
-  password: process.env.DB_PASSWORD || 'jewgo_dev_password',
-  ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
-  max: 20,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
-});
+// Support both DATABASE_URL (for Neon/Heroku-style) and individual env vars
+const dbConfig = process.env.DATABASE_URL
+  ? {
+      connectionString: process.env.DATABASE_URL,
+      ssl: { rejectUnauthorized: false },
+      max: 20,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 10000, // Increased timeout for Neon
+    }
+  : {
+      host: process.env.DB_HOST || 'localhost',
+      port: process.env.DB_PORT || 5432,
+      database: process.env.DB_NAME || 'jewgo_dev',
+      user: process.env.DB_USER || 'jewgo_user',
+      password: process.env.DB_PASSWORD || 'jewgo_dev_password',
+      ssl:
+        process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
+      max: 20,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 2000,
+    };
+
+const dbPool = new Pool(dbConfig);
 
 // Initialize auth system
 const authSystem = new AuthSystem(dbPool);
