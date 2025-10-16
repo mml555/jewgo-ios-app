@@ -1,4 +1,10 @@
-import React, { useCallback, useMemo, useState, useRef } from 'react';
+import React, {
+  useCallback,
+  useMemo,
+  useState,
+  useRef,
+  useEffect,
+} from 'react';
 import {
   View,
   Text,
@@ -6,6 +12,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Dimensions,
+  Animated,
 } from 'react-native';
 import Icon, { IconName } from './Icon';
 import { Spacing } from '../styles/designSystem';
@@ -38,14 +45,18 @@ const CHIP_WIDTH = 80;
 const CHIP_SPACING = 12;
 const VISIBLE_CHIPS = 5;
 const CONTAINER_PADDING = 16;
+const INDICATOR_WIDTH = 32;
+const SCROLLBAR_WIDTH = screenWidth - CONTAINER_PADDING * 2;
 
 const CategoryRail: React.FC<CategoryRailProps> = ({
   activeCategory,
   onCategoryChange,
   compact = false,
 }) => {
-  const [scrollX, setScrollX] = useState(0);
   const scrollViewRef = useRef<ScrollView>(null);
+  const scrollXAnimated = useRef(new Animated.Value(0)).current;
+  const [activeIndex, setActiveIndex] = useState(0);
+
   // Memoize the render item to prevent unnecessary re-renders
   const renderCategoryChip = useCallback(
     ({ item }: { item: Category }) => {
@@ -64,6 +75,7 @@ const CategoryRail: React.FC<CategoryRailProps> = ({
           accessibilityLabel={`${item.name} category`}
           accessibilityHint={`Filter content by ${item.name}`}
           accessibilityState={{ selected: isActive }}
+          activeOpacity={0.7}
         >
           {!compact && (
             <View style={styles.iconContainer}>
@@ -98,28 +110,80 @@ const CategoryRail: React.FC<CategoryRailProps> = ({
     [],
   );
 
+  // Update active index when category changes
+  useEffect(() => {
+    const index = CATEGORIES.findIndex(
+      category => category.id === activeCategory,
+    );
+    setActiveIndex(index !== -1 ? index : 0);
+  }, [activeCategory]);
+
   // Calculate snap interval for smooth scrolling
   const snapToInterval = useMemo(() => CHIP_WIDTH + CHIP_SPACING, []);
 
-  // Calculate the position of the green indicator based on active category and scroll position
-  const getIndicatorPosition = useCallback(() => {
-    const activeIndex = CATEGORIES.findIndex(
+  // Calculate indicator position - the indicator should follow the active button as it scrolls
+  const indicatorPosition = useMemo(() => {
+    // Calculate the center of the active button in content coordinates
+    const buttonCenterInContent =
+      CONTAINER_PADDING +
+      (CHIP_WIDTH + CHIP_SPACING) * activeIndex +
+      CHIP_WIDTH / 2;
+
+    // Calculate the raw position: buttonCenter - scrollX - containerPadding - halfIndicator
+    const rawPosition = Animated.subtract(
+      buttonCenterInContent - CONTAINER_PADDING - INDICATOR_WIDTH / 2,
+      scrollXAnimated,
+    );
+
+    // Use a more intelligent clamping that allows the indicator to move with its category
+    // but keeps it visible when the category is partially visible
+    return Animated.diffClamp(
+      rawPosition,
+      -INDICATOR_WIDTH, // Allow indicator to go slightly off-screen to the left
+      SCROLLBAR_WIDTH, // Allow indicator to go slightly off-screen to the right
+    );
+  }, [activeIndex, scrollXAnimated]);
+
+  // Use Animated.event for native-driven scroll performance
+  const handleScroll = useMemo(
+    () =>
+      Animated.event(
+        [{ nativeEvent: { contentOffset: { x: scrollXAnimated } } }],
+        { useNativeDriver: false }, // Can't use native driver for layout animations
+      ),
+    [scrollXAnimated],
+  );
+
+  // Auto-scroll to active category when it changes
+  useEffect(() => {
+    const index = CATEGORIES.findIndex(
       category => category.id === activeCategory,
     );
-    if (activeIndex === -1) return CONTAINER_PADDING + (CHIP_WIDTH - 32) / 2;
 
-    // Calculate the left edge of the active button
-    const buttonLeftEdge =
-      CONTAINER_PADDING + (CHIP_WIDTH + CHIP_SPACING) * activeIndex - scrollX;
-    // Center the 32px indicator under the 80px button - fine-tune centering
-    const centeredPosition = buttonLeftEdge + 8; // Start earlier, further left for perfect centering
-    return Math.max(CONTAINER_PADDING, centeredPosition);
-  }, [activeCategory, scrollX]);
+    if (index !== -1 && scrollViewRef.current) {
+      // Calculate the scroll position to center the active chip
+      const scrollPosition = Math.max(
+        0,
+        (CHIP_WIDTH + CHIP_SPACING) * index - CONTAINER_PADDING,
+      );
 
-  // Handle scroll events to update indicator position
-  const handleScroll = useCallback((event: any) => {
-    setScrollX(event.nativeEvent.contentOffset.x);
-  }, []);
+      // Update both the animated value and scroll the view
+      const timeoutId = setTimeout(() => {
+        if (scrollViewRef.current) {
+          // Update animated value
+          scrollXAnimated.setValue(scrollPosition);
+
+          // Scroll without animation for instant positioning
+          scrollViewRef.current.scrollTo({
+            x: scrollPosition,
+            animated: false,
+          });
+        }
+      }, 0);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [activeCategory, scrollXAnimated]);
 
   return (
     <View style={[styles.container, compact && styles.containerCompact]}>
@@ -140,9 +204,10 @@ const CategoryRail: React.FC<CategoryRailProps> = ({
         snapToInterval={snapToInterval}
         snapToAlignment="start"
         onScroll={handleScroll}
-        scrollEventThrottle={16}
+        scrollEventThrottle={1}
         accessibilityRole="list"
         accessibilityLabel="Category filter list"
+        nestedScrollEnabled={false}
       >
         {CATEGORIES.map((item, index) => (
           <React.Fragment key={item.id}>
@@ -154,8 +219,13 @@ const CategoryRail: React.FC<CategoryRailProps> = ({
       {/* Static scrollbar positioned below the buttons */}
       <View style={styles.staticScrollbar}>
         {/* Green indicator under the selected category */}
-        <View
-          style={[styles.scrollbarIndicator, { left: getIndicatorPosition() }]}
+        <Animated.View
+          style={[
+            styles.scrollbarIndicator,
+            {
+              left: indicatorPosition,
+            },
+          ]}
         />
       </View>
     </View>

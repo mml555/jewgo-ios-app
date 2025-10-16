@@ -1,11 +1,11 @@
 import React, { useState, useCallback } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import type { StackNavigationProp } from '@react-navigation/stack';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import TopBar from '../components/TopBar';
 import CategoryRail from '../components/CategoryRail';
 import SpecialsGridScreen from './SpecialsGridScreen';
-import type { AppStackParamList } from '../types/navigation';
+import type { TabParamList } from '../types/navigation';
 import { Colors } from '../styles/designSystem';
 
 interface SpecialsScreenProps {
@@ -13,7 +13,8 @@ interface SpecialsScreenProps {
 }
 
 const SpecialsScreen: React.FC<SpecialsScreenProps> = ({ onSearchChange }) => {
-  const navigation = useNavigation<StackNavigationProp<AppStackParamList>>();
+  const navigation =
+    useNavigation<BottomTabNavigationProp<TabParamList, 'Specials'>>();
   const [activeCategory, setActiveCategory] = useState('specials');
   const [searchQuery, setSearchQuery] = useState('');
   const [scrollY, setScrollY] = useState(0);
@@ -35,30 +36,26 @@ const SpecialsScreen: React.FC<SpecialsScreenProps> = ({ onSearchChange }) => {
         return;
       }
 
-      // For other categories, navigate to the appropriate screen
+      // For other categories, navigate to the Explore tab with the category
       setActiveCategory(category);
 
-      // Navigate to the category in the main tabs
+      // Navigate to the Explore tab (HomeScreen) with the selected category
       if (
         category === 'mikvah' ||
         category === 'eatery' ||
         category === 'shul' ||
-        category === 'stores'
+        category === 'stores' ||
+        category === 'events' ||
+        category === 'jobs'
       ) {
-        navigation.navigate('MainTabs', {
-          screen: 'Home',
-          params: { category },
-        });
-      } else if (category === 'events') {
-        navigation.navigate('MainTabs', {
-          screen: 'Home',
-          params: { category },
-        });
-      } else if (category === 'jobs') {
-        navigation.navigate('MainTabs', {
-          screen: 'Home',
-          params: { category },
-        });
+        // Direct tab navigation - this works because both screens are in the same Tab Navigator
+        navigation.navigate('Explore', { category });
+      } else if (category === 'shtetl') {
+        // Navigate to Shtetl screen (stack screen) - need to go through parent
+        const parent = navigation.getParent();
+        if (parent) {
+          parent.navigate('Shtetl' as never);
+        }
       }
     },
     [navigation],

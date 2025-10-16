@@ -232,8 +232,8 @@ const JobCard: React.FC<JobCardProps> = memo(({ item, categoryKey }) => {
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
       >
         <HeartIcon
-          size={28}
-          color={isFavorited ? '#FF69B4' : '#b8b8b8'} // Pink when favorited, light grey otherwise
+          size={20}
+          color={isFavorited ? Colors.error : Colors.textSecondary}
           filled={true}
           showBorder={true}
         />

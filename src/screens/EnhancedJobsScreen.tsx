@@ -829,7 +829,7 @@ const EnhancedJobsScreen: React.FC<EnhancedJobsScreenProps> = ({
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
           <HeartIcon
-            size={14}
+            size={20}
             color={isFavorited ? Colors.error : Colors.textSecondary}
             filled={true}
             showBorder={true}
@@ -892,7 +892,7 @@ const EnhancedJobsScreen: React.FC<EnhancedJobsScreenProps> = ({
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
           <HeartIcon
-            size={14}
+            size={20}
             color={isFavorited ? Colors.error : Colors.textSecondary}
             filled={true}
             showBorder={true}
@@ -1278,14 +1278,13 @@ const styles = StyleSheet.create({
   },
   heartButton: {
     position: 'absolute',
-    top: 8,
-    right: 8,
+    top: 0,
+    right: 0,
     zIndex: 1,
-    width: 28,
-    height: 28,
+    width: TouchTargets.minimum,
+    height: TouchTargets.minimum,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 14,
   },
   cardContent: {
     flex: 1,
@@ -1296,14 +1295,14 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: Colors.textPrimary,
     marginBottom: 4,
-    paddingRight: 12,
+    paddingRight: 36,
     lineHeight: 20,
   },
   seekerJob: {
     fontSize: 14,
     color: Colors.textSecondary,
     marginBottom: 6,
-    paddingRight: 12,
+    paddingRight: 36,
     lineHeight: 18,
   },
   companyName: {
@@ -1347,7 +1346,7 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     marginBottom: 6,
     lineHeight: 18,
-    paddingRight: 12,
+    paddingRight: 36,
   },
   description: {
     ...Typography.styles.body,
