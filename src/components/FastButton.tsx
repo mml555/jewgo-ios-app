@@ -177,8 +177,6 @@ const styles = StyleSheet.create({
   },
   buttonOutline: {
     backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: Colors.primary.main,
     shadowOpacity: 0,
     elevation: 0,
   },

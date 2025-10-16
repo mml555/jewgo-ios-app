@@ -31,8 +31,8 @@ export interface JobListing {
   is_remote: boolean;
   is_hybrid: boolean;
   description: string;
-  requirements?: string;
-  benefits?: string;
+  requirements?: string | string[]; // Can be string or array from database
+  benefits?: string | string[];
   responsibilities?: string;
   skills?: string[];
   cta_link?: string;
@@ -167,7 +167,7 @@ class JobsService {
       const error = await response
         .json()
         .catch(() => ({ error: 'Request failed' }));
-      
+
       // Handle rate limiting gracefully - return error instead of throwing
       if (response.status === 429) {
         const retryAfter = response.headers.get('Retry-After');
@@ -180,7 +180,7 @@ class JobsService {
           code: 'RATE_LIMIT_EXCEEDED',
         };
       }
-      
+
       // Handle authentication errors - return error instead of throwing
       if (response.status === 403 || response.status === 401) {
         return {
@@ -189,7 +189,7 @@ class JobsService {
           code: 'AUTH_REQUIRED',
         };
       }
-      
+
       // Return error response instead of throwing
       return {
         success: false,
@@ -220,6 +220,8 @@ class JobsService {
     limit?: number;
     sortBy?: string;
     sortOrder?: string;
+    business_id?: string;
+    employer_id?: string;
   }): Promise<{ jobListings: JobListing[]; pagination: any }> {
     const params = new URLSearchParams();
 
@@ -355,16 +357,28 @@ class JobsService {
     id: string,
   ): Promise<{ profile: JobSeekerProfile }> {
     const response = await this.makeRequest(`/jobs/seekers/${id}`);
-    console.log('🔍 JobsService.getSeekerProfileById - Raw response:', response);
-    console.log('🔍 JobsService.getSeekerProfileById - response.data:', response.data);
-    console.log('🔍 JobsService.getSeekerProfileById - response.profile:', response.profile);
-    
+    console.log(
+      '🔍 JobsService.getSeekerProfileById - Raw response:',
+      response,
+    );
+    console.log(
+      '🔍 JobsService.getSeekerProfileById - response.data:',
+      response.data,
+    );
+    console.log(
+      '🔍 JobsService.getSeekerProfileById - response.profile:',
+      response.profile,
+    );
+
     // Transform the backend response format to match frontend expectations
     const profileData = response.data || response.profile || response;
-    console.log('🔍 JobsService.getSeekerProfileById - Final profile data:', profileData);
-    
+    console.log(
+      '🔍 JobsService.getSeekerProfileById - Final profile data:',
+      profileData,
+    );
+
     return {
-      profile: profileData
+      profile: profileData,
     };
   }
 
@@ -507,9 +521,7 @@ class JobsService {
       });
     }
 
-    return this.makeRequest(
-      `/jobs/my-applications?${params.toString()}`,
-    );
+    return this.makeRequest(`/jobs/my-applications?${params.toString()}`);
   }
 
   static async updateApplicationStatus(
@@ -518,32 +530,24 @@ class JobsService {
     employerNotes?: string,
     interviewScheduledAt?: string,
   ): Promise<{ success: boolean; application: JobApplication }> {
-    return this.makeRequest(
-      `/jobs/applications/${applicationId}/status`,
-      {
-        method: 'PUT',
-        body: JSON.stringify({ status, employerNotes, interviewScheduledAt }),
-      },
-    );
+    return this.makeRequest(`/jobs/applications/${applicationId}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ status, employerNotes, interviewScheduledAt }),
+    });
   }
 
   static async withdrawApplication(
     applicationId: string,
   ): Promise<{ success: boolean }> {
-    return this.makeRequest(
-      `/jobs/applications/${applicationId}/withdraw`,
-      {
-        method: 'POST',
-      },
-    );
+    return this.makeRequest(`/jobs/applications/${applicationId}/withdraw`, {
+      method: 'POST',
+    });
   }
 
   static async getApplicationStatistics(
     jobListingId: string,
   ): Promise<{ statistics: any }> {
-    return this.makeRequest(
-      `/jobs/listings/${jobListingId}/application-stats`,
-    );
+    return this.makeRequest(`/jobs/listings/${jobListingId}/application-stats`);
   }
 
   // ============================================================================

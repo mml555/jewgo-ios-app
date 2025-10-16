@@ -117,7 +117,7 @@ export type AuthStackParamList = {
 
 // Tab Navigator - handles bottom tab screens
 export type TabParamList = {
-  Home: undefined;
+  Explore: undefined;
   Favorites: undefined;
   Specials:
     | {

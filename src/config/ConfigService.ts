@@ -1,4 +1,13 @@
-import Config from 'react-native-config';
+import {
+  API_BASE_URL,
+  NODE_ENV,
+  GOOGLE_PLACES_API_KEY,
+  GOOGLE_OAUTH_CLIENT_ID,
+  RECAPTCHA_SITE_KEY,
+  ENABLE_ANALYTICS,
+  ENABLE_PERFORMANCE_MONITORING,
+  DEBUG_MODE,
+} from '@env';
 import { debugLog, warnLog, errorLog } from '../utils/logger';
 
 export interface EnvironmentConfig {
@@ -31,7 +40,7 @@ export class ConfigService {
   private loadConfig(): EnvironmentConfig {
     // Load API URL from environment variable
     // Make sure .env file is configured with the correct API_BASE_URL
-    const apiBaseUrl = Config.API_BASE_URL;
+    const apiBaseUrl = API_BASE_URL;
 
     // Validate and log the API URL being used
     if (!apiBaseUrl) {
@@ -45,43 +54,50 @@ export class ConfigService {
 
     return {
       nodeEnv:
-        (Config.NODE_ENV as 'development' | 'staging' | 'production') ||
-        'development',
+        (NODE_ENV as 'development' | 'staging' | 'production') || 'development',
       apiBaseUrl: apiBaseUrl,
-      googlePlacesApiKey: Config.GOOGLE_PLACES_API_KEY || '',
-      googleOAuthClientId: (Config as any).GOOGLE_OAUTH_CLIENT_ID || '',
+      googlePlacesApiKey: GOOGLE_PLACES_API_KEY || '',
+      googleOAuthClientId: GOOGLE_OAUTH_CLIENT_ID || '',
       recaptchaSiteKey:
-        (Config as any).RECAPTCHA_SITE_KEY ||
-        '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI', // Test key
-      enableAnalytics: Config.ENABLE_ANALYTICS === 'true',
-      enablePerformanceMonitoring:
-        Config.ENABLE_PERFORMANCE_MONITORING === 'true',
-      debugMode: Config.DEBUG_MODE === 'true',
+        RECAPTCHA_SITE_KEY || '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI', // Test key
+      enableAnalytics: ENABLE_ANALYTICS === 'true',
+      enablePerformanceMonitoring: ENABLE_PERFORMANCE_MONITORING === 'true',
+      debugMode: DEBUG_MODE === 'true',
     };
   }
 
   private validateConfig(): void {
-    const requiredFields: (keyof EnvironmentConfig)[] = [
-      'apiBaseUrl',
-      'googlePlacesApiKey',
-    ];
+    // Required fields that must be present
+    const requiredFields: (keyof EnvironmentConfig)[] = ['apiBaseUrl'];
 
-    const missingFields = requiredFields.filter(field => {
+    // Optional fields that should be warned about if missing
+    const optionalFields: (keyof EnvironmentConfig)[] = ['googlePlacesApiKey'];
+
+    const missingRequired = requiredFields.filter(field => {
       const value = this.config[field];
       return !value || (typeof value === 'string' && value.trim() === '');
     });
 
-    if (missingFields.length > 0) {
-      const errorMessage = `Missing required environment variables: ${missingFields.join(
+    const missingOptional = optionalFields.filter(field => {
+      const value = this.config[field];
+      return !value || (typeof value === 'string' && value.trim() === '');
+    });
+
+    // Error for missing required fields
+    if (missingRequired.length > 0) {
+      const errorMessage = `Missing required environment variables: ${missingRequired.join(
         ', ',
       )}`;
       errorLog('❌ Configuration Error:', errorMessage);
+      throw new Error(errorMessage);
+    }
 
-      if (this.config.nodeEnv === 'production') {
-        throw new Error(errorMessage);
-      } else {
-        warnLog('⚠️ Configuration Warning:', errorMessage);
-      }
+    // Warning for missing optional fields
+    if (missingOptional.length > 0 && this.config.debugMode) {
+      const warningMessage = `Missing optional environment variables: ${missingOptional.join(
+        ', ',
+      )}`;
+      warnLog('⚠️ Configuration Warning:', warningMessage);
     }
 
     // Log configuration in development mode

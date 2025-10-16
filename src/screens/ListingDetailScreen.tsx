@@ -32,6 +32,7 @@ import WriteReviewModal from '../components/WriteReviewModal';
 import ImageCarousel from '../components/ImageCarousel';
 import DetailHeaderBar from '../components/DetailHeaderBar';
 import BusinessSpecials from '../components/BusinessSpecials';
+import BusinessJobsSection from '../components/BusinessJobsSection';
 import { SkeletonDetail } from '../components/SkeletonLoader';
 import {
   Colors,
@@ -54,26 +55,19 @@ const { width: screenWidth } = Dimensions.get('window');
 const ListingDetailScreen: React.FC = () => {
   const route = useRoute();
   const navigation = useNavigation();
-  
+
   // Validate route params
   const params = route.params as ListingDetailParams | undefined;
-  
+
   useEffect(() => {
     if (!params?.itemId || !params?.categoryKey) {
-      Alert.alert(
-        'Error',
-        'Missing listing information. Please try again.',
-        [{ text: 'OK', onPress: () => navigation.goBack() }]
-      );
+      Alert.alert('Error', 'Missing listing information. Please try again.', [
+        { text: 'OK', onPress: () => navigation.goBack() },
+      ]);
     }
   }, [params, navigation]);
-  
-  if (!params?.itemId || !params?.categoryKey) {
-    return <LoadingScreen />;
-  }
-  
-  const { itemId, categoryKey } = params;
-  
+
+  // All hooks must be called before any conditional returns
   const { location, getCurrentLocation } = useLocation();
   const { accuracyAuthorization } = useLocationSimple();
   const {
@@ -108,47 +102,11 @@ const ListingDetailScreen: React.FC = () => {
   const [showHoursDropdown, setShowHoursDropdown] = useState(false);
   const [pressedButtons, setPressedButtons] = useState<Set<string>>(new Set());
 
-  // Helper functions for button press effects
-  const handlePressIn = (buttonId: string) => {
-    setPressedButtons(prev => new Set(prev).add(buttonId));
-  };
+  // Extract params early for use in hooks
+  const itemId = params?.itemId || '';
+  const categoryKey = params?.categoryKey || '';
 
-  const handlePressOut = (buttonId: string) => {
-    setPressedButtons(prev => {
-      const newSet = new Set(prev);
-      newSet.delete(buttonId);
-      return newSet;
-    });
-  };
-
-  // Handle special card navigation
-  const handleSpecialPress = (specialId: string) => {
-    // Navigate to the special detail screen
-    (navigation as any).navigate('SpecialDetail', {
-      specialId: specialId,
-      businessId: itemId, // Pass the business ID for context
-    });
-  };
-
-  // Handle viewing all specials
-  const handleViewAllSpecials = () => {
-    // Navigate to main specials screen showing all specials
-    (navigation as any).navigate('MainTabs', {
-      screen: 'Specials',
-    });
-  };
-
-  // Handle social media press
-  const handleSocialMediaPress = (platform: string, url: string) => {
-    // For now, we'll show an alert. In a real app, this would open the social media link
-    Alert.alert(
-      `Open ${platform.charAt(0).toUpperCase() + platform.slice(1)}`,
-      `This would open ${url} in the browser or social media app.`,
-      [{ text: 'OK' }],
-    );
-  };
-
-  // Calculate real distance if user location is available
+  // Calculate real distance if user location is available - MUST be before conditional return
   const realDistance = useMemo(() => {
     infoLog(
       '📍 DEBUG: realDistance calculation - item:',
@@ -252,6 +210,51 @@ const ListingDetailScreen: React.FC = () => {
   useEffect(() => {
     // Modal state changed
   }, [showWriteReviewModal]);
+
+  // Conditional return AFTER all hooks
+  if (!params?.itemId || !params?.categoryKey) {
+    return <LoadingScreen />;
+  }
+
+  // Helper functions for button press effects
+  const handlePressIn = (buttonId: string) => {
+    setPressedButtons(prev => new Set(prev).add(buttonId));
+  };
+
+  const handlePressOut = (buttonId: string) => {
+    setPressedButtons(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(buttonId);
+      return newSet;
+    });
+  };
+
+  // Handle special card navigation
+  const handleSpecialPress = (specialId: string) => {
+    // Navigate to the special detail screen
+    (navigation as any).navigate('SpecialDetail', {
+      specialId: specialId,
+      businessId: itemId, // Pass the business ID for context
+    });
+  };
+
+  // Handle viewing all specials
+  const handleViewAllSpecials = () => {
+    // Navigate to main specials screen showing all specials
+    (navigation as any).navigate('MainTabs', {
+      screen: 'Specials',
+    });
+  };
+
+  // Handle social media press
+  const handleSocialMediaPress = (platform: string, url: string) => {
+    // For now, we'll show an alert. In a real app, this would open the social media link
+    Alert.alert(
+      `Open ${platform.charAt(0).toUpperCase() + platform.slice(1)}`,
+      `This would open ${url} in the browser or social media app.`,
+      [{ text: 'OK' }],
+    );
+  };
 
   // Handle image swipe
   const handleImageSwipe = (event: any) => {
@@ -827,6 +830,16 @@ const ListingDetailScreen: React.FC = () => {
               maxDisplayCount={3}
             />
 
+            {/* Divider */}
+            <View style={styles.divider} />
+
+            {/* Business Jobs - I'm Hiring Section */}
+            <BusinessJobsSection
+              businessId={itemId}
+              businessName={item?.title || 'Business'}
+              maxDisplayCount={3}
+            />
+
             {/* Social Media Icons */}
             {(item.facebook_url ||
               item.instagram_url ||
@@ -876,7 +889,7 @@ const ListingDetailScreen: React.FC = () => {
                       }
                       activeOpacity={0.7}
                     >
-                      <TikTokIcon size={24} color="#000000" />
+                      <TikTokIcon size={24} color="#292b2d" />
                     </TouchableOpacity>
                   )}
                 </View>
@@ -1116,8 +1129,6 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     minWidth: 50,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   pageCounterText: {
     color: Colors.white,
@@ -1157,6 +1168,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#FFD700',
     marginRight: Spacing.xs,
+    fontFamily: Typography.fontFamily,
   },
   infoRow: {
     flexDirection: 'row',
@@ -1340,8 +1352,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-evenly', // Even spacing between all elements
     paddingHorizontal: Spacing.sm,
     overflow: 'hidden', // Ensure blur effect stays within border radius
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
     shadowColor: Colors.black,
     shadowOffset: {
       width: 0,
@@ -1420,6 +1430,7 @@ const styles = StyleSheet.create({
   heartIcon: {
     fontSize: 16,
     color: Colors.textPrimary,
+    fontFamily: Typography.fontFamily,
   },
   heartIconActive: {
     color: Colors.error,
@@ -1448,8 +1459,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     ...Shadows.sm,
-    borderWidth: 1,
-    borderColor: Colors.border.primary,
   },
   // Long Description Styles
   longDescriptionContainer: {
@@ -1494,8 +1503,6 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius['2xl'],
     paddingVertical: Spacing.sm,
     paddingHorizontal: Spacing.md,
-    borderWidth: 1,
-    borderColor: Colors.success,
     ...Shadows.sm,
   },
   writeReviewButtonText: {

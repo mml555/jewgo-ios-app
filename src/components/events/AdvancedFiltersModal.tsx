@@ -12,8 +12,12 @@ import {
   Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { EventCategory, EventType, EventFilters } from '../../services/EventsService';
-import { Spacing } from '../../styles/designSystem';
+import {
+  EventCategory,
+  EventType,
+  EventFilters,
+} from '../../services/EventsService';
+import { Spacing, Typography } from '../../styles/designSystem';
 
 interface AdvancedFiltersModalProps {
   visible: boolean;
@@ -33,9 +37,10 @@ const AdvancedFiltersModal: React.FC<AdvancedFiltersModalProps> = ({
   currentFilters,
 }) => {
   const insets = useSafeAreaInsets();
-  
+
   // Local state for filter form
-  const [localFilters, setLocalFilters] = useState<EventFilters>(currentFilters);
+  const [localFilters, setLocalFilters] =
+    useState<EventFilters>(currentFilters);
 
   const updateFilter = useCallback((key: keyof EventFilters, value: any) => {
     setLocalFilters(prev => ({ ...prev, [key]: value }));
@@ -53,8 +58,8 @@ const AdvancedFiltersModal: React.FC<AdvancedFiltersModalProps> = ({
   }, [onApplyFilters, onClose]);
 
   const getActiveFiltersCount = useCallback(() => {
-    return Object.values(localFilters).filter(value => 
-      value !== undefined && value !== null && value !== ''
+    return Object.values(localFilters).filter(
+      value => value !== undefined && value !== null && value !== '',
     ).length;
   }, [localFilters]);
 
@@ -71,7 +76,10 @@ const AdvancedFiltersModal: React.FC<AdvancedFiltersModalProps> = ({
             <Text style={styles.closeText}>Cancel</Text>
           </TouchableOpacity>
           <Text style={styles.title}>Advanced Filters</Text>
-          <TouchableOpacity onPress={handleApplyFilters} style={styles.applyButton}>
+          <TouchableOpacity
+            onPress={handleApplyFilters}
+            style={styles.applyButton}
+          >
             <Text style={styles.applyText}>Apply</Text>
           </TouchableOpacity>
         </View>
@@ -87,7 +95,7 @@ const AdvancedFiltersModal: React.FC<AdvancedFiltersModalProps> = ({
                   style={styles.dateInput}
                   placeholder="YYYY-MM-DD"
                   value={localFilters.dateFrom || ''}
-                  onChangeText={(text) => updateFilter('dateFrom', text)}
+                  onChangeText={text => updateFilter('dateFrom', text)}
                   accessibilityLabel="Start date filter"
                 />
               </View>
@@ -97,7 +105,7 @@ const AdvancedFiltersModal: React.FC<AdvancedFiltersModalProps> = ({
                   style={styles.dateInput}
                   placeholder="YYYY-MM-DD"
                   value={localFilters.dateTo || ''}
-                  onChangeText={(text) => updateFilter('dateTo', text)}
+                  onChangeText={text => updateFilter('dateTo', text)}
                   accessibilityLabel="End date filter"
                 />
               </View>
@@ -107,25 +115,39 @@ const AdvancedFiltersModal: React.FC<AdvancedFiltersModalProps> = ({
           {/* Event Type */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Event Type</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipContainer}>
-              {eventTypes.map((type) => (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.chipContainer}
+            >
+              {eventTypes.map(type => (
                 <TouchableOpacity
                   key={type.id}
                   style={[
                     styles.chip,
                     localFilters.eventType === type.key && styles.chipActive,
                   ]}
-                  onPress={() => updateFilter('eventType', 
-                    localFilters.eventType === type.key ? undefined : type.key
-                  )}
+                  onPress={() =>
+                    updateFilter(
+                      'eventType',
+                      localFilters.eventType === type.key
+                        ? undefined
+                        : type.key,
+                    )
+                  }
                   accessibilityRole="button"
                   accessibilityLabel={`Filter by ${type.name} event type`}
-                  accessibilityState={{ selected: localFilters.eventType === type.key }}
+                  accessibilityState={{
+                    selected: localFilters.eventType === type.key,
+                  }}
                 >
-                  <Text style={[
-                    styles.chipText,
-                    localFilters.eventType === type.key && styles.chipTextActive,
-                  ]}>
+                  <Text
+                    style={[
+                      styles.chipText,
+                      localFilters.eventType === type.key &&
+                        styles.chipTextActive,
+                    ]}
+                  >
                     {type.name}
                   </Text>
                 </TouchableOpacity>
@@ -140,9 +162,12 @@ const AdvancedFiltersModal: React.FC<AdvancedFiltersModalProps> = ({
               style={styles.textInput}
               placeholder="Enter tags separated by commas"
               value={localFilters.tags?.join(', ') || ''}
-              onChangeText={(text) => updateFilter('tags', 
-                text ? text.split(',').map(tag => tag.trim()) : undefined
-              )}
+              onChangeText={text =>
+                updateFilter(
+                  'tags',
+                  text ? text.split(',').map(tag => tag.trim()) : undefined,
+                )
+              }
               multiline
               accessibilityLabel="Tags filter"
             />
@@ -155,7 +180,7 @@ const AdvancedFiltersModal: React.FC<AdvancedFiltersModalProps> = ({
               style={styles.textInput}
               placeholder="Enter zip code"
               value={localFilters.zipCode || ''}
-              onChangeText={(text) => updateFilter('zipCode', text || undefined)}
+              onChangeText={text => updateFilter('zipCode', text || undefined)}
               keyboardType="numeric"
               accessibilityLabel="Zip code filter"
             />
@@ -164,12 +189,14 @@ const AdvancedFiltersModal: React.FC<AdvancedFiltersModalProps> = ({
           {/* Toggle Filters */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Event Options</Text>
-            
+
             <View style={styles.toggleRow}>
               <Text style={styles.toggleLabel}>Free Events Only</Text>
               <Switch
                 value={localFilters.isFree || false}
-                onValueChange={(value) => updateFilter('isFree', value || undefined)}
+                onValueChange={value =>
+                  updateFilter('isFree', value || undefined)
+                }
                 trackColor={{ false: '#E0E0E0', true: '#74E1A0' }}
                 thumbColor={localFilters.isFree ? '#FFFFFF' : '#FFFFFF'}
                 accessibilityLabel="Filter for free events only"
@@ -180,7 +207,9 @@ const AdvancedFiltersModal: React.FC<AdvancedFiltersModalProps> = ({
               <Text style={styles.toggleLabel}>RSVP Required</Text>
               <Switch
                 value={localFilters.isRsvpRequired || false}
-                onValueChange={(value) => updateFilter('isRsvpRequired', value || undefined)}
+                onValueChange={value =>
+                  updateFilter('isRsvpRequired', value || undefined)
+                }
                 trackColor={{ false: '#E0E0E0', true: '#74E1A0' }}
                 thumbColor={localFilters.isRsvpRequired ? '#FFFFFF' : '#FFFFFF'}
                 accessibilityLabel="Filter for events requiring RSVP"
@@ -191,9 +220,13 @@ const AdvancedFiltersModal: React.FC<AdvancedFiltersModalProps> = ({
               <Text style={styles.toggleLabel}>Sponsorship Available</Text>
               <Switch
                 value={localFilters.isSponsorshipAvailable || false}
-                onValueChange={(value) => updateFilter('isSponsorshipAvailable', value || undefined)}
+                onValueChange={value =>
+                  updateFilter('isSponsorshipAvailable', value || undefined)
+                }
                 trackColor={{ false: '#E0E0E0', true: '#74E1A0' }}
-                thumbColor={localFilters.isSponsorshipAvailable ? '#FFFFFF' : '#FFFFFF'}
+                thumbColor={
+                  localFilters.isSponsorshipAvailable ? '#FFFFFF' : '#FFFFFF'
+                }
                 accessibilityLabel="Filter for events with sponsorship opportunities"
               />
             </View>
@@ -202,13 +235,17 @@ const AdvancedFiltersModal: React.FC<AdvancedFiltersModalProps> = ({
           {/* Sort Options */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Sort By</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipContainer}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.chipContainer}
+            >
               {[
                 { key: 'event_date', label: 'Date' },
                 { key: 'created_at', label: 'Newest' },
                 { key: 'title', label: 'Title' },
                 { key: 'rsvp_count', label: 'Popularity' },
-              ].map((option) => (
+              ].map(option => (
                 <TouchableOpacity
                   key={option.key}
                   style={[
@@ -218,12 +255,17 @@ const AdvancedFiltersModal: React.FC<AdvancedFiltersModalProps> = ({
                   onPress={() => updateFilter('sortBy', option.key)}
                   accessibilityRole="button"
                   accessibilityLabel={`Sort by ${option.label}`}
-                  accessibilityState={{ selected: localFilters.sortBy === option.key }}
+                  accessibilityState={{
+                    selected: localFilters.sortBy === option.key,
+                  }}
                 >
-                  <Text style={[
-                    styles.chipText,
-                    localFilters.sortBy === option.key && styles.chipTextActive,
-                  ]}>
+                  <Text
+                    style={[
+                      styles.chipText,
+                      localFilters.sortBy === option.key &&
+                        styles.chipTextActive,
+                    ]}
+                  >
                     {option.label}
                   </Text>
                 </TouchableOpacity>
@@ -242,10 +284,11 @@ const AdvancedFiltersModal: React.FC<AdvancedFiltersModalProps> = ({
           >
             <Text style={styles.clearButtonText}>Clear All</Text>
           </TouchableOpacity>
-          
+
           <View style={styles.activeFiltersInfo}>
             <Text style={styles.activeFiltersText}>
-              {getActiveFiltersCount()} filter{getActiveFiltersCount() !== 1 ? 's' : ''} applied
+              {getActiveFiltersCount()} filter
+              {getActiveFiltersCount() !== 1 ? 's' : ''} applied
             </Text>
           </View>
         </View>
@@ -301,6 +344,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#292B2D',
     marginBottom: Spacing.md,
+    fontFamily: Typography.fontFamily,
   },
   dateRow: {
     flexDirection: 'row',

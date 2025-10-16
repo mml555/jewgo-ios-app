@@ -193,7 +193,7 @@ const styles = StyleSheet.create({
       android: { elevation: 4 },
     }),
   },
-  thumbnail: { width: 100, height: 140, backgroundColor: '#F1F1F1' },
+  thumbnail: { width: 100, height: 140, backgroundColor: '#f8f8f8' },
   cardContent: { flex: 1, padding: Spacing.md },
   cardHeader: {
     flexDirection: 'row',
@@ -214,7 +214,7 @@ const styles = StyleSheet.create({
   statText: { fontSize: 12, color: '#999', marginRight: Spacing.md },
   actions: { flexDirection: 'row' },
   actionButton: {
-    backgroundColor: '#F1F1F1',
+    backgroundColor: '#f8f8f8',
     borderRadius: 8,
     paddingVertical: Spacing.xs,
     paddingHorizontal: Spacing.md,

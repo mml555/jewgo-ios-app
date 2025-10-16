@@ -28,6 +28,7 @@ import {
 } from '../styles/designSystem';
 import { favoritesEventService } from '../services/FavoritesEventService';
 import Icon from './Icon';
+import HeartIcon from './HeartIcon';
 import { debugLog, errorLog, warnLog } from '../utils/logger';
 import { DistanceDisplay } from './DistanceDisplay';
 import { useLocationSimple } from '../hooks/useLocationSimple';
@@ -43,9 +44,9 @@ interface CategoryCardProps {
 }
 
 const { width: screenWidth } = Dimensions.get('window');
-const ROW_PADDING = 16; // 8px padding on each side of the row
-const CARD_SPACING = 8; // Space between cards in a row
-const CARD_WIDTH = (screenWidth - ROW_PADDING - CARD_SPACING) / 2;
+const HORIZONTAL_PADDING = Spacing.md; // 16px padding on each side
+const CARD_GAP = Spacing.md; // 16px gap between cards
+const CARD_WIDTH = (screenWidth - HORIZONTAL_PADDING * 2 - CARD_GAP) / 2;
 const IMAGE_HEIGHT = (CARD_WIDTH * 3) / 4; // 4:3 aspect ratio
 
 const CategoryCard: React.FC<CategoryCardProps> = ({
@@ -193,12 +194,12 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
     }
 
     isNavigatingRef.current = true;
-    
+
     // Clear any existing navigation timeout
     if (navigationTimeoutRef.current) {
       clearTimeout(navigationTimeoutRef.current);
     }
-    
+
     // Reset after navigation animation completes (typically 300-500ms)
     navigationTimeoutRef.current = setTimeout(() => {
       isNavigatingRef.current = false;
@@ -393,11 +394,11 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
           accessibilityHint="Tap to toggle favorite status"
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Icon
-            name="heart"
-            size={20}
-            color={isFavorited ? Colors.error : Colors.textSecondary}
-            filled={isFavorited}
+          <HeartIcon
+            size={28}
+            color={isFavorited ? '#FF69B4' : '#b8b8b8'} // Pink when favorited, light grey otherwise
+            filled={true}
+            showBorder={true}
           />
         </Pressable>
       </View>
@@ -450,7 +451,7 @@ export default memo(CategoryCard);
 const styles = StyleSheet.create({
   container: {
     width: CARD_WIDTH,
-    borderRadius: BorderRadius.lg,
+    borderRadius: BorderRadius.xl,
     padding: 0, // Remove padding to align with image edges
     // Shadow moved to specific container types to prevent rendering warnings
   },
@@ -470,9 +471,9 @@ const styles = StyleSheet.create({
     position: 'relative',
     width: '100%',
     height: IMAGE_HEIGHT,
-    borderRadius: BorderRadius.lg,
+    borderRadius: BorderRadius.xl,
     overflow: 'hidden',
-    marginBottom: Spacing.sm,
+    marginBottom: Spacing.sm, // Reduced spacing below image
     backgroundColor: Colors.background.tertiary, // Add background color for when image fails to load
   },
   image: {
@@ -493,6 +494,7 @@ const styles = StyleSheet.create({
     fontSize: 40,
     marginBottom: Spacing.sm,
     opacity: 0.7,
+    fontFamily: Typography.fontFamily,
   },
   placeholderText: {
     ...Typography.styles.bodySmall,
@@ -505,18 +507,16 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: Spacing.sm,
     left: Spacing.sm,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)', // Dark background for better contrast
+    backgroundColor: '#ffffff', // White background
     borderRadius: BorderRadius.full,
     paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)', // Light border for contrast
+    paddingVertical: Spacing.sm,
+    ...Shadows.sm,
   },
   tagText: {
     ...Typography.styles.caption,
-    color: Colors.text.inverse, // White text for dark background
+    color: '#292b2d', // Dark text color
     fontWeight: '700',
-    textTransform: 'uppercase',
   },
   heartButton: {
     position: 'absolute',
@@ -527,15 +527,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  heartIcon: {
-    fontSize: 24, // Reduced from 32 to 24 for better visual balance
-    color: Colors.gray300, // Light grey when not favorited
-    textAlign: 'center',
-    lineHeight: 24, // Match the fontSize
-    textShadowColor: 'rgba(255, 255, 255, 1)',
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 3, // Increased radius for better white outline
-  },
   heartIconActive: {
     color: Colors.error,
     textShadowColor: 'rgba(255, 255, 255, 1)',
@@ -544,13 +535,14 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     flex: 1,
-    paddingHorizontal: Spacing.xs, // Add padding to content area
+    paddingHorizontal: Spacing.xs, // Reduced padding for tighter spacing
+    paddingBottom: Spacing.xs, // Add bottom padding
   },
   titleSection: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: Spacing.sm,
+    marginBottom: Spacing.xs,
     paddingHorizontal: 0,
   },
   title: {
@@ -567,8 +559,9 @@ const styles = StyleSheet.create({
   },
   ratingStar: {
     fontSize: 14,
-    color: Colors.primary.main,
+    color: '#FFD700', // Yellow/gold color for star
     marginRight: Spacing.xs,
+    fontFamily: Typography.fontFamily,
   },
   ratingText: {
     ...Typography.styles.caption,

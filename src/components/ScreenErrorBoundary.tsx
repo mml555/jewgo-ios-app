@@ -155,7 +155,7 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 12,
     color: Colors.error,
-    fontFamily: 'Courier',
+    fontFamily: Typography.fontFamily,
   },
   button: {
     backgroundColor: Colors.primary.main,

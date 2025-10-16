@@ -65,6 +65,7 @@ class JobsController {
         companyName,
         companyWebsite,
         companyLogoUrl,
+        businessEntityId,
       } = req.body;
 
       // Validate required fields
@@ -130,8 +131,8 @@ class JobsController {
           show_compensation, zip_code, city, state, latitude, longitude,
           is_remote, is_hybrid, location_type, description, requirements, benefits,
           responsibilities, skills, application_url, contact_email, contact_phone,
-          is_active, posted_date
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32)
+          business_entity_id, is_active, posted_date
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33)
         RETURNING *`,
         [
           userId,
@@ -164,6 +165,7 @@ class JobsController {
           ctaLink,
           contactEmail,
           contactPhone,
+          businessEntityId || null, // Optional link to business entity
           true, // is_active
           new Date(), // posted_date
         ],
@@ -211,6 +213,8 @@ class JobsController {
         limit = 20,
         sortBy = 'created_at',
         sortOrder = 'DESC',
+        business_id,
+        employer_id,
       } = req.query;
 
       let query = `
@@ -294,6 +298,20 @@ class JobsController {
         paramCount++;
       }
 
+      // Filter by business entity (for displaying jobs on business listing pages)
+      if (business_id) {
+        paramCount++;
+        query += ` AND j.business_entity_id = $${paramCount}`;
+        params.push(business_id);
+      }
+
+      // Filter by employer/poster
+      if (employer_id) {
+        paramCount++;
+        query += ` AND j.poster_id = $${paramCount}`;
+        params.push(employer_id);
+      }
+
       // Location-based filtering
       if (lat && lng && radius) {
         paramCount++;
@@ -374,6 +392,9 @@ class JobsController {
     try {
       const { id } = req.params;
       const userId = req.user?.id;
+      // Guest users have IDs like "guest_..." which aren't valid UUIDs
+      const isGuestUser = userId && userId.startsWith('guest_');
+      const validUserId = !isGuestUser ? userId : null;
 
       const result = await db.query(
         `SELECT 
@@ -382,20 +403,16 @@ class JobsController {
           u.last_name as employer_last_name,
           u.email as employer_email,
           (SELECT COUNT(*) FROM job_applications WHERE job_id = j.id) as total_applications,
+          false as is_saved,
           ${
-            userId
-              ? `(SELECT COUNT(*) > 0 FROM saved_jobs WHERE user_id = $2 AND job_id = j.id) as is_saved,`
-              : 'false as is_saved,'
-          }
-          ${
-            userId
+            validUserId
               ? `(SELECT COUNT(*) > 0 FROM job_applications WHERE applicant_id = $2 AND job_id = j.id) as has_applied`
               : 'false as has_applied'
           }
         FROM jobs j
         LEFT JOIN users u ON j.poster_id = u.id
         WHERE j.id = $1`,
-        userId ? [id, userId] : [id],
+        validUserId ? [id, validUserId] : [id],
       );
 
       if (result.rows.length === 0) {
@@ -589,12 +606,10 @@ class JobsController {
 
       if (job.is_active === true) {
         await client.query('ROLLBACK');
-        return res
-          .status(400)
-          .json({
-            error: 'Job listing is already active',
-            code: 'JOB_ALREADY_ACTIVE',
-          });
+        return res.status(400).json({
+          error: 'Job listing is already active',
+          code: 'JOB_ALREADY_ACTIVE',
+        });
       }
 
       // Check listing limit

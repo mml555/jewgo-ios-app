@@ -107,18 +107,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
       }
 
-      // Set guest user if guest session exists
-      if (guestService.isGuestAuthenticated()) {
-        const guest = guestService.getGuestUser();
-        setGuestUser(guest);
-        // Only log occasionally to avoid console spam
-        if (__DEV__ && Math.random() < 0.1) {
-          debugLog('🔐 AuthContext: Restored guest session from storage');
+      // TEMP FIX: Force clear old guest sessions and create a new one
+      // This ensures we get a fresh token that works with the current backend
+      if (!authService.isAuthenticated()) {
+        debugLog(
+          '🔐 AuthContext: Clearing old guest session and creating fresh one...',
+        );
+        try {
+          // Clear any existing guest session
+          await guestService.revokeSession();
+
+          // Create a new guest session
+          const session = await guestService.createGuestSession();
+          setGuestUser(session.guestUser);
+          debugLog('🔐 AuthContext: Fresh guest session created successfully');
+        } catch (error) {
+          errorLog('🔐 AuthContext: Failed to create guest session:', error);
         }
       }
-      // Note: Do NOT auto-create guest sessions here
-      // Let the user explicitly choose to continue as guest from the Login screen
-      // This prevents auto-login after logout
     } catch (error) {
       errorLog('Auth initialization error:', error);
       setUser(null);

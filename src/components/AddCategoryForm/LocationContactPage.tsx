@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, TextInput, StyleSheet, ScrollView } from 'react-native';
 import Icon from '../Icon';
+import { Typography } from '../../styles/designSystem';
 
 interface LocationContactPageProps {
   formData: any;
@@ -297,7 +298,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#000000',
+    color: '#292b2d',
     textAlign: 'center',
     marginBottom: 8,
   },
@@ -313,8 +314,9 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000000',
+    color: '#292b2d',
     marginBottom: 12,
+    fontFamily: Typography.fontFamily,
   },
   rowContainer: {
     flexDirection: 'row',
@@ -329,7 +331,7 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#000000',
+    color: '#292b2d',
     marginBottom: 8,
   },
   textInput: {
@@ -338,7 +340,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
-    color: '#000000',
+    color: '#292b2d',
     borderWidth: 1,
     borderColor: '#E5E5EA',
   },
@@ -359,7 +361,7 @@ const styles = StyleSheet.create({
   tipsTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000000',
+    color: '#292b2d',
     marginBottom: 12,
   },
   tipItem: {
@@ -378,6 +380,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666666',
     lineHeight: 20,
+    fontFamily: Typography.fontFamily,
   },
   bottomSpacer: {
     height: 40,

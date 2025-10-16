@@ -138,7 +138,7 @@ const styles = StyleSheet.create({
   card: {
     width: CARD_WIDTH,
     backgroundColor: Colors.white,
-    borderRadius: BorderRadius.md,
+    borderRadius: BorderRadius['2xl'],
     marginBottom: Spacing.md,
     ...Shadows.sm,
     overflow: 'hidden',
@@ -180,13 +180,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   content: {
-    padding: Spacing.md,
+    padding: Spacing.sm,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: Spacing.sm,
+    marginBottom: Spacing.xs,
   },
   storeName: {
     ...Typography.styles.h3,

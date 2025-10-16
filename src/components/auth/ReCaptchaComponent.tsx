@@ -12,6 +12,7 @@ import {
 import { debugLog, errorLog } from '../../utils/logger';
 import { WebView } from 'react-native-webview';
 import { configService } from '../../config/ConfigService';
+import { Typography } from '../../styles/designSystem';
 
 interface ReCaptchaComponentProps {
   siteKey: string;
@@ -374,11 +375,13 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#666666',
     fontWeight: '600',
+    fontFamily: Typography.fontFamily,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: '#000000',
+    fontFamily: Typography.fontFamily,
   },
   webViewContainer: {
     flex: 1,

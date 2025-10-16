@@ -162,17 +162,24 @@ const DashboardAnalyticsScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
+      <View style={styles.topNav}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
           <Icon name="chevron-left" size={24} color={Colors.text.primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Dashboard & Analytics</Text>
-        <TouchableOpacity style={styles.backButton} onPress={loadUserData}>
-          <Icon name="refresh-cw" size={20} color={Colors.primary.main} />
+        <View style={styles.navSpacer} />
+        <TouchableOpacity style={styles.refreshButton} onPress={loadUserData}>
+          <Icon name="refresh-cw" size={20} color={Colors.text.primary} />
         </TouchableOpacity>
+      </View>
+
+      <View style={styles.headerSection}>
+        <View style={styles.headerIconCard}>
+          <Icon name="bar-chart-2" size={28} color={Colors.text.primary} />
+        </View>
+        <Text style={styles.headerMainTitle}>Dashboard & Analytics</Text>
       </View>
 
       <ScrollView
@@ -366,31 +373,58 @@ const DashboardAnalyticsScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background.primary,
+    backgroundColor: '#FFFFFF',
   },
-  header: {
+  topNav: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    backgroundColor: Colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border.primary,
+    paddingVertical: Spacing.xs,
+    backgroundColor: '#FFFFFF',
   },
   backButton: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  headerTitle: {
-    ...Typography.styles.h3,
+  refreshButton: {
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  navSpacer: {
+    flex: 1,
+  },
+  headerSection: {
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.xl,
+    paddingHorizontal: Spacing.lg,
+  },
+  headerIconCard: {
+    width: 80,
+    height: 80,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: '#E5E5EA',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing.lg,
+  },
+  headerMainTitle: {
+    fontSize: 22,
+    fontWeight: '600',
     color: Colors.text.primary,
+    textAlign: 'center',
   },
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: Spacing.xl,
+    paddingBottom: Spacing['2xl'],
   },
   loadingContainer: {
     flex: 1,
@@ -416,35 +450,40 @@ const styles = StyleSheet.create({
   },
   statsSection: {
     flexDirection: 'row',
-    paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.lg,
-    paddingBottom: Spacing.md,
-    gap: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.xl,
+    gap: Spacing.md,
+    backgroundColor: '#FFFFFF',
   },
   statCard: {
     flex: 1,
     backgroundColor: '#3A3A3C',
-    borderRadius: BorderRadius.xl,
-    padding: Spacing.lg,
+    borderRadius: 24,
+    paddingVertical: Spacing.xl,
+    paddingHorizontal: Spacing.xs,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 100,
-    ...Shadows.md,
+    minHeight: 120,
+    ...Shadows.lg,
   },
   statNumber: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: Spacing.xs,
+    fontSize: 38,
+    fontWeight: '700',
+    color: '#74E1A0',
+    marginBottom: Spacing.sm,
   },
   statLabel: {
     fontSize: 14,
     color: '#E5E5E7',
     fontWeight: '500',
+    textAlign: 'center',
   },
   listingsSection: {
-    paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.lg,
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.md,
+    backgroundColor: '#F2F2F7',
+    flex: 1,
   },
   sectionTitle: {
     ...Typography.styles.h3,
@@ -452,36 +491,36 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   listingCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: BorderRadius.lg,
-    padding: Spacing.md,
-    marginBottom: Spacing.sm,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: Spacing.lg,
+    marginBottom: Spacing.lg,
     ...Shadows.sm,
   },
   listingHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.lg,
   },
   listingTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 19,
+    fontWeight: '700',
     color: Colors.text.primary,
     flex: 1,
   },
   metricsRow: {
     flexDirection: 'row',
-    gap: Spacing.sm,
+    gap: Spacing.md,
   },
   metricPill: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#3A3A3C',
     borderRadius: 20,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    gap: 6,
+    paddingVertical: 9,
+    paddingHorizontal: 15,
+    gap: 7,
   },
   metricPillText: {
     fontSize: 14,

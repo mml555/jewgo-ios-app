@@ -212,7 +212,8 @@ class NavigationService {
    * Tab navigation methods
    */
   tabs = {
-    navigateToHome: () => this.navigate('Home' as keyof TabParamList),
+    navigateToHome: () => this.navigate('Explore' as keyof TabParamList), // Legacy method name for compatibility
+    navigateToExplore: () => this.navigate('Explore' as keyof TabParamList),
     navigateToFavorites: () => this.navigate('Favorites' as keyof TabParamList),
     navigateToSpecials: (params?: {
       businessId?: string;

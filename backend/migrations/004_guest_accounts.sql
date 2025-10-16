@@ -125,8 +125,8 @@ BEGIN
     -- Update last_used_at if session exists and is valid
     UPDATE guest_sessions 
     SET last_used_at = NOW()
-    WHERE session_token = p_session_token 
-      AND expires_at > NOW();
+    WHERE guest_sessions.session_token = p_session_token 
+      AND guest_sessions.expires_at > NOW();
 END;
 $$ LANGUAGE plpgsql;
 

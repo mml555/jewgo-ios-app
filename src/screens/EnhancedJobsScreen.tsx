@@ -26,6 +26,7 @@ import { debugLog, errorLog } from '../utils/logger';
 import { apiService } from '../services/api';
 import jobSeekersService from '../services/JobSeekersService';
 import Icon from '../components/Icon';
+import HeartIcon from '../components/HeartIcon';
 import FastButton from '../components/FastButton';
 
 interface JobListing {
@@ -827,10 +828,11 @@ const EnhancedJobsScreen: React.FC<EnhancedJobsScreenProps> = ({
           onPress={() => handleHeartPress(item.id)}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Icon
-            name="heart"
+          <HeartIcon
             size={14}
             color={isFavorited ? Colors.error : Colors.textSecondary}
+            filled={true}
+            showBorder={true}
           />
         </TouchableOpacity>
 
@@ -889,10 +891,11 @@ const EnhancedJobsScreen: React.FC<EnhancedJobsScreenProps> = ({
           onPress={() => handleHeartPress(item.id)}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Icon
-            name="heart"
+          <HeartIcon
             size={14}
             color={isFavorited ? Colors.error : Colors.textSecondary}
+            filled={true}
+            showBorder={true}
           />
         </TouchableOpacity>
 
@@ -999,16 +1002,6 @@ const EnhancedJobsScreen: React.FC<EnhancedJobsScreenProps> = ({
                 textStyle={styles.bannerButtonText}
               />
             </View>
-          </View>
-        )}
-
-        {/* Location Enabled Indicator */}
-        {location && (
-          <View style={styles.locationIndicator}>
-            <Text style={styles.locationIndicatorText}>
-              📍 Location enabled - showing distances
-              {location.zipCode ? ` (${location.zipCode})` : ''}
-            </Text>
           </View>
         )}
       </>
@@ -1501,63 +1494,72 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   locationPermissionBanner: {
-    backgroundColor: Colors.primary.main,
-    marginHorizontal: 8,
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: Spacing.sm,
     marginTop: Spacing.sm,
     marginBottom: 8,
     borderRadius: BorderRadius.lg,
-    ...Shadows.sm,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
     zIndex: 10,
   },
   bannerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.md,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
   },
   bannerIcon: {
-    fontSize: 20,
+    fontSize: 16,
     marginRight: Spacing.sm,
+    color: '#71BBFF',
   },
   bannerTextContainer: {
     flex: 1,
   },
   bannerTitle: {
-    ...Typography.styles.bodyLarge,
-    color: Colors.white,
+    fontSize: 13,
+    color: '#000000',
     fontWeight: '600',
-    marginBottom: 2,
+    marginBottom: 0,
   },
   bannerSubtitle: {
-    ...Typography.styles.caption,
-    color: Colors.white,
-    opacity: 0.9,
+    fontSize: 11,
+    color: '#000000',
+    opacity: 0.6,
   },
   bannerButtonStyle: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-    minHeight: 32,
+    backgroundColor: '#71BBFF',
+    borderColor: '#71BBFF',
+    minHeight: 28,
+    paddingHorizontal: 12,
   },
   bannerButtonText: {
-    color: Colors.white,
-    fontSize: 14,
+    color: '#FFFFFF',
+    fontSize: 12,
     fontWeight: '600',
   },
   locationIndicator: {
-    backgroundColor: Colors.infoLight,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    marginHorizontal: 8,
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 4,
+    paddingHorizontal: 12,
+    marginHorizontal: Spacing.sm,
     marginTop: Spacing.sm,
     marginBottom: 8,
     borderRadius: BorderRadius.lg,
-    borderWidth: 1,
-    borderColor: Colors.info,
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   locationIndicatorText: {
     fontSize: 12,
-    color: Colors.info,
+    color: '#000000',
     fontWeight: '500',
   },
 });

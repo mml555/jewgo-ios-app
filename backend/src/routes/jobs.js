@@ -16,6 +16,8 @@ const router = express.Router();
 // Public routes
 router.get('/listings', JobsController.getJobListings);
 router.get('/listings/:id', JobsController.getJobListingById);
+// Backwards compatibility route (mobile app uses this)
+router.get('/:id', JobsController.getJobListingById);
 
 // Protected routes (require authentication)
 router.post('/listings', /* authenticate(), */ JobsController.createJobListing);

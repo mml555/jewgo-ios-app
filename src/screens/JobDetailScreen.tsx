@@ -489,15 +489,47 @@ const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
           <Text style={[styles.cardTitle, { textAlign: 'center' }]}>
             About job
           </Text>
-          <ScrollView
-            style={styles.descriptionScroll}
-            contentContainerStyle={styles.descriptionContent}
-            showsVerticalScrollIndicator={false}
-            nestedScrollEnabled={true}
-          >
-            <Text style={styles.jobDescription}>{job.description}</Text>
-          </ScrollView>
+          <Text style={styles.jobDescription}>
+            {job.description.substring(0, 200) +
+              (job.description.length > 200 ? '...' : '')}
+          </Text>
         </View>
+
+        {/* Requirements Card */}
+        {job.requirements && job.requirements.length > 0 && (
+          <View style={styles.infoCard}>
+            <Text style={[styles.cardTitle, { textAlign: 'center' }]}>
+              Requirements
+            </Text>
+            <Text style={styles.jobDescription}>
+              {Array.isArray(job.requirements)
+                ? job.requirements.join(', ').substring(0, 250) +
+                  (job.requirements.join(', ').length > 250 ? '...' : '')
+                : typeof job.requirements === 'string'
+                ? job.requirements.substring(0, 250) +
+                  (job.requirements.length > 250 ? '...' : '')
+                : ''}
+            </Text>
+          </View>
+        )}
+
+        {/* Benefits Card */}
+        {job.benefits && job.benefits.length > 0 && (
+          <View style={styles.infoCard}>
+            <Text style={[styles.cardTitle, { textAlign: 'center' }]}>
+              Benefits
+            </Text>
+            <View style={styles.benefitTags}>
+              {job.benefits.map((benefit, index) => (
+                <View key={index} style={styles.benefitTag}>
+                  <Text style={styles.benefitTagText} numberOfLines={1}>
+                    {benefit}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
 
         {/* Contact Information Card */}
         <View style={styles.contactCard}>
@@ -508,33 +540,6 @@ const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
             Please call us or text on whatsapp or email your resume to us
           </Text>
         </View>
-
-        {/* View Job Application PDF Button */}
-        {job.application_url && (
-          <TouchableOpacity
-            style={styles.pdfButtonContainer}
-            onPress={async () => {
-              try {
-                const supported = await Linking.canOpenURL(
-                  job.application_url!,
-                );
-                if (supported) {
-                  await Linking.openURL(job.application_url!);
-                } else {
-                  Alert.alert('Error', 'Cannot open application link');
-                }
-              } catch (error) {
-                errorLog('Error opening application URL:', error);
-                Alert.alert('Error', 'Failed to open application link');
-              }
-            }}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.pdfButtonText}>
-              📄 View Job Application PDF
-            </Text>
-          </TouchableOpacity>
-        )}
 
         {/* Reach Out CTA Buttons */}
         <View style={styles.reachOutActionBar}>
@@ -632,134 +637,140 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     flex: 1,
-    paddingHorizontal: scale(16),
-    paddingTop: verticalScale(12),
-    paddingBottom: verticalScale(16),
+    paddingHorizontal: scale(14),
+    paddingVertical: verticalScale(8),
     justifyContent: 'space-between',
   },
-  // Job Details Card - Fixed size
+  // Job Details Card
   jobDetailsCard: {
     backgroundColor: Colors.white,
-    padding: scale(18),
-    borderRadius: moderateScale(14),
+    padding: scale(12),
+    borderRadius: moderateScale(12),
     ...Shadows.sm,
+    marginBottom: verticalScale(6),
   },
   jobTitle: {
-    fontSize: moderateScale(20),
+    fontSize: moderateScale(17),
     fontWeight: 'bold',
     color: Colors.textPrimary,
-    marginBottom: verticalScale(6),
-    lineHeight: moderateScale(26),
+    marginBottom: verticalScale(4),
+    lineHeight: moderateScale(22),
+    flexWrap: 'wrap',
   },
   jobSalary: {
-    fontSize: moderateScale(16),
+    fontSize: moderateScale(15),
     color: Colors.textPrimary,
-    marginBottom: verticalScale(12),
-    lineHeight: moderateScale(22),
+    marginBottom: verticalScale(6),
+    lineHeight: moderateScale(20),
     fontWeight: '600',
   },
   jobDetailsFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: verticalScale(6),
+    marginTop: verticalScale(4),
   },
   jobTypeTag: {
     backgroundColor: '#E8F5E8', // Light green background
-    paddingHorizontal: scale(14),
-    paddingVertical: verticalScale(7),
-    borderRadius: moderateScale(18),
-    minWidth: scale(90),
+    paddingHorizontal: scale(10),
+    paddingVertical: verticalScale(4),
+    borderRadius: moderateScale(12),
     alignItems: 'center',
   },
   jobTypeText: {
-    fontSize: moderateScale(13),
+    fontSize: moderateScale(12),
     color: '#2E7D32', // Dark green text
     fontWeight: '600',
   },
   jobLocation: {
-    fontSize: moderateScale(13),
+    fontSize: moderateScale(12),
     color: '#2196F3', // Light blue
     fontWeight: '500',
   },
-  // About Job Card - Flexible to fill space
+  // About Job Card
   aboutJobCard: {
-    flex: 1,
     backgroundColor: '#E8F5E8', // Light green background
-    marginVertical: verticalScale(12),
-    padding: scale(18),
-    borderRadius: moderateScale(14),
+    padding: scale(12),
+    borderRadius: moderateScale(12),
     ...Shadows.sm,
+    marginBottom: verticalScale(6),
   },
   cardTitle: {
-    fontSize: moderateScale(17),
+    fontSize: moderateScale(15),
     fontWeight: 'bold',
     color: Colors.textPrimary, // Black text
     textAlign: 'center',
-    marginBottom: verticalScale(8),
-    lineHeight: moderateScale(22),
-  },
-  descriptionScroll: {
-    flex: 1,
-  },
-  descriptionContent: {
-    flexGrow: 1,
+    marginBottom: verticalScale(6),
+    lineHeight: moderateScale(20),
+    flexWrap: 'wrap',
   },
   jobDescription: {
-    fontSize: moderateScale(14),
+    fontSize: moderateScale(13),
     color: Colors.textPrimary, // Black text
-    lineHeight: moderateScale(22),
+    lineHeight: moderateScale(19),
     textAlign: 'left',
+    flexWrap: 'wrap',
   },
-  // Contact Card - Fixed size
+  // Info Cards (Requirements, Benefits)
+  infoCard: {
+    backgroundColor: '#E8F5E8', // Light green background
+    padding: scale(12),
+    borderRadius: moderateScale(12),
+    ...Shadows.sm,
+    marginBottom: verticalScale(6),
+  },
+  benefitTags: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: scale(6),
+  },
+  benefitTag: {
+    backgroundColor: Colors.white,
+    paddingHorizontal: scale(10),
+    paddingVertical: verticalScale(4),
+    borderRadius: moderateScale(12),
+    borderWidth: 1,
+    borderColor: '#2E7D32',
+  },
+  benefitTagText: {
+    fontSize: moderateScale(12),
+    color: '#2E7D32',
+    fontWeight: '500',
+  },
+  // Contact Card
   contactCard: {
     backgroundColor: Colors.white,
-    padding: scale(18),
-    borderRadius: moderateScale(14),
+    padding: scale(12),
+    borderRadius: moderateScale(12),
     ...Shadows.sm,
+    marginBottom: verticalScale(6),
   },
   contactInstructions: {
-    fontSize: moderateScale(14),
+    fontSize: moderateScale(12),
     color: Colors.textPrimary, // Black text
     textAlign: 'center',
-    lineHeight: moderateScale(20),
+    lineHeight: moderateScale(18),
+    flexWrap: 'wrap',
   },
-  // PDF Button - Fixed size
-  pdfButtonContainer: {
-    backgroundColor: '#E8F5E8', // Light green background
-    marginVertical: verticalScale(12),
-    paddingVertical: verticalScale(14),
-    paddingHorizontal: scale(20),
-    borderRadius: moderateScale(12),
-    alignItems: 'center',
-    minHeight: verticalScale(52),
-    justifyContent: 'center',
-    ...Shadows.sm,
-  },
-  pdfButtonText: {
-    fontSize: moderateScale(15),
-    color: '#2E7D32', // Dark green
-    fontWeight: '600',
-  },
-  // Reach Out Action Bar - Fixed size
+  // Reach Out Action Bar
   reachOutActionBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: 'transparent',
-    gap: scale(12),
+    gap: scale(10),
   },
   actionButton: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: verticalScale(14),
+    paddingVertical: verticalScale(10),
     backgroundColor: '#E8F5E8', // Light green background
     borderRadius: moderateScale(12),
-    minHeight: verticalScale(52),
+    ...Shadows.sm,
   },
   actionButtonIcon: {
-    fontSize: moderateScale(24),
+    fontSize: moderateScale(20),
     color: '#2E7D32', // Dark green
   },
 });

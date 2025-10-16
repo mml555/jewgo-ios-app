@@ -91,7 +91,10 @@ const ProfileScreen: React.FC = () => {
         const statsResponse = await UserStatsService.getUserStats();
         if (statsResponse.success && statsResponse.data) {
           setUserStats(statsResponse.data.stats);
-          debugLog('ProfileScreen: Stats loaded from DB', statsResponse.data.stats);
+          debugLog(
+            'ProfileScreen: Stats loaded from DB',
+            statsResponse.data.stats,
+          );
         } else {
           errorLog('ProfileScreen: Failed to load stats', statsResponse.error);
           // Show zeros if backend fails - no mock data
@@ -165,7 +168,6 @@ const ProfileScreen: React.FC = () => {
   const handleSettings = () => {
     navigation.navigate('Settings' as never);
   };
-
 
   const handleNotifications = () => {
     // Navigate to the Notifications tab
@@ -264,32 +266,31 @@ const ProfileScreen: React.FC = () => {
         showsVerticalScrollIndicator={false}
       >
         {/* Profile Card */}
-        <View style={styles.profileCard}>
-          <View style={styles.avatarContainer}>
-            <View
-              style={[
-                styles.avatar,
-                isGuestAuthenticated && styles.guestAvatar,
-              ]}
-            >
-              <Text style={styles.avatarText}>{getUserInitials()}</Text>
-            </View>
-          </View>
-          <Text style={styles.name}>{getDisplayName()}</Text>
-          <TouchableOpacity
-            onPress={handleEditProfile}
-            style={styles.editProfileButton}
+        <TouchableOpacity
+          style={styles.profileCard}
+          onPress={handleEditProfile}
+          activeOpacity={0.7}
+        >
+          <View
+            style={[styles.avatar, isGuestAuthenticated && styles.guestAvatar]}
           >
-            <Text style={styles.editProfileText}>Edit profile</Text>
-          </TouchableOpacity>
+            <Text style={styles.avatarText}>{getUserInitials()}</Text>
+          </View>
 
-          {/* Upgrade prompt for guests */}
-          {isGuestAuthenticated && (
-            <View style={styles.guestBadge}>
-              <Text style={styles.guestBadgeText}>Guest User</Text>
-            </View>
-          )}
-        </View>
+          <View style={styles.profileInfo}>
+            <Text style={styles.name}>{getDisplayName()}</Text>
+            <Text style={styles.editProfileText}>Edit profile</Text>
+
+            {/* Upgrade prompt for guests */}
+            {isGuestAuthenticated && (
+              <View style={styles.guestBadge}>
+                <Text style={styles.guestBadgeText}>Guest User</Text>
+              </View>
+            )}
+          </View>
+
+          <Icon name="chevron-right" size={20} color={Colors.text.tertiary} />
+        </TouchableOpacity>
 
         {/* Stats Cards */}
         <View style={styles.statsCardsContainer}>
@@ -345,54 +346,37 @@ const ProfileScreen: React.FC = () => {
         <View style={styles.settingsContainer}>
           <Text style={styles.sectionTitle}>Settings</Text>
 
-          <TouchableOpacity style={styles.menuItem} onPress={handlePersonalInfo}>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={handlePersonalInfo}
+          >
             <Icon name="user" size={20} color={Colors.text.primary} />
             <Text style={styles.menuText}>Personal info</Text>
-            <Icon
-              name="chevron-right"
-              size={20}
-              color={Colors.text.tertiary}
-            />
+            <Icon name="chevron-right" size={20} color={Colors.text.tertiary} />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.menuItem} onPress={handlePaymentInfo}>
             <Icon name="credit-card" size={20} color={Colors.text.primary} />
             <Text style={styles.menuText}>Payment Info</Text>
-            <Icon
-              name="chevron-right"
-              size={20}
-              color={Colors.text.tertiary}
-            />
+            <Icon name="chevron-right" size={20} color={Colors.text.tertiary} />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.menuItem} onPress={handlePrivacy}>
             <Icon name="lock" size={20} color={Colors.text.primary} />
             <Text style={styles.menuText}>Privacy & Security</Text>
-            <Icon
-              name="chevron-right"
-              size={20}
-              color={Colors.text.tertiary}
-            />
+            <Icon name="chevron-right" size={20} color={Colors.text.tertiary} />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.menuItem} onPress={handleSupport}>
             <Icon name="help-circle" size={20} color={Colors.text.primary} />
             <Text style={styles.menuText}>Help & Support</Text>
-            <Icon
-              name="chevron-right"
-              size={20}
-              color={Colors.text.tertiary}
-            />
+            <Icon name="chevron-right" size={20} color={Colors.text.tertiary} />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
             <Icon name="log-out" size={20} color={Colors.text.primary} />
             <Text style={styles.menuText}>Logout</Text>
-            <Icon
-              name="chevron-right"
-              size={20}
-              color={Colors.text.tertiary}
-            />
+            <Icon name="chevron-right" size={20} color={Colors.text.tertiary} />
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -410,16 +394,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    backgroundColor: Colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border.primary,
+    paddingTop: Spacing.xl,
+    paddingBottom: Spacing.md,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 0,
   },
   screenTitle: {
-    ...Typography.styles.h1,
-    color: Colors.text.primary,
     fontSize: 34,
-    fontWeight: 'bold',
+    color: Colors.text.primary,
+    fontWeight: '700',
   },
   notificationButton: {
     width: 44,
@@ -432,53 +415,54 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing['2xl'],
   },
   profileCard: {
-    backgroundColor: Colors.surface,
+    backgroundColor: '#FFFFFF',
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: Spacing.xl,
+    paddingVertical: Spacing.lg,
     paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.lg,
-    ...Shadows.sm,
-  },
-  avatarContainer: {
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border.primary,
   },
   avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     backgroundColor: '#000000',
     justifyContent: 'center',
     alignItems: 'center',
-    ...Shadows.md,
+    marginRight: Spacing.md,
   },
   avatarText: {
     color: '#FFFFFF',
-    fontSize: 42,
-    fontWeight: 'bold',
+    fontSize: 36,
+    fontWeight: '700',
   },
   guestAvatar: {
     backgroundColor: '#FF9500',
   },
-  name: {
-    ...Typography.styles.h2,
-    color: Colors.text.primary,
-    marginBottom: Spacing.xs,
-    fontWeight: '700',
+  profileInfo: {
+    flex: 1,
   },
-  editProfileButton: {
-    paddingVertical: Spacing.xs,
+  name: {
+    fontSize: 22,
+    color: Colors.text.primary,
+    marginBottom: 2,
+    fontWeight: '600',
   },
   editProfileText: {
-    ...Typography.styles.body,
+    fontSize: 14,
     color: Colors.text.secondary,
-    fontSize: 16,
+    fontWeight: '400',
+    marginTop: 2,
   },
   guestBadge: {
     backgroundColor: '#FF9500',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 2,
     borderRadius: BorderRadius.full,
-    marginTop: Spacing.sm,
+    marginTop: Spacing.xs,
+    alignSelf: 'flex-start',
   },
   guestBadgeText: {
     color: '#FFFFFF',
@@ -487,87 +471,86 @@ const styles = StyleSheet.create({
   },
   statsCardsContainer: {
     flexDirection: 'row',
-    paddingHorizontal: Spacing.md,
-    marginBottom: Spacing.lg,
-    gap: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.lg,
+    marginBottom: Spacing.xl,
+    gap: Spacing.md,
+    backgroundColor: '#F2F2F7',
   },
   statCard: {
     flex: 1,
     backgroundColor: '#3A3A3C',
-    borderRadius: BorderRadius.xl,
+    borderRadius: 22,
     paddingVertical: Spacing.lg,
-    paddingHorizontal: Spacing.md,
+    paddingHorizontal: Spacing.xs,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 100,
-    ...Shadows.md,
+    minHeight: 110,
   },
   statCardNumber: {
     fontSize: 32,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
+    fontWeight: '700',
+    color: '#74E1A0',
     marginBottom: Spacing.xs,
   },
   statCardLabel: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#E5E5E7',
     fontWeight: '500',
     textAlign: 'center',
+    lineHeight: 16,
   },
   dashboardCard: {
     backgroundColor: '#3A3A3C',
-    marginHorizontal: Spacing.md,
-    marginBottom: Spacing.lg,
-    borderRadius: BorderRadius.lg,
-    padding: Spacing.lg,
+    marginHorizontal: Spacing.lg,
+    marginBottom: Spacing.xl,
+    borderRadius: 22,
+    paddingVertical: Spacing.lg,
+    paddingHorizontal: Spacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
-    ...Shadows.sm,
   },
   dashboardIconContainer: {
     width: 48,
     height: 48,
-    borderRadius: BorderRadius.md,
+    borderRadius: 8,
     backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: Spacing.md,
   },
   dashboardText: {
-    ...Typography.styles.h3,
     color: '#FFFFFF',
     flex: 1,
-    fontSize: 18,
+    fontSize: 17,
+    fontWeight: '500',
   },
   settingsContainer: {
-    backgroundColor: Colors.surface,
-    marginHorizontal: Spacing.md,
-    marginBottom: Spacing.lg,
-    borderRadius: BorderRadius.lg,
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: Spacing.lg,
+    marginBottom: Spacing.xl,
+    borderRadius: 22,
     overflow: 'hidden',
-    ...Shadows.sm,
   },
   sectionTitle: {
-    ...Typography.styles.h3,
     color: Colors.text.primary,
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.lg,
-    paddingBottom: Spacing.sm,
+    paddingTop: Spacing.xl,
+    paddingBottom: Spacing.md,
     fontSize: 22,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
+    paddingVertical: Spacing.lg,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border.primary,
     gap: Spacing.md,
   },
   menuText: {
     flex: 1,
-    ...Typography.styles.body,
     color: Colors.text.primary,
     fontSize: 16,
     fontWeight: '400',
@@ -681,7 +664,7 @@ const styles = StyleSheet.create({
   storeModalTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#000000',
+    color: '#292b2d',
     paddingHorizontal: 24,
     marginBottom: 16,
   },
@@ -753,7 +736,7 @@ const styles = StyleSheet.create({
   storeActionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000000',
+    color: '#292b2d',
   },
   storeActionSubtitle: {
     fontSize: 13,

@@ -8,7 +8,7 @@ import {
   SafeAreaView,
   Alert,
 } from 'react-native';
-import { Spacing, Shadows, Colors } from '../styles/designSystem';
+import { Spacing, Shadows, Colors, Typography } from '../styles/designSystem';
 import { debugLog } from '../utils/logger';
 
 const SettingsScreen: React.FC = () => {
@@ -251,6 +251,7 @@ const styles = StyleSheet.create({
     color: '#333',
     padding: 20,
     paddingBottom: 10,
+    fontFamily: Typography.fontFamily,
   },
   settingItem: {
     flexDirection: 'row',

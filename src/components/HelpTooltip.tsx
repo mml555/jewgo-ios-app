@@ -14,6 +14,7 @@ import HelpContentService, {
   HelpContent,
   TooltipContent,
 } from '../services/HelpContent';
+import { Typography } from '../styles/designSystem';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -328,6 +329,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     textAlign: 'center',
+    fontFamily: Typography.fontFamily,
   },
   tooltipArrow: {
     position: 'absolute',
@@ -419,8 +421,9 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#000000',
+    color: '#292b2d',
     flex: 1,
+    fontFamily: Typography.fontFamily,
   },
   closeButton: {
     width: 32,
@@ -434,6 +437,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#8E8E93',
     fontWeight: '600',
+    fontFamily: Typography.fontFamily,
   },
   modalBody: {
     flex: 1,
@@ -442,9 +446,10 @@ const styles = StyleSheet.create({
   },
   modalDescription: {
     fontSize: 16,
-    color: '#000000',
+    color: '#292b2d',
     lineHeight: 24,
     marginBottom: 20,
+    fontFamily: Typography.fontFamily,
   },
   section: {
     marginBottom: 20,
@@ -452,8 +457,9 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000000',
+    color: '#292b2d',
     marginBottom: 12,
+    fontFamily: Typography.fontFamily,
   },
   tipItem: {
     flexDirection: 'row',
@@ -465,12 +471,14 @@ const styles = StyleSheet.create({
     color: '#007AFF',
     marginRight: 8,
     fontWeight: '600',
+    fontFamily: Typography.fontFamily,
   },
   tipText: {
     fontSize: 14,
-    color: '#000000',
+    color: '#292b2d',
     flex: 1,
     lineHeight: 20,
+    fontFamily: Typography.fontFamily,
   },
   exampleItem: {
     backgroundColor: '#F2F9FF',
@@ -483,8 +491,8 @@ const styles = StyleSheet.create({
   },
   exampleText: {
     fontSize: 14,
-    color: '#000000',
-    fontFamily: 'Menlo',
+    color: '#292b2d',
+    fontFamily: Typography.fontFamily,
   },
   mistakeItem: {
     flexDirection: 'row',
@@ -496,6 +504,7 @@ const styles = StyleSheet.create({
     color: '#FF3B30',
     flex: 1,
     lineHeight: 20,
+    fontFamily: Typography.fontFamily,
   },
 });
 

@@ -13,7 +13,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import AdminService, { DashboardStats } from '../../services/AdminService';
-import { Spacing } from '../../styles/designSystem';
+import { Spacing, Typography } from '../../styles/designSystem';
 
 const AdminDashboard: React.FC = () => {
   const navigation = useNavigation();
@@ -218,6 +218,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#292B2D',
     marginBottom: Spacing.md,
+    fontFamily: Typography.fontFamily,
   },
   todayStatsRow: { flexDirection: 'row', justifyContent: 'space-around' },
   todayStatItem: { alignItems: 'center' },
@@ -231,7 +232,7 @@ const styles = StyleSheet.create({
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F1F1F1',
+    backgroundColor: '#f8f8f8',
     borderRadius: 12,
     padding: Spacing.md,
     marginBottom: Spacing.sm,

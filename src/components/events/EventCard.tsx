@@ -7,7 +7,7 @@ import {
   Platform,
 } from 'react-native';
 import { Event } from '../../services/EventsService';
-import { Spacing } from '../../styles/designSystem';
+import { Spacing, BorderRadius } from '../../styles/designSystem';
 import OptimizedImage from '../OptimizedImage';
 
 interface EventCardProps {
@@ -106,7 +106,7 @@ const EventCard: React.FC<EventCardProps> = memo(
 const styles = StyleSheet.create({
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderRadius: BorderRadius['2xl'],
     marginBottom: Spacing.md,
     overflow: 'hidden',
     position: 'relative',
@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
   imageContainer: {
     width: '100%',
     height: 200,
-    backgroundColor: '#F1F1F1',
+    backgroundColor: '#f8f8f8',
   },
   flyerImage: {
     width: '100%',
@@ -133,12 +133,12 @@ const styles = StyleSheet.create({
   },
   categoryPill: {
     position: 'absolute',
-    top: 12,
-    left: 12,
+    top: Spacing.sm,
+    left: Spacing.sm,
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    borderRadius: BorderRadius.lg,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.sm,
   },
   categoryPillText: {
     fontSize: 12,
@@ -177,14 +177,14 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: '#292B2D',
-    marginBottom: Spacing.sm,
+    marginBottom: Spacing.xs,
     lineHeight: 22,
   },
   metaRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: Spacing.sm,
+    marginBottom: Spacing.xs,
   },
   date: {
     fontSize: 14,

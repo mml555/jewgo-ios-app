@@ -186,7 +186,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E0E0E0',
   },
   filterChip: {
-    backgroundColor: '#F1F1F1',
+    backgroundColor: '#f8f8f8',
     borderRadius: 20,
     paddingVertical: Spacing.xs,
     paddingHorizontal: Spacing.md,

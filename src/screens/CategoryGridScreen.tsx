@@ -994,16 +994,6 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
             </View>
           </View>
         )}
-
-        {/* Location Enabled Indicator */}
-        {location && (
-          <View style={styles.locationIndicator}>
-            <Text style={styles.locationIndicatorText}>
-              📍 Location enabled - showing distances
-              {location.zipCode ? ` (${location.zipCode})` : ''}
-            </Text>
-          </View>
-        )}
       </>
     );
   }, [
@@ -1079,83 +1069,91 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background.primary,
   },
   locationPermissionBanner: {
-    backgroundColor: Colors.primary.main,
-    marginHorizontal: 8,
-    marginTop: Spacing.sm,
-    marginBottom: 8,
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: Spacing.md,
+    marginTop: 0, // ActionBar provides 10px spacing
+    marginBottom: 10, // 10px gap before cards
     borderRadius: BorderRadius.lg,
-    ...Shadows.sm,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
     zIndex: 10, // Ensure banner is above other content
   },
   bannerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: Spacing.md,
+    paddingVertical: Spacing.sm,
     paddingHorizontal: Spacing.md,
   },
   bannerIcon: {
-    fontSize: 20,
+    fontSize: 16,
     marginRight: Spacing.sm,
+    color: '#71BBFF',
   },
   bannerTextContainer: {
     flex: 1,
   },
   bannerTitle: {
-    ...Typography.styles.bodyLarge,
-    color: Colors.white,
+    fontSize: 13,
+    color: '#000000',
     fontWeight: '600',
-    marginBottom: 2,
+    marginBottom: 0,
   },
   bannerSubtitle: {
-    ...Typography.styles.caption,
-    color: Colors.white,
-    opacity: 0.9,
+    fontSize: 11,
+    color: '#000000',
+    opacity: 0.6,
   },
   bannerButton: {
     ...Typography.styles.body,
-    color: Colors.white,
+    color: '#FFFFFF',
     fontWeight: '600',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: '#71BBFF',
     paddingVertical: Spacing.xs,
     paddingHorizontal: Spacing.sm,
     borderRadius: BorderRadius.md,
   },
   bannerButtonStyle: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-    minHeight: 32,
+    backgroundColor: '#71BBFF',
+    minHeight: 28,
+    paddingHorizontal: 12,
   },
   bannerButtonText: {
-    color: Colors.white,
-    fontSize: 14,
+    color: '#FFFFFF',
+    fontSize: 12,
     fontWeight: '600',
   },
   locationIndicator: {
-    backgroundColor: Colors.infoLight,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    marginHorizontal: 8,
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 4,
+    paddingHorizontal: 12,
+    marginHorizontal: Spacing.md,
     marginTop: Spacing.sm,
-    marginBottom: 8,
+    marginBottom: Spacing.sm,
     borderRadius: BorderRadius.lg,
-    borderWidth: 1,
-    borderColor: Colors.info,
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   locationIndicatorText: {
     fontSize: 12,
-    color: Colors.info,
+    color: '#000000',
     fontWeight: '500',
   },
   listContent: {
     paddingHorizontal: 0,
-    paddingTop: Spacing.sm, // Add top padding for better spacing
-    paddingBottom: 20, // Add some bottom padding to push content up
+    paddingTop: 0, // No padding - spacing handled by banners
+    paddingBottom: Spacing.xl, // Increased bottom padding
   },
   row: {
     justifyContent: 'space-between',
-    paddingHorizontal: 8, // Consistent horizontal padding for each row
-    marginBottom: 8, // Consistent vertical spacing between rows
+    paddingHorizontal: Spacing.md, // 16px horizontal padding - matches card calculations
+    marginBottom: Spacing.md, // 16px vertical spacing between rows
   },
   footerLoader: {
     flexDirection: 'row',
@@ -1178,7 +1176,7 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#000000',
+    color: '#292b2d',
     marginBottom: 8,
     textAlign: 'center',
   },

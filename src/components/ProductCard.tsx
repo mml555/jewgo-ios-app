@@ -136,7 +136,7 @@ const styles = StyleSheet.create({
   card: {
     width: CARD_WIDTH,
     backgroundColor: Colors.white,
-    borderRadius: BorderRadius.md,
+    borderRadius: BorderRadius['2xl'],
     marginBottom: Spacing.md,
     ...Shadows.sm,
     overflow: 'hidden',
@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   content: {
-    padding: Spacing.md,
+    padding: Spacing.sm,
   },
   productName: {
     ...Typography.h4,

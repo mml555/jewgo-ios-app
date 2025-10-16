@@ -15,7 +15,7 @@ import ClaimsService, {
   Claim,
   ClaimEvidence,
 } from '../../services/ClaimsService';
-import { Spacing } from '../../styles/designSystem';
+import { Spacing, Typography } from '../../styles/designSystem';
 
 type RouteParams = {
   ClaimDetail: {
@@ -187,6 +187,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#292B2D',
     marginBottom: Spacing.md,
+    fontFamily: Typography.fontFamily,
   },
   sectionText: { fontSize: 16, color: '#666', lineHeight: 24 },
   infoRow: { flexDirection: 'row', marginBottom: Spacing.sm },

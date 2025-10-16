@@ -28,7 +28,7 @@ export const Colors = {
 
   // Background Colors
   background: {
-    primary: '#F1F1F1', // Main background
+    primary: '#f8f8f8', // Main background
     secondary: '#FFFFFF', // Card/surface background
     tertiary: '#F8F9FA', // Subtle background
   },
@@ -70,7 +70,7 @@ export const Colors = {
   jewgoBlack: '#292B2D', // Primary JewGo Black
   jewgoGreen: '#74E1A0', // Primary JewGo Green
   jewgoPurple: '#BEBBE7', // Primary JewGo Purple
-  jewgoGray: '#F1F1F1', // Primary JewGo Gray
+  jewgoGray: '#f8f8f8', // Primary JewGo Gray
   jewgoWhite: '#FFFFFF', // Primary JewGo White
 
   // Neutral Colors (WCAG compliant)
@@ -83,7 +83,7 @@ export const Colors = {
   gray500: '#B0B0B0', // Light gray
   gray400: '#C7C7CC', // Very light gray
   gray300: '#E5E5EA', // Extra light gray
-  gray200: '#F1F1F1', // Background gray
+  gray200: '#f8f8f8', // Background gray
   gray100: '#F8F9FA', // Very light background gray
   gray50: '#FBFCFD', // Subtle background gray
 

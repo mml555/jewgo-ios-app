@@ -135,8 +135,13 @@ class GuestService {
       const apiUrl = config.apiBaseUrl;
       const fullUrl = `${apiUrl}/guest/create`;
 
-      // Log the URL we're trying to connect to (for debugging)
-      debugLog(`🔐 GuestService: Connecting to: ${fullUrl}`);
+      // TEMP DEBUG: Log everything for troubleshooting
+      console.log('==========================================');
+      console.log('🔐 GUEST SESSION DEBUG:');
+      console.log('API Base URL from config:', apiUrl);
+      console.log('Full URL:', fullUrl);
+      console.log('Device Info:', JSON.stringify(deviceInfo));
+      console.log('==========================================');
 
       const response = await fetch(fullUrl, {
         method: 'POST',
@@ -146,14 +151,44 @@ class GuestService {
         body: JSON.stringify({ deviceInfo }),
       });
 
+      // TEMP DEBUG: Log response status
+      console.log('Response status:', response.status, response.statusText);
+      console.log('Response OK?:', response.ok);
+
       if (!response.ok) {
         const errorData = await response.json();
+        console.log('Error response data:', JSON.stringify(errorData));
 
         // If rate limited and we have retries left, wait and retry
         if (response.status === 429 && retryCount < maxRetries) {
-          const retryAfter = errorData.retryAfter || 60;
+          // Parse retryAfter - can be a number (seconds) or string (e.g., "1 hour")
+          let retryAfterSeconds = 60; // Default to 60 seconds
+
+          if (errorData.retryAfter) {
+            if (typeof errorData.retryAfter === 'number') {
+              retryAfterSeconds = errorData.retryAfter;
+            } else if (typeof errorData.retryAfter === 'string') {
+              // Parse strings like "1 hour", "15 minutes", etc.
+              const match = errorData.retryAfter.match(
+                /(\d+)\s*(hour|minute|second)/i,
+              );
+              if (match) {
+                const value = parseInt(match[1], 10);
+                const unit = match[2].toLowerCase();
+                if (unit.startsWith('hour')) {
+                  retryAfterSeconds = value * 3600;
+                } else if (unit.startsWith('minute')) {
+                  retryAfterSeconds = value * 60;
+                } else {
+                  retryAfterSeconds = value;
+                }
+              }
+            }
+          }
+
+          // Use exponential backoff, but cap at retryAfter
           const backoffDelay = Math.min(
-            retryAfter * 1000,
+            retryAfterSeconds * 1000,
             Math.pow(2, retryCount) * 1000,
           );
 
@@ -172,8 +207,17 @@ class GuestService {
       }
 
       const data = await response.json();
-      // Removed excessive logging
+      console.log(
+        '✅ Response data received:',
+        JSON.stringify(data).substring(0, 200),
+      );
       const guestSession = data.data;
+      console.log('✅ Guest session extracted from data');
+      console.log(
+        'Session token:',
+        guestSession?.sessionToken?.substring(0, 20) + '...',
+      );
+      console.log('==========================================');
 
       // Store guest session
       await safeAsyncStorage.setItem(

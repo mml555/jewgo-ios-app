@@ -15,6 +15,7 @@ import FormAnalyticsService, {
   FormSession,
 } from '../services/FormAnalytics';
 import CrashReportingService from '../services/CrashReporting';
+import { Typography } from '../styles/designSystem';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -422,7 +423,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#000000',
+    color: '#292b2d',
   },
   refreshButton: {
     paddingHorizontal: 16,
@@ -466,9 +467,10 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#000000',
+    color: '#292b2d',
     marginBottom: 16,
     marginTop: 8,
+    fontFamily: Typography.fontFamily,
   },
   metricsGrid: {
     flexDirection: 'row',
@@ -499,7 +501,7 @@ const styles = StyleSheet.create({
   metricValue: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#000000',
+    color: '#292b2d',
     marginBottom: 4,
   },
   metricSubtitle: {
@@ -523,7 +525,7 @@ const styles = StyleSheet.create({
   stepNumber: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#000000',
+    color: '#292b2d',
   },
   stepTime: {
     fontSize: 14,
@@ -544,7 +546,7 @@ const styles = StyleSheet.create({
   issueTitle: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#000000',
+    color: '#292b2d',
     flex: 1,
   },
   issueValue: {
@@ -579,7 +581,7 @@ const styles = StyleSheet.create({
   sessionId: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000000',
+    color: '#292b2d',
   },
   sessionStatus: {
     paddingHorizontal: 8,
@@ -618,7 +620,7 @@ const styles = StyleSheet.create({
   sessionMetricValue: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000000',
+    color: '#292b2d',
   },
   errorTypesList: {
     backgroundColor: '#FFFFFF',
@@ -637,7 +639,7 @@ const styles = StyleSheet.create({
   errorTypeName: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#000000',
+    color: '#292b2d',
     textTransform: 'capitalize',
   },
   errorTypeCount: {
@@ -657,7 +659,7 @@ const styles = StyleSheet.create({
   topErrorMessage: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#000000',
+    color: '#292b2d',
     marginBottom: 8,
   },
   topErrorMeta: {

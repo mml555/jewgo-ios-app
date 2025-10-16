@@ -110,7 +110,7 @@ const ActionBar: React.FC<ActionBarProps> = ({
 
           <View style={styles.jobsRightButtons}>
             <TouchableOpacity
-              style={styles.addButton}
+              style={styles.jobsAddButton}
               onPress={() => {
                 if (jobMode === 'hiring') {
                   // Navigate to job posting form
@@ -189,12 +189,12 @@ const ActionBar: React.FC<ActionBarProps> = ({
           accessibilityLabel="Open live map"
           accessibilityHint="Tap to view live map"
         >
-          <Icon name="map" size={14} color="#333" />
           <Text style={styles.actionText}>Live Map</Text>
+          <Icon name="map" size={18} color="#292b2d" />
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.actionButton}
+          style={styles.addButton}
           onPress={() => handleActionPress('addCategory')}
           accessible={true}
           accessibilityRole="button"
@@ -205,10 +205,10 @@ const ActionBar: React.FC<ActionBarProps> = ({
             currentCategory,
           ).toLowerCase()}`}
         >
-          <Text style={styles.actionIcon}>➕</Text>
-          <Text style={styles.actionText}>
+          <Text style={styles.addButtonText}>
             Add {getCategoryDisplayName(currentCategory)}
           </Text>
+          <Icon name="plus-circle" size={20} color="#71bbff" />
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -222,13 +222,11 @@ const ActionBar: React.FC<ActionBarProps> = ({
           accessibilityLabel="Open filters"
           accessibilityHint="Tap to open filter options"
         >
-          <View style={styles.filterIconWrapper}>
-            <Icon name="filter" size={14} color="#333" />
-          </View>
           <Text style={styles.actionText}>
             Filters
             {getActiveFiltersCount() > 0 ? ` (${getActiveFiltersCount()})` : ''}
           </Text>
+          <Icon name="filter" size={18} color="#292b2d" />
         </TouchableOpacity>
       </View>
 
@@ -250,36 +248,53 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.sm,
-    paddingBottom: Spacing.sm,
-    backgroundColor: Colors.background.secondary,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border.primary,
+    paddingTop: 10,
+    paddingBottom: 10,
+    backgroundColor: Colors.background.primary,
   },
   actionButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.gray200,
-    borderRadius: 25, // Pill shape like listing page buttons
-    paddingVertical: 6, // Even thinner pill
-    paddingHorizontal: Spacing.xs, // Minimal horizontal padding
-    marginHorizontal: Spacing.xs,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 25, // Pill shape
+    paddingVertical: 10,
+    paddingHorizontal: Spacing.xs,
+    marginHorizontal: 4,
     minHeight: TouchTargets.minimum,
-    ...Shadows.sm,
+    gap: 6,
+  },
+  addButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ffffff',
+    borderRadius: 25, // Pill shape
+    paddingVertical: 10,
+    paddingHorizontal: Spacing.xs,
+    marginHorizontal: 4,
+    minHeight: TouchTargets.minimum,
+    gap: 6,
+  },
+  addButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#71bbff',
+    flexShrink: 1,
   },
   actionIcon: {
-    fontSize: 14, // Smaller icon
+    fontSize: 14,
     marginRight: Spacing.xs,
   },
   filterIconWrapper: {
     marginRight: Spacing.xs,
   },
   actionText: {
-    fontSize: 12, // Smaller text
+    fontSize: 12,
     fontWeight: '600',
-    color: Colors.textPrimary,
+    color: '#292b2d',
     flexShrink: 1,
   },
   actionButtonActive: {
@@ -291,11 +306,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.sm,
-    paddingTop: Spacing.sm,
-    paddingBottom: Spacing.sm,
-    backgroundColor: Colors.background.secondary,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border.primary,
+    paddingTop: 10,
+    paddingBottom: 10,
+    backgroundColor: Colors.background.primary,
     minHeight: 50,
   },
   jobsRightButtons: {
@@ -303,7 +316,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.sm,
   },
-  addButton: {
+  jobsAddButton: {
     width: 44,
     height: 44,
     borderRadius: 22,

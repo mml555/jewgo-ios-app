@@ -16,7 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import EventsService, { Event } from '../../services/EventsService';
-import { Spacing } from '../../styles/designSystem';
+import { Spacing, Typography } from '../../styles/designSystem';
 import { SocialShareBar } from '../../components/events';
 import ImageCarousel from '../../components/ImageCarousel';
 import DetailHeaderBar from '../../components/DetailHeaderBar';
@@ -825,6 +825,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#1E7A5F',
     marginBottom: Spacing.md,
+    fontFamily: Typography.fontFamily,
   },
   sectionText: {
     fontSize: 16,
@@ -843,7 +844,7 @@ const styles = StyleSheet.create({
     height: 80,
     borderRadius: 12,
     marginRight: Spacing.md,
-    backgroundColor: '#F1F1F1',
+    backgroundColor: '#f8f8f8',
   },
   relatedEventImage: {
     width: 80,
@@ -905,6 +906,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: '#292B2D',
+    fontFamily: Typography.fontFamily,
   },
   formGroup: {
     marginBottom: Spacing.lg,

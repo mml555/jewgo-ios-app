@@ -100,7 +100,7 @@ const CreateJobScreen: React.FC = () => {
         industries: industriesRes.industries?.length,
         jobTypes: jobTypesRes.jobTypes?.length,
         compensationStructures: compensationRes.compensationStructures?.length,
-        experienceLevels: experienceRes.experienceLevels?.length
+        experienceLevels: experienceRes.experienceLevels?.length,
       });
 
       setIndustries(industriesRes.industries);
@@ -112,7 +112,7 @@ const CreateJobScreen: React.FC = () => {
       Alert.alert(
         'Error Loading Form',
         'Failed to load form data from server. Please check your connection and try again.',
-        [{ text: 'OK', onPress: () => navigation.goBack() }]
+        [{ text: 'OK', onPress: () => navigation.goBack() }],
       );
     }
   }, [navigation]);
@@ -937,7 +937,7 @@ const styles = StyleSheet.create({
   skillChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F1F1F1',
+    backgroundColor: '#f8f8f8',
     borderRadius: 8,
     paddingVertical: Spacing.xs,
     paddingHorizontal: Spacing.sm,
@@ -975,7 +975,7 @@ const styles = StyleSheet.create({
   },
   backButton: {
     flex: 1,
-    backgroundColor: '#F1F1F1',
+    backgroundColor: '#f8f8f8',
     borderRadius: 12,
     paddingVertical: Spacing.md,
     alignItems: 'center',

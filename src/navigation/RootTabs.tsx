@@ -10,6 +10,8 @@ import {
   Typography,
   Spacing,
   TouchTargets,
+  BorderRadius,
+  Shadows,
 } from '../styles/designSystem';
 import Icon, { IconName } from '../components/Icon';
 
@@ -28,7 +30,8 @@ const TabIcon: React.FC<{
   focused: boolean;
   label: string;
   filled?: boolean;
-}> = ({ iconName, focused, label, filled = false }) => {
+  isSpecialsTab?: boolean;
+}> = ({ iconName, focused, label, filled = false, isSpecialsTab = false }) => {
   const handlePress = useCallback(() => {
     // Haptic feedback on tab press
     if (Platform.OS === 'ios') {
@@ -41,9 +44,22 @@ const TabIcon: React.FC<{
     Keyboard.dismiss();
   }, []);
 
+  // Determine icon color based on Specials tab state
+  const iconColor = isSpecialsTab
+    ? focused
+      ? '#292b2d' // Dark color when Specials is active
+      : '#b8b8b8' // Gray color when Specials is inactive
+    : focused
+    ? Colors.primary.main
+    : Colors.text.secondary;
+
   return (
     <View
-      style={styles.tabIconContainer}
+      style={[
+        styles.tabIconContainer,
+        isSpecialsTab && focused && styles.tabIconSpecialsFocused,
+        isSpecialsTab && !focused && styles.tabIconSpecialsUnfocused,
+      ]}
       onTouchStart={handlePress}
       accessible={true}
       accessibilityRole="button"
@@ -53,8 +69,9 @@ const TabIcon: React.FC<{
       <Icon
         name={iconName}
         size={24}
-        color={focused ? Colors.primary.main : Colors.textSecondary}
+        color={iconColor}
         filled={filled && focused}
+        style={isSpecialsTab ? styles.specialsIcon : undefined}
       />
     </View>
   );
@@ -75,9 +92,9 @@ function RootTabs() {
           let filled = false;
 
           switch (route.name) {
-            case 'Home':
-              iconName = 'home';
-              label = 'Home';
+            case 'Explore':
+              iconName = 'search';
+              label = 'Explore';
               break;
             case 'Favorites':
               iconName = 'heart';
@@ -85,7 +102,7 @@ function RootTabs() {
               filled = true; // Heart fills when focused
               break;
             case 'Specials':
-              iconName = 'tag';
+              iconName = 'gift';
               label = 'Specials';
               break;
             case 'Notifications':
@@ -107,19 +124,41 @@ function RootTabs() {
               focused={focused}
               label={label}
               filled={filled}
+              isSpecialsTab={route.name === 'Specials'}
             />
           );
         },
-        tabBarLabel: ({ focused }) => (
-          <Text style={[styles.tabLabel, focused && styles.tabLabelFocused]}>
-            {route.name}
-          </Text>
-        ),
+        tabBarLabel: ({ focused }) => {
+          const isSpecials = route.name === 'Specials';
+          const labelColor = isSpecials
+            ? focused
+              ? '#292b2d' // Dark color when Specials is active
+              : '#b8b8b8' // Gray color when Specials is inactive
+            : undefined; // Use default styling for other tabs
+
+          return (
+            <Text
+              style={[
+                styles.tabLabel,
+                focused && styles.tabLabelFocused,
+                isSpecials && { color: labelColor },
+              ]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.8}
+            >
+              {route.name}
+            </Text>
+          );
+        },
         /* eslint-enable react/no-unstable-nested-components */
         tabBarStyle: {
           ...styles.tabBar,
-          paddingBottom: Math.max(insets.bottom, 8),
-          height: 60 + Math.max(insets.bottom, 8),
+          paddingBottom: Spacing.xs,
+          height: 68, // Made slightly bigger
+          marginBottom: Spacing.xxl + 8, // Shifted up more
+          marginLeft: Spacing.md,
+          marginRight: Spacing.md,
         },
         tabBarActiveTintColor: Colors.primary.main,
         tabBarInactiveTintColor: Colors.textTertiary,
@@ -128,10 +167,10 @@ function RootTabs() {
       })}
     >
       <Tab.Screen
-        name="Home"
+        name="Explore"
         component={HomeScreen}
         options={{
-          tabBarAccessibilityLabel: 'Home tab',
+          tabBarAccessibilityLabel: 'Explore tab',
         }}
       />
       <Tab.Screen
@@ -168,17 +207,18 @@ function RootTabs() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    backgroundColor: Colors.background.primary,
+    backgroundColor: Colors.background.secondary,
     borderTopWidth: 0,
-    paddingTop: Spacing.sm,
-    elevation: 0,
-    shadowColor: 'transparent',
-    shadowOffset: {
-      width: 0,
-      height: 0,
-    },
-    shadowOpacity: 0,
-    shadowRadius: 0,
+    paddingTop: Spacing.xs,
+    paddingHorizontal: Spacing.xs,
+    borderRadius: 30,
+    position: 'absolute',
+    // Enhanced shadow for better visibility
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
+    elevation: 12,
   },
   tabIconContainer: {
     width: TouchTargets.minimum,
@@ -186,6 +226,35 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: TouchTargets.minimum / 2,
+  },
+  tabIconSpecialsFocused: {
+    backgroundColor: '#C6FFD1', // Brand color with glow when active
+    shadowColor: '#C6FFD1',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 4,
+    elevation: 3,
+    // Sized to fit within tab bar
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    marginBottom: -20, // Push circle down further to stay within nav bar
+    paddingBottom: 0,
+    justifyContent: 'flex-start', // Align icon with other tabs
+    alignItems: 'center', // Center content horizontally
+    paddingTop: 8, // Offset to align icon with other tabs
+  },
+  tabIconSpecialsUnfocused: {
+    backgroundColor: '#E0FFEB', // Light green circle when inactive
+    // Sized to fit within tab bar
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    marginBottom: -20, // Push circle down further to stay within nav bar
+    paddingBottom: 0,
+    justifyContent: 'flex-start', // Align icon with other tabs
+    alignItems: 'center', // Center content horizontally
+    paddingTop: 8, // Offset to align icon with other tabs
   },
   tabIcon: {
     fontSize: 24,
@@ -196,6 +265,7 @@ const styles = StyleSheet.create({
   },
   tabLabel: {
     ...Typography.styles.caption,
+    fontSize: 10,
     fontWeight: '500',
     marginTop: 2,
     textAlign: 'center',
@@ -203,6 +273,9 @@ const styles = StyleSheet.create({
   tabLabelFocused: {
     fontWeight: '600',
     color: Colors.primary.main,
+  },
+  specialsIcon: {
+    marginBottom: 4, // Add space between icon and text for Specials tab
   },
 });
 

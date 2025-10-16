@@ -8,6 +8,7 @@ import {
   Dimensions,
 } from 'react-native';
 import Icon, { IconName } from './Icon';
+import { Spacing } from '../styles/designSystem';
 
 interface CategoryRailProps {
   activeCategory: string;
@@ -26,6 +27,7 @@ const CATEGORIES: Category[] = [
   { id: 'eatery', name: 'Eatery', iconName: 'restaurant' },
   { id: 'shul', name: 'Shul', iconName: 'synagogue' },
   { id: 'stores', name: 'Stores', iconName: 'shopping-bag' },
+  { id: 'specials', name: 'Specials', iconName: 'gift' },
   { id: 'shtetl', name: 'Shtetl', iconName: 'users' }, // Community icon
   { id: 'events', name: 'Events', iconName: 'calendar' },
   { id: 'jobs', name: 'Jobs', iconName: 'briefcase' },
@@ -68,7 +70,7 @@ const CategoryRail: React.FC<CategoryRailProps> = ({
               <Icon
                 name={item.iconName}
                 size={24}
-                color={isActive ? '#FFFFFF' : '#374151'} // Spec: white icon on active, charcoal on inactive
+                color={isActive ? '#FFFFFF' : '#b8b8b8'}
               />
             </View>
           )}
@@ -162,25 +164,25 @@ const CategoryRail: React.FC<CategoryRailProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
-    height: 90, // Increased height to accommodate static scrollbar
+    backgroundColor: '#f8f8f8',
+    borderBottomWidth: 0,
+    height: 88, // Increased height for taller buttons
     position: 'relative',
+    marginBottom: 2, // Minimal gap to ActionBar since container has visual height
   },
   containerCompact: {
     height: 50, // Reduced height for compact mode
   },
   scrollViewStyle: {
     flexGrow: 0, // Prevent ScrollView from expanding unnecessarily
-    height: 72, // Height for the category buttons
+    height: 84, // Increased height for taller buttons
   },
   scrollViewStyleCompact: {
     height: 42, // Reduced height for compact mode
   },
   scrollContent: {
     paddingHorizontal: CONTAINER_PADDING,
-    paddingVertical: 12,
+    paddingVertical: 4,
     alignItems: 'center', // Center content vertically within the fixed height
     flexDirection: 'row', // Ensure horizontal layout for ScrollView
   },
@@ -189,7 +191,7 @@ const styles = StyleSheet.create({
   },
   staticScrollbar: {
     position: 'absolute',
-    bottom: 8, // Position below the buttons with some spacing
+    bottom: 2, // Small spacing from container bottom
     left: 0,
     right: 0,
     height: 2,
@@ -202,7 +204,7 @@ const styles = StyleSheet.create({
     top: 0,
     width: 32, // Smaller width for better visual balance
     height: 2,
-    backgroundColor: '#10B981', // Green color for selected category
+    backgroundColor: '#292b2d',
     borderRadius: 1,
   },
   chip: {
@@ -211,10 +213,8 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 4,
     borderRadius: 20, // Spec: radius 20-24
-    backgroundColor: '#FFFFFF', // Solid background required for shadow
-    borderWidth: 1,
-    borderColor: '#E5E7EB', // Spec: neutral stroke
-    minHeight: 60,
+    backgroundColor: '#FFFFFF',
+    minHeight: 72, // Increased height for taller buttons
     justifyContent: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -223,8 +223,7 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   chipActive: {
-    backgroundColor: '#374151', // Spec: charcoal fill
-    borderColor: '#374151',
+    backgroundColor: '#292b2d',
     shadowColor: '#000000',
     shadowOffset: {
       width: 0,
@@ -245,7 +244,7 @@ const styles = StyleSheet.create({
     width: 24,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   chipIcon: {
     fontSize: 24,
@@ -255,7 +254,7 @@ const styles = StyleSheet.create({
   chipText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#6B7280',
+    color: '#b8b8b8',
     textAlign: 'center',
   },
   chipTextActive: {

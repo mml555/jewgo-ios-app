@@ -20,6 +20,7 @@ import {
   TouchTargets,
 } from '../styles/designSystem';
 import Icon from './Icon';
+import HeartIcon from './HeartIcon';
 import { DistanceDisplay } from './DistanceDisplay';
 import { useLocationSimple } from '../hooks/useLocationSimple';
 import { debugLog, errorLog } from '../utils/logger';
@@ -49,7 +50,7 @@ const JobCard: React.FC<JobCardProps> = memo(({ item, categoryKey }) => {
   // Check favorite status on mount and when item.id changes
   useEffect(() => {
     let mounted = true;
-    
+
     const checkStatus = async () => {
       try {
         const status = await checkFavoriteStatus(item.id);
@@ -61,9 +62,9 @@ const JobCard: React.FC<JobCardProps> = memo(({ item, categoryKey }) => {
         errorLog('Error checking favorite status in JobCard:', error);
       }
     };
-    
+
     checkStatus();
-    
+
     // Cleanup function to prevent state updates on unmounted component
     return () => {
       mounted = false;
@@ -166,7 +167,7 @@ const JobCard: React.FC<JobCardProps> = memo(({ item, categoryKey }) => {
         return `${Math.round(distanceMiles)} mi away`;
       }
     }
-    
+
     // Otherwise show zip code
     return item.zip_code ? String(item.zip_code) : 'Remote';
   };
@@ -230,11 +231,11 @@ const JobCard: React.FC<JobCardProps> = memo(({ item, categoryKey }) => {
         accessibilityHint="Tap to toggle favorite status"
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
       >
-        <Icon
-          name="heart"
-          size={14}
-          color={isFavorited ? Colors.error : '#6B7280'}
-          filled={isFavorited}
+        <HeartIcon
+          size={28}
+          color={isFavorited ? '#FF69B4' : '#b8b8b8'} // Pink when favorited, light grey otherwise
+          filled={true}
+          showBorder={true}
         />
       </Pressable>
 
@@ -286,7 +287,7 @@ const styles = StyleSheet.create({
   container: {
     width: CARD_WIDTH,
     backgroundColor: Colors.white,
-    borderRadius: 16, // Smaller radius to match reference
+    borderRadius: BorderRadius['2xl'],
     padding: 12, // Reduced padding
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -295,23 +296,20 @@ const styles = StyleSheet.create({
     elevation: 1,
     position: 'relative',
     minHeight: 100, // Much thinner cards
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
   heartButton: {
     position: 'absolute',
     top: 8,
     right: 8,
-    width: 28,
-    height: 28,
+    width: TouchTargets.minimum,
+    height: TouchTargets.minimum,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 10,
-    borderRadius: 14,
   },
   contentContainer: {
     flex: 1,
-    paddingRight: 12, // Reduced space for smaller heart button
+    paddingRight: 32, // Space for larger heart icon
     justifyContent: 'space-between',
   },
   jobTitle: {
@@ -334,16 +332,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   employmentTypeContainer: {
-    backgroundColor: '#E8F5E9',
+    backgroundColor: '#ffffff', // White background like other tags
     paddingHorizontal: 10,
     paddingVertical: 3,
-    borderRadius: 8,
+    borderRadius: BorderRadius.full,
     alignSelf: 'flex-start',
+    ...Shadows.sm,
   },
   employmentTypeText: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#4CAF50',
+    fontWeight: '700',
+    color: '#292b2d', // Dark text color
   },
   cardFooter: {
     flexDirection: 'row',
@@ -355,8 +354,7 @@ const styles = StyleSheet.create({
   bottomRightText: {
     fontSize: 12,
     fontWeight: '500',
-    color: '#3B82F6',
-    textDecorationLine: 'underline',
+    color: Colors.textSecondary,
     flexShrink: 1,
     marginLeft: 8,
   },

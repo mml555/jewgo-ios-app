@@ -91,9 +91,26 @@ class AuthService {
         this.accessToken = storedTokens.accessToken;
         this.refreshToken = storedTokens.refreshToken;
 
-        // Verify token is still valid
-        const isValid = await this.verifyToken();
-        if (!isValid) {
+        // Verify token is still valid (with timeout)
+        try {
+          const isValid = await Promise.race([
+            this.verifyToken(),
+            new Promise<boolean>((_, reject) =>
+              setTimeout(
+                () => reject(new Error('Token verification timeout')),
+                5000,
+              ),
+            ),
+          ]);
+
+          if (!isValid) {
+            await this.clearStoredTokens();
+            this.accessToken = null;
+            this.refreshToken = null;
+          }
+        } catch (error) {
+          // If verification times out or fails, clear tokens and continue
+          errorLog('Token verification failed:', error);
           await this.clearStoredTokens();
           this.accessToken = null;
           this.refreshToken = null;
@@ -431,7 +448,17 @@ class AuthService {
     };
 
     try {
-      const response = await fetch(url, config);
+      // Add timeout to prevent hanging requests
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+      const response = await fetch(url, {
+        ...config,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
       const data = await response.json();
 
       if (!response.ok) {
@@ -447,6 +474,13 @@ class AuthService {
         data: data.data || data,
       };
     } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        errorLog(`Request timeout for ${endpoint}`);
+        return {
+          success: false,
+          error: 'Request timeout',
+        };
+      }
       errorLog(`Request failed for ${endpoint}:`, error);
       return {
         success: false,

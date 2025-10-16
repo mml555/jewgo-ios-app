@@ -17,6 +17,7 @@ import {
   TouchTargets,
 } from '../styles/designSystem';
 import Icon from './Icon';
+import HeartIcon from './HeartIcon';
 
 type CurrencyCode = 'USD' | 'ILS' | 'EUR' | string;
 
@@ -173,11 +174,11 @@ const SpecialCard: React.FC<SpecialCardProps> = memo(
               accessibilityHint="Tap to toggle favorite status"
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <Icon
-                name="heart"
+              <HeartIcon
                 size={20}
                 color={item.isLiked ? Colors.error : Colors.textSecondary}
-                filled={item.isLiked}
+                filled={true}
+                showBorder={true}
               />
             </Pressable>
           )}
@@ -214,16 +215,16 @@ const styles = StyleSheet.create({
   container: {
     width: CARD_WIDTH,
     backgroundColor: 'transparent',
-    borderRadius: BorderRadius.lg,
+    borderRadius: BorderRadius['2xl'],
     padding: 0, // Remove padding to align with image edges
   },
   imageContainer: {
     position: 'relative',
     width: '100%',
     height: IMAGE_HEIGHT,
-    borderRadius: BorderRadius.lg,
+    borderRadius: BorderRadius['2xl'],
     overflow: 'hidden',
-    marginBottom: Spacing.sm,
+    marginBottom: Spacing.xs,
   },
   image: {
     width: '100%',
@@ -236,15 +237,12 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary.main, // Default color, will be overridden by dynamic color
     borderRadius: BorderRadius.full,
     paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)', // Light border for contrast
+    paddingVertical: Spacing.sm,
   },
   tagText: {
     ...Typography.styles.caption,
     color: Colors.text.inverse, // White text for dark background
     fontWeight: '700',
-    textTransform: 'uppercase',
   },
   heartButton: {
     position: 'absolute',
@@ -263,6 +261,7 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(255, 255, 255, 1)',
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 3, // Increased radius for better white outline
+    fontFamily: Typography.fontFamily,
   },
   heartIconActive: {
     color: Colors.error,

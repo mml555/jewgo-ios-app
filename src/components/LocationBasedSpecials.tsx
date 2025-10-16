@@ -444,7 +444,7 @@ const styles = StyleSheet.create({
   locationCoords: {
     ...Typography.styles.bodySmall,
     color: Colors.textSecondary,
-    fontFamily: 'monospace',
+    fontFamily: Typography.fontFamily,
   },
   controlsContainer: {
     margin: Spacing.md,

@@ -6,25 +6,25 @@ import {
   StyleSheet,
   TouchableOpacity,
   Platform,
+  Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import JewgoLogo from './JewgoLogo';
-import {
-  Colors,
-  Typography,
-  Spacing,
-  BorderRadius,
-  Shadows,
-  TouchTargets,
-} from '../styles/designSystem';
+import Feather from 'react-native-vector-icons/Feather';
+import { Colors, Typography, Spacing, Shadows } from '../styles/designSystem';
 
 interface TopBarProps {
   onQueryChange: (query: string) => void;
   debounceMs?: number;
   placeholder?: string;
+  onAddSpecial?: () => void;
 }
 
-const TopBar: React.FC<TopBarProps> = ({ onQueryChange, debounceMs = 250, placeholder }) => {
+const TopBar: React.FC<TopBarProps> = ({
+  onQueryChange,
+  debounceMs = 250,
+  placeholder,
+  onAddSpecial,
+}) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const insets = useSafeAreaInsets();
@@ -74,46 +74,75 @@ const TopBar: React.FC<TopBarProps> = ({ onQueryChange, debounceMs = 250, placeh
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.content}>
-        {/* Logo */}
-        <View style={styles.logoContainer}>
-          <JewgoLogo width={32} height={32} color="#a5ffc6" />
-        </View>
+        {/* Combined Logo and Search Container */}
+        <View style={styles.searchWrapper}>
+          {/* Search Icon Logo */}
+          <View style={styles.logoContainer}>
+            <Image
+              source={require('../assets/icons/social/icon.webp')}
+              style={styles.logoImage}
+            />
+          </View>
 
-        {/* Search Input */}
-        <View style={styles.searchContainer}>
-          <TextInput
+          {/* Search Input */}
+          <View
             style={[
-              styles.searchInput,
-              isSearchFocused && styles.searchInputFocused,
+              styles.searchContainer,
+              isSearchFocused && styles.searchContainerFocused,
             ]}
-            placeholder={placeholder || "Search places, events..."}
-            placeholderTextColor="#8E8E93"
-            value={searchQuery}
-            onChangeText={handleSearchChange}
-            onFocus={() => setIsSearchFocused(true)}
-            onBlur={() => setIsSearchFocused(false)}
-            returnKeyType="search"
-            clearButtonMode="never" // We'll handle clear button ourselves
-            accessible={true}
-            accessibilityRole="search"
-            accessibilityLabel="Search input"
-            accessibilityHint="Enter text to search for places and events"
-          />
+          >
+            {/* Search Icon */}
+            <Feather
+              name="search"
+              size={20}
+              color={Colors.textSecondary}
+              style={styles.searchIcon}
+            />
 
-          {/* Clear Button */}
-          {searchQuery.length > 0 && (
+            <TextInput
+              style={styles.searchInput}
+              placeholder={placeholder || 'Find your Eatery'}
+              placeholderTextColor={Colors.textSecondary}
+              value={searchQuery}
+              onChangeText={handleSearchChange}
+              onFocus={() => setIsSearchFocused(true)}
+              onBlur={() => setIsSearchFocused(false)}
+              returnKeyType="search"
+              clearButtonMode="never"
+              accessible={true}
+              accessibilityRole="search"
+              accessibilityLabel="Search input"
+              accessibilityHint="Enter text to search for places and events"
+            />
+
+            {/* Clear Button */}
+            {searchQuery.length > 0 && (
+              <TouchableOpacity
+                style={styles.clearButton}
+                onPress={handleClearPress}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel="Clear search"
+                accessibilityHint="Clears the search input"
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Text style={styles.clearButtonText}>✕</Text>
+              </TouchableOpacity>
+            )}
+
+            {/* Add Special Button */}
             <TouchableOpacity
-              style={styles.clearButton}
-              onPress={handleClearPress}
+              style={styles.addSpecialButton}
+              onPress={onAddSpecial}
               accessible={true}
               accessibilityRole="button"
-              accessibilityLabel="Clear search"
-              accessibilityHint="Clears the search input"
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              accessibilityLabel="Add a Special"
+              accessibilityHint="Opens the form to add a new special offer"
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Text style={styles.clearButtonText}>✕</Text>
+              <Text style={styles.addSpecialButtonText}>Add a Special +</Text>
             </TouchableOpacity>
-          )}
+          </View>
         </View>
       </View>
     </View>
@@ -122,64 +151,96 @@ const TopBar: React.FC<TopBarProps> = ({ onQueryChange, debounceMs = 250, placeh
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: Colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border.primary,
-    ...Shadows.sm,
+    backgroundColor: Colors.background.primary,
+    borderBottomWidth: 0,
   },
   content: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    minHeight: TouchTargets.minimum,
+    paddingVertical: Spacing.md,
+  },
+  searchWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    maxWidth: 600, // Limit width on larger screens
+    flex: 1,
   },
   logoContainer: {
-    marginRight: Spacing.sm,
-    width: 32,
-    height: 32,
+    width: 56,
+    height: 56,
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 10,
+    marginRight: -32, // More overlap to sit on search bar
+  },
+  logoImage: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
   },
   searchContainer: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.gray200,
-    borderRadius: BorderRadius.lg,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    minHeight: TouchTargets.minimum,
+    backgroundColor: Colors.white,
+    borderRadius: 28,
+    paddingLeft: 36, // Padding to account for logo overlap
+    paddingRight: Spacing.sm, // Reduced padding to make room for button
+    paddingVertical: 12,
+    height: 56,
+    ...Shadows.sm,
+  },
+  searchContainerFocused: {
+    ...Shadows.md,
+  },
+  searchIcon: {
+    marginRight: 8,
   },
   searchInput: {
     flex: 1,
-    ...Typography.styles.bodyLarge,
+    ...Typography.styles.body,
+    fontSize: 14,
     color: Colors.textPrimary,
     paddingVertical: 0,
     ...Platform.select({
       ios: {
-        paddingVertical: 4,
+        paddingVertical: 2,
       },
     }),
   },
-  searchInputFocused: {
-    backgroundColor: Colors.surface,
-    ...Shadows.sm,
-  },
   clearButton: {
-    width: TouchTargets.minimum,
-    height: TouchTargets.minimum,
+    width: 24,
+    height: 24,
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: Spacing.sm,
-    borderRadius: TouchTargets.minimum / 2,
+    marginLeft: Spacing.xs,
+    borderRadius: 12,
     backgroundColor: Colors.gray400,
   },
   clearButtonText: {
-    ...Typography.styles.body,
+    fontSize: 14,
     color: Colors.white,
     fontWeight: '600',
     textAlign: 'center',
+  },
+  addSpecialButton: {
+    backgroundColor: Colors.jewgoGreen,
+    borderRadius: 20, // Oval shape - height/2
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 6,
+    marginLeft: Spacing.xs,
+    justifyContent: 'center',
+    alignItems: 'center',
+    minHeight: 32,
+    maxHeight: 32,
+  },
+  addSpecialButtonText: {
+    fontSize: 12,
+    color: Colors.white,
+    fontWeight: '600',
+    fontFamily: Typography.fontFamilySemiBold,
   },
 });
 

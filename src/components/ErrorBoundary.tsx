@@ -183,13 +183,13 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 12,
     color: Colors.error,
-    fontFamily: 'Courier',
+    fontFamily: Typography.fontFamily,
     marginBottom: Spacing.sm,
   },
   errorStack: {
     fontSize: 10,
     color: Colors.text?.secondary || Colors.gray700,
-    fontFamily: 'Courier',
+    fontFamily: Typography.fontFamily,
   },
   button: {
     backgroundColor: Colors.primary.main,

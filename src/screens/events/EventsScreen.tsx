@@ -91,7 +91,7 @@ const EventsListHeader = memo(
         >
           <Text style={styles.actionButtonIcon}>+</Text>
           <Text style={[styles.actionButtonText, styles.addEventButtonText]}>
-            Add a Event
+            Add Event
           </Text>
         </TouchableOpacity>
 

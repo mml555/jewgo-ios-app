@@ -402,7 +402,7 @@ const styles = StyleSheet.create({
   },
   backButton: {
     flex: 1,
-    backgroundColor: '#F1F1F1',
+    backgroundColor: '#f8f8f8',
     borderRadius: 12,
     paddingVertical: Spacing.md,
     alignItems: 'center',

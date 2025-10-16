@@ -22,7 +22,10 @@ import JobsService, {
 } from '../../services/JobsService';
 import { Spacing } from '../../styles/designSystem';
 import { AppStackParamList } from '../../types/navigation';
-import { FALLBACK_INDUSTRIES, FALLBACK_JOB_TYPES } from '../../utils/fallbackData';
+import {
+  FALLBACK_INDUSTRIES,
+  FALLBACK_JOB_TYPES,
+} from '../../utils/fallbackData';
 
 type JobSeekerProfilesScreenNavigationProp =
   StackNavigationProp<AppStackParamList>;
@@ -145,11 +148,11 @@ const JobSeekerProfilesScreen: React.FC = () => {
       setJobTypes(jobTypesRes.jobTypes);
     } catch (error) {
       console.error('Error loading lookup data:', error);
-      
+
       // Provide fallback data
       setIndustries(FALLBACK_INDUSTRIES);
       setJobTypes(FALLBACK_JOB_TYPES);
-      
+
       // Show a subtle notification that we're using offline data
       console.log('Using fallback data due to API connectivity issues');
     }
@@ -460,7 +463,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   filterChip: {
-    backgroundColor: '#F1F1F1',
+    backgroundColor: '#f8f8f8',
     borderRadius: 20,
     paddingVertical: Spacing.xs,
     paddingHorizontal: Spacing.md,
@@ -560,7 +563,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   skillChip: {
-    backgroundColor: '#F1F1F1',
+    backgroundColor: '#f8f8f8',
     borderRadius: 6,
     paddingVertical: 4,
     paddingHorizontal: 8,
@@ -615,7 +618,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 8,
-    backgroundColor: '#F1F1F1',
+    backgroundColor: '#f8f8f8',
     alignItems: 'center',
     justifyContent: 'center',
   },

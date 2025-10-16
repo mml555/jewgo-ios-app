@@ -1,10 +1,13 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import type { StackNavigationProp } from '@react-navigation/stack';
 import TopBar from '../components/TopBar';
 import CategoryRail from '../components/CategoryRail';
 import CategoryGridScreen from './CategoryGridScreen';
 import EnhancedJobsScreen from './EnhancedJobsScreen';
+import type { AppStackParamList } from '../types/navigation';
 import { Colors } from '../styles/designSystem';
 
 interface HomeScreenProps {
@@ -12,6 +15,7 @@ interface HomeScreenProps {
 }
 
 const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
+  const navigation = useNavigation<StackNavigationProp<AppStackParamList>>();
   const [activeCategory, setActiveCategory] = useState('mikvah');
   const [searchQuery, setSearchQuery] = useState('');
   const [jobMode, setJobMode] = useState<'seeking' | 'hiring'>('hiring');
@@ -44,6 +48,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
     setScrollY(offsetY);
   }, []);
 
+  const handleAddSpecial = useCallback(() => {
+    // Navigate to the Specials tab where users can create specials
+    navigation.navigate('MainTabs', { screen: 'Specials' });
+  }, [navigation]);
+
   const isCompact = scrollY > 50;
 
   const getCategoryDisplayName = useCallback((categoryKey: string) => {
@@ -67,6 +76,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
         placeholder={
           activeCategory === 'jobs' ? 'Find a job' : 'Search places, events...'
         }
+        onAddSpecial={handleAddSpecial}
       />
       <CategoryRail
         activeCategory={activeCategory}
@@ -107,7 +117,7 @@ const styles = StyleSheet.create({
   welcomeText: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#000000',
+    color: '#292b2d',
     marginBottom: 8,
     textAlign: 'center',
   },
@@ -125,7 +135,7 @@ const styles = StyleSheet.create({
   filterLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#000000',
+    color: '#292b2d',
     marginBottom: 8,
   },
   filterText: {
@@ -153,7 +163,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 8,
-    color: '#000000',
+    color: '#292b2d',
   },
   cardDescription: {
     fontSize: 14,
@@ -171,7 +181,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 12,
-    color: '#000000',
+    color: '#292b2d',
   },
   statusText: {
     fontSize: 14,

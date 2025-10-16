@@ -16,7 +16,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import JobsService, { JobListing } from '../../services/JobsService';
-import { Spacing } from '../../styles/designSystem';
+import { Spacing, Typography } from '../../styles/designSystem';
 
 type RouteParams = {
   JobDetail: {
@@ -49,10 +49,51 @@ const JobDetailScreen: React.FC = () => {
     loadJobDetails();
   }, [jobId]);
 
+  // Helper to check if a field has content
+  const hasContent = (field: string | string[] | undefined): boolean => {
+    if (!field) {
+      console.log('❌ hasContent: field is null/undefined');
+      return false;
+    }
+    if (Array.isArray(field)) {
+      const result = field.length > 0 && field.some(item => item.trim());
+      console.log('✅ hasContent (array):', {
+        length: field.length,
+        result,
+        sample: field[0],
+      });
+      return result;
+    }
+    const result = field.trim().length > 0;
+    console.log('✅ hasContent (string):', { length: field.length, result });
+    return result;
+  };
+
+  // Helper to format array or string fields
+  const formatListField = (field: string | string[] | undefined): string => {
+    if (!field) return '';
+    if (Array.isArray(field)) {
+      return field.map((item, index) => `• ${item}`).join('\n');
+    }
+    return field;
+  };
+
   const loadJobDetails = async () => {
     try {
       setLoading(true);
       const response = await JobsService.getJobById(jobId);
+
+      // Debug logging
+      console.log('📋 Job Detail Loaded:', {
+        title: response.jobListing.title,
+        hasRequirements: !!response.jobListing.requirements,
+        requirementsType: typeof response.jobListing.requirements,
+        requirementsValue: response.jobListing.requirements,
+        hasBenefits: !!response.jobListing.benefits,
+        benefitsType: typeof response.jobListing.benefits,
+        benefitsValue: response.jobListing.benefits,
+      });
+
       setJob(response.jobListing);
       setIsSaved(response.jobListing.is_saved || false);
     } catch (error) {
@@ -355,7 +396,7 @@ const JobDetailScreen: React.FC = () => {
             </Text>
           </TouchableOpacity>
 
-          {job.requirements && (
+          {hasContent(job.requirements) && (
             <TouchableOpacity
               style={[
                 styles.tab,
@@ -374,7 +415,7 @@ const JobDetailScreen: React.FC = () => {
             </TouchableOpacity>
           )}
 
-          {job.benefits && (
+          {hasContent(job.benefits) && (
             <TouchableOpacity
               style={[styles.tab, activeTab === 'benefits' && styles.tabActive]}
               onPress={() => setActiveTab('benefits')}
@@ -420,17 +461,21 @@ const JobDetailScreen: React.FC = () => {
             </>
           )}
 
-          {activeTab === 'requirements' && job.requirements && (
+          {activeTab === 'requirements' && hasContent(job.requirements) && (
             <>
               <Text style={styles.sectionTitle}>Requirements</Text>
-              <Text style={styles.sectionText}>{job.requirements}</Text>
+              <Text style={styles.sectionText}>
+                {formatListField(job.requirements)}
+              </Text>
             </>
           )}
 
-          {activeTab === 'benefits' && job.benefits && (
+          {activeTab === 'benefits' && hasContent(job.benefits) && (
             <>
               <Text style={styles.sectionTitle}>Benefits</Text>
-              <Text style={styles.sectionText}>{job.benefits}</Text>
+              <Text style={styles.sectionText}>
+                {formatListField(job.benefits)}
+              </Text>
             </>
           )}
         </View>
@@ -619,6 +664,7 @@ const styles = StyleSheet.create({
     color: '#292B2D',
     marginBottom: Spacing.sm,
     marginTop: Spacing.md,
+    fontFamily: Typography.fontFamily,
   },
   sectionText: {
     fontSize: 16,
@@ -631,7 +677,7 @@ const styles = StyleSheet.create({
     marginTop: Spacing.sm,
   },
   skillChip: {
-    backgroundColor: '#F1F1F1',
+    backgroundColor: '#f8f8f8',
     borderRadius: 8,
     paddingVertical: Spacing.xs,
     paddingHorizontal: Spacing.sm,
@@ -668,7 +714,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#F1F1F1',
+    backgroundColor: '#f8f8f8',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: Spacing.sm,
@@ -722,6 +768,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: '#292B2D',
+    fontFamily: Typography.fontFamily,
   },
   modalContent: {
     flex: 1,

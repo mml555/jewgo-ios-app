@@ -9,7 +9,12 @@ import {
   Alert,
 } from 'react-native';
 import { errorLog } from '../utils/logger';
-import { Spacing, Shadows, TouchTargets } from '../styles/designSystem';
+import {
+  Spacing,
+  Shadows,
+  TouchTargets,
+  Typography,
+} from '../styles/designSystem';
 import {
   filterOptionsService,
   CategoryFilterOptions,
@@ -651,11 +656,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#007AFF',
     fontWeight: '600',
+    fontFamily: Typography.fontFamily,
   },
   title: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#000000',
+    color: '#292b2d',
   },
   clearButton: {
     paddingHorizontal: 12,
@@ -684,8 +690,9 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000000',
+    color: '#292b2d',
     marginBottom: 12,
+    fontFamily: Typography.fontFamily,
   },
   distanceContainer: {
     marginBottom: 8,
@@ -761,13 +768,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.sm, // Less horizontal padding
     borderRadius: 25, // Pill shape like listing page buttons
     backgroundColor: '#F2F2F7',
-    borderWidth: 1,
-    borderColor: '#E5E5EA',
     ...Shadows.sm,
   },
   kosherButtonActive: {
     backgroundColor: '#74e1a0',
-    borderColor: '#74e1a0',
   },
   kosherButtonText: {
     fontSize: 12, // Smaller text
@@ -813,13 +817,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.sm, // Less horizontal padding
     borderRadius: 25, // Pill shape like listing page buttons
     backgroundColor: '#F2F2F7',
-    borderWidth: 1,
-    borderColor: '#E5E5EA',
     ...Shadows.sm,
   },
   sortButtonActive: {
     backgroundColor: '#74e1a0',
-    borderColor: '#74e1a0',
   },
   sortButtonText: {
     fontSize: 12, // Smaller text
@@ -864,22 +865,20 @@ const styles = StyleSheet.create({
   },
   serviceLabel: {
     fontSize: 14,
-    color: '#000000',
+    color: '#292b2d',
     fontWeight: '500',
   },
   checkbox: {
     width: TouchTargets.minimum,
     height: TouchTargets.minimum,
     borderRadius: 4,
-    borderWidth: 2,
-    borderColor: '#E5E5EA',
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
+    ...Shadows.sm,
   },
   checkboxChecked: {
     backgroundColor: '#74e1a0',
-    borderColor: '#74e1a0',
   },
   checkmark: {
     color: '#FFFFFF',
@@ -934,13 +933,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.sm,
     borderRadius: 25,
     backgroundColor: '#F2F2F7',
-    borderWidth: 1,
-    borderColor: '#E5E5EA',
     ...Shadows.sm,
   },
   denominationButtonActive: {
     backgroundColor: '#74e1a0',
-    borderColor: '#74e1a0',
   },
   denominationButtonText: {
     fontSize: 12,
@@ -960,13 +956,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.sm,
     borderRadius: 25,
     backgroundColor: '#F2F2F7',
-    borderWidth: 1,
-    borderColor: '#E5E5EA',
     ...Shadows.sm,
   },
   storeTypeButtonActive: {
     backgroundColor: '#74e1a0',
-    borderColor: '#74e1a0',
   },
   storeTypeButtonText: {
     fontSize: 12,

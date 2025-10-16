@@ -235,13 +235,30 @@ class ApiService {
         }
       }
 
+      // TEMP DEBUG: Log request headers
+      const finalHeaders = {
+        'Content-Type': 'application/json',
+        ...authHeaders,
+        ...options.headers,
+      };
+      console.log('🔐 API Request Headers:', {
+        url,
+        hasAuthorization: !!finalHeaders.Authorization,
+        authHeaderValue: finalHeaders.Authorization
+          ? finalHeaders.Authorization.substring(0, 30) + '...'
+          : 'NONE',
+      });
+
       const response = await fetch(url, {
-        headers: {
-          'Content-Type': 'application/json',
-          ...authHeaders,
-          ...options.headers,
-        },
+        headers: finalHeaders,
         ...options,
+      });
+
+      // TEMP DEBUG: Log response status
+      console.log('📡 API Response:', {
+        url,
+        status: response.status,
+        ok: response.ok,
       });
 
       // Handle rate limiting specifically

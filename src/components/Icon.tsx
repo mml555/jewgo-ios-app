@@ -6,13 +6,17 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
-export type IconLibrary = 'Feather' | 'Ionicons' | 'MaterialCommunityIcons' | 'MaterialIcons';
+export type IconLibrary =
+  | 'Feather'
+  | 'Ionicons'
+  | 'MaterialCommunityIcons'
+  | 'MaterialIcons';
 
 /**
  * Full catalog (Apple/Google removed)
  *
  * App elements mapped to concrete glyph names per library:
- * - Feather: heart, arrow-left, eye, home, user, bell, search, shopping-bag, briefcase, calendar, filter,
+ * - Feather: heart, arrow-left, eye, eye-off, home, user, bell, search, shopping-bag, briefcase, calendar, filter,
  *            plus-circle, share-2, file, users, phone, globe, mail, clock, star, edit, flag, info, map, map-pin
  * - MaterialCommunityIcons (MDI): tag, synagogue, pool, email-alert, alert-circle
  * - Ionicons: restaurant
@@ -21,6 +25,7 @@ export type IconName =
   | 'heart'
   | 'arrow-left'
   | 'eye'
+  | 'eye-off'
   | 'tag'
   | 'home'
   | 'user'
@@ -35,7 +40,7 @@ export type IconName =
   | 'filter'
   | 'plus-circle'
   | 'share-2'
-  | 'alert-circle'      // used for "Report (report problem)"
+  | 'alert-circle' // used for "Report (report problem)"
   | 'file'
   | 'users'
   | 'phone'
@@ -49,76 +54,79 @@ export type IconName =
   | 'info'
   | 'map'
   | 'map-pin'
-  | 'bar-chart-2'       // Dashboard & Analytics
-  | 'credit-card'       // Payment Info
-  | 'chevron-right'     // Navigation arrows
-  | 'chevron-left'      // Back navigation
-  | 'refresh-cw'        // Refresh/Reload
-  | 'x'                 // Close/Cancel
-  | 'settings'          // Settings/Gear icon
-  | 'store'             // Store/Shop icon
-  | 'package'           // Products/Packages
-  | 'message-circle'    // Messages/Chat
-  | 'log-out'           // Logout
-  | 'check'             // Checkmark
-  | 'lock'              // Privacy/Security
-  | 'help-circle';      // Help & Support
+  | 'bar-chart-2' // Dashboard & Analytics
+  | 'credit-card' // Payment Info
+  | 'chevron-right' // Navigation arrows
+  | 'chevron-left' // Back navigation
+  | 'refresh-cw' // Refresh/Reload
+  | 'x' // Close/Cancel
+  | 'settings' // Settings/Gear icon
+  | 'store' // Store/Shop icon
+  | 'package' // Products/Packages
+  | 'message-circle' // Messages/Chat
+  | 'log-out' // Logout
+  | 'check' // Checkmark
+  | 'lock' // Privacy/Security
+  | 'help-circle' // Help & Support
+  | 'gift'; // Gift/Specials icon
 
 type IconMeta = { lib: IconLibrary; name: string };
 
 const ICONS: Record<IconName, IconMeta> = {
   // Feather
-  'heart':          { lib: 'Feather', name: 'heart' },
-  'arrow-left':     { lib: 'Feather', name: 'arrow-left' },
-  'eye':            { lib: 'Feather', name: 'eye' },
-  'home':           { lib: 'Feather', name: 'home' },
-  'user':           { lib: 'Feather', name: 'user' },
-  'bell':           { lib: 'Feather', name: 'bell' },
-  'search':         { lib: 'Feather', name: 'search' },
-  'shopping-bag':   { lib: 'Feather', name: 'shopping-bag' },
-  'briefcase':      { lib: 'Feather', name: 'briefcase' },
-  'calendar':       { lib: 'Feather', name: 'calendar' },
-  'filter':         { lib: 'Feather', name: 'filter' },
-  'plus-circle':    { lib: 'Feather', name: 'plus-circle' },
-  'share-2':        { lib: 'Feather', name: 'share-2' },
-  'file':           { lib: 'Feather', name: 'file' },
-  'users':          { lib: 'Feather', name: 'users' },
-  'phone':          { lib: 'Feather', name: 'phone' },
-  'globe':          { lib: 'Feather', name: 'globe' },
-  'mail':           { lib: 'Feather', name: 'mail' },
-  'clock':          { lib: 'Feather', name: 'clock' },
-  'star':           { lib: 'Feather', name: 'star' },
-  'edit':           { lib: 'Feather', name: 'edit' },
-  'flag':           { lib: 'Feather', name: 'flag' },
-  'info':           { lib: 'Feather', name: 'info' },
-  'map':            { lib: 'Feather', name: 'map' },
-  'map-pin':        { lib: 'Feather', name: 'map-pin' },
-  'bar-chart-2':    { lib: 'Feather', name: 'bar-chart-2' },
-  'credit-card':    { lib: 'Feather', name: 'credit-card' },
-  'chevron-right':  { lib: 'Feather', name: 'chevron-right' },
-  'chevron-left':   { lib: 'Feather', name: 'chevron-left' },
-  'refresh-cw':     { lib: 'Feather', name: 'refresh-cw' },
-  'x':              { lib: 'Feather', name: 'x' },
-  'settings':       { lib: 'Feather', name: 'settings' },
-  'package':        { lib: 'Feather', name: 'package' },
+  heart: { lib: 'Feather', name: 'heart' },
+  'arrow-left': { lib: 'Feather', name: 'arrow-left' },
+  eye: { lib: 'Feather', name: 'eye' },
+  'eye-off': { lib: 'Feather', name: 'eye-off' },
+  home: { lib: 'Feather', name: 'home' },
+  user: { lib: 'Feather', name: 'user' },
+  bell: { lib: 'Feather', name: 'bell' },
+  search: { lib: 'Feather', name: 'search' },
+  'shopping-bag': { lib: 'Feather', name: 'shopping-bag' },
+  briefcase: { lib: 'Feather', name: 'briefcase' },
+  calendar: { lib: 'Feather', name: 'calendar' },
+  filter: { lib: 'Feather', name: 'filter' },
+  'plus-circle': { lib: 'Feather', name: 'plus-circle' },
+  'share-2': { lib: 'Feather', name: 'share-2' },
+  file: { lib: 'Feather', name: 'file' },
+  users: { lib: 'Feather', name: 'users' },
+  phone: { lib: 'Feather', name: 'phone' },
+  globe: { lib: 'Feather', name: 'globe' },
+  mail: { lib: 'Feather', name: 'mail' },
+  clock: { lib: 'Feather', name: 'clock' },
+  star: { lib: 'Feather', name: 'star' },
+  edit: { lib: 'Feather', name: 'edit' },
+  flag: { lib: 'Feather', name: 'flag' },
+  info: { lib: 'Feather', name: 'info' },
+  map: { lib: 'Feather', name: 'map' },
+  'map-pin': { lib: 'Feather', name: 'map-pin' },
+  'bar-chart-2': { lib: 'Feather', name: 'bar-chart-2' },
+  'credit-card': { lib: 'Feather', name: 'credit-card' },
+  'chevron-right': { lib: 'Feather', name: 'chevron-right' },
+  'chevron-left': { lib: 'Feather', name: 'chevron-left' },
+  'refresh-cw': { lib: 'Feather', name: 'refresh-cw' },
+  x: { lib: 'Feather', name: 'x' },
+  settings: { lib: 'Feather', name: 'settings' },
+  package: { lib: 'Feather', name: 'package' },
   'message-circle': { lib: 'Feather', name: 'message-circle' },
-  'log-out':        { lib: 'Feather', name: 'log-out' },
-  'check':          { lib: 'Feather', name: 'check' },
-  'lock':           { lib: 'Feather', name: 'lock' },
-  'help-circle':    { lib: 'Feather', name: 'help-circle' },
+  'log-out': { lib: 'Feather', name: 'log-out' },
+  check: { lib: 'Feather', name: 'check' },
+  lock: { lib: 'Feather', name: 'lock' },
+  'help-circle': { lib: 'Feather', name: 'help-circle' },
+  gift: { lib: 'Feather', name: 'gift' },
 
   // MaterialCommunityIcons (MDI)
-  'tag':            { lib: 'MaterialCommunityIcons', name: 'tag' },
-  'pool':           { lib: 'MaterialCommunityIcons', name: 'pool' },
-  'email-alert':    { lib: 'MaterialCommunityIcons', name: 'email-alert' },
-  'alert-circle':   { lib: 'MaterialCommunityIcons', name: 'alert-circle' },
-  'store':          { lib: 'MaterialCommunityIcons', name: 'store' },
+  tag: { lib: 'MaterialCommunityIcons', name: 'tag' },
+  pool: { lib: 'MaterialCommunityIcons', name: 'pool' },
+  'email-alert': { lib: 'MaterialCommunityIcons', name: 'email-alert' },
+  'alert-circle': { lib: 'MaterialCommunityIcons', name: 'alert-circle' },
+  store: { lib: 'MaterialCommunityIcons', name: 'store' },
 
   // MaterialIcons
-  'synagogue':      { lib: 'MaterialIcons', name: 'synagogue' },
+  synagogue: { lib: 'MaterialIcons', name: 'synagogue' },
 
   // Ionicons
-  'restaurant':     { lib: 'Ionicons', name: 'restaurant' },
+  restaurant: { lib: 'Ionicons', name: 'restaurant' },
 };
 
 export interface IconProps {
@@ -146,7 +154,7 @@ export async function preloadIconFonts(): Promise<void> {
   try {
     // Try to load fonts if the method exists
     const loadPromises = [];
-    
+
     if (typeof (Feather as any).loadFont === 'function') {
       loadPromises.push((Feather as any).loadFont());
     }
@@ -159,12 +167,14 @@ export async function preloadIconFonts(): Promise<void> {
     if (typeof (MaterialIcons as any).loadFont === 'function') {
       loadPromises.push((MaterialIcons as any).loadFont());
     }
-    
+
     if (loadPromises.length > 0) {
       await Promise.all(loadPromises);
     } else {
       // loadFont doesn't exist, fonts are loaded automatically
-      console.log('Font loading methods not found - fonts should load automatically');
+      console.log(
+        'Font loading methods not found - fonts should load automatically',
+      );
     }
   } catch (error) {
     // Log but don't fail - fonts might load automatically anyway
@@ -175,7 +185,14 @@ export async function preloadIconFonts(): Promise<void> {
 
 /** Runtime guard (should never happen with strict typing) */
 function fallbackRender(props: Omit<IconProps, 'name'>) {
-  return <Feather name="info" size={props.size} color={props.color} style={props.style} />;
+  return (
+    <Feather
+      name="info"
+      size={props.size}
+      color={props.color}
+      style={props.style}
+    />
+  );
 }
 
 /** Single entry-point icon component */
@@ -186,6 +203,7 @@ const Icon = memo(function Icon({
   style,
   accessibilityLabel,
   testID,
+  filled = false,
 }: IconProps) {
   const meta = ICONS[name];
   if (!meta) return fallbackRender({ size, color, style });
@@ -197,6 +215,11 @@ const Icon = memo(function Icon({
     accessibilityLabel: accessibilityLabel ?? name,
     testID: testID ?? `icon-${name}`,
   };
+
+  // Special handling for heart icon - use Ionicons for filled variant
+  if (name === 'heart' && filled) {
+    return <Ionicons name="heart" {...common} />;
+  }
 
   switch (meta.lib) {
     case 'Feather':

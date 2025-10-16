@@ -847,7 +847,7 @@ const styles = StyleSheet.create({
     marginTop: Spacing.sm,
   },
   actionButton: {
-    backgroundColor: '#F1F1F1',
+    backgroundColor: '#f8f8f8',
     borderRadius: 8,
     paddingVertical: Spacing.xs,
     paddingHorizontal: Spacing.md,
@@ -866,7 +866,7 @@ const styles = StyleSheet.create({
     color: '#F44336',
   },
   coverLetterPreview: {
-    backgroundColor: '#F1F1F1',
+    backgroundColor: '#f8f8f8',
     borderRadius: 8,
     padding: Spacing.sm,
     marginBottom: Spacing.sm,

@@ -1,13 +1,15 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-} from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../styles/designSystem';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  Shadows,
+} from '../styles/designSystem';
 import Icon from './Icon';
+import HeartIcon from './HeartIcon';
 
 interface DetailHeaderBarProps {
   pressedButtons: Set<string>;
@@ -18,23 +20,27 @@ interface DetailHeaderBarProps {
   onSharePress?: () => void;
   onFavoritePress?: () => void;
   // Different content for different screens
-  centerContent?: {
-    type: 'view_count';
-    count: number;
-  } | {
-    type: 'claims_left';
-    count: number;
-  };
-  rightContent?: {
-    type: 'share_favorite';
-    shareCount: number;
-    likeCount: number;
-    isFavorited: boolean;
-  } | {
-    type: 'search_favorite';
-    isFavorited: boolean;
-    onSearchPress: () => void;
-  };
+  centerContent?:
+    | {
+        type: 'view_count';
+        count: number;
+      }
+    | {
+        type: 'claims_left';
+        count: number;
+      };
+  rightContent?:
+    | {
+        type: 'share_favorite';
+        shareCount: number;
+        likeCount: number;
+        isFavorited: boolean;
+      }
+    | {
+        type: 'search_favorite';
+        isFavorited: boolean;
+        onSearchPress: () => void;
+      };
 }
 
 const DetailHeaderBar: React.FC<DetailHeaderBarProps> = ({
@@ -54,10 +60,10 @@ const DetailHeaderBar: React.FC<DetailHeaderBarProps> = ({
     <View style={styles.headerBarContainer}>
       <View style={styles.headerBarBackground} />
       <View style={styles.headerBarBlur}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[
             styles.headerBackButton,
-            pressedButtons.has('back') && styles.headerButtonPressed
+            pressedButtons.has('back') && styles.headerButtonPressed,
           ]}
           onPress={() => navigation.goBack()}
           onPressIn={() => handlePressIn('back')}
@@ -66,11 +72,11 @@ const DetailHeaderBar: React.FC<DetailHeaderBarProps> = ({
         >
           <Icon name="arrow-left" size={20} color={Colors.text.primary} />
         </TouchableOpacity>
-        
-        <TouchableOpacity 
+
+        <TouchableOpacity
           style={[
             styles.reportFlagButton,
-            pressedButtons.has('report') && styles.headerButtonPressed
+            pressedButtons.has('report') && styles.headerButtonPressed,
           ]}
           onPress={onReportPress}
           onPressIn={() => handlePressIn('report')}
@@ -79,29 +85,33 @@ const DetailHeaderBar: React.FC<DetailHeaderBarProps> = ({
         >
           <Icon name="flag" size={18} color={Colors.status.error} />
         </TouchableOpacity>
-        
+
         {/* Center Content - View Count or Claims Left */}
         {centerContent?.type === 'view_count' && (
           <View style={styles.viewCountGroup}>
             <Icon name="eye" size={14} color={Colors.primary.main} />
-            <Text style={styles.viewCount}>{formatCount(centerContent.count)}</Text>
+            <Text style={styles.viewCount}>
+              {formatCount(centerContent.count)}
+            </Text>
           </View>
         )}
-        
+
         {centerContent?.type === 'claims_left' && (
           <View style={styles.claimsCountGroup}>
             <Icon name="tag" size={14} color={Colors.text.secondary} />
-            <Text style={styles.claimsCount}>{formatCount(centerContent.count)}</Text>
+            <Text style={styles.claimsCount}>
+              {formatCount(centerContent.count)}
+            </Text>
           </View>
         )}
-        
+
         {/* Right Content - Share/Favorite or Search/Favorite */}
         {rightContent?.type === 'share_favorite' && (
           <>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[
                 styles.shareButton,
-                pressedButtons.has('share') && styles.headerButtonPressed
+                pressedButtons.has('share') && styles.headerButtonPressed,
               ]}
               onPress={onSharePress}
               onPressIn={() => handlePressIn('share')}
@@ -110,14 +120,16 @@ const DetailHeaderBar: React.FC<DetailHeaderBarProps> = ({
             >
               <View style={styles.headerButtonGroup}>
                 <Icon name="share-2" size={16} color={Colors.text.primary} />
-                <Text style={styles.headerButtonCount}>{formatCount(rightContent.shareCount)}</Text>
+                <Text style={styles.headerButtonCount}>
+                  {formatCount(rightContent.shareCount)}
+                </Text>
               </View>
             </TouchableOpacity>
-            
-            <TouchableOpacity 
+
+            <TouchableOpacity
               style={[
                 styles.heartButton,
-                pressedButtons.has('heart') && styles.headerButtonPressed
+                pressedButtons.has('heart') && styles.headerButtonPressed,
               ]}
               onPress={onFavoritePress}
               onPressIn={() => handlePressIn('heart')}
@@ -125,24 +137,30 @@ const DetailHeaderBar: React.FC<DetailHeaderBarProps> = ({
               activeOpacity={0.7}
             >
               <View style={styles.headerButtonGroup}>
-                <Icon 
-                  name="heart"
-                  size={16} 
-                  color={rightContent.isFavorited ? Colors.status.error : Colors.gray400}
-                  filled={rightContent.isFavorited}
+                <HeartIcon
+                  size={16}
+                  color={
+                    rightContent.isFavorited
+                      ? Colors.status.error
+                      : Colors.gray400
+                  }
+                  filled={true}
+                  showBorder={true}
                 />
-                <Text style={styles.headerButtonCount}>{formatCount(rightContent.likeCount)}</Text>
+                <Text style={styles.headerButtonCount}>
+                  {formatCount(rightContent.likeCount)}
+                </Text>
               </View>
             </TouchableOpacity>
           </>
         )}
-        
+
         {rightContent?.type === 'search_favorite' && (
           <>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[
                 styles.shareButton,
-                pressedButtons.has('search') && styles.headerButtonPressed
+                pressedButtons.has('search') && styles.headerButtonPressed,
               ]}
               onPress={rightContent.onSearchPress}
               onPressIn={() => handlePressIn('search')}
@@ -151,22 +169,26 @@ const DetailHeaderBar: React.FC<DetailHeaderBarProps> = ({
             >
               <Icon name="search" size={16} color={Colors.text.primary} />
             </TouchableOpacity>
-            
-            <TouchableOpacity 
+
+            <TouchableOpacity
               style={[
                 styles.favoriteButton,
-                pressedButtons.has('favorite') && styles.headerButtonPressed
+                pressedButtons.has('favorite') && styles.headerButtonPressed,
               ]}
               onPress={onFavoritePress}
               onPressIn={() => handlePressIn('favorite')}
               onPressOut={() => handlePressOut('favorite')}
               activeOpacity={0.7}
             >
-              <Icon 
-                name="heart"
-                size={20} 
-                color={rightContent.isFavorited ? Colors.status.error : Colors.gray400}
-                filled={rightContent.isFavorited}
+              <HeartIcon
+                size={20}
+                color={
+                  rightContent.isFavorited
+                    ? Colors.status.error
+                    : Colors.gray400
+                }
+                filled={true}
+                showBorder={true}
               />
             </TouchableOpacity>
           </>

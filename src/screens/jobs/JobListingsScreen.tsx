@@ -22,7 +22,10 @@ import JobsService, {
 } from '../../services/JobsService';
 import { Spacing } from '../../styles/designSystem';
 import { AppStackParamList } from '../../types/navigation';
-import { FALLBACK_INDUSTRIES, FALLBACK_JOB_TYPES } from '../../utils/fallbackData';
+import {
+  FALLBACK_INDUSTRIES,
+  FALLBACK_JOB_TYPES,
+} from '../../utils/fallbackData';
 import { useLocation, calculateDistance } from '../../hooks/useLocation';
 
 type JobListingsScreenNavigationProp = StackNavigationProp<AppStackParamList>;
@@ -62,11 +65,11 @@ const JobListingsScreen: React.FC = () => {
       setJobTypes(jobTypesRes.jobTypes);
     } catch (error) {
       console.error('Error loading lookup data:', error);
-      
+
       // Provide fallback data
       setIndustries(FALLBACK_INDUSTRIES);
       setJobTypes(FALLBACK_JOB_TYPES);
-      
+
       // Show a subtle notification that we're using offline data
       console.log('Using fallback data due to API connectivity issues');
     }
@@ -112,7 +115,7 @@ const JobListingsScreen: React.FC = () => {
         setIsRateLimited(false); // Clear rate limit flag on success
       } catch (error: any) {
         console.error('Error loading jobs:', error);
-        
+
         // Check if rate limited or blocked
         const errorMessage = error?.message || '';
         if (
@@ -220,9 +223,7 @@ const JobListingsScreen: React.FC = () => {
         <View style={styles.jobMeta}>
           <View style={styles.metaItem}>
             <Text style={styles.metaIcon}>📍</Text>
-            <Text style={styles.metaText}>
-              {formatJobLocation(item)}
-            </Text>
+            <Text style={styles.metaText}>{formatJobLocation(item)}</Text>
           </View>
 
           <View style={styles.metaItem}>
@@ -553,7 +554,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   filterChip: {
-    backgroundColor: '#F1F1F1',
+    backgroundColor: '#f8f8f8',
     borderRadius: 20,
     paddingVertical: Spacing.xs,
     paddingHorizontal: Spacing.md,
@@ -656,7 +657,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   tag: {
-    backgroundColor: '#F1F1F1',
+    backgroundColor: '#f8f8f8',
     borderRadius: 6,
     paddingVertical: 4,
     paddingHorizontal: 8,
