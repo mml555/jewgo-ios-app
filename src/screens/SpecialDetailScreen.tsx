@@ -277,7 +277,7 @@ const SpecialDetailScreen: React.FC = () => {
       // Pass entity data for guest users
       const entityData = {
         entity_name: special.business_name,
-        entity_type: special.category,
+        entity_type: 'specials',
         description: special.description,
         address: special.business_address,
         city: special.business_city,

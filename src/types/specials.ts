@@ -263,14 +263,19 @@ export interface ActiveSpecial {
   id: string;
   businessId: string;
   title: string;
+  description?: string;
   discountLabel: string;
   priority: number;
   validUntil: string;
   claimsTotal: number;
   maxClaimsTotal?: number;
   businessName: string;
+  category?: string; // Entity type for filtering (restaurant, store, synagogue, mikvah, etc.)
   city: string;
   state: string;
+  imageUrl?: string;
+  rating?: number;
+  reviewCount?: number;
   location?: {
     type: 'Point';
     coordinates: [number, number];
@@ -278,6 +283,7 @@ export interface ActiveSpecial {
   // Enhanced deal type information
   discountType?: DiscountKind;
   discountValue?: number;
+  distance?: string;
 }
 
 // API request/response types

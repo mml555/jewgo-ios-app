@@ -1,823 +1,115 @@
-import React, { useCallback, useMemo, useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  ActivityIndicator,
-  RefreshControl,
-  Alert,
-  TouchableOpacity,
-  ScrollView,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useState, useCallback } from 'react';
+import { View, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
-import {
-  Colors,
-  Typography,
-  Spacing,
-  BorderRadius,
-  Shadows,
-  TouchTargets,
-} from '../styles/designSystem';
+import TopBar from '../components/TopBar';
+import CategoryRail from '../components/CategoryRail';
+import SpecialsGridScreen from './SpecialsGridScreen';
 import type { AppStackParamList } from '../types/navigation';
-import SpecialCard, { DealGridCard } from '../components/SpecialCard';
-import { SkeletonList } from '../components/SkeletonLoader';
-import { errorLog } from '../utils/logger';
-import { specialsService } from '../services/SpecialsService';
-import {
-  Special,
-  RestaurantWithSpecials,
-  ActiveSpecial,
-} from '../types/specials';
-import { useFavorites } from '../hooks/useFavorites';
-import { infoLog } from '../utils/logger';
-import guestService from '../services/GuestService';
-import Icon from '../components/Icon';
-
-type NavigationProp = StackNavigationProp<AppStackParamList, 'SpecialDetail'>;
+import { Colors } from '../styles/designSystem';
 
 interface SpecialsScreenProps {
-  route?: {
-    params?: {
-      businessId?: string;
-      businessName?: string;
-    };
-  };
+  onSearchChange?: (query: string) => void;
 }
 
-const SpecialsScreen: React.FC<SpecialsScreenProps> = ({ route }) => {
-  const navigation = useNavigation<NavigationProp>();
-  const { toggleFavorite } = useFavorites();
+const SpecialsScreen: React.FC<SpecialsScreenProps> = ({ onSearchChange }) => {
+  const navigation = useNavigation<StackNavigationProp<AppStackParamList>>();
+  const [activeCategory, setActiveCategory] = useState('specials');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [scrollY, setScrollY] = useState(0);
 
-  // Get route params for business filtering
-  const businessId = route?.params?.businessId;
-  const businessName = route?.params?.businessName;
-  const isFilteredByBusiness = !!businessId;
+  const handleSearchChange = useCallback(
+    (query: string) => {
+      setSearchQuery(query);
+      // Pass search query to parent component (RootTabs)
+      onSearchChange?.(query);
+    },
+    [onSearchChange],
+  );
 
-  // State management
-  const [specials, setSpecials] = useState<ActiveSpecial[]>([]);
-  const [restaurantsWithSpecials, setRestaurantsWithSpecials] = useState<
-    RestaurantWithSpecials[]
-  >([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const handleCategoryChange = useCallback(
+    (category: string) => {
+      // If we're already on specials tab and trying to select specials, don't navigate
+      if (category === 'specials') {
+        setActiveCategory(category);
+        return;
+      }
 
-  // Transform enhanced special to component format
-  const transformSpecial = (special: ActiveSpecial): DealGridCard => {
-    // Calculate time left in seconds
-    const validUntilDate = new Date(special.validUntil);
-    const now = new Date();
-    const timeLeftSeconds = Math.max(
-      0,
-      Math.floor((validUntilDate.getTime() - now.getTime()) / 1000),
-    );
+      // For other categories, navigate to the appropriate screen
+      setActiveCategory(category);
 
-    // Use default pricing since ActiveSpecial doesn't have discount details
-    const originalPrice = 25.99;
-    const salePrice = 19.99;
-
-    // Determine badge type from discount label
-    const getBadgeType = (
-      label: string | undefined,
-    ): 'percent' | 'amount' | 'custom' | 'bogo' | 'free_item' => {
-      if (!label) return 'custom';
-
-      const labelLower = label.toLowerCase();
-      if (labelLower.includes('%') || labelLower.includes('percent')) {
-        return 'percent';
-      } else if (labelLower.includes('$') || labelLower.includes('off')) {
-        return 'amount';
-      } else if (
-        labelLower.includes('bogo') ||
-        labelLower.includes('buy one')
+      // Navigate to the category in the main tabs
+      if (
+        category === 'mikvah' ||
+        category === 'eatery' ||
+        category === 'shul' ||
+        category === 'stores'
       ) {
-        return 'bogo';
-      } else if (labelLower.includes('free')) {
-        return 'free_item';
-      }
-      return 'custom';
-    };
-
-    return {
-      id: special.id,
-      title: special.title,
-      imageUrl: `https://picsum.photos/300/200?random=${special.id}`,
-      badge: {
-        text: special.discountLabel || 'Special Offer',
-        type: getBadgeType(special.discountLabel),
-      },
-      merchantName: special.businessName,
-      price: {
-        original: originalPrice,
-        sale: salePrice,
-        currency: 'USD',
-      },
-      timeLeftSeconds: timeLeftSeconds,
-      expiresAt: special.validUntil,
-      claimsLeft: special.maxClaimsTotal
-        ? Math.max(0, special.maxClaimsTotal - special.claimsTotal)
-        : 999,
-      views: Math.floor(Math.random() * 2000) + 100, // Mock data for now
-      isLiked: false,
-      showHeart: true,
-      ctaText: 'Click to Claim',
-      overlayTag: 'Restaurant',
-      // Add deal type information from API response
-      discountType: special.discountType,
-      discountValue: special.discountValue,
-    };
-  };
-
-  // Optimized load specials with better error handling and performance
-  const loadSpecials = useCallback(async () => {
-    try {
-      setError(null);
-      setLoading(true);
-
-      let response;
-
-      if (isFilteredByBusiness && businessId) {
-        // Load specials for a specific business
-        response = await specialsService.getRestaurantSpecials(businessId);
-        if (response.success && response.data) {
-          // Transform Special[] to ActiveSpecial[] format with deal type information
-          const activeSpecials: ActiveSpecial[] = response.data.specials.map(
-            special => ({
-              id: special.id,
-              businessId: special.businessId,
-              businessName:
-                (special as any).business_name || 'Unknown Business',
-              title: special.title,
-              discountLabel:
-                (special as any).discount_display ||
-                special.discountLabel ||
-                'Special Offer',
-              validUntil: special.validUntil,
-              claimsTotal: special.claimsTotal,
-              maxClaimsTotal: special.maxClaimsTotal,
-              city: (special as any).business_city || '',
-              state: (special as any).business_state || '',
-              // Preserve deal type information for enhanced display
-              discountType: special.discountType,
-              discountValue: special.discountValue,
-              priority: special.priority || 0,
-            }),
-          );
-          setSpecials(activeSpecials);
-        }
-      } else {
-        // Use the fast materialized view endpoint for better performance
-        response = await specialsService.getActiveSpecials({
-          limit: 20,
-          sortBy: 'priority',
-          sortOrder: 'desc',
+        navigation.navigate('MainTabs', {
+          screen: 'Home',
+          params: { category },
         });
-
-        if (response.success && response.data) {
-          // Transform Special[] to ActiveSpecial[] format with deal type information
-          const activeSpecials: ActiveSpecial[] = response.data.specials.map(
-            special => ({
-              id: special.id,
-              businessId: special.businessId,
-              businessName:
-                (special as any).business_name || 'Unknown Business',
-              title: special.title,
-              discountLabel:
-                (special as any).discount_display ||
-                special.discountLabel ||
-                'Special Offer',
-              validUntil: special.validUntil,
-              claimsTotal: special.claimsTotal,
-              maxClaimsTotal: special.maxClaimsTotal,
-              city: (special as any).business_city || '',
-              state: (special as any).business_state || '',
-              // Preserve deal type information for enhanced display
-              discountType: special.discountType,
-              discountValue: special.discountValue,
-              priority: special.priority || 0,
-            }),
-          );
-
-          setSpecials(activeSpecials);
-
-          // Also load restaurants with specials for enhanced data (optional)
-          try {
-            const restaurantsResponse =
-              await specialsService.getRestaurantsWithSpecialsFast({
-                limit: 20,
-              });
-
-            if (restaurantsResponse.success && restaurantsResponse.data) {
-              setRestaurantsWithSpecials(restaurantsResponse.data.restaurants);
-            }
-          } catch (restaurantsError) {
-            // Don't fail the entire load if this optional call fails
-          }
-        }
+      } else if (category === 'events') {
+        navigation.navigate('MainTabs', {
+          screen: 'Home',
+          params: { category },
+        });
+      } else if (category === 'jobs') {
+        navigation.navigate('MainTabs', {
+          screen: 'Home',
+          params: { category },
+        });
       }
-
-      if (!response?.success) {
-        setError(response?.error || 'Failed to load specials');
-      }
-    } catch (err) {
-      errorLog('Error loading specials:', err);
-      setError('Failed to load specials');
-    } finally {
-      setLoading(false);
-    }
-  }, [businessId, isFilteredByBusiness]);
-
-  // Load specials on component mount
-  useEffect(() => {
-    loadSpecials();
-  }, [loadSpecials]);
-
-  const handleOfferPress = useCallback(
-    (deal: DealGridCard) => {
-      infoLog('Deal pressed:', deal.title);
-      (navigation as any).navigate('SpecialDetail', { specialId: deal.id });
     },
     [navigation],
   );
 
-  const handleClaimOffer = useCallback(
-    async (dealId: string) => {
-      try {
-        const response = await specialsService.claimSpecial({
-          specialId: dealId,
-          userId: 'current-user-id', // TODO: Get from auth context
-          ipAddress: '127.0.0.1', // TODO: Get actual IP
-          userAgent: 'JewgoApp/1.0',
-        });
-
-        if (response.success) {
-          Alert.alert('Success', 'Special claimed successfully!');
-
-          // Track the claim event
-          await specialsService.trackSpecialEvent({
-            specialId: dealId,
-            eventType: 'claim',
-            userId: 'current-user-id',
-            ipAddress: '127.0.0.1',
-            userAgent: 'JewgoApp/1.0',
-          });
-
-          // Refresh the specials list to update claim counts
-          await loadSpecials();
-        } else {
-          Alert.alert('Error', response.error || 'Failed to claim special');
-        }
-      } catch (err) {
-        errorLog('Error claiming special:', err);
-        Alert.alert('Error', 'Failed to claim special');
-      }
-    },
-    [loadSpecials],
-  );
-
-  const handleToggleLike = useCallback(
-    async (dealId: string) => {
-      try {
-        // Find the special to get its business information
-        const special = specials.find(s => s.id === dealId);
-        if (!special) {
-          errorLog('Special not found:', dealId);
-          return;
-        }
-
-        // Use business data from the ActiveSpecial
-        const businessName = special.businessName;
-        const businessCity = special.city;
-        const businessState = special.state;
-
-        // Prepare entity data for the favorites service
-        const entityData = {
-          entity_name: businessName,
-          entity_type: 'restaurant', // Specials are always for restaurants
-          description: special.discountLabel,
-          address: undefined, // ActiveSpecial doesn't have address
-          city: businessCity,
-          state: businessState,
-          rating: undefined, // ActiveSpecial doesn't have rating
-          review_count: undefined, // ActiveSpecial doesn't have review_count
-          image_url: undefined, // ActiveSpecial doesn't have image_url
-          category: 'restaurant',
-        };
-
-        const success = await toggleFavorite(special.businessId, entityData);
-
-        if (success) {
-          infoLog(`✅ Toggled favorite for restaurant: ${businessName}`);
-        } else {
-          errorLog(
-            '❌ Failed to toggle favorite for restaurant:',
-            businessName,
-          );
-        }
-      } catch (error) {
-        errorLog('Error toggling favorite for special:', error);
-      }
-    },
-    [specials, toggleFavorite],
-  );
-
-  // Memoized render item for FlatList
-  const renderItem = useCallback(
-    ({ item }: { item: DealGridCard }) => (
-      <SpecialCard
-        item={item}
-        onPress={handleOfferPress}
-        onClaim={handleClaimOffer}
-        onToggleLike={handleToggleLike}
-      />
-    ),
-    [handleOfferPress, handleClaimOffer, handleToggleLike],
-  );
-
-  // Memoized key extractor
-  const keyExtractor = useCallback((item: DealGridCard) => item.id, []);
-
-  // Memoized column wrapper style
-  const columnWrapperStyle = useMemo(
-    () => ({
-      justifyContent: 'space-between' as const,
-      paddingHorizontal: 8,
-      marginBottom: 8,
-    }),
-    [],
-  );
-
-  // Handle refresh
-  const handleRefresh = useCallback(async () => {
-    setRefreshing(true);
-    try {
-      await loadSpecials();
-    } catch (err) {
-      errorLog('Error refreshing specials:', err);
-    } finally {
-      setRefreshing(false);
+  const handleActionPress = useCallback((action: string) => {
+    // Handle specials-specific actions
+    if (action === 'addSpecial') {
+      // Navigate to add special screen
+      console.log('Add special pressed');
     }
-  }, [loadSpecials]);
+  }, []);
 
-  // Memoized refresh control
-  const refreshControl = useMemo(
-    () => (
-      <RefreshControl
-        refreshing={refreshing}
-        onRefresh={handleRefresh}
-        tintColor={Colors.link}
-        colors={[Colors.link]}
-      />
-    ),
-    [refreshing, handleRefresh],
-  );
+  const handleScroll = useCallback((offsetY: number) => {
+    setScrollY(offsetY);
+  }, []);
 
-  // Category filter state
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [pressedButtons, setPressedButtons] = useState<Set<string>>(new Set());
+  const handleAddSpecial = useCallback(() => {
+    // Navigate to add special screen
+    console.log('Add special from TopBar pressed');
+  }, []);
 
-  // Helper functions for button press effects
-  const handlePressIn = (buttonId: string) => {
-    setPressedButtons(prev => new Set(prev).add(buttonId));
-  };
-
-  const handlePressOut = (buttonId: string) => {
-    setPressedButtons(prev => {
-      const newSet = new Set(prev);
-      newSet.delete(buttonId);
-      return newSet;
-    });
-  };
-
-  // Format count numbers (e.g., 1200 -> 1.2k, 24 -> 24)
-  const formatCount = (count: number): string => {
-    if (count >= 1000000) {
-      return `${(count / 1000000).toFixed(1)}M`;
-    } else if (count >= 1000) {
-      return `${(count / 1000).toFixed(1)}k`;
-    } else {
-      return count.toString();
-    }
-  };
-
-  // Category options for specials
-  const categories = [
-    { id: 'all', name: 'All' },
-    { id: 'Restaurant', name: 'Restaurant' },
-    { id: 'Cafe', name: 'Cafe' },
-    { id: 'Catering', name: 'Catering' },
-    { id: 'Store', name: 'Store' },
-  ];
-
-  // Transform specials to display format and filter by category
-  const transformedSpecials = useMemo(() => {
-    return specials.map(transformSpecial);
-  }, [specials]);
-
-  const filteredSpecials = useMemo(() => {
-    if (selectedCategory === 'all') {
-      return transformedSpecials;
-    }
-    return transformedSpecials.filter(
-      deal => deal.overlayTag === selectedCategory,
-    );
-  }, [transformedSpecials, selectedCategory]);
-
-  // Memoized empty component
-  const renderEmpty = useCallback(() => {
-    if (loading) return null;
-
-    return (
-      <View style={styles.emptyContainer}>
-        <Icon name="tag" size={64} color={Colors.gray400} />
-        <Text style={styles.emptyTitle}>No Specials Available</Text>
-        <Text style={styles.emptyDescription}>
-          Check back soon for exclusive deals and offers from your favorite
-          Jewish community businesses.
-        </Text>
-      </View>
-    );
-  }, [loading]);
-
-  // Memoized header component with glassy header bar and category filters
-  const ListHeaderComponent = useMemo(
-    () => (
-      <View>
-        {/* Header Bar - Matches ListingDetailScreen design */}
-        <View style={styles.headerBarContainer}>
-          <View style={styles.headerBarBackground} />
-          <View style={styles.headerBarBlur}>
-            <TouchableOpacity
-              style={[
-                styles.headerBackButton,
-                pressedButtons.has('back') && styles.headerButtonPressed,
-              ]}
-              onPress={() => navigation.goBack()}
-              onPressIn={() => handlePressIn('back')}
-              onPressOut={() => handlePressOut('back')}
-              activeOpacity={0.7}
-            >
-              <Icon name="arrow-left" size={20} color={Colors.text.primary} />
-            </TouchableOpacity>
-
-            <View style={styles.headerTitle}>
-              <Text style={styles.headerTitleText}>
-                {isFilteredByBusiness
-                  ? businessName || 'Business Specials'
-                  : 'Specials'}
-              </Text>
-            </View>
-
-            <TouchableOpacity
-              style={[
-                styles.headerSearchButton,
-                pressedButtons.has('search') && styles.headerButtonPressed,
-              ]}
-              onPress={() => {
-                // TODO: Implement search functionality
-                infoLog('Search from specials screen');
-              }}
-              onPressIn={() => handlePressIn('search')}
-              onPressOut={() => handlePressOut('search')}
-              activeOpacity={0.7}
-            >
-              <Icon name="search" size={16} color={Colors.text.primary} />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Page Subtitle */}
-        <View style={styles.subtitleContainer}>
-          <Text style={styles.subtitle}>
-            {isFilteredByBusiness
-              ? `Current specials and offers from ${
-                  businessName || 'this business'
-                }`
-              : 'Exclusive deals and offers'}
-          </Text>
-        </View>
-
-        {/* Category Filter Buttons - Only show when not filtered by business */}
-        {!isFilteredByBusiness && (
-          <View style={styles.categoryContainer}>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.categoryScrollContent}
-            >
-              {categories.map(category => (
-                <TouchableOpacity
-                  key={category.id}
-                  style={[
-                    styles.categoryButton,
-                    selectedCategory === category.id &&
-                      styles.categoryButtonActive,
-                  ]}
-                  onPress={() => setSelectedCategory(category.id)}
-                  accessible={true}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Filter by ${category.name}`}
-                  accessibilityState={{
-                    selected: selectedCategory === category.id,
-                  }}
-                >
-                  <Text
-                    style={[
-                      styles.categoryButtonText,
-                      selectedCategory === category.id &&
-                        styles.categoryButtonTextActive,
-                    ]}
-                  >
-                    {category.name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        )}
-      </View>
-    ),
-    [
-      selectedCategory,
-      categories,
-      pressedButtons,
-      navigation,
-      handlePressIn,
-      handlePressOut,
-      isFilteredByBusiness,
-      businessName,
-    ],
-  );
-
-  // Show loading state with skeleton
-  if (loading && specials.length === 0) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <SkeletonList count={5} />
-      </SafeAreaView>
-    );
-  }
-
-  // Show error state
-  if (error && specials.length === 0) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.errorContainer}>
-          <Icon name="tag" size={64} color={Colors.gray400} />
-          <Text style={styles.errorTitle}>Unable to Load Specials</Text>
-          <Text style={styles.errorDescription}>{error}</Text>
-          <TouchableOpacity
-            style={styles.retryButton}
-            onPress={() => {
-              setLoading(true);
-              loadSpecials();
-            }}
-          >
-            <Text style={styles.retryButtonText}>Try Again</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
-    );
-  }
+  const isCompact = scrollY > 50;
 
   return (
-    <SafeAreaView style={styles.container}>
-      <FlatList
-        data={filteredSpecials}
-        renderItem={renderItem}
-        keyExtractor={keyExtractor}
-        numColumns={2}
-        columnWrapperStyle={columnWrapperStyle}
-        contentContainerStyle={styles.listContent}
-        refreshControl={refreshControl}
-        ListHeaderComponent={ListHeaderComponent}
-        ListEmptyComponent={renderEmpty}
-        showsVerticalScrollIndicator={false}
-        removeClippedSubviews={true}
-        maxToRenderPerBatch={10}
-        updateCellsBatchingPeriod={50}
-        initialNumToRender={6}
-        windowSize={21}
-        accessibilityRole="list"
-        accessibilityLabel="Special offers grid"
+    <View style={styles.container}>
+      {/* Always show TopBar with search */}
+      <TopBar
+        onQueryChange={handleSearchChange}
+        placeholder="Find your Special"
+        onAddSpecial={handleAddSpecial}
       />
-    </SafeAreaView>
+      <CategoryRail
+        activeCategory={activeCategory}
+        onCategoryChange={handleCategoryChange}
+        compact={isCompact}
+      />
+      <SpecialsGridScreen
+        categoryKey={activeCategory}
+        query={searchQuery}
+        onScroll={handleScroll}
+        onActionPress={handleActionPress}
+      />
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background.primary, // Match CategoryGridScreen background
-  },
-  listContent: {
-    paddingHorizontal: 0,
-    paddingTop: Spacing.sm,
-    paddingBottom: 20,
-  },
-  // Header Bar Styles (matches ListingDetailScreen)
-  headerBarContainer: {
-    position: 'relative',
-  },
-  headerBarBackground: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(255, 255, 255, 0.95)', // White background
-    marginHorizontal: Spacing.md,
-    marginTop: Spacing.sm,
-    marginBottom: Spacing.sm,
-    height: 44,
-    borderRadius: 22, // Match header bar pill shape
-  },
-  headerBarBlur: {
-    marginHorizontal: Spacing.md,
-    marginTop: Spacing.sm,
-    marginBottom: Spacing.sm,
-    height: 44,
-    borderRadius: 22, // Pill shape (height/2)
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between', // Space between back, title, search
-    paddingHorizontal: Spacing.sm,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.1)', // Light border for white background
-    shadowColor: Colors.black,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  headerBackButton: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    minWidth: 40,
-    backgroundColor: 'rgba(0, 0, 0, 0.05)', // Light grey container on white background
-    borderRadius: 16,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-  },
-  headerButtonPressed: {
-    transform: [{ scale: 0.95 }],
-    opacity: 0.8,
-    backgroundColor: 'rgba(0, 0, 0, 0.1)', // Darker when pressed
-  },
-  headerTitle: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  headerTitleText: {
-    ...Typography.styles.h3,
-    color: Colors.textPrimary,
-    fontWeight: '700',
-  },
-  headerSearchButton: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    minWidth: 40,
-    backgroundColor: 'rgba(0, 0, 0, 0.05)', // Light grey container on white background
-    borderRadius: 16,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-  },
-  subtitleContainer: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    alignItems: 'center',
-  },
-  subtitle: {
-    ...Typography.styles.body,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    backgroundColor: Colors.surface,
-    marginHorizontal: Spacing.md,
-    marginBottom: Spacing.lg,
-    borderRadius: BorderRadius.lg,
-    paddingVertical: Spacing.lg,
-    ...Shadows.md,
-  },
-  statItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  statNumber: {
-    ...Typography.styles.h3,
-    color: Colors.primary.main,
-    marginBottom: Spacing.xs,
-  },
-  statLabel: {
-    ...Typography.styles.bodySmall,
-    color: Colors.textSecondary,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing['4xl'],
-    minHeight: 400,
-  },
-  emptyTitle: {
-    ...Typography.styles.h2,
-    marginBottom: Spacing.sm,
-    marginTop: Spacing.md,
-    textAlign: 'center',
-  },
-  emptyDescription: {
-    ...Typography.styles.body,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.xl,
-  },
-  loadingText: {
-    ...Typography.styles.body,
-    color: Colors.textSecondary,
-    marginTop: Spacing.md,
-    textAlign: 'center',
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.xl,
-  },
-  errorTitle: {
-    ...Typography.styles.h2,
-    marginBottom: Spacing.sm,
-    marginTop: Spacing.md,
-    textAlign: 'center',
-  },
-  errorDescription: {
-    ...Typography.styles.body,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: Spacing.lg,
-  },
-  retryButton: {
-    backgroundColor: Colors.primary.main,
-    borderRadius: BorderRadius.md,
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.lg,
-    minHeight: TouchTargets.minimum,
-    justifyContent: 'center',
-    alignItems: 'center',
-    ...Shadows.md,
-  },
-  retryButtonText: {
-    ...Typography.styles.button,
-    color: Colors.white,
-  },
-  categoryContainer: {
-    paddingHorizontal: Spacing.md,
-    marginBottom: Spacing.md,
-  },
-  categoryScrollContent: {
-    paddingHorizontal: 0,
-    gap: Spacing.sm,
-  },
-  categoryButton: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    backgroundColor: Colors.surface,
-    borderRadius: BorderRadius.full,
-    borderWidth: 1,
-    borderColor: Colors.border.primary,
-    marginRight: Spacing.sm,
-    minWidth: 80,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  categoryButtonActive: {
-    backgroundColor: Colors.primary.main,
-    borderColor: Colors.primary.main,
-  },
-  categoryButtonText: {
-    ...Typography.styles.body,
-    fontWeight: '600',
-    color: Colors.textPrimary,
-    fontSize: 14,
-  },
-  categoryButtonTextActive: {
-    color: Colors.surface,
+    backgroundColor: Colors.background.primary,
   },
 });
 

@@ -13,6 +13,10 @@ export type AppStackParamList = {
     itemId: string;
     categoryKey: string;
   };
+  // Favorites screens
+  CategoryFavorites: {
+    categoryKey: string;
+  };
   // Special screens
   SpecialDetail: {
     specialId: string;

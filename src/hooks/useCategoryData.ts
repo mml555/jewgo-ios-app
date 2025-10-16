@@ -246,11 +246,11 @@ export const useCategoryData = ({
   const loadingRef = useRef(false);
   const queryRef = useRef(query);
   const initialLoadRef = useRef(false);
-  
+
   // Use ref to store current page to prevent recreating loadMore
   const currentPageRef = useRef(currentPage);
   const hasMoreRef = useRef(hasMore);
-  
+
   useEffect(() => {
     currentPageRef.current = currentPage;
     hasMoreRef.current = hasMore;
@@ -287,18 +287,14 @@ export const useCategoryData = ({
     const safeItem: CategoryItem = {
       id: String(listing.id || ''),
       title: String(listing.title || 'Unknown'),
-      description: String(
-        listing.description || 'No description available',
-      ),
+      description: String(listing.description || 'No description available'),
       imageUrl: String(getImageUrl(listing)),
       category: String(listing.category_name || 'unknown'),
       rating: Number(parseFloat(listing.rating) || 0),
       zip_code: String(listing.zip_code || '00000'),
       // Add coordinates directly to the item
       latitude: listing.latitude ? Number(listing.latitude) : undefined,
-      longitude: listing.longitude
-        ? Number(listing.longitude)
-        : undefined,
+      longitude: listing.longitude ? Number(listing.longitude) : undefined,
       // Provide all optional fields with safe defaults
       price: '$$',
       isOpen: true,
@@ -340,6 +336,19 @@ export const useCategoryData = ({
         pageSize,
         offset,
       );
+
+      // Handle special redirect for specials category
+      if (response.success && (response as any).redirectTo === 'specials') {
+        debugLog(
+          '🎁 Specials category detected - should redirect to Specials tab',
+        );
+        // Return empty data to prevent API errors
+        setData([]);
+        setLoading(false);
+        setRefreshing(false);
+        setHasMore(false);
+        return;
+      }
 
       if (response.success && response.data) {
         // Filter listings by query if provided
@@ -434,7 +443,13 @@ export const useCategoryData = ({
     // Removed excessive logging to prevent memory issues
     // Only load if we haven't loaded for this category/query combination
     // and authentication is ready (not initializing and has some form of auth)
-    if (!initialLoadRef.current && data.length === 0 && !loadingRef.current && !isInitializing && hasAnyAuth) {
+    if (
+      !initialLoadRef.current &&
+      data.length === 0 &&
+      !loadingRef.current &&
+      !isInitializing &&
+      hasAnyAuth
+    ) {
       // Only log very occasionally to reduce console noise
       if (__DEV__ && Math.random() < 0.1) {
         debugLog('🔐 useCategoryData: Starting data load for', categoryKey);
@@ -458,6 +473,18 @@ export const useCategoryData = ({
     try {
       // Try to fetch from API first with category-specific call
       const response = await apiService.getListingsByCategory(categoryKey);
+
+      // Handle special redirect for specials category
+      if (response.success && (response as any).redirectTo === 'specials') {
+        debugLog(
+          '🎁 Specials category detected during refresh - should redirect to Specials tab',
+        );
+        // Return empty data to prevent API errors
+        setData([]);
+        setRefreshing(false);
+        setHasMore(false);
+        return;
+      }
 
       if (response.success && response.data) {
         // Filter listings by query if provided

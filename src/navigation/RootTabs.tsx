@@ -44,14 +44,14 @@ const TabIcon: React.FC<{
     Keyboard.dismiss();
   }, []);
 
-  // Determine icon color based on Specials tab state
+  // Icon colors: special handling for Specials tab
   const iconColor = isSpecialsTab
     ? focused
-      ? '#292b2d' // Dark color when Specials is active
-      : '#b8b8b8' // Gray color when Specials is inactive
+      ? '#292b2d' // Dark color when active (clicked)
+      : '#b8b8b8' // Gray when inactive (not clicked)
     : focused
-    ? Colors.primary.main
-    : Colors.text.secondary;
+    ? '#1A1A1A' // Active: dark (reference spec)
+    : '#C7C7C7'; // Inactive: ultra-light gray (reference spec)
 
   return (
     <View
@@ -66,9 +66,50 @@ const TabIcon: React.FC<{
       accessibilityLabel={label}
       accessibilityHint={`Navigate to ${label} tab`}
     >
+      {/* Brand color glow appears when Specials is ACTIVE (clicked) */}
+      {isSpecialsTab && focused && (
+        <>
+          {/* Outer glow layer - ABSOLUTELY POSITIONED */}
+          <View
+            style={[
+              styles.glowOuter,
+              {
+                position: 'absolute',
+                top: -28, // Center the glow behind the icon
+                left: -33, // Center horizontally
+                pointerEvents: 'none', // Don't interfere with touch
+              },
+            ]}
+          />
+          {/* Middle glow layer - ABSOLUTELY POSITIONED */}
+          <View
+            style={[
+              styles.glowMiddle,
+              {
+                position: 'absolute',
+                top: -18, // Center the glow behind the icon
+                left: -23, // Center horizontally
+                pointerEvents: 'none', // Don't interfere with touch
+              },
+            ]}
+          />
+          {/* Inner glow layer - ABSOLUTELY POSITIONED */}
+          <View
+            style={[
+              styles.glowInner,
+              {
+                position: 'absolute',
+                top: -8, // Center the glow behind the icon
+                left: -13, // Center horizontally
+                pointerEvents: 'none', // Don't interfere with touch
+              },
+            ]}
+          />
+        </>
+      )}
       <Icon
         name={iconName}
-        size={24}
+        size={24} // Reference spec: 24px
         color={iconColor}
         filled={filled && focused}
         style={isSpecialsTab ? styles.specialsIcon : undefined}
@@ -129,23 +170,28 @@ function RootTabs() {
           );
         },
         tabBarLabel: ({ focused }) => {
+          // Label colors: special handling for Specials tab
           const isSpecials = route.name === 'Specials';
           const labelColor = isSpecials
             ? focused
-              ? '#292b2d' // Dark color when Specials is active
-              : '#b8b8b8' // Gray color when Specials is inactive
-            : undefined; // Use default styling for other tabs
+              ? '#292b2d' // Dark color when active (clicked)
+              : '#b8b8b8' // Gray when inactive (not clicked)
+            : focused
+            ? '#1A1A1A' // Active: dark (reference spec)
+            : '#C7C7C7'; // Inactive: ultra-light gray (reference spec)
 
           return (
             <Text
+              allowFontScaling={false} // Prevent clipping across devices
+              // @ts-ignore - Android specific prop
+              includeFontPadding={false} // Android: prevent extra padding
+              numberOfLines={1}
+              ellipsizeMode="clip" // Don't show ... truncation
               style={[
                 styles.tabLabel,
                 focused && styles.tabLabelFocused,
-                isSpecials && { color: labelColor },
+                { color: labelColor },
               ]}
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.8}
             >
               {route.name}
             </Text>
@@ -154,11 +200,19 @@ function RootTabs() {
         /* eslint-enable react/no-unstable-nested-components */
         tabBarStyle: {
           ...styles.tabBar,
-          paddingBottom: Spacing.xs,
-          height: 68, // Made slightly bigger
-          marginBottom: Spacing.xxl + 8, // Shifted up more
+          marginBottom: Spacing.xl + Spacing.md, // Raised higher on page
           marginLeft: Spacing.md,
           marginRight: Spacing.md,
+        },
+        // Two-layer approach: inner pill with frosted background
+        tabBarBackground: () => <View style={styles.tabBarInner} />,
+        tabBarItemStyle: {
+          // Equal width cells for perfect spacing
+          flex: 1, // Every tab identical width
+          minWidth: 72, // Increased for "Notifications" label
+          alignItems: 'center',
+          justifyContent: 'center',
+          paddingHorizontal: 2, // Reduced for more text space
         },
         tabBarActiveTintColor: Colors.primary.main,
         tabBarInactiveTintColor: Colors.textTertiary,
@@ -207,18 +261,44 @@ function RootTabs() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    backgroundColor: Colors.background.secondary,
+    // OUTER wrapper: shadow only, NO overflow clipping (golden config)
+    backgroundColor: 'transparent',
     borderTopWidth: 0,
-    paddingTop: Spacing.xs,
-    paddingHorizontal: Spacing.xs,
-    borderRadius: 30,
+    paddingTop: 8,
+    paddingHorizontal: 8, // Minimal padding for maximum label space
+    paddingBottom: 8, // Lifted so shadow reads evenly
+    borderRadius: 48,
     position: 'absolute',
-    // Enhanced shadow for better visibility
+    height: 74,
+    // Golden config: wide, airy, low-opacity plume
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: -6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 16,
-    elevation: 12,
+    shadowOpacity: 0.06,
+    shadowRadius: 22, // Wide radius for airy plume
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 14,
+    overflow: 'visible', // Critical: allows shadow to render outside bounds
+    // Platform-specific
+    ...Platform.select({
+      ios: {
+        // iOS renders shadow properly with overflow: visible
+      },
+      android: {
+        // Android respects elevation
+      },
+    }),
+  },
+  // INNER container: pill mask with solid white background
+  tabBarInner: {
+    backgroundColor: '#FFFFFF', // Solid white background
+    borderRadius: 48,
+    height: '100%',
+    overflow: 'hidden', // Clips content to pill shape
+    borderWidth: 0.5,
+    borderColor: 'rgba(0, 0, 0, 0.04)', // Optional rim
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center', // Center the equal-width tabs
+    paddingHorizontal: 8, // Consistent edge padding
   },
   tabIconContainer: {
     width: TouchTargets.minimum,
@@ -226,56 +306,101 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: TouchTargets.minimum / 2,
+    opacity: 1, // Base opacity for active state
+    marginHorizontal: 0, // Ensure consistent spacing between tabs
+    // Smooth transitions for all state changes
+    ...Platform.select({
+      ios: {
+        // iOS uses native animations
+      },
+      android: {
+        // Android can use elevation transitions
+      },
+    }),
   },
   tabIconSpecialsFocused: {
-    backgroundColor: '#C6FFD1', // Brand color with glow when active
-    shadowColor: '#C6FFD1',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 4,
-    elevation: 3,
-    // Sized to fit within tab bar
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    marginBottom: -20, // Push circle down further to stay within nav bar
+    // Active state: brand color #C6FFD1 with subtle glow
+    backgroundColor: '#C6FFD1', // Brand color background when active
+    // Sized slightly larger
+    width: 80,
+    height: 80,
+    borderRadius: 38,
+    marginBottom: -22, // Move down even more for proper alignment
     paddingBottom: 0,
-    justifyContent: 'flex-start', // Align icon with other tabs
-    alignItems: 'center', // Center content horizontally
-    paddingTop: 8, // Offset to align icon with other tabs
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    paddingTop: 6,
+    opacity: 1,
+    transform: [{ scale: 1.0 }],
   },
   tabIconSpecialsUnfocused: {
-    backgroundColor: '#E0FFEB', // Light green circle when inactive
-    // Sized to fit within tab bar
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    marginBottom: -20, // Push circle down further to stay within nav bar
+    // Inactive state: light green circle #E0FFEB (a little larger)
+    backgroundColor: '#E0FFEB', // Light green circle when not clicked
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    marginBottom: -22, // Move down even more for proper alignment
     paddingBottom: 0,
-    justifyContent: 'flex-start', // Align icon with other tabs
-    alignItems: 'center', // Center content horizontally
-    paddingTop: 8, // Offset to align icon with other tabs
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    paddingTop: 8,
+    opacity: 1,
+    transform: [{ scale: 0.96 }], // Slightly smaller when inactive
+  },
+  // Subtle glow effect when active - much less prominent
+  glowOuter: {
+    position: 'absolute',
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: 'rgba(198, 255, 209, 0.05)', // Very subtle outer glow
+    top: -11,
+    left: -11,
+  },
+  glowMiddle: {
+    position: 'absolute',
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    backgroundColor: 'rgba(198, 255, 209, 0.08)', // Subtle mid glow
+    top: -4,
+    left: -4,
+  },
+  glowInner: {
+    position: 'absolute',
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: 'rgba(198, 255, 209, 0.12)', // Very subtle inner glow
+    top: 0,
+    left: 0,
   },
   tabIcon: {
-    fontSize: 24,
+    fontSize: 24, // Reference spec: 24px
     textAlign: 'center',
   },
   tabIconFocused: {
-    transform: [{ scale: 1.1 }],
+    // Reference spec: scale animation
+    transform: [{ scale: 1.0 }], // From 0.96 → 1.0
   },
   tabLabel: {
-    ...Typography.styles.caption,
-    fontSize: 10,
-    fontWeight: '500',
-    marginTop: 2,
+    // Typography optimized for full word visibility
+    fontSize: 11, // Slightly smaller for "Notifications"
+    lineHeight: 13,
+    fontWeight: '400',
+    letterSpacing: 0.1, // Reduced spacing
+    marginTop: 3, // Breathing room
     textAlign: 'center',
+    alignSelf: 'stretch', // Prevents narrow text box
+    // Nunito font
+    fontFamily: 'Nunito-Regular',
   },
   tabLabelFocused: {
-    fontWeight: '600',
-    color: Colors.primary.main,
+    // Reference spec: keep same weight as inactive (400)
+    // Color is handled inline in the component
   },
   specialsIcon: {
-    marginBottom: 4, // Add space between icon and text for Specials tab
+    zIndex: 10, // Ensure icon renders above glow layers
   },
 });
 

@@ -63,9 +63,9 @@ interface SpecialCardProps {
 }
 
 const { width: screenWidth } = Dimensions.get('window');
-const ROW_PADDING = 16; // 8px padding on each side of the row
-const CARD_SPACING = 8; // Space between cards in a row
-const CARD_WIDTH = (screenWidth - ROW_PADDING - CARD_SPACING) / 2;
+const HORIZONTAL_PADDING = Spacing.md; // 16px padding on each side
+const CARD_GAP = Spacing.md; // 16px gap between cards
+const CARD_WIDTH = (screenWidth - HORIZONTAL_PADDING * 2 - CARD_GAP) / 2;
 const IMAGE_HEIGHT = (CARD_WIDTH * 3) / 4; // 4:3 aspect ratio
 
 const SpecialCard: React.FC<SpecialCardProps> = memo(
@@ -215,16 +215,16 @@ const styles = StyleSheet.create({
   container: {
     width: CARD_WIDTH,
     backgroundColor: 'transparent',
-    borderRadius: BorderRadius['2xl'],
+    borderRadius: BorderRadius.xl,
     padding: 0, // Remove padding to align with image edges
   },
   imageContainer: {
     position: 'relative',
     width: '100%',
     height: IMAGE_HEIGHT,
-    borderRadius: BorderRadius['2xl'],
+    borderRadius: BorderRadius.xl,
     overflow: 'hidden',
-    marginBottom: Spacing.xs,
+    marginBottom: Spacing.sm,
   },
   image: {
     width: '100%',

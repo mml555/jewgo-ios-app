@@ -41,6 +41,7 @@ interface CategoryCardProps {
   categoryKey: string;
   onFavoriteToggle?: (entityId: string, isFavorited: boolean) => void;
   isInitiallyFavorited?: boolean;
+  onPress?: (item: CategoryItem) => void;
 }
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -54,6 +55,7 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
   categoryKey,
   onFavoriteToggle,
   isInitiallyFavorited,
+  onPress,
 }) => {
   // Only log in development and reduce frequency
   if (__DEV__ && Math.random() < 0.1) {
@@ -212,6 +214,12 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
       title: item.title,
     });
 
+    // Use custom onPress if provided (for favorites screen)
+    if (onPress) {
+      onPress(item);
+      return;
+    }
+
     // Events category navigates to EventDetail screen
     if (categoryKey === 'events') {
       console.log('🔷 Navigating to EventDetail with eventId:', item.id);
@@ -226,7 +234,7 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
         categoryKey: categoryKey,
       });
     }
-  }, [navigation, item.id, categoryKey, item.title]);
+  }, [navigation, item.id, categoryKey, item.title, onPress]);
 
   // Memoized heart press handler to prevent unnecessary re-renders
   const handleHeartPress = useCallback(async () => {

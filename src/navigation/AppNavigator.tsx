@@ -3,6 +3,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { AppStackParamList } from '../types/navigation';
 import RootTabs from './RootTabs';
 import ListingDetailScreen from '../screens/ListingDetailScreen';
+import CategoryFavoritesScreen from '../screens/CategoryFavoritesScreen';
 import SpecialDetailScreen from '../screens/SpecialDetailScreen';
 import AddCategoryScreen from '../screens/AddCategoryScreen';
 import AddMikvahScreen from '../screens/AddMikvahScreen';
@@ -68,6 +69,14 @@ const AppNavigator: React.FC = () => {
       <Stack.Screen
         name="SpecialDetail"
         component={SpecialDetailScreen}
+        options={{
+          headerShown: false,
+          presentation: 'card',
+        }}
+      />
+      <Stack.Screen
+        name="CategoryFavorites"
+        component={CategoryFavoritesScreen}
         options={{
           headerShown: false,
           presentation: 'card',

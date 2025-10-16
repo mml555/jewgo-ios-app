@@ -53,9 +53,10 @@ export interface FavoriteToggleResponse {
 
 class FavoritesService {
   private baseUrl = '/favorites';
-  
+
   // Cache for entity data to prevent duplicate API requests
-  private entityCache: Map<string, { data: any; timestamp: number }> = new Map();
+  private entityCache: Map<string, { data: any; timestamp: number }> =
+    new Map();
   private readonly CACHE_DURATION = 60000; // 1 minute cache
   private pendingRequests: Map<string, Promise<any>> = new Map(); // Request deduplication
 
@@ -78,7 +79,7 @@ class FavoritesService {
    */
   private async getEntityWithCache(entityId: string): Promise<any> {
     const now = Date.now();
-    
+
     // Check cache first
     const cached = this.entityCache.get(entityId);
     if (cached && now - cached.timestamp < this.CACHE_DURATION) {
@@ -97,14 +98,14 @@ class FavoritesService {
         const entityResponse = await (apiService as any).request(
           `/entities/${entityId}`,
         );
-        
+
         const data = entityResponse.success
           ? entityResponse.data.entity || entityResponse.data
           : null;
-        
+
         // Cache the result
         this.entityCache.set(entityId, { data, timestamp: now });
-        
+
         return data;
       } finally {
         // Remove from pending requests
@@ -114,7 +115,7 @@ class FavoritesService {
 
     // Store pending request
     this.pendingRequests.set(entityId, requestPromise);
-    
+
     return requestPromise;
   }
 
@@ -169,6 +170,8 @@ class FavoritesService {
                 restaurant: 'restaurant',
                 mikvah: 'mikvah',
                 store: 'store',
+                stores: 'store',
+                specials: 'specials',
               };
 
               const mappedEntityType =
@@ -212,6 +215,8 @@ class FavoritesService {
                 restaurant: 'restaurant',
                 mikvah: 'mikvah',
                 store: 'store',
+                stores: 'store',
+                specials: 'specials',
               };
 
               const mappedEntityType =

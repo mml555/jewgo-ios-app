@@ -605,6 +605,16 @@ class ApiService {
     limit: number = 100,
     offset: number = 0,
   ): Promise<ApiResponse<{ listings: Listing[] }>> {
+    // Special handling for specials category - redirect to Specials tab instead of fetching data
+    if (categoryKey === 'specials') {
+      debugLog('🎁 Specials category selected - redirecting to Specials tab');
+      return {
+        success: true,
+        data: { listings: [] }, // Return empty array since we're redirecting
+        redirectTo: 'specials', // Signal to redirect
+      };
+    }
+
     // Special handling for jobs category - use dedicated jobs endpoint
     if (categoryKey === 'jobs') {
       debugLog('🔍 Fetching jobs from dedicated endpoint');

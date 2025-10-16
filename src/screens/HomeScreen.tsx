@@ -1,7 +1,7 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import TopBar from '../components/TopBar';
 import CategoryRail from '../components/CategoryRail';
@@ -9,6 +9,7 @@ import CategoryGridScreen from './CategoryGridScreen';
 import EnhancedJobsScreen from './EnhancedJobsScreen';
 import type { AppStackParamList } from '../types/navigation';
 import { Colors } from '../styles/designSystem';
+import { debugLog } from '../utils/logger';
 
 interface HomeScreenProps {
   onSearchChange?: (query: string) => void;
@@ -16,10 +17,22 @@ interface HomeScreenProps {
 
 const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
   const navigation = useNavigation<StackNavigationProp<AppStackParamList>>();
+  const route = useRoute();
   const [activeCategory, setActiveCategory] = useState('mikvah');
   const [searchQuery, setSearchQuery] = useState('');
   const [jobMode, setJobMode] = useState<'seeking' | 'hiring'>('hiring');
   const [scrollY, setScrollY] = useState(0);
+
+  // Handle category navigation from route params (from Favorites screen)
+  useEffect(() => {
+    const params = route.params as { category?: string } | undefined;
+    if (params?.category) {
+      debugLog('🔍 HomeScreen received category param:', params.category);
+      setActiveCategory(params.category);
+      // Clear the param after handling it
+      navigation.setParams({ category: undefined } as any);
+    }
+  }, [route.params, navigation]);
 
   const handleSearchChange = useCallback(
     (query: string) => {

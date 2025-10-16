@@ -78,6 +78,7 @@ class SpecialsController {
           e.instagram_url,
           e.whatsapp_url,
           e.rating,
+          e.review_count,
           e.entity_type as category,
           COALESCE((
             SELECT COUNT(*) 
@@ -130,6 +131,10 @@ class SpecialsController {
         subtitle: special.subtitle,
         description: special.description,
         businessId: special.business_id,
+        businessName: special.business_name, // Add flat field for frontend filtering
+        category: special.category, // Add entity type for filtering
+        city: special.business_city, // Add for frontend display
+        state: special.business_state, // Add for frontend display
         business: {
           id: special.business_id,
           name: special.business_name,
@@ -155,6 +160,7 @@ class SpecialsController {
         maxClaimsTotal: special.max_claims_total,
         priority: special.priority,
         heroImageUrl: special.hero_image_url,
+        imageUrl: special.hero_image_url, // Add imageUrl field for frontend
         isActive: special.is_active,
         isExpiring:
           new Date(special.valid_until) <
@@ -162,6 +168,7 @@ class SpecialsController {
         terms: special.terms,
         gallery: [], // Will be populated separately if needed
         rating: special.rating,
+        reviewCount: special.review_count || 0, // Add review count
         priceRange:
           special.rating >= 4.5 ? '$$$' : special.rating >= 3.5 ? '$$' : '$',
         createdAt: special.created_at.toISOString(),
