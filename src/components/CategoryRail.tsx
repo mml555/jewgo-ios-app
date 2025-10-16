@@ -222,8 +222,7 @@ const CategoryRail: React.FC<CategoryRailProps> = ({
           style={[
             styles.scrollbarIndicator,
             {
-              left: indicatorStyle.left,
-              opacity: indicatorStyle.opacity,
+              left: indicatorPosition,
             },
           ]}
         />
