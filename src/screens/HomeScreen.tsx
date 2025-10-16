@@ -61,6 +61,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
       eatery: 'Eatery',
       shul: 'Shul',
       stores: 'Store',
+      specials: 'Specials',
       shtetl: 'Shtetl',
       shidduch: 'Shidduch',
       social: 'Social',

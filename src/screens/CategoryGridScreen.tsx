@@ -70,6 +70,13 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
     }
   }, [categoryKey, navigation]);
 
+  // Redirect to Specials tab for specials category
+  useEffect(() => {
+    if (categoryKey === 'specials') {
+      navigation.navigate('MainTabs', { screen: 'Specials' });
+    }
+  }, [categoryKey, navigation]);
+
   // State for events data
   const [eventsData, setEventsData] = useState<Event[]>([]);
   const [eventsLoading, setEventsLoading] = useState(false);

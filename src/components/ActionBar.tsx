@@ -59,6 +59,7 @@ const ActionBar: React.FC<ActionBarProps> = ({
       eatery: 'Eatery',
       shul: 'Shul',
       stores: 'Store',
+      specials: 'Special',
       shtetl: 'Shtetl',
       events: 'Events',
       jobs: 'Jobs',
