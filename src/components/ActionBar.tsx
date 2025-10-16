@@ -249,8 +249,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: Spacing.md,
-    paddingTop: 10,
-    paddingBottom: 10,
+    paddingTop: 0, // CategoryRail marginBottom provides spacing
+    paddingBottom: 20, // Consistent 20px spacing to banner/grid
     backgroundColor: Colors.background.primary,
   },
   actionButton: {
@@ -307,8 +307,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.sm,
-    paddingTop: 10,
-    paddingBottom: 10,
+    paddingTop: 0, // CategoryRail marginBottom provides spacing
+    paddingBottom: 20, // Consistent 20px spacing to banner/grid
     backgroundColor: Colors.background.primary,
     minHeight: 50,
   },

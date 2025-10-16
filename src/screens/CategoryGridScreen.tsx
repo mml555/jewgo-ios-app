@@ -1078,8 +1078,8 @@ const styles = StyleSheet.create({
   locationPermissionBanner: {
     backgroundColor: '#FFFFFF',
     marginHorizontal: Spacing.md,
-    marginTop: 0, // ActionBar provides 10px spacing
-    marginBottom: 10, // 10px gap before cards
+    marginTop: 0, // ActionBar provides spacing
+    marginBottom: 20, // Consistent 20px spacing to grid
     borderRadius: BorderRadius.lg,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
