@@ -121,7 +121,7 @@ const CategoryRail: React.FC<CategoryRailProps> = ({
   // Calculate snap interval for smooth scrolling
   const snapToInterval = useMemo(() => CHIP_WIDTH + CHIP_SPACING, []);
 
-  // Calculate indicator position - the indicator should follow the active button as it scrolls
+  // Calculate indicator position
   const indicatorPosition = useMemo(() => {
     // Calculate the center of the active button in content coordinates
     const buttonCenterInContent =
@@ -135,12 +135,11 @@ const CategoryRail: React.FC<CategoryRailProps> = ({
       scrollXAnimated,
     );
 
-    // Use a more intelligent clamping that allows the indicator to move with its category
-    // but keeps it visible when the category is partially visible
+    // Clamp position to keep indicator within scrollbar bounds
     return Animated.diffClamp(
       rawPosition,
-      -INDICATOR_WIDTH, // Allow indicator to go slightly off-screen to the left
-      SCROLLBAR_WIDTH, // Allow indicator to go slightly off-screen to the right
+      0,
+      SCROLLBAR_WIDTH - INDICATOR_WIDTH,
     );
   }, [activeIndex, scrollXAnimated]);
 
@@ -223,7 +222,8 @@ const CategoryRail: React.FC<CategoryRailProps> = ({
           style={[
             styles.scrollbarIndicator,
             {
-              left: indicatorPosition,
+              left: indicatorStyle.left,
+              opacity: indicatorStyle.opacity,
             },
           ]}
         />

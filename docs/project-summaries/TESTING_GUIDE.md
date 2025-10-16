@@ -27,6 +27,7 @@ rm -rf /tmp/haste-*
 ```
 
 Expected output:
+
 ```
 🔍 Testing Metro Bundler Connection...
 Testing Metro Status Endpoint... ✓ OK
@@ -38,6 +39,7 @@ Testing Metro Root Endpoint... ✓ OK
 ### 3. Test Logout (Critical)
 
 #### Test Regular Logout:
+
 1. Open the app in iOS Simulator
 2. If you see the welcome screen, tap "Sign In"
 3. Use test credentials or create an account
@@ -47,6 +49,7 @@ Testing Metro Root Endpoint... ✓ OK
 7. ✅ **Expected:** You return to Welcome screen, NO CRASH
 
 #### Test Guest Logout:
+
 1. From Welcome screen, tap "Continue as Guest"
 2. Navigate to Profile tab
 3. Scroll to bottom and tap "Logout" button
@@ -58,11 +61,13 @@ Testing Metro Root Endpoint... ✓ OK
 ### Critical Issues
 
 1. **Missing Alert Import in ProfileScreen.tsx**
+
    - Caused: Crash when pressing logout button
    - Fixed: Added `Alert` to react-native imports
    - Impact: Critical - prevents app crash
 
 2. **Undefined sessions Variable**
+
    - Caused: Reference error in handleSessions function
    - Fixed: Added `const [sessions, setSessions] = useState<any[]>([]);`
    - Impact: High - prevents potential crashes
@@ -76,7 +81,7 @@ Testing Metro Root Endpoint... ✓ OK
 
 ```
 ✅ src/screens/ProfileScreen.tsx - Added Alert import & sessions state
-✅ src/screens/EnhancedJobsScreen.tsx - Added Alert import  
+✅ src/screens/EnhancedJobsScreen.tsx - Added Alert import
 ✅ metro.config.js - Enhanced logging
 ✅ scripts/test-metro-connection.sh - New diagnostic tool
 ✅ scripts/fix-alert-imports.js - Automated fix tool
@@ -89,12 +94,14 @@ Testing Metro Root Endpoint... ✓ OK
 **Precondition:** User is authenticated
 
 **Steps:**
+
 1. Launch app
 2. Login with valid credentials
 3. Navigate to Profile tab
 4. Tap "Logout" button
 
 **Expected Result:**
+
 - Alert dialog appears with "Sign Out" title
 - Dialog has "Cancel" and "Sign Out" buttons
 - After confirming, user is logged out
@@ -102,7 +109,7 @@ Testing Metro Root Endpoint... ✓ OK
 - No JavaScript errors in Metro logs
 - No crash
 
-**Actual Result:** ____________________
+**Actual Result:** ********\_\_\_\_********
 
 **Status:** [ ] Pass [ ] Fail
 
@@ -113,12 +120,14 @@ Testing Metro Root Endpoint... ✓ OK
 **Precondition:** User is in guest mode
 
 **Steps:**
+
 1. Launch app
 2. Tap "Continue as Guest"
 3. Navigate to Profile tab
 4. Tap "Logout" button
 
 **Expected Result:**
+
 - Alert dialog appears with "End Guest Session" title
 - Dialog has "Cancel" and "End Session" buttons
 - After confirming, guest session ends
@@ -126,7 +135,7 @@ Testing Metro Root Endpoint... ✓ OK
 - No JavaScript errors in Metro logs
 - No crash
 
-**Actual Result:** ____________________
+**Actual Result:** ********\_\_\_\_********
 
 **Status:** [ ] Pass [ ] Fail
 
@@ -135,15 +144,17 @@ Testing Metro Root Endpoint... ✓ OK
 ### Test Case 3: Metro Connection
 
 **Steps:**
+
 1. Run `./scripts/test-metro-connection.sh`
 
 **Expected Result:**
+
 - Metro Status Endpoint: ✓ OK
 - Metro Root Endpoint: ✓ OK
 - Metro bundler process is running
 - Port 8081 is in use
 
-**Actual Result:** ____________________
+**Actual Result:** ********\_\_\_\_********
 
 **Status:** [ ] Pass [ ] Fail
 
@@ -153,6 +164,7 @@ Testing Metro Root Endpoint... ✓ OK
 
 **Steps:**
 Test various features that use Alert:
+
 1. Profile > Edit Profile (should show alert)
 2. Profile > Favorites (guest - should show alert)
 3. Profile > Reviews (guest - should show alert)
@@ -160,11 +172,12 @@ Test various features that use Alert:
 5. Create Store > Save (validation - should show alert)
 
 **Expected Result:**
+
 - All alerts display properly
 - No crashes
 - No "Alert is not defined" errors
 
-**Actual Result:** ____________________
+**Actual Result:** ********\_\_\_\_********
 
 **Status:** [ ] Pass [ ] Fail
 
@@ -217,11 +230,13 @@ npx react-native run-ios
 ### Key Metrics to Watch
 
 1. **Crash Reports**
+
    - Location: Xcode > Window > Organizer > Crashes
    - Watch for: "RCTExceptionsManager" crashes
    - Expected: Zero crashes related to Alert or logout
 
 2. **Metro Logs**
+
    ```bash
    tail -f logs/metro.log | grep -i "error\|exception\|alert"
    ```
@@ -275,23 +290,24 @@ After any future code changes, test:
 
 ---
 
-**Tester:** _______________  
-**Date:** _______________  
+**Tester:** ******\_\_\_******  
+**Date:** ******\_\_\_******  
 **Version:** 1.0 (Build 1)  
 **Device:** iOS Simulator  
-**Pass/Fail:** _______________
+**Pass/Fail:** ******\_\_\_******
 
 ## Next Steps After Testing
 
 If all tests pass:
+
 - [ ] Deploy to TestFlight for beta testing
 - [ ] Monitor crash reports for 48 hours
 - [ ] Collect user feedback on logout flow
 - [ ] Document any edge cases found
 
 If any tests fail:
+
 - [ ] Document the failure in detail
 - [ ] Check Metro logs for errors
 - [ ] Review crash reports
 - [ ] Contact development team with findings
-
