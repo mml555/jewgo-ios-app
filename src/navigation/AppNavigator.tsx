@@ -47,6 +47,14 @@ import JobSeekerProfilesScreen from '../screens/jobs/JobSeekerProfilesScreen';
 import JobSeekerDetailScreenV2 from '../screens/jobs/JobSeekerDetailScreen';
 import CreateJobSeekerProfileScreen from '../screens/jobs/CreateJobSeekerProfileScreen';
 import JobDetailScreenV2 from '../screens/jobs/JobDetailScreen';
+// Boost screens
+import MikvahBoostScreen from '../screens/boost/MikvahBoostScreen';
+import EateryBoostScreen from '../screens/boost/EateryBoostScreen';
+import ShulBoostScreen from '../screens/boost/ShulBoostScreen';
+import StoreBoostScreen from '../screens/boost/StoreBoostScreen';
+import SpecialsBoostScreen from '../screens/boost/SpecialsBoostScreen';
+import EventBoostScreen from '../screens/boost/EventBoostScreen';
+import JobBoostScreen from '../screens/boost/JobBoostScreen';
 
 const Stack = createStackNavigator<AppStackParamList>();
 
@@ -378,6 +386,63 @@ const AppNavigator: React.FC = () => {
       <Stack.Screen
         name="FlaggedContent"
         component={FlaggedContentScreen}
+        options={{
+          headerShown: false,
+          presentation: 'card',
+        }}
+      />
+      {/* Boost Screens */}
+      <Stack.Screen
+        name="MikvahBoost"
+        component={MikvahBoostScreen}
+        options={{
+          headerShown: false,
+          presentation: 'card',
+        }}
+      />
+      <Stack.Screen
+        name="EateryBoost"
+        component={EateryBoostScreen}
+        options={{
+          headerShown: false,
+          presentation: 'card',
+        }}
+      />
+      <Stack.Screen
+        name="ShulBoost"
+        component={ShulBoostScreen}
+        options={{
+          headerShown: false,
+          presentation: 'card',
+        }}
+      />
+      <Stack.Screen
+        name="StoreBoost"
+        component={StoreBoostScreen}
+        options={{
+          headerShown: false,
+          presentation: 'card',
+        }}
+      />
+      <Stack.Screen
+        name="SpecialsBoost"
+        component={SpecialsBoostScreen}
+        options={{
+          headerShown: false,
+          presentation: 'card',
+        }}
+      />
+      <Stack.Screen
+        name="EventBoost"
+        component={EventBoostScreen}
+        options={{
+          headerShown: false,
+          presentation: 'card',
+        }}
+      />
+      <Stack.Screen
+        name="JobBoost"
+        component={JobBoostScreen}
         options={{
           headerShown: false,
           presentation: 'card',

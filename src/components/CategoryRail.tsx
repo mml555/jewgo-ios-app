@@ -218,7 +218,7 @@ const CategoryRail: React.FC<CategoryRailProps> = ({
 
   // Item layout for performance
   const getItemLayout = useCallback(
-    (data: Category[] | null | undefined, index: number) => ({
+    (data: ArrayLike<Category> | null | undefined, index: number) => ({
       length: CHIP_WIDTH + CHIP_SPACING,
       offset: (CHIP_WIDTH + CHIP_SPACING) * index,
       index,

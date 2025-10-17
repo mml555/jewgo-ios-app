@@ -693,6 +693,29 @@ export const Responsive = {
   },
 };
 
+// ResponsiveSpacing utility for consistent spacing across devices
+export const ResponsiveSpacing = {
+  get: (baseSpacing: number): number => {
+    return Responsive.getScaledSpacing(baseSpacing);
+  },
+  xs: Responsive.getScaledSpacing(4),
+  sm: Responsive.getScaledSpacing(8),
+  md: Responsive.getScaledSpacing(16),
+  lg: Responsive.getScaledSpacing(24),
+  xl: Responsive.getScaledSpacing(32),
+  xxl: Responsive.getScaledSpacing(40),
+};
+
+// ResponsiveTypography utility for consistent typography across devices
+export const ResponsiveTypography = {
+  fontSize: (baseSize: number): number => {
+    return Responsive.getScaledSpacing(baseSize);
+  },
+  lineHeight: (baseSize: number): number => {
+    return Responsive.getScaledSpacing(baseSize * 1.2);
+  },
+};
+
 // Initialize accessibility validation in development
 if (__DEV__) {
   Accessibility.validateColors();
@@ -708,4 +731,6 @@ export default {
   ComponentStyles,
   Accessibility,
   Responsive,
+  ResponsiveSpacing,
+  ResponsiveTypography,
 };

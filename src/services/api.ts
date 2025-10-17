@@ -11,6 +11,7 @@ export interface ApiResponse<T> {
   data?: T;
   error?: string;
   message?: string;
+  redirectTo?: string;
 }
 
 export interface Category {
@@ -243,9 +244,9 @@ class ApiService {
       };
       console.log('🔐 API Request Headers:', {
         url,
-        hasAuthorization: !!finalHeaders.Authorization,
-        authHeaderValue: finalHeaders.Authorization
-          ? finalHeaders.Authorization.substring(0, 30) + '...'
+        hasAuthorization: !!(finalHeaders as any).Authorization,
+        authHeaderValue: (finalHeaders as any).Authorization
+          ? (finalHeaders as any).Authorization.substring(0, 30) + '...'
           : 'NONE',
       });
 

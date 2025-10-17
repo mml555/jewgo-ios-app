@@ -42,6 +42,8 @@ interface CategoryCardProps {
   onFavoriteToggle?: (entityId: string, isFavorited: boolean) => void;
   isInitiallyFavorited?: boolean;
   onPress?: (item: CategoryItem) => void;
+  cardWidth?: number;
+  imageHeight?: number;
 }
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -56,7 +58,15 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
   onFavoriteToggle,
   isInitiallyFavorited,
   onPress,
+  cardWidth = CARD_WIDTH,
+  imageHeight = IMAGE_HEIGHT,
 }) => {
+  // Create dynamic styles based on props
+  const styles = useMemo(
+    () => createStyles(cardWidth, imageHeight),
+    [cardWidth, imageHeight],
+  );
+
   // Only log in development and reduce frequency
   if (__DEV__ && Math.random() < 0.1) {
     // debugLog('🔄 CategoryCard render - props:', {
@@ -456,151 +466,152 @@ CategoryCard.displayName = 'CategoryCard';
 
 export default memo(CategoryCard);
 
-const styles = StyleSheet.create({
-  container: {
-    width: CARD_WIDTH,
-    borderRadius: BorderRadius.xl,
-    padding: 0, // Remove padding to align with image edges
-    // Shadow moved to specific container types to prevent rendering warnings
-  },
-  containerWithBackground: {
-    backgroundColor: Colors.background.secondary, // White background for jobs
-    ...Shadows.sm, // Shadow only on solid background
-  },
-  containerTransparent: {
-    backgroundColor: 'transparent', // Transparent background for non-job cards
-    // No shadow on transparent cards
-  },
-  pressed: {
-    opacity: 0.7,
-    transform: [{ scale: 0.98 }],
-  },
-  imageContainer: {
-    position: 'relative',
-    width: '100%',
-    height: IMAGE_HEIGHT,
-    borderRadius: BorderRadius.xl,
-    overflow: 'hidden',
-    marginBottom: Spacing.sm, // Reduced spacing below image
-    backgroundColor: Colors.background.tertiary, // Add background color for when image fails to load
-  },
-  image: {
-    width: '100%',
-    height: '100%',
-  },
-  placeholderContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: Colors.background.tertiary,
-  },
-  placeholderIcon: {
-    fontSize: 40,
-    marginBottom: Spacing.sm,
-    opacity: 0.7,
-    fontFamily: Typography.fontFamily,
-  },
-  placeholderText: {
-    ...Typography.styles.bodySmall,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    fontWeight: '500',
-    textTransform: 'capitalize',
-  },
-  tagContainer: {
-    position: 'absolute',
-    top: Spacing.sm,
-    left: Spacing.sm,
-    backgroundColor: '#ffffff', // White background
-    borderRadius: BorderRadius.full,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.sm,
-    ...Shadows.sm,
-  },
-  tagText: {
-    ...Typography.styles.caption,
-    color: '#292b2d', // Dark text color
-    fontWeight: '700',
-  },
-  heartButton: {
-    position: 'absolute',
-    top: Spacing.sm - 6, // Move up 6px total for better visual alignment
-    right: Spacing.sm,
-    width: TouchTargets.minimum,
-    height: TouchTargets.minimum,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  heartIconActive: {
-    color: Colors.error,
-    textShadowColor: 'rgba(255, 255, 255, 1)',
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 3, // Increased radius for better white outline
-  },
-  contentContainer: {
-    flex: 1,
-    paddingHorizontal: Spacing.xs, // Reduced padding for tighter spacing
-    paddingBottom: Spacing.xs, // Add bottom padding
-  },
-  titleSection: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.xs,
-    paddingHorizontal: 0,
-  },
-  title: {
-    ...Typography.styles.bodyLarge,
-    fontWeight: '600',
-    color: Colors.textPrimary,
-    flex: 1,
-    marginRight: Spacing.sm,
-  },
-  ratingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    minWidth: 40, // Ensure consistent width
-  },
-  ratingStar: {
-    fontSize: 14,
-    color: '#FFD700', // Yellow/gold color for star
-    marginRight: Spacing.xs,
-    fontFamily: Typography.fontFamily,
-  },
-  ratingText: {
-    ...Typography.styles.caption,
-    color: Colors.textPrimary,
-    fontWeight: '600',
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 0,
-  },
-  priceText: {
-    ...Typography.styles.body,
-    color: Colors.textPrimary,
-    flex: 1,
-    marginRight: Spacing.sm,
-  },
-  distanceContainer: {
-    alignItems: 'flex-end',
-    justifyContent: 'center',
-    minWidth: 50, // Ensure minimum width for proper alignment
-  },
-  distanceText: {
-    ...Typography.styles.body,
-    color: Colors.textSecondary,
-    fontWeight: '500',
-    minWidth: 40, // Match rating container width
-    textAlign: 'right', // Right align the text
-  },
-});
+const createStyles = (cardWidth: number, imageHeight: number) =>
+  StyleSheet.create({
+    container: {
+      width: cardWidth,
+      borderRadius: BorderRadius.xl,
+      padding: 0, // Remove padding to align with image edges
+      // Shadow moved to specific container types to prevent rendering warnings
+    },
+    containerWithBackground: {
+      backgroundColor: Colors.background.secondary, // White background for jobs
+      ...Shadows.sm, // Shadow only on solid background
+    },
+    containerTransparent: {
+      backgroundColor: 'transparent', // Transparent background for non-job cards
+      // No shadow on transparent cards
+    },
+    pressed: {
+      opacity: 0.7,
+      transform: [{ scale: 0.98 }],
+    },
+    imageContainer: {
+      position: 'relative',
+      width: '100%',
+      height: imageHeight,
+      borderRadius: BorderRadius.xl,
+      overflow: 'hidden',
+      marginBottom: Spacing.sm, // Reduced spacing below image
+      backgroundColor: Colors.background.tertiary, // Add background color for when image fails to load
+    },
+    image: {
+      width: '100%',
+      height: '100%',
+    },
+    placeholderContainer: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: Colors.background.tertiary,
+    },
+    placeholderIcon: {
+      fontSize: 40,
+      marginBottom: Spacing.sm,
+      opacity: 0.7,
+      fontFamily: Typography.fontFamily,
+    },
+    placeholderText: {
+      ...Typography.styles.bodySmall,
+      color: Colors.textSecondary,
+      textAlign: 'center',
+      fontWeight: '500',
+      textTransform: 'capitalize',
+    },
+    tagContainer: {
+      position: 'absolute',
+      top: Spacing.sm,
+      left: Spacing.sm,
+      backgroundColor: '#ffffff', // White background
+      borderRadius: BorderRadius.full,
+      paddingHorizontal: Spacing.sm,
+      paddingVertical: Spacing.sm,
+      ...Shadows.sm,
+    },
+    tagText: {
+      ...Typography.styles.caption,
+      color: '#292b2d', // Dark text color
+      fontWeight: '700',
+    },
+    heartButton: {
+      position: 'absolute',
+      top: Spacing.sm - 6, // Move up 6px total for better visual alignment
+      right: Spacing.sm,
+      width: TouchTargets.minimum,
+      height: TouchTargets.minimum,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    heartIconActive: {
+      color: Colors.error,
+      textShadowColor: 'rgba(255, 255, 255, 1)',
+      textShadowOffset: { width: 0, height: 0 },
+      textShadowRadius: 3, // Increased radius for better white outline
+    },
+    contentContainer: {
+      flex: 1,
+      paddingHorizontal: Spacing.xs, // Reduced padding for tighter spacing
+      paddingBottom: Spacing.xs, // Add bottom padding
+    },
+    titleSection: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: Spacing.xs,
+      paddingHorizontal: 0,
+    },
+    title: {
+      ...Typography.styles.bodyLarge,
+      fontWeight: '600',
+      color: Colors.textPrimary,
+      flex: 1,
+      marginRight: Spacing.sm,
+    },
+    ratingContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      minWidth: 40, // Ensure consistent width
+    },
+    ratingStar: {
+      fontSize: 14,
+      color: '#FFD700', // Yellow/gold color for star
+      marginRight: Spacing.xs,
+      fontFamily: Typography.fontFamily,
+    },
+    ratingText: {
+      ...Typography.styles.caption,
+      color: Colors.textPrimary,
+      fontWeight: '600',
+    },
+    infoRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: 0,
+    },
+    priceText: {
+      ...Typography.styles.body,
+      color: Colors.textPrimary,
+      flex: 1,
+      marginRight: Spacing.sm,
+    },
+    distanceContainer: {
+      alignItems: 'flex-end',
+      justifyContent: 'center',
+      minWidth: 50, // Ensure minimum width for proper alignment
+    },
+    distanceText: {
+      ...Typography.styles.body,
+      color: Colors.textSecondary,
+      fontWeight: '500',
+      minWidth: 40, // Match rating container width
+      textAlign: 'right', // Right align the text
+    },
+  });
 
 // Custom comparison function for memo to ensure proper re-rendering
 const areEqual = (
@@ -615,8 +626,12 @@ const areEqual = (
     prevProps.item.id !== nextProps.item.id ||
     prevProps.item.title !== nextProps.item.title ||
     prevProps.categoryKey !== nextProps.categoryKey;
+  const dimensionsChanged =
+    prevProps.cardWidth !== nextProps.cardWidth ||
+    prevProps.imageHeight !== nextProps.imageHeight;
 
-  const shouldReRender = callbackChanged || initialStatusChanged || itemChanged;
+  const shouldReRender =
+    callbackChanged || initialStatusChanged || itemChanged || dimensionsChanged;
 
   // debugLog('🔄 CategoryCardWithMemo memo comparison:', {
   //   title: nextProps.item.title,
@@ -637,6 +652,8 @@ export const CategoryCardWithMemo = memo(
     categoryKey,
     onFavoriteToggle,
     isInitiallyFavorited,
+    cardWidth,
+    imageHeight,
   }: CategoryCardProps) => {
     // debugLog('🔄 CategoryCardWithMemo render - props:', {
     //   title: item.title,
@@ -651,6 +668,8 @@ export const CategoryCardWithMemo = memo(
         categoryKey={categoryKey}
         onFavoriteToggle={onFavoriteToggle}
         isInitiallyFavorited={isInitiallyFavorited}
+        cardWidth={cardWidth}
+        imageHeight={imageHeight}
       />
     );
   },

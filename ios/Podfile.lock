@@ -2528,7 +2528,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
-  - RNSVG (15.12.1):
+  - RNSVG (15.14.0):
     - React-Core
   - RNVectorIcons (10.3.0):
     - boost
@@ -2991,7 +2991,7 @@ SPEC CHECKSUMS:
   RNPermissions: 0b0cdb0dfcc2fabc136a3d596220cc3d91977d79
   RNReactNativeHapticFeedback: b9a2e47c9b5b83e94a86a20f072c708f412a2105
   RNScreens: 35525ebfe219c8709da0d26aebbc9a5e02e1077b
-  RNSVG: d3f55b1e5f680744764389119f1cb7512058672b
+  RNSVG: ad69b385e35653fd9694935c48840117e96ccc1d
   RNVectorIcons: 9084b0cf37b3c5690b730c5627a21d750c9f517e
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
   Stripe: a4b6584549bac3698733ed564e55b0b067cfda8a

@@ -145,9 +145,13 @@ const CreateJobScreen: React.FC = () => {
         isRemote: job.is_remote,
         isHybrid: job.is_hybrid,
         description: job.description,
-        requirements: job.requirements || '',
+        requirements: Array.isArray(job.requirements)
+          ? job.requirements.join(', ')
+          : job.requirements || '',
         responsibilities: job.responsibilities || '',
-        benefits: job.benefits || '',
+        benefits: Array.isArray(job.benefits)
+          ? job.benefits.join(', ')
+          : job.benefits || '',
         skills: job.skills || [],
         contactEmail: job.contact_email || '',
         contactPhone: job.contact_phone || '',

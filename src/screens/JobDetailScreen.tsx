@@ -506,8 +506,8 @@ const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
                 ? job.requirements.join(', ').substring(0, 250) +
                   (job.requirements.join(', ').length > 250 ? '...' : '')
                 : typeof job.requirements === 'string'
-                ? job.requirements.substring(0, 250) +
-                  (job.requirements.length > 250 ? '...' : '')
+                ? (job.requirements as string).substring(0, 250) +
+                  ((job.requirements as string).length > 250 ? '...' : '')
                 : ''}
             </Text>
           </View>

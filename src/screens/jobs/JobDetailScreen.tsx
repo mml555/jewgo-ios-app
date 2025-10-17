@@ -85,7 +85,7 @@ const JobDetailScreen: React.FC = () => {
 
       // Debug logging
       console.log('📋 Job Detail Loaded:', {
-        title: response.jobListing.title,
+        title: (response.jobListing as any).title,
         hasRequirements: !!response.jobListing.requirements,
         requirementsType: typeof response.jobListing.requirements,
         requirementsValue: response.jobListing.requirements,

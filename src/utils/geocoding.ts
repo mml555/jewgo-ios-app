@@ -22,17 +22,22 @@ export const reverseGeocode = async (
   longitude: number,
 ): Promise<{ zipCode: string; city: string; state: string } | null> => {
   try {
+    // TEMPORARY FIX: Disable reverse geocoding to prevent API errors
+    debugLog('⚠️ Reverse geocoding temporarily disabled to prevent API errors');
+    return null;
+
+    /* Commented out temporarily - uncomment when re-enabling reverse geocoding
     // Create cache key (round to 4 decimal places = ~11m precision)
     const cacheKey = `${latitude.toFixed(4)},${longitude.toFixed(4)}`;
 
     // Check cache first
     const cached = geocodeCache.get(cacheKey);
-    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+    if (cached && Date.now() - cached!.timestamp < CACHE_DURATION) {
       // Return cached result without logging to reduce console noise
       return {
-        zipCode: cached.zipCode,
-        city: cached.city,
-        state: cached.state,
+        zipCode: cached!.zipCode,
+        city: cached!.city,
+        state: cached!.state,
       };
     }
 
@@ -84,6 +89,7 @@ export const reverseGeocode = async (
 
     debugLog('⚠️ No zip code found in reverse geocoding response');
     return null;
+    */
   } catch (error) {
     errorLog('Error reverse geocoding:', error);
     return null;

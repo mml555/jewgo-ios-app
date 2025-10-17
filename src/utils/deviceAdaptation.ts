@@ -11,29 +11,29 @@ export const DeviceType = {
   TABLET: 'tablet',
 } as const;
 
-export type DeviceTypeValue = typeof DeviceType[keyof typeof DeviceType];
+export type DeviceTypeValue = (typeof DeviceType)[keyof typeof DeviceType];
 
 // Screen size breakpoints (based on iOS device sizes)
 export const ScreenSize = {
-  SMALL: 'small',     // iPhone SE, iPhone 12 mini
-  MEDIUM: 'medium',   // iPhone 12, iPhone 13
-  LARGE: 'large',     // iPhone 12 Pro Max, iPhone 13 Pro Max
-  XLARGE: 'xlarge',   // iPad
+  SMALL: 'small', // iPhone SE, iPhone 12 mini
+  MEDIUM: 'medium', // iPhone 12, iPhone 13
+  LARGE: 'large', // iPhone 12 Pro Max, iPhone 13 Pro Max
+  XLARGE: 'xlarge', // iPad
 } as const;
 
-export type ScreenSizeValue = typeof ScreenSize[keyof typeof ScreenSize];
+export type ScreenSizeValue = (typeof ScreenSize)[keyof typeof ScreenSize];
 
 /**
  * Get the current device type
  */
 export const getDeviceType = (): DeviceTypeValue => {
   const aspectRatio = screenHeight / screenWidth;
-  
+
   // iPads typically have aspect ratios closer to 1.33, phones are closer to 2.0+
   if (aspectRatio < 1.6) {
     return DeviceType.TABLET;
   }
-  
+
   return DeviceType.PHONE;
 };
 
@@ -42,18 +42,18 @@ export const getDeviceType = (): DeviceTypeValue => {
  */
 export const getScreenSize = (): ScreenSizeValue => {
   const deviceType = getDeviceType();
-  
+
   if (deviceType === DeviceType.TABLET) {
     return ScreenSize.XLARGE;
   }
-  
+
   // Phone screen size categories based on width
   if (screenWidth <= 375) {
-    return ScreenSize.SMALL;   // iPhone SE, iPhone 12 mini
+    return ScreenSize.SMALL; // iPhone SE, iPhone 12 mini
   } else if (screenWidth <= 390) {
-    return ScreenSize.MEDIUM;  // iPhone 12, iPhone 13
+    return ScreenSize.MEDIUM; // iPhone 12, iPhone 13
   } else {
-    return ScreenSize.LARGE;   // iPhone 12 Pro Max, iPhone 13 Pro Max
+    return ScreenSize.LARGE; // iPhone 12 Pro Max, iPhone 13 Pro Max
   }
 };
 
@@ -69,7 +69,7 @@ export const isLandscape = (): boolean => {
  */
 export const getResponsiveSpacing = (base: number): number => {
   const screenSize = getScreenSize();
-  
+
   switch (screenSize) {
     case ScreenSize.SMALL:
       return base * 0.8;
@@ -89,7 +89,7 @@ export const getResponsiveSpacing = (base: number): number => {
  */
 export const getResponsiveFontSize = (base: number): number => {
   const screenSize = getScreenSize();
-  
+
   switch (screenSize) {
     case ScreenSize.SMALL:
       return base * 0.9;
@@ -119,19 +119,19 @@ export const getStatusBarHeight = (): number => {
  */
 export const useResponsiveDimensions = () => {
   const [dimensions, setDimensions] = useState(() => Dimensions.get('window'));
-  
+
   useEffect(() => {
     const subscription = Dimensions.addEventListener('change', ({ window }) => {
       setDimensions(window);
     });
-    
+
     return () => subscription?.remove();
   }, []);
-  
+
   const deviceType = getDeviceType();
   const screenSize = getScreenSize();
   const landscape = dimensions.width > dimensions.height;
-  
+
   return {
     width: dimensions.width,
     height: dimensions.height,
@@ -153,32 +153,33 @@ export const useKeyboardAwareLayout = () => {
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const insets = useSafeAreaInsets();
-  
+
   useEffect(() => {
     const showEvent = 'keyboardDidShow';
     const hideEvent = 'keyboardDidHide';
-    
+
     const keyboardDidShow = (event: any) => {
       setKeyboardHeight(event.endCoordinates.height);
       setIsKeyboardVisible(true);
     };
-    
+
     const keyboardDidHide = () => {
       setKeyboardHeight(0);
       setIsKeyboardVisible(false);
     };
-    
+
     const showSubscription = Keyboard.addListener(showEvent, keyboardDidShow);
     const hideSubscription = Keyboard.addListener(hideEvent, keyboardDidHide);
-    
+
     return () => {
       showSubscription?.remove();
       hideSubscription?.remove();
     };
   }, []);
-  
-  const availableHeight = screenHeight - keyboardHeight - insets.top - insets.bottom;
-  
+
+  const availableHeight =
+    screenHeight - keyboardHeight - insets.top - insets.bottom;
+
   return {
     keyboardHeight,
     isKeyboardVisible,
@@ -193,29 +194,35 @@ export const useKeyboardAwareLayout = () => {
 export const getResponsiveLayout = () => {
   const screenSize = getScreenSize();
   const deviceType = getDeviceType();
-  
+
   return {
     // Container padding
     containerPadding: getResponsiveSpacing(16),
-    
+
     // Form element spacing
     formSpacing: getResponsiveSpacing(12),
-    
+
     // Button heights
     buttonHeight: deviceType === DeviceType.TABLET ? 56 : 44,
-    
+
     // Input heights
     inputHeight: deviceType === DeviceType.TABLET ? 52 : 44,
-    
+
     // Modal sizes
-    modalWidth: deviceType === DeviceType.TABLET ? 
-      Math.min(screenWidth * 0.7, 600) : 
-      screenWidth * 0.9,
-    
+    modalWidth:
+      deviceType === DeviceType.TABLET
+        ? Math.min(screenWidth * 0.7, 600)
+        : screenWidth * 0.9,
+
     // Grid columns
-    gridColumns: deviceType === DeviceType.TABLET ? 
-      (isLandscape() ? 4 : 3) : 
-      (isLandscape() ? 3 : 2),
+    gridColumns:
+      deviceType === DeviceType.TABLET
+        ? isLandscape()
+          ? 4
+          : 3
+        : isLandscape()
+        ? 3
+        : 2,
   };
 };
 
@@ -226,14 +233,54 @@ export const createResponsiveStyles = <T extends Record<string, any>>(
   baseStyles: T,
   responsiveOverrides?: {
     [K in ScreenSizeValue]?: Partial<T>;
-  }
+  },
 ): T => {
   const screenSize = getScreenSize();
   const overrides = responsiveOverrides?.[screenSize] || {};
-  
+
   return {
     ...baseStyles,
     ...overrides,
+  };
+};
+
+/**
+ * Get responsive grid columns based on device type
+ * Mobile phones: 2 columns (consistent across all phone sizes)
+ * Tablets: 3-4 columns depending on orientation
+ */
+export const getGridColumns = (): number => {
+  const deviceType = getDeviceType();
+
+  if (deviceType === DeviceType.TABLET) {
+    // Tablets get 3 columns in portrait, 4 in landscape
+    return isLandscape() ? 4 : 3;
+  }
+
+  // All mobile phones get 2 columns
+  return 2;
+};
+
+/**
+ * Get responsive grid card dimensions
+ */
+export const getGridCardDimensions = (
+  horizontalPadding: number,
+  cardGap: number,
+  aspectRatio: number,
+): { columns: number; gap: number; cardWidth: number; imageHeight: number } => {
+  const columns = getGridColumns();
+  const { width } = Dimensions.get('window');
+  const availableWidth = width - horizontalPadding * 2;
+  const totalGapWidth = cardGap * (columns - 1);
+  const cardWidth = (availableWidth - totalGapWidth) / columns;
+  const imageHeight = cardWidth / aspectRatio;
+
+  return {
+    columns,
+    gap: cardGap,
+    cardWidth,
+    imageHeight,
   };
 };
 
@@ -250,4 +297,6 @@ export default {
   useKeyboardAwareLayout,
   getResponsiveLayout,
   createResponsiveStyles,
+  getGridColumns,
+  getGridCardDimensions,
 };

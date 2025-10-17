@@ -5,6 +5,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import TopBar from '../components/TopBar';
 import CategoryRail from '../components/CategoryRail';
+import ActionBar from '../components/ActionBar';
 import CategoryGridScreen from './CategoryGridScreen';
 import EnhancedJobsScreen from './EnhancedJobsScreen';
 import type { AppStackParamList } from '../types/navigation';
@@ -21,7 +22,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
   const [activeCategory, setActiveCategory] = useState('mikvah');
   const [searchQuery, setSearchQuery] = useState('');
   const [jobMode, setJobMode] = useState<'seeking' | 'hiring'>('hiring');
-  const [scrollY, setScrollY] = useState(0);
+  const [isScrolled, setIsScrolled] = useState(false);
 
   // Handle category navigation from route params (from Favorites screen)
   useEffect(() => {
@@ -59,6 +60,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
 
   const handleScroll = useCallback((offsetY: number) => {
     setScrollY(offsetY);
+    setIsScrolled(offsetY > 10);
   }, []);
 
   const handleAddSpecial = useCallback(() => {
@@ -82,21 +84,33 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
     return categoryMap[categoryKey] || 'Place';
   }, []);
 
+  const headerHeight = isScrolled ? 150 : 100;
+
   return (
     <View style={styles.container}>
-      {/* Always show TopBar with search */}
-      <TopBar
-        onQueryChange={handleSearchChange}
-        placeholder={
-          activeCategory === 'jobs' ? 'Find a job' : 'Search places, events...'
-        }
-        onAddSpecial={handleAddSpecial}
-      />
-      <CategoryRail
-        activeCategory={activeCategory}
-        onCategoryChange={handleCategoryChange}
-        compact={isCompact}
-      />
+      <View style={[styles.stickyHeader, { height: headerHeight }]}>
+        <TopBar
+          onQueryChange={handleSearchChange}
+          placeholder={
+            activeCategory === 'jobs'
+              ? 'Find a job'
+              : 'Search places, events...'
+          }
+          onAddSpecial={handleAddSpecial}
+        />
+        <CategoryRail
+          activeCategory={activeCategory}
+          onCategoryChange={handleCategoryChange}
+          compact={isCompact}
+        />
+        {isScrolled && (
+          <ActionBar
+            onActionPress={handleActionPress}
+            currentCategory={activeCategory}
+            jobMode={activeCategory === 'jobs' ? jobMode : undefined}
+          />
+        )}
+      </View>
       {activeCategory === 'jobs' ? (
         <EnhancedJobsScreen onScroll={handleScroll} />
       ) : (
@@ -106,6 +120,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
           jobMode={activeCategory === 'jobs' ? jobMode : undefined}
           onScroll={handleScroll}
           onActionPress={handleActionPress}
+          paddingTop={headerHeight}
         />
       )}
     </View>
@@ -115,6 +130,14 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: Colors.background.primary,
+  },
+  stickyHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 1,
     backgroundColor: Colors.background.primary,
   },
   scrollContent: {

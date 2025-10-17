@@ -133,7 +133,7 @@ export type TabParamList = {
         businessName?: string;
       }
     | undefined;
-  Notifications: undefined;
+  LiveMap: undefined;
   Profile: undefined;
 };
 

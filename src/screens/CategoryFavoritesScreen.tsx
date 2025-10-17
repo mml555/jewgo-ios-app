@@ -20,7 +20,7 @@ import {
   BorderRadius,
   Shadows,
 } from '../styles/designSystem';
-import type { RootStackParamList } from '../types/navigation';
+import type { AppStackParamList } from '../types/navigation';
 import { useFavorites } from '../hooks/useFavorites';
 import { getCategoryInfo } from '../utils/categoryMapping';
 import { debugLog } from '../utils/logger';
@@ -28,11 +28,11 @@ import CategoryCard from '../components/CategoryCard';
 import Icon from 'react-native-vector-icons/Feather';
 
 type CategoryFavoritesRouteProp = RouteProp<
-  RootStackParamList,
+  AppStackParamList,
   'CategoryFavorites'
 >;
 type CategoryFavoritesNavigationProp = StackNavigationProp<
-  RootStackParamList,
+  AppStackParamList,
   'CategoryFavorites'
 >;
 
@@ -197,10 +197,7 @@ const CategoryFavoritesScreen: React.FC = () => {
         <TouchableOpacity
           style={styles.exploreButton}
           onPress={() => {
-            navigation.navigate('MainTabs', {
-              screen: 'Explore',
-              params: { category: categoryKey },
-            });
+            navigation.navigate('MainTabs');
           }}
         >
           <Text style={styles.exploreButtonText}>
@@ -228,7 +225,7 @@ const CategoryFavoritesScreen: React.FC = () => {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.errorContainer}>
-          <Icon name="alert-triangle" size={64} color={Colors.error.main} />
+          <Icon name="alert-triangle" size={64} color={Colors.status.error} />
           <Text style={styles.errorTitle}>Error Loading Favorites</Text>
           <Text style={styles.errorDescription}>
             We couldn't load your favorites. Please check your connection and
@@ -359,7 +356,7 @@ const styles = StyleSheet.create({
   },
   errorTitle: {
     ...Typography.styles.h3,
-    color: Colors.error.main,
+    color: Colors.status.error,
     marginTop: Spacing.md,
     textAlign: 'center',
   },

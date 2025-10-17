@@ -20,6 +20,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
+import type { AppStackParamList } from '../types/navigation';
 import {
   Colors,
   Typography,
@@ -28,7 +29,6 @@ import {
   Shadows,
   TouchTargets,
 } from '../styles/designSystem';
-import type { AppStackParamList } from '../types/navigation';
 import SpecialCard, { DealGridCard } from '../components/SpecialCard';
 import { SkeletonGrid } from '../components/SkeletonLoader';
 import { errorLog, infoLog } from '../utils/logger';
@@ -64,11 +64,77 @@ const SpecialsGridScreen: React.FC<SpecialsGridScreenProps> = ({
   onScroll,
   onActionPress,
 }) => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<StackNavigationProp<AppStackParamList>>();
   const { toggleFavorite } = useFavorites();
 
   // State management
-  const [specials, setSpecials] = useState<ActiveSpecial[]>([]);
+  const [specials, setSpecials] = useState<
+    (DealGridCard & {
+      businessName: string;
+      businessId: string;
+      description?: string;
+      rating?: number;
+      reviewCount?: number;
+      category?: string;
+      discountLabel: string;
+    })[]
+  >([]);
+
+  // Convert ActiveSpecial to DealGridCard with additional properties
+  const convertToDealGridCard = useCallback(
+    (
+      special: ActiveSpecial,
+    ): DealGridCard & {
+      businessName: string;
+      businessId: string;
+      description?: string;
+      rating?: number;
+      reviewCount?: number;
+      category?: string;
+      discountLabel: string;
+    } => {
+      return {
+        id: special.id,
+        title: special.title,
+        imageUrl: special.imageUrl || '',
+        badge: {
+          text: special.discountLabel,
+          type: 'custom' as const,
+        },
+        merchantName: special.businessName,
+        price: {
+          original: 0, // Not available in ActiveSpecial
+          sale: 0, // Not available in ActiveSpecial
+          currency: 'USD' as const,
+        },
+        timeLeftSeconds: special.validUntil
+          ? Math.max(0, new Date(special.validUntil).getTime() - Date.now()) /
+            1000
+          : undefined,
+        claimsLeft: special.maxClaimsTotal
+          ? special.maxClaimsTotal - special.claimsTotal
+          : undefined,
+        totalClaims: special.maxClaimsTotal,
+        views: 0, // Not available in ActiveSpecial
+        distanceMiles: 0, // Not available in ActiveSpecial
+        addressShort: `${special.city}, ${special.state}`,
+        isLiked: false, // Not available in ActiveSpecial
+        showHeart: true,
+        isClaimed: false, // Not available in ActiveSpecial
+        ctaText: 'Click to Claim',
+        discountType: 'other' as const,
+        // Additional properties for compatibility
+        businessName: special.businessName,
+        businessId: special.businessId,
+        description: special.description,
+        rating: special.rating,
+        reviewCount: special.reviewCount,
+        category: special.category,
+        discountLabel: special.discountLabel,
+      };
+    },
+    [],
+  );
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -180,7 +246,7 @@ const SpecialsGridScreen: React.FC<SpecialsGridScreenProps> = ({
         const specialsData = response.data.specials || response.data;
 
         if (Array.isArray(specialsData)) {
-          setSpecials(specialsData);
+          setSpecials(specialsData.map(convertToDealGridCard));
 
           // Debug: Log specials data structure to help configure filters
           if (__DEV__ && specialsData.length > 0) {
@@ -238,7 +304,6 @@ const SpecialsGridScreen: React.FC<SpecialsGridScreenProps> = ({
       // Navigate to special detail screen
       navigation.navigate('SpecialDetail', {
         specialId: special.id,
-        businessId: special.businessId,
       });
     },
     [navigation],
@@ -251,7 +316,6 @@ const SpecialsGridScreen: React.FC<SpecialsGridScreenProps> = ({
 
       const claimResponse = await specialsService.claimSpecial({
         specialId: special.id,
-        businessId: special.businessId,
       });
 
       if (claimResponse.success) {
@@ -334,7 +398,7 @@ const SpecialsGridScreen: React.FC<SpecialsGridScreenProps> = ({
       });
     }
 
-    return filtered.map(transformSpecial);
+    return filtered;
   }, [specials, query, selectedFilter]);
 
   // Memoized render item for FlatList
@@ -343,11 +407,22 @@ const SpecialsGridScreen: React.FC<SpecialsGridScreenProps> = ({
       <SpecialCard
         item={item}
         onPress={handleOfferPress}
-        onClaim={handleClaimOffer}
+        onClaim={dealId => {
+          const special = specials.find(s => s.id === dealId);
+          if (special) {
+            handleClaimOffer(special);
+          }
+        }}
         onToggleLike={handleToggleLike}
       />
     ),
-    [handleOfferPress, handleClaimOffer, handleToggleLike],
+    [
+      handleOfferPress,
+      handleClaimOffer,
+      handleToggleLike,
+      specials,
+      convertToDealGridCard,
+    ],
   );
 
   // Memoized key extractor
@@ -481,7 +556,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: Colors.border.light,
+    borderColor: Colors.border.secondary,
   },
   filterPillActive: {
     backgroundColor: Colors.primary.main,

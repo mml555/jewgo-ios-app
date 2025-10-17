@@ -53,12 +53,22 @@ const BusinessJobsSection: React.FC<BusinessJobsSectionProps> = ({
 
       // Handle different response formats
       let jobsList = [];
-      if (response.jobListings) {
+      if ('jobListings' in response && response.jobListings) {
         jobsList = response.jobListings || [];
-      } else if (response.data?.jobListings) {
-        jobsList = response.data.jobListings || [];
-      } else if (response.success && response.data) {
-        jobsList = response.data.jobListings || [];
+      } else if (
+        'data' in response &&
+        response.data &&
+        typeof response.data === 'object' &&
+        'jobListings' in response.data
+      ) {
+        jobsList = (response.data as any).jobListings || [];
+      } else if (
+        'success' in response &&
+        response.success &&
+        'data' in response &&
+        response.data
+      ) {
+        jobsList = (response.data as any).jobListings || [];
       }
 
       // Debug: Log first job's requirements format
@@ -283,7 +293,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   jobTitle: {
-    ...Typography.styles.h5,
+    ...Typography.styles.h4,
     fontFamily: 'Nunito-Bold',
     marginBottom: Spacing.xs,
   },
@@ -301,7 +311,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
     paddingVertical: Spacing.xs,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border.light,
+    borderBottomColor: Colors.border.secondary,
   },
   requirementsSection: {
     marginBottom: Spacing.sm,
@@ -331,7 +341,7 @@ const styles = StyleSheet.create({
     marginTop: Spacing.sm,
     paddingTop: Spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: Colors.border.light,
+    borderTopColor: Colors.border.secondary,
   },
   salaryContainer: {
     flexDirection: 'row',
