@@ -62,16 +62,26 @@ class EventsDeepLinkService {
 
       // Handle query parameters for filtering
       const queryParams = new URLSearchParams(parsedUrl.search);
+      const navParams: any = {};
+
       if (queryParams.has('category')) {
-        // TODO: Apply category filter when navigating to events
-        debugLog('Category filter from deep link:', queryParams.get('category'));
+        navParams.initialCategory = queryParams.get('category');
+        debugLog('Category filter from deep link:', navParams.initialCategory);
       }
 
       if (queryParams.has('search')) {
-        // TODO: Apply search filter when navigating to events
-        debugLog('Search filter from deep link:', queryParams.get('search'));
+        navParams.initialSearch = queryParams.get('search');
+        debugLog('Search filter from deep link:', navParams.initialSearch);
       }
 
+      // Apply filters if any exist
+      if (Object.keys(navParams).length > 0 && eventId) {
+        // If navigating to specific event, pass filters for when user returns to list
+        NavigationService.navigate('EventDetail', { eventId, ...navParams });
+      } else if (Object.keys(navParams).length > 0) {
+        // If no specific event, navigate to events list with filters
+        NavigationService.navigate('Events', navParams);
+      }
     } catch (error) {
       errorLog('Error parsing events deep link:', error);
     }

@@ -78,17 +78,14 @@ const JobSeekerDetailScreen: React.FC = () => {
       if (response.profile) {
         setProfile(response.profile);
         setIsSaved(response.profile.is_saved || false);
-        console.log('✅ Profile loaded successfully:', response.profile.name);
+        debugLog('Profile loaded successfully:', response.profile.name);
       } else {
-        console.log('❌ No profile data in response');
-        console.log(
-          '❌ Full response object:',
-          JSON.stringify(response, null, 2),
-        );
+        debugLog('No profile data in response');
+        debugLog('❌ Full response object:', JSON.stringify(response, null, 2));
         Alert.alert('Error', 'No profile data found');
       }
     } catch (error) {
-      console.error('❌ Error loading profile:', error);
+      errorLog('Error loading profile:', error);
       Alert.alert('Error', 'Failed to load profile');
       navigation.goBack();
     } finally {
@@ -200,7 +197,7 @@ const JobSeekerDetailScreen: React.FC = () => {
   }
 
   if (!profile) {
-    console.log('❌ No profile data available for rendering');
+    debugLog('No profile data available for rendering');
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.errorContainer}>
@@ -222,7 +219,7 @@ const JobSeekerDetailScreen: React.FC = () => {
   }
 
   // Debug logging for profile data
-  console.log('🎨 Rendering profile with data:', {
+  debugLog('Rendering profile with data:', {
     name: profile.name,
     bio: profile.bio,
     industry_name: profile.industry_name,
@@ -274,7 +271,7 @@ const JobSeekerDetailScreen: React.FC = () => {
                 source={{ uri: profile.headshot_url }}
                 style={styles.profileImage}
                 onError={() => {
-                  console.log('Failed to load headshot image');
+                  errorLog('Failed to load headshot image');
                 }}
               />
             ) : (

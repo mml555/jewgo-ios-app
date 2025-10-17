@@ -86,7 +86,8 @@ const SpecialsScreen: React.FC<SpecialsScreenProps> = ({ onSearchChange }) => {
       <TopBar
         onQueryChange={handleSearchChange}
         placeholder="Find your Special"
-        onAddSpecial={handleAddSpecial}
+        onAddEntity={handleAddSpecial}
+        addButtonText="Add Special"
       />
       <CategoryRail
         activeCategory={activeCategory}

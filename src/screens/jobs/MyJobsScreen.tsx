@@ -599,7 +599,7 @@ const MyJobsScreen: React.FC = () => {
       {activeTab === 'listings' && (
         <TouchableOpacity
           style={styles.emptyButton}
-          onPress={() => navigation.navigate('CreateJob' as never)}
+          onPress={() => navigation.navigate('CreateJobV2', undefined)}
         >
           <Text style={styles.emptyButtonText}>Create Job</Text>
         </TouchableOpacity>

@@ -25,7 +25,6 @@ import PaymentInfoScreen from '../screens/PaymentInfoScreen';
 import JobDetailScreen from '../screens/JobDetailScreen';
 import JobSeekingScreen from '../screens/JobSeekingScreen';
 import JobSeekersScreen from '../screens/JobSeekersScreen';
-import JobSeekerDetailScreen from '../screens/JobSeekerDetailScreen';
 // Events screens
 import EventsScreen from '../screens/events/EventsScreen';
 import EventDetailScreen from '../screens/events/EventDetailScreen';
@@ -46,7 +45,6 @@ import MyJobsScreen from '../screens/jobs/MyJobsScreen';
 import JobSeekerProfilesScreen from '../screens/jobs/JobSeekerProfilesScreen';
 import JobSeekerDetailScreenV2 from '../screens/jobs/JobSeekerDetailScreen';
 import CreateJobSeekerProfileScreen from '../screens/jobs/CreateJobSeekerProfileScreen';
-import JobDetailScreenV2 from '../screens/jobs/JobDetailScreen';
 // Boost screens
 import MikvahBoostScreen from '../screens/boost/MikvahBoostScreen';
 import EateryBoostScreen from '../screens/boost/EateryBoostScreen';
@@ -243,14 +241,6 @@ const AppNavigator: React.FC = () => {
           presentation: 'card',
         }}
       />
-      <Stack.Screen
-        name="JobSeekerDetail"
-        component={JobSeekerDetailScreen}
-        options={{
-          headerShown: false,
-          presentation: 'card',
-        }}
-      />
       {/* Enhanced Jobs System */}
       <Stack.Screen
         name="JobListings"
@@ -295,14 +285,6 @@ const AppNavigator: React.FC = () => {
       <Stack.Screen
         name="CreateJobSeekerProfile"
         component={CreateJobSeekerProfileScreen}
-        options={{
-          headerShown: false,
-          presentation: 'card',
-        }}
-      />
-      <Stack.Screen
-        name="JobDetailV2"
-        component={JobDetailScreenV2}
         options={{
           headerShown: false,
           presentation: 'card',

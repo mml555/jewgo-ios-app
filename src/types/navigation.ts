@@ -66,9 +66,6 @@ export type AppStackParamList = {
   };
   JobSeeking: undefined;
   JobSeekers: undefined;
-  JobSeekerDetail: {
-    jobSeekerId: string;
-  };
   // Enhanced Jobs screens
   JobListings: undefined;
   CreateJobV2:
@@ -81,9 +78,6 @@ export type AppStackParamList = {
   JobSeekerProfiles: undefined;
   JobSeekerDetailV2: {
     profileId: string;
-  };
-  JobDetailV2: {
-    jobId: string;
   };
   CreateJobSeekerProfile: undefined;
   // Events screens

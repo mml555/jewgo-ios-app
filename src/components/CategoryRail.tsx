@@ -20,6 +20,7 @@ interface CategoryRailProps {
   activeCategory: string;
   onCategoryChange: (category: string) => void;
   compact?: boolean;
+  variant?: 'default' | 'sticky';
 }
 
 interface Category {
@@ -109,6 +110,7 @@ const CategoryRail: React.FC<CategoryRailProps> = ({
   activeCategory,
   onCategoryChange,
   compact = false,
+  variant = 'default',
 }) => {
   const listRef = useRef<FlatList<Category>>(null);
 
@@ -242,6 +244,43 @@ const CategoryRail: React.FC<CategoryRailProps> = ({
     [],
   );
 
+  // For sticky variant, don't show the horizontal scroll; show a static row instead
+  if (variant === 'sticky') {
+    return (
+      <View
+        style={[
+          styles.container,
+          styles.containerSticky,
+          compact && styles.containerCompact,
+        ]}
+      >
+        <View
+          style={[
+            styles.scrollContent,
+            styles.stickyContent,
+            compact && styles.scrollContentCompact,
+          ]}
+        >
+          {CATEGORIES.map((item, index) => {
+            const isActive = activeCategory === item.id;
+            return (
+              <React.Fragment key={item.id}>
+                {index > 0 && <View style={styles.separator} />}
+                <CategoryChip
+                  item={item}
+                  isActive={isActive}
+                  compact={compact}
+                  onPress={onCategoryChange}
+                />
+              </React.Fragment>
+            );
+          })}
+        </View>
+      </View>
+    );
+  }
+
+  // Default variant with horizontal scroll
   return (
     <View style={[styles.container, compact && styles.containerCompact]}>
       <FlatList
@@ -317,8 +356,15 @@ const styles = StyleSheet.create({
     position: 'relative',
     marginBottom: 26, // 20px visual gap to ActionBar (rail extends down 6px, so 20+6=26)
   },
+  containerSticky: {
+    marginBottom: 0, // No margin bottom for sticky variant
+  },
   containerCompact: {
     height: 50, // Reduced height for compact mode
+  },
+  stickyContent: {
+    flexWrap: 'nowrap', // Don't wrap in sticky mode
+    justifyContent: 'flex-start',
   },
   scrollViewStyle: {
     flexGrow: 0, // Prevent ScrollView from expanding unnecessarily

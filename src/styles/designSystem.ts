@@ -716,6 +716,17 @@ export const ResponsiveTypography = {
   },
 };
 
+// StickyLayout constants for sticky header system
+// Contract: These are the single source of truth for sticky measurements
+export const StickyLayout = {
+  searchBarHeight: 56, // TopBar/SearchBar fixed height
+  laneGap: 0, // Vertical gap between Lane A and Lane B
+  actionBarHeight: 48, // ActionBar height when shown in Lane B
+  scrollBuffer: 6, // Hysteresis buffer to prevent threshold flicker
+  categoryRailHeightDefault: 96, // Conservative fallback for CategoryRail
+  locationBannerHeightDefault: 80, // Conservative fallback for LocationBanner
+};
+
 // Initialize accessibility validation in development
 if (__DEV__) {
   Accessibility.validateColors();
