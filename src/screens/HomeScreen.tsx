@@ -56,11 +56,36 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
     // For now, we'll just log the action
   }, []);
 
-  const handleAddSpecial = useCallback(() => {
-    // Navigate to the Specials tab where users can create specials
-    // Note: This assumes we're already in the tab navigator
-    debugLog('Navigate to Specials tab');
-  }, [navigation]);
+  const getAddButtonText = useCallback((category: string) => {
+    const categoryMap: { [key: string]: string } = {
+      mikvah: 'Add Mikvah',
+      eatery: 'Add Eatery',
+      shul: 'Add Shul',
+      stores: 'Add Store',
+      specials: 'Add Special',
+      shtetl: 'Add Store',
+      jobs: 'Add Job',
+      events: 'Add Event',
+    };
+    return categoryMap[category] || 'Add Entity';
+  }, []);
+
+  const handleAddEntity = useCallback(() => {
+    // Navigate to the appropriate add screen based on current category
+    debugLog('Navigate to Add Entity for category:', activeCategory);
+
+    if (activeCategory === 'mikvah') {
+      navigation.navigate('AddMikvah');
+    } else if (activeCategory === 'shul') {
+      navigation.navigate('AddSynagogue');
+    } else if (activeCategory === 'jobs') {
+      navigation.navigate('CreateJobV2');
+    } else if (activeCategory === 'events') {
+      navigation.navigate('CreateEvent');
+    } else {
+      (navigation as any).navigate('AddCategory', { category: activeCategory });
+    }
+  }, [navigation, activeCategory]);
 
   return (
     <View style={styles.container}>
@@ -69,7 +94,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
         placeholder={
           activeCategory === 'jobs' ? 'Find a job' : 'Search places, events...'
         }
-        onAddSpecial={handleAddSpecial}
+        onAddEntity={handleAddEntity}
+        addButtonText={getAddButtonText(activeCategory)}
       />
       <CategoryRail
         activeCategory={activeCategory}

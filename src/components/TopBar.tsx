@@ -16,14 +16,16 @@ interface TopBarProps {
   onQueryChange: (query: string) => void;
   debounceMs?: number;
   placeholder?: string;
-  onAddSpecial?: () => void;
+  onAddEntity?: () => void;
+  addButtonText?: string;
 }
 
 const TopBar: React.FC<TopBarProps> = ({
   onQueryChange,
   debounceMs = 250,
   placeholder,
-  onAddSpecial,
+  onAddEntity,
+  addButtonText = 'Add Entity',
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
@@ -130,17 +132,17 @@ const TopBar: React.FC<TopBarProps> = ({
               </TouchableOpacity>
             )}
 
-            {/* Add Special Button */}
+            {/* Add Entity Button */}
             <TouchableOpacity
-              style={styles.addSpecialButton}
-              onPress={onAddSpecial}
+              style={styles.addEntityButton}
+              onPress={onAddEntity}
               accessible={true}
               accessibilityRole="button"
-              accessibilityLabel="Add a Special"
-              accessibilityHint="Opens the form to add a new special offer"
+              accessibilityLabel="Add Entity"
+              accessibilityHint="Opens the form to add a new entity"
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Text style={styles.addSpecialButtonText}>Add a Special +</Text>
+              <Text style={styles.addEntityButtonText}>{addButtonText} +</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -226,7 +228,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
   },
-  addSpecialButton: {
+  addEntityButton: {
     backgroundColor: Colors.jewgoGreen,
     borderRadius: 20, // Oval shape - height/2
     paddingHorizontal: Spacing.sm,
@@ -237,7 +239,7 @@ const styles = StyleSheet.create({
     minHeight: 32,
     maxHeight: 32,
   },
-  addSpecialButtonText: {
+  addEntityButtonText: {
     fontSize: 12,
     color: Colors.white,
     fontWeight: '600',
