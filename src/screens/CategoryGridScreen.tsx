@@ -22,7 +22,6 @@ import { useLocation, calculateDistance } from '../hooks/useLocation';
 import CategoryCard from '../components/CategoryCard';
 import JobCard from '../components/JobCard';
 import FastButton from '../components/FastButton';
-import ActionBar from '../components/ActionBar';
 import { SkeletonGrid } from '../components/SkeletonLoader';
 import {
   Colors,
@@ -42,7 +41,6 @@ interface CategoryGridScreenProps {
   categoryKey: string;
   query?: string;
   jobMode?: 'seeking' | 'hiring';
-  onScroll?: (offsetY: number) => void;
   onActionPress?: (action: string) => void;
 }
 
@@ -50,7 +48,6 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
   categoryKey,
   query = '',
   jobMode = 'hiring',
-  onScroll,
   onActionPress,
 }) => {
   const navigation = useNavigation();
@@ -73,7 +70,7 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
   // Redirect to Specials tab for specials category
   useEffect(() => {
     if (categoryKey === 'specials') {
-      navigation.navigate('MainTabs', { screen: 'Specials' });
+      debugLog('Specials category selected - handled by tab navigator');
     }
   }, [categoryKey, navigation]);
 
@@ -847,13 +844,9 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
   );
 
   // Handle scroll to report position to parent
-  const handleScrollEvent = useCallback(
-    (event: any) => {
-      const offsetY = event.nativeEvent.contentOffset.y;
-      onScroll?.(offsetY);
-    },
-    [onScroll],
-  );
+  const handleScrollEvent = useCallback(() => {
+    // No scroll tracking needed for flat layout
+  }, []);
 
   // Handle end reached for infinite scroll
   const handleEndReached = useCallback(() => {
@@ -944,16 +937,10 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
     );
   }, [error]);
 
-  // Render ActionBar and location banners as list header
+  // Render location banners as list header
   const renderListHeader = useCallback(() => {
     return (
       <>
-        <ActionBar
-          onActionPress={onActionPress}
-          currentCategory={categoryKey}
-          jobMode={jobMode}
-        />
-
         {/* Location Permission Banner */}
         {!location && !permissionGranted && (
           <View style={styles.locationPermissionBanner}>
@@ -1004,9 +991,6 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
       </>
     );
   }, [
-    onActionPress,
-    categoryKey,
-    jobMode,
     location,
     permissionGranted,
     locationLoading,
@@ -1052,7 +1036,6 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
         refreshControl={refreshControl}
         onEndReached={handleEndReached}
         onEndReachedThreshold={0.5}
-        onScroll={handleScrollEvent}
         scrollEventThrottle={16}
         ListHeaderComponent={renderListHeader}
         ListFooterComponent={renderFooter}
@@ -1078,7 +1061,7 @@ const styles = StyleSheet.create({
   locationPermissionBanner: {
     backgroundColor: '#FFFFFF',
     marginHorizontal: Spacing.md,
-    marginTop: 0, // ActionBar provides spacing
+    marginTop: 0, // No ActionBar in this component
     marginBottom: 20, // Consistent 20px spacing to grid
     borderRadius: BorderRadius.lg,
     shadowColor: '#000',

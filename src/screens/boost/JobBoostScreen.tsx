@@ -7,8 +7,8 @@ export default function JobBoostScreen() {
   const nav = useNavigation<any>();
   return (
     <BoostTemplate
-      accent={BoostPalette.jobs?.accent || '#3b82f6'}
-      bg={BoostPalette.jobs?.bg || '#eff6ff'}
+      accent={BoostPalette.jobs.accent}
+      bg={BoostPalette.jobs.bg}
       title="Job Boost ⚡"
       headline="Find the Perfect Candidate Faster."
       subcopy="Make your job listing stand out and connect with qualified candidates in the Jewish community."

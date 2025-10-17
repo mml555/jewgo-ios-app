@@ -43,6 +43,13 @@ export const BoostPalette = {
     text: '#292B2D',
     context: 'Synagogue services',
   }, // complementary
+  jobs: {
+    accent: '#3b82f6',
+    bg: '#eff6ff',
+    gradient: 'linear(180deg, #3b82f6 0%, #eff6ff 100%)',
+    text: '#292B2D',
+    context: 'Job listings and career opportunities',
+  },
 } as const;
 
 export type BoostKind = keyof typeof BoostPalette;

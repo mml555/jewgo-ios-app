@@ -281,7 +281,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center', // vertical centering for all buttons
     justifyContent: 'space-between',
-    marginHorizontal: 0, // no margin - let parent container control padding
+    marginHorizontal: ResponsiveSpacing.md, // Add horizontal margin for screen edge padding
     marginTop: 0, // Remove top margin to position directly below search bar
     paddingBottom: ResponsiveSpacing.get(12), // anchor closer to grid
     backgroundColor: 'transparent',
