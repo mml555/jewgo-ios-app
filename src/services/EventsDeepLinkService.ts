@@ -48,6 +48,7 @@ class EventsDeepLinkService {
       // Parse URL to extract route and parameters
       const parsedUrl = new URL(url);
       const pathSegments = parsedUrl.pathname.split('/').filter(Boolean);
+      let eventId: string | undefined;
 
       if (pathSegments[0] === 'events') {
         if (pathSegments.length === 1) {
@@ -55,7 +56,7 @@ class EventsDeepLinkService {
           navigationService.app.navigateToEvents();
         } else if (pathSegments.length === 2) {
           // /events/:eventId - Navigate to specific event
-          const eventId = pathSegments[1];
+          eventId = pathSegments[1];
           navigationService.app.navigateToEventDetail({ eventId });
         }
       }
@@ -77,10 +78,10 @@ class EventsDeepLinkService {
       // Apply filters if any exist
       if (Object.keys(navParams).length > 0 && eventId) {
         // If navigating to specific event, pass filters for when user returns to list
-        NavigationService.navigate('EventDetail', { eventId, ...navParams });
+        navigationService.navigate('EventDetail', { eventId, ...navParams });
       } else if (Object.keys(navParams).length > 0) {
         // If no specific event, navigate to events list with filters
-        NavigationService.navigate('Events', navParams);
+        navigationService.navigate('Events', navParams);
       }
     } catch (error) {
       errorLog('Error parsing events deep link:', error);

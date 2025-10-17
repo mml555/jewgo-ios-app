@@ -103,6 +103,28 @@ export type AppStackParamList = {
   AdminDashboard: undefined;
   ReviewQueue: undefined;
   FlaggedContent: undefined;
+  // Boost screens
+  MikvahBoost: {
+    listingId: string;
+  };
+  EateryBoost: {
+    listingId: string;
+  };
+  ShulBoost: {
+    listingId: string;
+  };
+  StoreBoost: {
+    storeId: string;
+  };
+  SpecialsBoost: {
+    specialId: string;
+  };
+  EventBoost: {
+    eventId: string;
+  };
+  JobBoost: {
+    jobId: string;
+  };
 };
 
 // Auth Navigator - handles authentication screens

@@ -35,26 +35,12 @@ interface ProductManagementParams {
 const ProductManagementScreen: React.FC = () => {
   const route = useRoute();
   const navigation = useNavigation();
-  
+
   // Validate route params
   const params = route.params as ProductManagementParams | undefined;
-  
-  useEffect(() => {
-    if (!params?.storeId) {
-      Alert.alert(
-        'Error',
-        'Missing store information. Please try again.',
-        [{ text: 'OK', onPress: () => navigation.goBack() }]
-      );
-    }
-  }, [params, navigation]);
-  
-  if (!params?.storeId) {
-    return <LoadingScreen />;
-  }
-  
-  const { storeId } = params;
+  const storeId = params?.storeId;
 
+  // All hooks must be called before any early returns
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -76,7 +62,18 @@ const ProductManagementScreen: React.FC = () => {
     tags: [],
   });
 
+  // Validate store ID and show error if missing
+  useEffect(() => {
+    if (!storeId) {
+      Alert.alert('Error', 'Missing store information. Please try again.', [
+        { text: 'OK', onPress: () => navigation.goBack() },
+      ]);
+    }
+  }, [storeId, navigation]);
+
   const loadProducts = useCallback(async () => {
+    if (!storeId) return;
+
     try {
       setLoading(true);
       setError(null);
@@ -175,6 +172,11 @@ const ProductManagementScreen: React.FC = () => {
   }, [formData]);
 
   const handleSaveProduct = useCallback(async () => {
+    if (!storeId) {
+      Alert.alert('Error', 'Store ID is missing');
+      return;
+    }
+
     if (!validateForm()) {
       return;
     }
@@ -656,6 +658,11 @@ const ProductManagementScreen: React.FC = () => {
       </Modal>
     );
   };
+
+  // Early return if storeId is missing (after all hooks)
+  if (!storeId) {
+    return <LoadingScreen />;
+  }
 
   if (loading) {
     return (

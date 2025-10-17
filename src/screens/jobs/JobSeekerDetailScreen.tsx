@@ -21,6 +21,7 @@ import {
   BorderRadius,
   Shadows,
 } from '../../styles/designSystem';
+import { debugLog, errorLog } from '../../utils/logger';
 
 // Responsive scaling functions
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');

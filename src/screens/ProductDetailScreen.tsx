@@ -32,31 +32,28 @@ const { width: screenWidth } = Dimensions.get('window');
 const ProductDetailScreen: React.FC = () => {
   const route = useRoute();
   const navigation = useNavigation();
-  
+
   // Validate route params
   const params = route.params as ProductDetailParams | undefined;
-  
-  useEffect(() => {
-    if (!params?.productId || !params?.storeId) {
-      Alert.alert(
-        'Error',
-        'Missing product information. Please try again.',
-        [{ text: 'OK', onPress: () => navigation.goBack() }]
-      );
-    }
-  }, [params, navigation]);
-  
-  if (!params?.productId || !params?.storeId) {
-    return <LoadingScreen />;
-  }
-  
-  const { productId, storeId } = params;
+  const productId = params?.productId;
+  const storeId = params?.storeId;
 
+  // All hooks must be called before any early returns
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Validate params and show error if missing
+  useEffect(() => {
+    if (!productId || !storeId) {
+      Alert.alert('Error', 'Missing product information. Please try again.', [
+        { text: 'OK', onPress: () => navigation.goBack() },
+      ]);
+    }
+  }, [productId, storeId, navigation]);
+
   const loadProduct = useCallback(async () => {
+    if (!productId || !storeId) return;
     try {
       setLoading(true);
       setError(null);
@@ -135,6 +132,11 @@ const ProductDetailScreen: React.FC = () => {
       currency: currency,
     }).format(price);
   };
+
+  // Early return if params are missing (after all hooks)
+  if (!productId || !storeId) {
+    return <LoadingScreen />;
+  }
 
   if (loading) {
     return (

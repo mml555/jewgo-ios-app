@@ -32,34 +32,31 @@ interface StoreSpecialsRouteParams {
 const StoreSpecialsScreen: React.FC = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  
+
   // Validate route params
   const params = route.params as StoreSpecialsRouteParams | undefined;
-  
-  useEffect(() => {
-    if (!params?.storeId) {
-      Alert.alert(
-        'Error',
-        'Missing store information. Please try again.',
-        [{ text: 'OK', onPress: () => navigation.goBack() }]
-      );
-    }
-  }, [params, navigation]);
-  
-  if (!params?.storeId) {
-    return <LoadingScreen />;
-  }
-  
-  const { storeId } = params;
+  const storeId = params?.storeId;
 
+  // All hooks must be called before any early returns
   const [store, setStore] = useState<ShtetlStore | null>(null);
   const [specials, setSpecials] = useState<Special[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Validate store ID and show error if missing
+  useEffect(() => {
+    if (!storeId) {
+      Alert.alert('Error', 'Missing store information. Please try again.', [
+        { text: 'OK', onPress: () => navigation.goBack() },
+      ]);
+    }
+  }, [storeId, navigation]);
+
   const loadData = useCallback(
     async (showSpinner: boolean = true) => {
+      if (!storeId) return;
+
       if (showSpinner) {
         setLoading(true);
       } else {
@@ -222,6 +219,11 @@ const StoreSpecialsScreen: React.FC = () => {
       </View>
     );
   };
+
+  // Early return if storeId is missing (after all hooks)
+  if (!storeId) {
+    return <LoadingScreen />;
+  }
 
   if (loading) {
     return (

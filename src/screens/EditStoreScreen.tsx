@@ -65,26 +65,12 @@ const kosherLevels = [
 const EditStoreScreen: React.FC = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  
+
   // Validate route params
   const params = route.params as EditStoreRouteParams | undefined;
-  
-  useEffect(() => {
-    if (!params?.storeId) {
-      Alert.alert(
-        'Error',
-        'Missing store information. Please try again.',
-        [{ text: 'OK', onPress: () => navigation.goBack() }]
-      );
-    }
-  }, [params, navigation]);
-  
-  if (!params?.storeId) {
-    return <LoadingScreen />;
-  }
-  
-  const { storeId } = params;
+  const storeId = params?.storeId;
 
+  // All hooks must be called before any early returns
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState<CreateStoreForm>(EMPTY_FORM);
@@ -92,7 +78,17 @@ const EditStoreScreen: React.FC = () => {
     Partial<Record<keyof CreateStoreForm, string>>
   >({});
 
+  // Validate store ID and show error if missing
+  useEffect(() => {
+    if (!storeId) {
+      Alert.alert('Error', 'Missing store information. Please try again.', [
+        { text: 'OK', onPress: () => navigation.goBack() },
+      ]);
+    }
+  }, [storeId, navigation]);
+
   const loadStore = useCallback(async () => {
+    if (!storeId) return;
     try {
       setLoading(true);
       const response = await shtetlService.getStore(storeId);
@@ -181,6 +177,11 @@ const EditStoreScreen: React.FC = () => {
   }, [formData]);
 
   const handleSave = useCallback(async () => {
+    if (!storeId) {
+      Alert.alert('Error', 'Store ID is missing');
+      return;
+    }
+
     if (!validateForm()) {
       Alert.alert(
         'Validation Error',
@@ -241,6 +242,11 @@ const EditStoreScreen: React.FC = () => {
       {errors[field] && <Text style={styles.errorText}>{errors[field]}</Text>}
     </View>
   );
+
+  // Early return if storeId is missing (after all hooks)
+  if (!storeId) {
+    return <LoadingScreen />;
+  }
 
   if (loading) {
     return (
