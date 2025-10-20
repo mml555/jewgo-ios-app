@@ -36,8 +36,8 @@ const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 const SuccessCelebration: React.FC<SuccessCelebrationProps> = memo(
   ({
     visible,
-    title = 'Success!',
-    message = 'Your action was completed successfully.',
+    title = '🎉 Your Eatery Is Submitted!',
+    message = 'Our team reviews all new listings within 24-48 hours',
     icon = '🎉',
     onComplete,
     duration = 3000,
@@ -328,15 +328,15 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: Colors.black + '80',
+    backgroundColor: Colors.jetBlack + '80',
   },
   content: {
     backgroundColor: Colors.white,
-    borderRadius: BorderRadius.xl,
+    borderRadius: Spacing.formButtonRadius,
     padding: Spacing.xl,
     alignItems: 'center',
     maxWidth: screenWidth * 0.8,
-    shadowColor: Colors.black,
+    shadowColor: Colors.jewgoGreen,
     shadowOffset: {
       width: 0,
       height: 8,
@@ -344,6 +344,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 16,
     elevation: 10,
+    borderWidth: 2,
+    borderColor: Colors.jewgoGreen,
   },
   iconContainer: {
     marginBottom: Spacing.lg,
@@ -356,15 +358,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   title: {
-    ...Typography.styles.h2,
-    color: Colors.success,
+    ...Typography.formTitle,
+    color: Colors.jetBlack,
     textAlign: 'center',
     marginBottom: Spacing.sm,
     fontWeight: 'bold',
   },
   message: {
-    ...Typography.styles.body,
-    color: Colors.textSecondary,
+    ...Typography.formSubtitle,
+    color: Colors.softGray,
     textAlign: 'center',
     lineHeight: 24,
   },

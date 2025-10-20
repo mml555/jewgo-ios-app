@@ -1,18 +1,24 @@
-import React, {
-  useState,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-} from 'react';
-import { View, FlatList, StyleSheet, Dimensions, Alert } from 'react-native';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import {
+  View,
+  FlatList,
+  StyleSheet,
+  Dimensions,
+  Alert,
+  Platform,
+  LayoutAnimation,
+  UIManager,
+} from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { StackNavigationProp } from '@react-navigation/stack';
-import StickyStack from '../components/StickyStack';
-import GridListHeader, {
-  GridListHeaderRef,
-} from '../components/GridListHeader';
+import { BlurView } from '@react-native-community/blur';
+import TopBar from '../components/TopBar';
+import ActionBar from '../components/ActionBar';
+import StickyDebugOverlay from '../components/StickyDebugOverlay';
+import GridListScrollHeader, {
+  GridListScrollHeaderRef,
+} from '../components/GridListScrollHeader';
 import { useCategoryGridRenderProps } from './CategoryGridScreen';
 import EnhancedJobsScreen from './EnhancedJobsScreen';
 import { SkeletonGrid } from '../components/SkeletonLoader';
@@ -29,27 +35,25 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
   const navigation = useNavigation<StackNavigationProp<AppStackParamList>>();
   const route = useRoute();
   const insets = useSafeAreaInsets();
-  const headerRailRef = useRef<GridListHeaderRef>(null);
+  const headerRailRef = useRef<GridListScrollHeaderRef>(null);
 
   // Core state
   const [activeCategory, setActiveCategory] = useState('mikvah');
   const [searchQuery, setSearchQuery] = useState('');
   const [jobMode, setJobMode] = useState<'seeking' | 'hiring'>('hiring');
 
-  // Measurement state with conservative fallbacks
-  const [railHeight, setRailHeight] = useState(
-    StickyLayout.categoryRailHeightDefault,
-  );
-  const [bannerHeight, setBannerHeight] = useState(
-    StickyLayout.locationBannerHeightDefault,
-  );
-  const [measurementComplete, setMeasurementComplete] = useState(false);
+  // Scroll-away section height (Rail + ActionBar + Banner) - NOT including TopBar
+  const restHeaderHRef = useRef(0); // LOCKED resting header height (never changes after first measurement)
+  const [scrollHeaderH, setScrollHeaderH] = useState(0); // For debug overlay only
 
   // Scroll state
-  const [showActionBar, setShowActionBar] = useState(false);
+  const [scrollY, setScrollY] = useState(0);
+  const [showSticky, setShowSticky] = useState(false);
 
-  // Layout dirty flag for orientation/RTL changes
-  const [layoutDirty, setLayoutDirty] = useState(false);
+  // Clear intent: ActionBar placement
+  // Show ActionBar in header when NOT sticky (rest state)
+  // Initially true to allow measurement, then controlled by scroll position
+  const showActionBarInHeader = !showSticky;
 
   // Location hooks
   const {
@@ -57,7 +61,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
     requestLocationPermission,
     permissionGranted,
     getCurrentLocation,
-    loading: locationLoading,
   } = useLocation();
 
   // Handle category navigation from route params (from Favorites screen)
@@ -71,47 +74,203 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
     }
   }, [route.params, navigation]);
 
-  // Listen for orientation changes
+  // Live measurements - single source of truth (no more magic numbers!)
+  const SAFE_TOP = insets.top;
+  const [searchHeight, setSearchHeight] = useState(0);
+  const [actionBarHeight, setActionBarHeight] = useState(0);
+  const GAP = StickyLayout.laneGap; // Shared gap between TopBar and the next lane
+
+  // The TopBar already reports its height including safe area padding, so do
+  // not double count SAFE_TOP. Fallback to design tokens until we measure.
+  const topBarHeight =
+    searchHeight > 0 ? searchHeight : SAFE_TOP + StickyLayout.searchBarHeight;
+  const measuredActionBarHeight =
+    actionBarHeight > 0 ? actionBarHeight : StickyLayout.actionBarHeight;
+  const stickyLaneOffset = topBarHeight + GAP;
+  // Single source of truth for sticky height (TopBar + gap + ActionBar)
+  const stickyH = stickyLaneOffset + measuredActionBarHeight;
+
+  // FlatList padding equals the area permanently occupied by TopBar + gap.
+  const listPaddingTop = stickyLaneOffset;
+  const stickyGridInset = showSticky ? StickyLayout.overlayGridInset : 0;
+  const gridPaddingTop = listPaddingTop + stickyGridInset;
+
+  // How much of the scroll header must pass before ActionBar reaches the TopBar
+  const headerPreActionHeight =
+    scrollHeaderH > 0
+      ? Math.max(0, scrollHeaderH - measuredActionBarHeight)
+      : StickyLayout.categoryRailHeightDefault + StickyLayout.railActionGap;
+
+  // Threshold where sticky state begins (TopBar height + gap + category rail)
+  const THRESHOLD_BASE = topBarHeight + headerPreActionHeight;
+  const revealOffset = StickyLayout.stickyRevealOffset ?? 0;
+  const thresholdCandidate = stickyH - revealOffset;
+  const THRESHOLD = Math.max(
+    topBarHeight,
+    Math.min(THRESHOLD_BASE, thresholdCandidate),
+  );
+  const STICKY_ENTER = THRESHOLD + StickyLayout.stickyHysteresis;
+  const STICKY_EXIT = THRESHOLD - StickyLayout.stickyHysteresis;
+
+  // Debug: Log current state
+  if (__DEV__ && false) {
+    console.log('🔍 Sticky State:', {
+      restHeaderHRef: restHeaderHRef.current,
+      scrollHeaderH,
+      actionBarHeight,
+      THRESHOLD,
+      showActionBarInHeader,
+      showSticky,
+      STICKY_ENTER,
+      STICKY_EXIT,
+    });
+  }
+
+  // No padding calculation needed - header is in normal flow above the list
+
+  // Debug: Log measurements on mount and when they change
+  useEffect(() => {
+    if (__DEV__) {
+      debugLog('📐 Sticky', {
+        SAFE_TOP,
+        searchHeight,
+        GAP,
+        actionBarHeight,
+        stickyH,
+        scrollHeaderH,
+        THRESHOLD,
+        showSticky,
+      });
+    }
+  }, [
+    SAFE_TOP,
+    searchHeight,
+    GAP,
+    actionBarHeight,
+    stickyH,
+    scrollHeaderH,
+    THRESHOLD,
+    showSticky,
+  ]);
+
+  // Orientation change listener - force re-measure on dimension changes
   useEffect(() => {
     const subscription = Dimensions.addEventListener('change', () => {
-      setLayoutDirty(true);
-      setMeasurementComplete(false);
+      requestAnimationFrame(() => setScrollHeaderH(0)); // triggers fresh onLayout
     });
     return () => subscription?.remove();
   }, []);
 
-  // Calculate sticky constants
-  const SAFE_TOP = insets.top;
-  const SEARCH_H = StickyLayout.searchBarHeight;
-  const LANE_GAP = StickyLayout.laneGap;
-  const ACTION_H = StickyLayout.actionBarHeight;
-  const LANE_B_H = Math.max(railHeight, ACTION_H); // Lock to max height
-  const BUFFER = StickyLayout.scrollBuffer;
+  useEffect(() => {
+    if (
+      Platform.OS === 'android' &&
+      UIManager.setLayoutAnimationEnabledExperimental
+    ) {
+      UIManager.setLayoutAnimationEnabledExperimental(true);
+    }
+  }, []);
 
-  const STICKY_H = SAFE_TOP + SEARCH_H + LANE_GAP + LANE_B_H;
-  const THRESHOLD_Y = railHeight + bannerHeight;
+  useEffect(() => {
+    LayoutAnimation.configureNext(
+      LayoutAnimation.create(
+        120,
+        LayoutAnimation.Types.easeInEaseOut,
+        LayoutAnimation.Properties.opacity,
+      ),
+    );
+  }, [showSticky]);
 
-  // One-shot measurement handlers
-  const handleRailLayout = useCallback(
-    (height: number) => {
-      if (!measurementComplete) {
-        debugLog('📏 Rail height measured:', height);
-        setRailHeight(height);
+  // Fallback: if no measurement happens within 1 second, use estimated height and LOCK it
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (restHeaderHRef.current === 0 && showActionBarInHeader) {
+        const estimatedHeight =
+          StickyLayout.categoryRailHeightDefault +
+          StickyLayout.actionBarHeight + // Always include ActionBar in rest height
+          StickyLayout.railActionGap; // Include the gap that scrolls with header
+        console.log(
+          '🔍 Timeout fallback - LOCKING estimated height:',
+          estimatedHeight,
+        );
+        restHeaderHRef.current = estimatedHeight; // LOCK it
+        setScrollHeaderH(estimatedHeight); // For debug
       }
-    },
-    [measurementComplete],
-  );
+    }, 1000);
 
-  const handleBannerLayout = useCallback(
-    (height: number) => {
-      if (!measurementComplete) {
-        debugLog('📏 Banner height measured:', height);
-        setBannerHeight(height);
-        setMeasurementComplete(true); // Mark complete after both measurements
+    return () => clearTimeout(timer);
+  }, [showActionBarInHeader]);
+
+  // Immediate fallback: if restHeaderH is still 0 after component mount, use estimated and LOCK it
+  useEffect(() => {
+    if (restHeaderHRef.current === 0) {
+      const estimatedHeight =
+        StickyLayout.categoryRailHeightDefault +
+        StickyLayout.actionBarHeight + // Always include ActionBar in rest height
+        StickyLayout.railActionGap; // Gap spacer matching header layout
+      console.log(
+        '🔍 Immediate fallback - LOCKING estimated height:',
+        estimatedHeight,
+      );
+      restHeaderHRef.current = estimatedHeight; // LOCK it
+      setScrollHeaderH(estimatedHeight); // For debug
+    }
+  }, []); // Run once on mount
+
+  // Force measurement after a short delay if still 0
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (restHeaderHRef.current === 0) {
+        const estimatedHeight =
+          StickyLayout.categoryRailHeightDefault +
+          StickyLayout.actionBarHeight +
+          StickyLayout.railActionGap; // Gap spacer
+        console.log(
+          '🔍 Delayed fallback - LOCKING estimated height:',
+          estimatedHeight,
+        );
+        restHeaderHRef.current = estimatedHeight; // LOCK it
+        setScrollHeaderH(estimatedHeight); // For debug
       }
-    },
-    [measurementComplete],
-  );
+    }, 500); // Wait 500ms for layout to complete
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Measure scroll-away section height (Rail + ActionBar + Banner) - NOT including TopBar
+  // CRITICAL: Only lock the measurement when ActionBar is in the header (rest state)
+  // Measure TopBar height
+  const handleTopBarLayout = useCallback((event: any) => {
+    console.log(
+      '🔍 TopBar onLayout called:',
+      !!event,
+      event?.nativeEvent?.layout,
+    );
+    const h = event?.nativeEvent?.layout?.height ?? 0;
+    console.log('📏 TopBar measured height:', h);
+    if (h > 0) {
+      setSearchHeight(h);
+      console.log('✅ TopBar height set to:', h);
+    } else {
+      console.log('⚠️ TopBar height is 0, ignoring');
+    }
+  }, []);
+
+  // Measure ActionBar height
+  const handleActionBarLayout = useCallback((event: any) => {
+    console.log(
+      '🔍 ActionBar onLayout called:',
+      !!event,
+      event?.nativeEvent?.layout,
+    );
+    const h = event?.nativeEvent?.layout?.height ?? 0;
+    console.log('📏 ActionBar measured height:', h);
+    if (h > 0) {
+      setActionBarHeight(h);
+      console.log('✅ ActionBar height set to:', h);
+    } else {
+      console.log('⚠️ ActionBar height is 0, ignoring');
+    }
+  }, []);
 
   const handleSearchChange = useCallback(
     (query: string) => {
@@ -121,16 +280,25 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
     [onSearchChange],
   );
 
-  const handleCategoryChange = useCallback((category: string) => {
-    setActiveCategory(category);
+  const handleCategoryChange = useCallback(
+    (category: string) => {
+      console.log('🔄 Category changing from', activeCategory, 'to', category);
+      setActiveCategory(category);
 
-    // Auto-center the real header Rail on next frame
-    if (headerRailRef.current) {
-      requestAnimationFrame(() => {
-        headerRailRef.current?.scrollToCategory(category);
-      });
-    }
-  }, []);
+      // Reset measurement on category change to allow re-locking
+      restHeaderHRef.current = 0;
+      setScrollHeaderH(0);
+      console.log('🔓 Unlocked header measurement for new category');
+
+      // Auto-center the real header Rail on next frame
+      if (headerRailRef.current) {
+        requestAnimationFrame(() => {
+          headerRailRef.current?.scrollToCategory(category);
+        });
+      }
+    },
+    [activeCategory],
+  );
 
   const handleActionPress = useCallback((action: string) => {
     // Handle job mode changes
@@ -139,6 +307,19 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
       setJobMode(mode);
     }
   }, []);
+
+  // Get appropriate add button text based on category
+  const getAddButtonText = (category: string): string => {
+    const categoryMap: { [key: string]: string } = {
+      mikvah: 'Add Mikvah',
+      eatery: 'Add Eatery',
+      shul: 'Add Shul',
+      stores: 'Add Store',
+      jobs: 'Add Job',
+      events: 'Add Event',
+    };
+    return categoryMap[category] || 'Add Entity';
+  };
 
   const handleAddEntity = useCallback(() => {
     debugLog('Navigate to Add Entity for category:', activeCategory);
@@ -215,20 +396,14 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
   }, [getCurrentLocation]);
 
   // Swap logic with hysteresis
+  // Scroll handler with proper threshold logic
   const handleScroll = useCallback(
     (event: any) => {
       const y = event.nativeEvent.contentOffset.y;
-
-      // Apply hysteresis buffer to prevent flicker
-      if (!showActionBar && y >= THRESHOLD_Y + BUFFER) {
-        debugLog('🔄 Swap to ActionBar at y:', y);
-        setShowActionBar(true);
-      } else if (showActionBar && y < THRESHOLD_Y - BUFFER) {
-        debugLog('🔄 Swap to Rail at y:', y);
-        setShowActionBar(false);
-      }
+      setScrollY(y);
+      setShowSticky(prev => (prev ? y >= STICKY_EXIT : y >= STICKY_ENTER));
     },
-    [showActionBar, THRESHOLD_Y, BUFFER],
+    [STICKY_ENTER, STICKY_EXIT],
   );
 
   // Get grid render props from CategoryGridScreen hook
@@ -238,46 +413,68 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
     jobMode: activeCategory === 'jobs' ? jobMode : undefined,
   });
 
-  // Render GridListHeader as the FlatList header
+  const handleScrollHeaderMeasured = useCallback(
+    (event: any) => {
+      if (!showActionBarInHeader) {
+        return;
+      }
+
+      const height = event?.nativeEvent?.layout?.height ?? 0;
+      if (height > 0) {
+        restHeaderHRef.current = height;
+        setScrollHeaderH(height);
+      }
+    },
+    [showActionBarInHeader],
+  );
+
+  // ALL HOOKS MUST BE CALLED BEFORE CONDITIONAL RETURNS
   const renderListHeader = useCallback(() => {
+    console.log('🔍 HomeScreen renderListHeader called:', {
+      activeCategory,
+      showSticky,
+      showActionBarInHeader,
+      scrollY,
+      scrollHeaderH,
+      restHeaderH: restHeaderHRef.current,
+    });
+
     return (
-      <GridListHeader
+      <GridListScrollHeader
         ref={headerRailRef}
         activeCategory={activeCategory}
         onCategoryChange={handleCategoryChange}
-        onRailLayout={handleRailLayout}
-        onBannerLayout={handleBannerLayout}
-        onLocationPermissionRequest={handleLocationPermissionRequest}
-        onLocationRefresh={handleLocationRefresh}
-        locationLoading={locationLoading}
+        showActionBarInHeader={showActionBarInHeader} // ActionBar lives here until sticky hand-off
+        onActionPress={handleActionPress}
+        jobMode={jobMode}
+        onMeasured={handleScrollHeaderMeasured}
+        actionBarPlaceholderHeight={measuredActionBarHeight}
       />
     );
   }, [
     activeCategory,
     handleCategoryChange,
-    handleRailLayout,
-    handleBannerLayout,
-    handleLocationPermissionRequest,
-    handleLocationRefresh,
-    locationLoading,
+    showSticky,
+    showActionBarInHeader,
+    handleActionPress,
+    jobMode,
+    handleScrollHeaderMeasured,
+    scrollHeaderH,
+    scrollY,
+    measuredActionBarHeight,
   ]);
 
   // Show skeleton loader on initial load
   if (gridRenderProps.isInitialLoading) {
     return (
       <View style={styles.container}>
-        <StickyStack
-          showActionBar={showActionBar}
-          activeCategory={activeCategory}
-          onCategoryChange={handleCategoryChange}
-          searchQuery={searchQuery}
-          onSearchChange={handleSearchChange}
+        <TopBar
+          onQueryChange={handleSearchChange}
+          placeholder="Search places, events..."
           onAddEntity={handleAddEntity}
-          onActionPress={handleActionPress}
-          jobMode={jobMode}
-          LANE_B_H={LANE_B_H}
+          addButtonText={getAddButtonText(activeCategory)}
         />
-        <View style={[styles.container, { paddingTop: STICKY_H }]}>
+        <View style={styles.container}>
           <SkeletonGrid count={6} columns={2} />
         </View>
       </View>
@@ -288,20 +485,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
   if (gridRenderProps.hasError) {
     return (
       <View style={styles.container}>
-        <StickyStack
-          showActionBar={showActionBar}
-          activeCategory={activeCategory}
-          onCategoryChange={handleCategoryChange}
-          searchQuery={searchQuery}
-          onSearchChange={handleSearchChange}
+        <TopBar
+          onQueryChange={handleSearchChange}
+          placeholder="Search places, events..."
           onAddEntity={handleAddEntity}
-          onActionPress={handleActionPress}
-          jobMode={jobMode}
-          LANE_B_H={LANE_B_H}
+          addButtonText="Add"
         />
-        <View style={[styles.container, { paddingTop: STICKY_H }]}>
-          {gridRenderProps.errorComponent}
-        </View>
+        <View style={styles.container}>{gridRenderProps.errorComponent}</View>
       </View>
     );
   }
@@ -310,41 +500,24 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
   if (activeCategory === 'jobs') {
     return (
       <View style={styles.container}>
-        <StickyStack
-          showActionBar={showActionBar}
-          activeCategory={activeCategory}
-          onCategoryChange={handleCategoryChange}
-          searchQuery={searchQuery}
-          onSearchChange={handleSearchChange}
+        <TopBar
+          onQueryChange={handleSearchChange}
+          placeholder="Search places, events..."
           onAddEntity={handleAddEntity}
-          onActionPress={handleActionPress}
-          jobMode={jobMode}
-          LANE_B_H={LANE_B_H}
+          addButtonText="Add"
         />
-        <EnhancedJobsScreen />
+        <View style={styles.container}>
+          <EnhancedJobsScreen />
+        </View>
       </View>
     );
   }
 
-  // Main render with sticky stack and FlatList
   return (
     <View style={styles.container}>
-      {/* Sticky overlay */}
-      <StickyStack
-        showActionBar={showActionBar}
-        activeCategory={activeCategory}
-        onCategoryChange={handleCategoryChange}
-        searchQuery={searchQuery}
-        onSearchChange={handleSearchChange}
-        onAddEntity={handleAddEntity}
-        onActionPress={handleActionPress}
-        jobMode={jobMode}
-        LANE_B_H={LANE_B_H}
-      />
-
-      {/* FlatList with grid - owned by HomeScreen */}
+      {/* FlatList: content padding creates space for fixed TopBar ONLY */}
       <FlatList
-        key="home-grid-list"
+        key={`home-grid-${activeCategory}`} // Force remount on category change - CRITICAL
         data={gridRenderProps.data}
         renderItem={gridRenderProps.renderItem}
         keyExtractor={gridRenderProps.keyExtractor}
@@ -352,7 +525,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
         columnWrapperStyle={gridRenderProps.columnWrapperStyle}
         contentContainerStyle={[
           gridRenderProps.contentContainerStyle,
-          { paddingTop: STICKY_H }, // Critical: pad for sticky stack
+          {
+            paddingTop: gridPaddingTop, // Offset grid for TopBar + gap, plus sticky inset when needed
+          },
         ]}
         refreshControl={gridRenderProps.refreshControl as any}
         onEndReached={gridRenderProps.onEndReached}
@@ -368,9 +543,173 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
         initialNumToRender={10}
         windowSize={21}
         showsVerticalScrollIndicator={false}
+        // kill iOS automatic insets — we own the header
+        contentInsetAdjustmentBehavior="never"
+        automaticallyAdjustContentInsets={false}
+        scrollIndicatorInsets={{ top: 0, left: 0, right: 0, bottom: 0 }}
         accessibilityRole="list"
         accessibilityLabel={`${activeCategory} category items`}
       />
+
+      {/* Layer 1: Fixed TopBar (absolutely positioned) */}
+      <View
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 1000, // Always on top
+          // NO backgroundColor - let TopBar handle its own background
+          // NO paddingTop - TopBar handles its own safe area insets
+        }}
+        onLayout={handleTopBarLayout}
+      >
+        <TopBar
+          onQueryChange={handleSearchChange}
+          placeholder="Search places, events..."
+          onAddEntity={handleAddEntity}
+          addButtonText={getAddButtonText(activeCategory)}
+        />
+      </View>
+
+      {/* Layer 1.5: Background fill between TopBar and sticky ActionBar */}
+      {showSticky && (
+        <>
+          <View
+            pointerEvents="none"
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              height: topBarHeight,
+              overflow: 'hidden',
+              zIndex: 998,
+            }}
+          >
+            <BlurView
+              style={StyleSheet.absoluteFillObject}
+              blurType="light"
+              blurAmount={16}
+              reducedTransparencyFallbackColor={Colors.background.primary}
+            />
+            <View
+              style={{
+                ...StyleSheet.absoluteFillObject,
+                backgroundColor: 'rgba(255,255,255,0.35)',
+              }}
+            />
+          </View>
+          {GAP > 0 && (
+            <View
+              pointerEvents="none"
+              style={{
+                position: 'absolute',
+                top: topBarHeight,
+                left: 0,
+                right: 0,
+                height: GAP,
+                backgroundColor: Colors.background.primary,
+                zIndex: 998,
+              }}
+            />
+          )}
+
+          <View
+            pointerEvents="none"
+            style={{
+              position: 'absolute',
+              top: stickyLaneOffset,
+              left: 0,
+              right: 0,
+              height:
+                measuredActionBarHeight > 0
+                  ? measuredActionBarHeight
+                  : StickyLayout.actionBarHeight,
+              overflow: 'hidden',
+              zIndex: 998,
+            }}
+          >
+            <BlurView
+              style={StyleSheet.absoluteFillObject}
+              blurType="light"
+              blurAmount={12}
+              reducedTransparencyFallbackColor={Colors.background.primary}
+            />
+            <View
+              style={{
+                ...StyleSheet.absoluteFillObject,
+                backgroundColor: 'rgba(255,255,255,0.4)',
+              }}
+            />
+          </View>
+        </>
+      )}
+
+      {/* Layer 2: Sticky ActionBar overlay - always render for measurement, show when sticky */}
+      <View
+        pointerEvents={showSticky ? 'box-none' : 'none'} // Disable touch when not sticky
+        accessible={showSticky}
+        importantForAccessibility={showSticky ? 'yes' : 'no'}
+        accessibilityElementsHidden={!showSticky}
+        style={{
+          position: 'absolute',
+          top: stickyLaneOffset, // Align ActionBar directly under TopBar
+          left: 0,
+          right: 0,
+          zIndex: 999, // Below TopBar (1000) but above FlatList
+          backgroundColor: 'transparent',
+          opacity: showSticky ? 1 : 0, // Hide when not sticky
+          ...Platform.select({
+            android: { elevation: 16 }, // stronger elevation ensures tap priority
+            ios: {
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.1,
+              shadowRadius: 4,
+            },
+          }),
+        }}
+        onLayout={handleActionBarLayout}
+      >
+        <ActionBar
+          onActionPress={handleActionPress}
+          currentCategory={activeCategory}
+          jobMode={activeCategory === 'jobs' ? jobMode : undefined}
+        />
+      </View>
+
+      {/* Debug overlay - positioned at bottom for full visibility */}
+      {false && __DEV__ && (
+        <View
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            zIndex: 9999,
+            backgroundColor: 'rgba(0,0,0,0.8)',
+            padding: 8,
+          }}
+        >
+          <StickyDebugOverlay
+            SAFE_TOP={SAFE_TOP}
+            SEARCH_H={topBarHeight}
+            LANE_GAP={GAP}
+            railHeight={StickyLayout.categoryRailHeightDefault}
+            ACTION_H={measuredActionBarHeight}
+            LANE_B_H={measuredActionBarHeight}
+            STICKY_H={stickyH}
+            THRESHOLD_Y={THRESHOLD}
+            bannerHeight={StickyLayout.locationBannerHeightDefault}
+            scrollY={scrollY}
+            stickyHeightMeasured={scrollHeaderH}
+            flatListPaddingTop={gridPaddingTop}
+            paddingExtra={stickyGridInset}
+            stickyOverlayHeight={stickyH}
+          />
+        </View>
+      )}
     </View>
   );
 };

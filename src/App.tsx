@@ -11,6 +11,7 @@ import eventsDeepLinkService from './services/EventsDeepLinkService';
 import { preloadIconFonts } from './components/Icon';
 import ErrorBoundary from './components/ErrorBoundary';
 import { NavigationParamList } from './types/navigation';
+import ResponsiveContainer from './components/ResponsiveContainer';
 
 // Note: defaultProps is deprecated in newer React Native versions
 // Font family should be set through StyleSheet or individual component styles
@@ -106,7 +107,9 @@ export default function App(): React.JSX.Element {
             ref={ref => navigationService.setNavigationRef(ref)}
           >
             <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-            <RootNavigator />
+            <ResponsiveContainer>
+              <RootNavigator />
+            </ResponsiveContainer>
           </NavigationContainer>
         </AuthProvider>
       </SafeAreaProvider>

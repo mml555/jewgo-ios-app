@@ -40,62 +40,34 @@ import BasicInfoPage from '../components/AddCategoryForm/BasicInfoPage';
 import HoursServicesPage from '../components/AddCategoryForm/HoursServicesPage';
 import KosherPricingPage from '../components/AddCategoryForm/KosherPricingPage';
 import PhotosReviewPage from '../components/AddCategoryForm/PhotosReviewPage';
+import AmenitiesReviewPage from '../components/AddCategoryForm/AmenitiesReviewPage';
 
 export interface ListingFormData {
-  // Step 1: Business Ownership & Basic Info
-  is_owner_submission: boolean;
+  // Step 1: Listing Basics (merged from Steps 1 & 3)
   name: string;
   address: string;
   phone: string;
   business_email: string;
   website: string;
+  hours_of_operation: string; // Simplified string format
+  business_images: string[]; // Moved from Step 4
+
+  // Step 2: Kosher & Dietary Info
+  dietary_category: 'Meat' | 'Dairy' | 'Pareve'; // Renamed from kosher_category
+  kosher_tags: string[]; // New field for multiple tags
+  hechsher: string; // Renamed from certifying_agency
+  short_description: string; // Max 70 chars
+  price_range: '$5-10' | '$10-20' | '$20-30' | '$30-40' | '$40+'; // New field
+
+  // Step 3: Amenities & Reviews
+  amenities: string[]; // New array field for selected amenities
+  google_reviews_link: string; // New field
+
+  // Legacy fields for backward compatibility
   listing_type: 'Eatery' | 'Catering' | 'Food Truck';
-
-  // Conditional Owner Information (if is_owner_submission = true)
-  owner_name: string;
-  owner_email: string;
-  owner_phone: string;
-
-  // Step 2: Kosher Certification
-  kosher_category: 'Meat' | 'Dairy' | 'Pareve';
-  certifying_agency: string;
-  custom_certifying_agency: string;
-
-  // Conditional Kosher Details
-  is_cholov_yisroel: boolean;
-  is_pas_yisroel: boolean;
-  cholov_stam: boolean;
-
-  // Step 3: Business Details
-  short_description: string;
-  description: string;
-  hours_of_operation: string;
-  business_hours: Array<{
-    day: string;
-    openTime: string;
-    closeTime: string;
-    isClosed: boolean;
-  }>;
-  seating_capacity: number;
-  years_in_business: number;
-  business_license: string;
-  tax_id: string;
-
-  // Service Options
   delivery_available: boolean;
   takeout_available: boolean;
   catering_available: boolean;
-
-  // Social Media Links
-  google_listing_url: string;
-  instagram_link: string;
-  facebook_link: string;
-  tiktok_link: string;
-
-  // Step 4: Images
-  business_images: string[];
-
-  // Step 5: Review & Submit
   finalReview: boolean;
 
   // Additional System Fields (auto-populated)
@@ -144,93 +116,32 @@ export interface ListingFormData {
 }
 
 const defaultFormData: ListingFormData = {
-  // Step 1: Business Ownership & Basic Info
-  is_owner_submission: false,
+  // Step 1: Listing Basics (merged from Steps 1 & 3)
   name: '',
   address: '',
   phone: '',
   business_email: '',
   website: '',
-  listing_type: 'Eatery',
+  hours_of_operation:
+    'Mon-Thu 11am-10pm, Fri 11am-3pm, Closed Sat, Sun 12pm-10pm',
+  business_images: [],
 
-  // Conditional Owner Information
-  owner_name: '',
-  owner_email: '',
-  owner_phone: '',
-
-  // Step 2: Kosher Certification
-  kosher_category: 'Pareve',
-  certifying_agency: '',
-  custom_certifying_agency: '',
-
-  // Conditional Kosher Details
-  is_cholov_yisroel: false,
-  is_pas_yisroel: false,
-  cholov_stam: false,
-
-  // Step 3: Business Details
+  // Step 2: Kosher & Dietary Info
+  dietary_category: 'Pareve',
+  kosher_tags: [],
+  hechsher: '',
   short_description: '',
-  description: '',
-  hours_of_operation: '',
-  business_hours: [
-    {
-      day: 'Monday',
-      openTime: '11:00 AM',
-      closeTime: '10:00 PM',
-      isClosed: false,
-    },
-    {
-      day: 'Tuesday',
-      openTime: '11:00 AM',
-      closeTime: '10:00 PM',
-      isClosed: false,
-    },
-    {
-      day: 'Wednesday',
-      openTime: '11:00 AM',
-      closeTime: '10:00 PM',
-      isClosed: false,
-    },
-    {
-      day: 'Thursday',
-      openTime: '11:00 AM',
-      closeTime: '10:00 PM',
-      isClosed: false,
-    },
-    {
-      day: 'Friday',
-      openTime: '11:00 AM',
-      closeTime: '3:00 PM',
-      isClosed: false,
-    },
-    { day: 'Saturday', openTime: '', closeTime: '', isClosed: true },
-    {
-      day: 'Sunday',
-      openTime: '12:00 PM',
-      closeTime: '10:00 PM',
-      isClosed: false,
-    },
-  ],
-  seating_capacity: 0,
-  years_in_business: 0,
-  business_license: '',
-  tax_id: '',
+  price_range: '$10-20',
 
-  // Service Options
+  // Step 3: Amenities & Reviews
+  amenities: [],
+  google_reviews_link: '',
+
+  // Legacy fields for backward compatibility
+  listing_type: 'Eatery',
   delivery_available: false,
   takeout_available: false,
   catering_available: false,
-
-  // Social Media Links
-  google_listing_url: '',
-  instagram_link: '',
-  facebook_link: '',
-  tiktok_link: '',
-
-  // Step 4: Images
-  business_images: [],
-
-  // Step 5: Review & Submit
   finalReview: false,
 
   // Additional System Fields (auto-populated)
@@ -258,14 +169,6 @@ const defaultFormData: ListingFormData = {
     friday: { open: '09:00', close: '15:00', closed: false },
     saturday: { open: '10:00', close: '18:00', closed: false },
     sunday: { open: '10:00', close: '18:00', closed: false },
-  },
-  amenities: {
-    hasParking: false,
-    hasWifi: false,
-    hasAccessibility: false,
-    hasDelivery: false,
-    hasTakeout: false,
-    hasOutdoorSeating: false,
   },
   kosherLevel: 'regular',
   priceRange: '$$',
@@ -302,7 +205,7 @@ const AddCategoryScreen: React.FC = () => {
   // Safely extract category from params, default to 'Place'
   const params = route.params as { category?: string } | undefined;
   const category = params?.category || 'Place';
-  const totalPages = 5;
+  const totalPages = 3;
 
   // Analytics and crash reporting services
   const analyticsService = FormAnalyticsService.getInstance();
@@ -422,8 +325,8 @@ const AddCategoryScreen: React.FC = () => {
   const formSteps = [
     {
       number: 1,
-      title: 'Basic Info',
-      subtitle: 'Business details & contact',
+      title: 'Listing Basics',
+      subtitle: 'Business details & photos',
       isCompleted: currentPage > 1,
       isValid: isStepValid(1),
       isCurrent: currentPage === 1,
@@ -434,8 +337,8 @@ const AddCategoryScreen: React.FC = () => {
     },
     {
       number: 2,
-      title: 'Kosher Info',
-      subtitle: 'Certification & dietary',
+      title: 'Kosher & Dietary Info',
+      subtitle: 'Certification & pricing',
       isCompleted: currentPage > 2,
       isValid: isStepValid(2),
       isCurrent: currentPage === 2,
@@ -446,8 +349,8 @@ const AddCategoryScreen: React.FC = () => {
     },
     {
       number: 3,
-      title: 'Business Details',
-      subtitle: 'Hours, services & social',
+      title: 'Amenities & Reviews',
+      subtitle: 'Services & Google reviews',
       isCompleted: currentPage > 3,
       isValid: isStepValid(3),
       isCurrent: currentPage === 3,
@@ -455,28 +358,6 @@ const AddCategoryScreen: React.FC = () => {
         ? Object.keys(stepResults[3].errors).length > 0
         : false,
       completionPercentage: stepResults[3]?.completionPercentage || 0,
-    },
-    {
-      number: 4,
-      title: 'Photos',
-      subtitle: 'Business images',
-      isCompleted: currentPage > 4,
-      isValid: isStepValid(4),
-      isCurrent: currentPage === 4,
-      hasErrors: stepResults[4]
-        ? Object.keys(stepResults[4].errors).length > 0
-        : false,
-      completionPercentage: stepResults[4]?.completionPercentage || 0,
-    },
-    {
-      number: 5,
-      title: 'Review',
-      subtitle: 'Final review & submit',
-      isCompleted: false,
-      isValid: isFormValid,
-      isCurrent: currentPage === 5,
-      hasErrors: !isFormValid,
-      completionPercentage: isFormValid ? 100 : 0,
     },
   ];
 
@@ -772,24 +653,30 @@ const AddCategoryScreen: React.FC = () => {
 
     setIsSubmitting(true);
 
-    // Transform form data to API format
+    // Transform form data to API format for new 3-step structure
     const services = [];
-    if (formData.delivery_available) services.push('delivery');
-    if (formData.takeout_available) services.push('takeout');
-    if (formData.catering_available) services.push('catering');
+    if (formData.amenities?.includes('Delivery Available'))
+      services.push('delivery');
+    if (formData.amenities?.includes('Dine-In')) services.push('dine_in');
+    if (formData.amenities?.includes('Catering')) services.push('catering');
 
-    // Map kosher category to valid enum values
+    // Map dietary category to kosher level
     const kosherLevelMap: Record<string, string> = {
       Meat: 'glatt',
       Dairy: 'chalav_yisrael',
-      Pareve: 'glatt',
+      Pareve: 'regular',
     };
+
+    // Map price range to description
+    const priceRangeText = formData.price_range
+      ? ` (${formData.price_range})`
+      : '';
 
     const apiData = {
       entityType: 'restaurant',
       name: formData.name,
-      description: formData.short_description,
-      longDescription: formData.description,
+      description: formData.short_description + priceRangeText,
+      longDescription: formData.short_description,
       ownerId: user?.id || null, // Use authenticated user's ID
       address: formData.address,
       city: (formData as any).city || '',
@@ -798,22 +685,24 @@ const AddCategoryScreen: React.FC = () => {
       phone: formData.phone,
       email: formData.business_email,
       website: formData.website,
-      facebookUrl: formData.facebook_link,
-      instagramUrl: formData.instagram_link,
-      whatsappUrl: (formData as any).whatsapp_url,
-      tiktokUrl: formData.tiktok_link,
+      facebookUrl: (formData as any).facebook_link || '',
+      instagramUrl: (formData as any).instagram_link || '',
+      whatsappUrl: (formData as any).whatsapp_url || '',
+      tiktokUrl: (formData as any).tiktok_link || '',
       latitude: (formData as any).latitude || 0,
       longitude: (formData as any).longitude || 0,
-      kosherLevel: kosherLevelMap[formData.kosher_category] || 'glatt',
-      kosherCertification:
-        formData.certifying_agency === 'Other'
-          ? formData.custom_certifying_agency
-          : formData.certifying_agency,
+      kosherLevel: kosherLevelMap[formData.dietary_category] || 'regular',
+      kosherCertification: formData.hechsher || '',
       kosherCertificateNumber: '',
       kosherExpiresAt: null,
       denomination: null,
       storeType: null,
       services: services,
+      // Add new fields for 3-step structure
+      kosherTags: formData.kosher_tags || [],
+      googleReviewsLink: formData.google_reviews_link || '',
+      businessImages: formData.business_images || [],
+      hoursOfOperation: formData.hours_of_operation || '',
     };
 
     try {
@@ -934,11 +823,9 @@ const AddCategoryScreen: React.FC = () => {
             dimensions.isSmallScreen && styles.headerSubtitleSmall,
           ]}
         >
-          {currentPage === 1 && 'Business Ownership & Basic Info'}
-          {currentPage === 2 && 'Kosher Certification'}
-          {currentPage === 3 && 'Business Details'}
-          {currentPage === 4 && 'Images'}
-          {currentPage === 5 && 'Review & Submit'}
+          {currentPage === 1 && 'Listing Basics'}
+          {currentPage === 2 && 'Kosher & Dietary Info'}
+          {currentPage === 3 && 'Amenities & Reviews'}
         </Text>
         {isInitialized && (
           <SaveStatusIndicator
@@ -966,15 +853,11 @@ const AddCategoryScreen: React.FC = () => {
 
     switch (currentPage) {
       case 1:
-        return <BasicInfoPage {...commonProps} />;
+        return <BasicInfoPage {...commonProps} />; // Merged with hours and photos
       case 2:
-        return <KosherPricingPage {...commonProps} />;
+        return <KosherPricingPage {...commonProps} />; // Updated with new fields
       case 3:
-        return <HoursServicesPage {...commonProps} />;
-      case 4:
-        return <PhotosReviewPage {...commonProps} isReviewStep={false} />;
-      case 5:
-        return <PhotosReviewPage {...commonProps} isReviewStep={true} />;
+        return <AmenitiesReviewPage {...commonProps} />; // New component
       default:
         return <BasicInfoPage {...commonProps} />;
     }
@@ -1016,7 +899,7 @@ const AddCategoryScreen: React.FC = () => {
               dimensions.isSmallScreen && styles.nextButtonTextSmall,
             ]}
           >
-            {currentPage === 4 ? 'Review & Submit' : 'Next →'}
+            {currentPage === 3 ? 'Review & Submit' : 'Next →'}
           </Text>
         </TouchableOpacity>
       ) : (
@@ -1089,8 +972,8 @@ const AddCategoryScreen: React.FC = () => {
           contentContainerStyle={[
             styles.content,
             {
-              paddingHorizontal: responsiveLayout.containerPadding,
-              paddingBottom: responsiveLayout.formSpacing * 2,
+              paddingHorizontal: 0,
+              paddingBottom: 120,
             },
           ]}
           showsVerticalScrollIndicator={false}
@@ -1233,9 +1116,15 @@ const styles = StyleSheet.create({
   content: {
     flexGrow: 1,
     paddingTop: 10,
+    minHeight: '100%',
   },
   footer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     paddingVertical: 16,
+    paddingHorizontal: 20,
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
     borderTopColor: '#E5E5EA',
@@ -1246,7 +1135,8 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 4,
+    elevation: 8,
+    zIndex: 10,
   },
   nextButton: {
     backgroundColor: '#74e1a0',

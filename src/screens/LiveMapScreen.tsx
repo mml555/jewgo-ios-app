@@ -4,7 +4,6 @@ import React, {
   useMemo,
   useRef,
   useEffect,
-  memo,
 } from 'react';
 import {
   View,
@@ -19,7 +18,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { WebView } from 'react-native-webview';
+import { Region } from 'react-native-maps';
 import { useFilters } from '../hooks/useFilters';
 import FiltersModal from '../components/FiltersModal';
 import Icon from '../components/Icon';
@@ -27,45 +26,13 @@ import { Spacing, Shadows } from '../styles/designSystem';
 import { useLocation, calculateDistance } from '../hooks/useLocation';
 import { useCategoryData } from '../hooks/useCategoryData';
 import { debugLog } from '../utils/logger';
-import { configService } from '../config/ConfigService';
+import { NativeMapView } from '../features/map/NativeMapView';
+import { MapPoint } from '../features/map/types';
 
-// This implementation uses Google Maps JavaScript API via WebView
-// for a real map experience without native dependencies
+// This implementation uses native react-native-maps with Google Maps provider
+// for high-performance map experience on iOS
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
-
-// Memoized WebView component to prevent unnecessary re-renders
-const MemoizedWebView = memo(
-  ({
-    mapHTML,
-    onMessage,
-    webViewRef,
-  }: {
-    mapHTML: string;
-    onMessage: (event: any) => void;
-    webViewRef: React.RefObject<WebView | null>;
-  }) => (
-    <WebView
-      ref={webViewRef}
-      source={{ html: mapHTML }}
-      style={styles.map}
-      onMessage={onMessage}
-      javaScriptEnabled={true}
-      domStorageEnabled={true}
-      startInLoadingState={true}
-      scalesPageToFit={false}
-      allowsInlineMediaPlayback={true}
-      mediaPlaybackRequiresUserAction={false}
-      mixedContentMode="compatibility"
-      thirdPartyCookiesEnabled={false}
-      sharedCookiesEnabled={false}
-      onShouldStartLoadWithRequest={() => true}
-      onLoadEnd={() => {
-        // Map is loaded, we can start sending marker updates
-      }}
-    />
-  ),
-);
 
 interface MapListing {
   id: string;
@@ -94,7 +61,6 @@ const LiveMapScreen: React.FC = () => {
     closeFiltersModal,
     getActiveFiltersCount,
   } = useFilters();
-  const webViewRef = useRef<WebView>(null);
   const {
     location,
     getCurrentLocation,
@@ -111,21 +77,8 @@ const LiveMapScreen: React.FC = () => {
   const [selectedListing, setSelectedListing] = useState<MapListing | null>(
     null,
   );
-  const [mapLoaded, setMapLoaded] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
-  const [mapRegion, setMapRegion] = useState({
-    latitude: 40.7128, // Default to NYC
-    longitude: -74.006,
-    latitudeDelta: 0.1,
-    longitudeDelta: 0.1,
-  });
-  const [isUserInteracting, setIsUserInteracting] = useState(false);
-
-  // Refs for debouncing region and marker updates
-  const regionUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const markerUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const isMountedRef = useRef(true);
 
   // Categories configuration - matching the keys from ActionBar
   const categories = [
@@ -354,13 +307,48 @@ const LiveMapScreen: React.FC = () => {
     return filtered;
   }, [mapListings, filters, searchQuery, location]);
 
+  // Convert listings to MapPoint format for native map
+  const mapPoints: MapPoint[] = useMemo(() => {
+    return filteredListings.map(listing => ({
+      id: listing.id,
+      latitude: listing.latitude,
+      longitude: listing.longitude,
+      rating: listing.rating || null,
+      title: listing.title,
+      description: listing.description,
+      category: listing.category,
+      imageUrl: listing.imageUrl,
+      address: listing.address,
+      city: listing.city,
+      state: listing.state,
+      zip_code: listing.zip_code,
+    }));
+  }, [filteredListings]);
+
+  // Initial region setup
+  const initialRegion: Region = useMemo(
+    () => ({
+      latitude: location?.latitude || 40.7128,
+      longitude: location?.longitude || -74.006,
+      latitudeDelta: 0.1,
+      longitudeDelta: 0.1,
+    }),
+    [location],
+  );
+
   const handleBackPress = useCallback(() => {
     navigation.goBack();
   }, [navigation]);
 
-  const handleMarkerPress = useCallback((listing: MapListing) => {
-    setSelectedListing(listing);
-  }, []);
+  const handleMarkerPress = useCallback(
+    (point: MapPoint) => {
+      const listing = filteredListings.find(l => l.id === point.id);
+      if (listing) {
+        setSelectedListing(listing);
+      }
+    },
+    [filteredListings],
+  );
 
   const handleClosePopup = useCallback(() => {
     setSelectedListing(null);
@@ -381,406 +369,6 @@ const LiveMapScreen: React.FC = () => {
     const cat = categories.find(c => c.key === category);
     return cat?.color || '#74e1a0';
   };
-
-  // Generate static Google Maps HTML (memoized to prevent re-renders)
-  const mapHTML = useMemo(
-    () => `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <style>
-        body { margin: 0; padding: 0; }
-        #map { width: 100%; height: 100vh; }
-      </style>
-    </head>
-    <body>
-      <div id="map"></div>
-      <script>
-        let map;
-        let markers = [];
-        let currentListings = [];
-
-        function initMap() {
-          map = new google.maps.Map(document.getElementById("map"), {
-            zoom: 13,
-            center: { lat: ${mapRegion.latitude}, lng: ${mapRegion.longitude} },
-            mapTypeId: google.maps.MapTypeId.ROADMAP,
-            styles: [
-              {
-                featureType: "poi",
-                elementType: "labels",
-                stylers: [{ visibility: "off" }]
-              }
-            ],
-            gestureHandling: 'greedy',
-            disableDefaultUI: false,
-            zoomControl: true,
-            mapTypeControl: false,
-            scaleControl: false,
-            streetViewControl: false,
-            rotateControl: false,
-            fullscreenControl: false
-          });
-
-          // Send map loaded message
-          window.ReactNativeWebView.postMessage(JSON.stringify({
-            type: 'map_loaded'
-          }));
-
-          // Add user location marker if available
-          const userLocationMarker = new google.maps.Marker({
-            position: { lat: ${
-              location?.latitude || mapRegion.latitude
-            }, lng: ${location?.longitude || mapRegion.longitude} },
-            map: map,
-            title: 'Your Location',
-            icon: {
-              path: google.maps.SymbolPath.CIRCLE,
-              scale: 12,
-              fillColor: '#4285F4',
-              fillOpacity: 1,
-              strokeColor: '#FFFFFF',
-              strokeWeight: 3
-            },
-            zIndex: 1000
-          });
-          
-
-          // Handle map region changes (heavily debounced to prevent re-renders)
-          let regionChangeTimeout;
-          let isUserInteracting = false;
-          
-          // Track user interaction
-          map.addListener('dragstart', () => {
-            isUserInteracting = true;
-            window.ReactNativeWebView.postMessage(JSON.stringify({
-              type: 'user_interaction_start'
-            }));
-          });
-          
-          map.addListener('dragend', () => {
-            isUserInteracting = false;
-            window.ReactNativeWebView.postMessage(JSON.stringify({
-              type: 'user_interaction_end'
-            }));
-          });
-          
-          map.addListener('zoom_changed', () => {
-            isUserInteracting = true;
-            window.ReactNativeWebView.postMessage(JSON.stringify({
-              type: 'user_interaction_start'
-            }));
-            setTimeout(() => {
-              isUserInteracting = false;
-              window.ReactNativeWebView.postMessage(JSON.stringify({
-                type: 'user_interaction_end'
-              }));
-            }, 500);
-          });
-          
-          map.addListener('bounds_changed', () => {
-            if (isUserInteracting) return; // Don't send updates during user interaction
-            
-            clearTimeout(regionChangeTimeout);
-            regionChangeTimeout = setTimeout(() => {
-              const center = map.getCenter();
-              window.ReactNativeWebView.postMessage(JSON.stringify({
-                type: 'region_changed',
-                region: {
-                  latitude: center.lat(),
-                  longitude: center.lng(),
-                  latitudeDelta: 0.0922,
-                  longitudeDelta: 0.0421
-                }
-              }));
-            }, 3000); // Much longer debounce time
-          });
-        }
-
-        function updateMarkers(listings) {
-          debugLog('🗺️ WebView received markers:', listings.length, 'markers');
-          
-          // Check if listings have actually changed to prevent unnecessary updates
-          const listingsChanged = JSON.stringify(listings) !== JSON.stringify(currentListings);
-          if (!listingsChanged && markers.length > 0) {
-            debugLog('🗺️ Markers unchanged, skipping update');
-            return;
-          }
-          
-          debugLog('🗺️ Updating markers due to data change');
-          
-          // Clear existing markers
-          markers.forEach(marker => marker.setMap(null));
-          markers = [];
-          currentListings = listings;
-
-          // Add new markers
-          listings.forEach((listing, index) => {
-            debugLog('🗺️ WebView creating marker:', listing.title, 'at', listing.position);
-            
-            // Create custom marker with more rounded pill shape
-            const marker = new google.maps.Marker({
-              position: listing.position,
-              map: map,
-              title: listing.title,
-              icon: {
-                url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(\`
-                  <svg width="70" height="35" xmlns="http://www.w3.org/2000/svg">
-                    <defs>
-                      <linearGradient id="grad\${index}" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" style="stop-color:\${listing.color};stop-opacity:1" />
-                        <stop offset="100%" style="stop-color:\${listing.color}dd;stop-opacity:1" />
-                      </linearGradient>
-                      <filter id="shadow\${index}" x="-50%" y="-50%" width="200%" height="200%">
-                        <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="rgba(0,0,0,0.3)"/>
-                      </filter>
-                    </defs>
-                    <rect x="5" y="5" width="60" height="25" rx="15" ry="15" fill="url(#grad\${index})" stroke="#FFFFFF" stroke-width="2" filter="url(#shadow\${index})"/>
-                    <text x="35" y="22" text-anchor="middle" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="11" font-weight="600" text-shadow="0 1px 2px rgba(0,0,0,0.5)">⭐ \${listing.rating || 'N/A'}</text>
-                  </svg>
-                \`),
-                scaledSize: new google.maps.Size(70, 35),
-                anchor: new google.maps.Point(35, 17.5)
-              }
-            });
-
-            const infoWindow = new google.maps.InfoWindow({
-              content: \`
-                <div style="padding: 10px; max-width: 250px;">
-                  \${listing.imageUrl ? \`
-                    <div style="margin-bottom: 8px;">
-                      <img src="\${listing.imageUrl}" style="width: 100%; height: 120px; object-fit: cover; border-radius: 8px;" alt="\${listing.title}" />
-                    </div>
-                  \` : ''}
-                  <div style="display: flex; align-items: center; margin-bottom: 8px;">
-                    <span style="font-size: 20px; margin-right: 8px;">\${listing.emoji}</span>
-                    <strong>\${listing.title}</strong>
-                  </div>
-                  <p style="margin: 0 0 8px 0; color: #666; font-size: 12px;">\${listing.description}</p>
-                  <div style="display: flex; justify-content: space-between; font-size: 12px;">
-                    <span>\${listing.rating ? '⭐ ' + listing.rating : 'No rating'}</span>
-                    <span>\${listing.distance && typeof listing.distance === 'number' ? listing.distance.toFixed(1) + 'mi' : ''}</span>
-                  </div>
-                </div>
-              \`
-            });
-
-            marker.addListener('click', () => {
-              infoWindow.open(map, marker);
-              window.ReactNativeWebView.postMessage(JSON.stringify({
-                type: 'marker_click',
-                listing: listing
-              }));
-            });
-
-            markers.push(marker);
-          });
-        }
-
-        // Listen for messages from React Native
-        window.addEventListener('message', function(event) {
-          try {
-            const data = JSON.parse(event.data);
-            debugLog('🗺️ WebView received message:', data.type);
-            if (data.type === 'update_markers') {
-              updateMarkers(data.listings);
-            }
-          } catch (error) {
-            debugLog('🗺️ WebView message parse error:', error);
-          }
-        });
-
-        // Also listen for React Native WebView messages
-        document.addEventListener('message', function(event) {
-          try {
-            const data = JSON.parse(event.data);
-            debugLog('🗺️ WebView received document message:', data.type);
-            if (data.type === 'update_markers') {
-              updateMarkers(data.listings);
-            }
-          } catch (error) {
-            debugLog('🗺️ WebView document message parse error:', error);
-          }
-        });
-      </script>
-      <script async defer
-        src="https://maps.googleapis.com/maps/api/js?key=${
-          configService.googlePlacesApiKey
-        }&callback=initMap">
-      </script>
-    </body>
-    </html>
-  `,
-    [mapRegion.latitude, mapRegion.longitude, configService.googlePlacesApiKey],
-  );
-
-  const handleWebViewMessage = useCallback(
-    (event: any) => {
-      try {
-        const data = JSON.parse(event.nativeEvent.data);
-
-        if (data.type === 'marker_click') {
-          handleMarkerPress(data.listing);
-        } else if (data.type === 'region_changed') {
-          // Debounce region updates to prevent excessive re-renders
-          if (regionUpdateTimeoutRef.current) {
-            clearTimeout(regionUpdateTimeoutRef.current);
-          }
-
-          regionUpdateTimeoutRef.current = setTimeout(() => {
-            // Only update if the change is significant and user is not interacting
-            if (!isUserInteracting && isMountedRef.current) {
-              const newRegion = data.region;
-              const currentRegion = mapRegion;
-              const latDiff = Math.abs(
-                newRegion.latitude - currentRegion.latitude,
-              );
-              const lngDiff = Math.abs(
-                newRegion.longitude - currentRegion.longitude,
-              );
-
-              // Only update if moved significantly (0.01 degrees ≈ 1km)
-              if (latDiff > 0.01 || lngDiff > 0.01) {
-                setMapRegion(newRegion);
-              }
-            }
-          }, 300); // 300ms debounce
-        } else if (data.type === 'map_loaded') {
-          if (isMountedRef.current) {
-            setMapLoaded(true);
-          }
-        } else if (data.type === 'user_interaction_start') {
-          if (isMountedRef.current) {
-            setIsUserInteracting(true);
-          }
-        } else if (data.type === 'user_interaction_end') {
-          if (isMountedRef.current) {
-            setIsUserInteracting(false);
-          }
-        }
-      } catch (error) {
-        // Silently handle parse errors
-      }
-    },
-    [handleMarkerPress, mapRegion, isUserInteracting],
-  );
-
-  // Memoize marker data to prevent unnecessary updates
-  const markerData = useMemo(() => {
-    debugLog(
-      '🗺️ Creating marker data from filteredListings:',
-      filteredListings.length,
-    );
-
-    const markers = filteredListings.map(listing => {
-      const category = categories.find(c => c.key === listing.category);
-
-      // Calculate real distance if user location is available
-      let realDistance = listing.distance || 0;
-      if (location) {
-        realDistance = calculateDistance(
-          location.latitude,
-          location.longitude,
-          listing.latitude,
-          listing.longitude,
-        );
-      } else {
-        // Handle both string and number distance values
-        if (typeof listing.distance === 'string' && listing.distance) {
-          // Extract number from string like "1.2 mi" or "1.2"
-          const match = listing.distance.match(/(\d+\.?\d*)/);
-          realDistance = match ? parseFloat(match[1]) : 0;
-        }
-      }
-
-      const marker = {
-        id: listing.id,
-        position: { lat: listing.latitude, lng: listing.longitude },
-        title: listing.title,
-        description: listing.description,
-        category: listing.category,
-        emoji: category?.emoji || '📍',
-        color: getCategoryColor(listing.category),
-        rating: listing.rating || 0,
-        distance: realDistance,
-      };
-
-      debugLog(
-        '🗺️ Created marker:',
-        marker.title,
-        'at',
-        `lat: ${marker.position.lat}, lng: ${marker.position.lng}`,
-      );
-      return marker;
-    });
-
-    debugLog('🗺️ Total markers created:', markers.length);
-    return markers;
-  }, [filteredListings, categories, location]);
-
-  // Get user's current location on mount
-  useEffect(() => {
-    const initializeLocation = async () => {
-      if (permissionGranted) {
-        const userLocation = await getCurrentLocation();
-        if (userLocation) {
-          setMapRegion({
-            latitude: userLocation.latitude,
-            longitude: userLocation.longitude,
-            latitudeDelta: 0.05, // Closer zoom when we have user location
-            longitudeDelta: 0.05,
-          });
-        }
-      }
-    };
-
-    initializeLocation();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [permissionGranted]); // Don't add getCurrentLocation to avoid infinite loop
-
-  // Cleanup on unmount
-  useEffect(() => {
-    isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
-      // Clear all pending timeouts
-      if (regionUpdateTimeoutRef.current) {
-        clearTimeout(regionUpdateTimeoutRef.current);
-      }
-      if (markerUpdateTimeoutRef.current) {
-        clearTimeout(markerUpdateTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  // Send marker updates to WebView when markerData changes (with debouncing)
-  useEffect(() => {
-    if (webViewRef.current && markerData.length > 0 && mapLoaded) {
-      const message = JSON.stringify({
-        type: 'update_markers',
-        listings: markerData,
-      });
-
-      // Clear previous timeout
-      if (markerUpdateTimeoutRef.current) {
-        clearTimeout(markerUpdateTimeoutRef.current);
-      }
-
-      // Debounce marker updates to prevent flickering
-      markerUpdateTimeoutRef.current = setTimeout(() => {
-        if (webViewRef.current && isMountedRef.current) {
-          webViewRef.current.postMessage(message);
-        }
-      }, 300); // 300ms debounce
-
-      return () => {
-        if (markerUpdateTimeoutRef.current) {
-          clearTimeout(markerUpdateTimeoutRef.current);
-        }
-      };
-    }
-  }, [markerData.length, mapLoaded]); // Simplified dependencies to prevent infinite loop
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -858,10 +446,12 @@ const LiveMapScreen: React.FC = () => {
 
       {/* Map */}
       <View style={styles.mapContainer}>
-        <MemoizedWebView
-          mapHTML={mapHTML}
-          onMessage={handleWebViewMessage}
-          webViewRef={webViewRef}
+        <NativeMapView
+          points={mapPoints}
+          initialRegion={initialRegion}
+          userLocation={location}
+          selectedId={selectedListing?.id}
+          onMarkerPress={handleMarkerPress}
         />
 
         {/* Map Legend */}

@@ -4,7 +4,6 @@ import React, {
   useMemo,
   useRef,
   useEffect,
-  memo,
 } from 'react';
 import {
   View,
@@ -19,7 +18,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { WebView } from 'react-native-webview';
+import { Region } from 'react-native-maps';
 import { useFilters } from '../hooks/useFilters';
 import FiltersModal from '../components/FiltersModal';
 import Icon from '../components/Icon';
@@ -27,45 +26,13 @@ import { Spacing, Shadows } from '../styles/designSystem';
 import { useLocation, calculateDistance } from '../hooks/useLocation';
 import { useCategoryData } from '../hooks/useCategoryData';
 import { debugLog } from '../utils/logger';
-import { configService } from '../config/ConfigService';
+import { NativeMapView } from '../features/map/NativeMapView';
+import { MapPoint } from '../features/map/types';
 
-// This implementation uses Google Maps JavaScript API via WebView
-// for a real map experience without native dependencies
+// This implementation uses native react-native-maps with Google Maps provider
+// for high-performance map experience on iOS
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
-
-// Memoized WebView component to prevent unnecessary re-renders
-const MemoizedWebView = memo(
-  ({
-    mapHTML,
-    onMessage,
-    webViewRef,
-  }: {
-    mapHTML: string;
-    onMessage: (event: any) => void;
-    webViewRef: React.RefObject<WebView | null>;
-  }) => (
-    <WebView
-      ref={webViewRef}
-      source={{ html: mapHTML }}
-      style={styles.map}
-      onMessage={onMessage}
-      javaScriptEnabled={true}
-      domStorageEnabled={true}
-      startInLoadingState={true}
-      scalesPageToFit={false}
-      allowsInlineMediaPlayback={true}
-      mediaPlaybackRequiresUserAction={false}
-      mixedContentMode="compatibility"
-      thirdPartyCookiesEnabled={false}
-      sharedCookiesEnabled={false}
-      onShouldStartLoadWithRequest={() => true}
-      onLoadEnd={() => {
-        // Map is loaded, we can start sending marker updates
-      }}
-    />
-  ),
-);
 
 interface MapListing {
   id: string;
@@ -103,21 +70,8 @@ const LiveMapAllScreen: React.FC = () => {
   const [selectedListing, setSelectedListing] = useState<MapListing | null>(
     null,
   );
-  const [mapLoaded, setMapLoaded] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
-  const [mapRegion, setMapRegion] = useState({
-    latitude: 40.7128, // Default to NYC
-    longitude: -74.006,
-    latitudeDelta: 0.1,
-    longitudeDelta: 0.1,
-  });
-  const [isUserInteracting, setIsUserInteracting] = useState(false);
-
-  // Refs for debouncing region and marker updates
-  const regionUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const markerUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const isMountedRef = useRef(true);
 
   // Categories configuration - matching the keys from ActionBar
   const categories = [
@@ -240,6 +194,23 @@ const LiveMapAllScreen: React.FC = () => {
     jobsData.data,
   ]);
 
+  // If nothing loaded yet, proactively refresh all categories once
+  useEffect(() => {
+    if (allListings.length === 0) {
+      // Kick off parallel refreshes; they no-op if already loading
+      eateryData.refresh();
+      shulData.refresh();
+      mikvahData.refresh();
+      schoolsData.refresh();
+      storesData.refresh();
+      servicesData.refresh();
+      housingData.refresh();
+      shtetlData.refresh();
+      eventsData.refresh();
+      jobsData.refresh();
+    }
+  }, [allListings.length]);
+
   // Convert listings to map format with coordinates
   const mapListings: MapListing[] = useMemo(() => {
     debugLog(
@@ -262,72 +233,6 @@ const LiveMapAllScreen: React.FC = () => {
     debugLog('🗺️ Converted mapListings:', converted.length);
     return converted;
   }, [allListings]);
-
-  const webViewRef = useRef<WebView | null>(null);
-
-  // Update user location when available
-  useEffect(() => {
-    if (location && permissionGranted && !isUserInteracting) {
-      setMapRegion({
-        latitude: location.latitude,
-        longitude: location.longitude,
-        latitudeDelta: 0.1,
-        longitudeDelta: 0.1,
-      });
-    }
-  }, [location, permissionGranted, isUserInteracting]);
-
-  // Update markers when listings change
-  useEffect(() => {
-    if (!isMountedRef.current || !webViewRef.current || !mapLoaded) {
-      return;
-    }
-
-    // Debounce marker updates to prevent too many re-renders
-    if (markerUpdateTimeoutRef.current) {
-      clearTimeout(markerUpdateTimeoutRef.current);
-    }
-
-    markerUpdateTimeoutRef.current = setTimeout(() => {
-      if (!isMountedRef.current) return;
-
-      const markersData = filteredListings.map(listing => ({
-        id: listing.id,
-        lat: listing.latitude,
-        lng: listing.longitude,
-        title: listing.title,
-        category: listing.category,
-        color: getCategoryColor(listing.category),
-      }));
-
-      const updateScript = `
-        updateMarkers(${JSON.stringify(markersData)});
-        true;
-      `;
-
-      webViewRef.current?.injectJavaScript(updateScript);
-    }, 300);
-
-    return () => {
-      if (markerUpdateTimeoutRef.current) {
-        clearTimeout(markerUpdateTimeoutRef.current);
-      }
-    };
-  }, [mapListings, mapLoaded, selectedCategory, filters, searchQuery]);
-
-  // Handle cleanup on unmount
-  useEffect(() => {
-    isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
-      if (regionUpdateTimeoutRef.current) {
-        clearTimeout(regionUpdateTimeoutRef.current);
-      }
-      if (markerUpdateTimeoutRef.current) {
-        clearTimeout(markerUpdateTimeoutRef.current);
-      }
-    };
-  }, []);
 
   // Filter listings based on selected category, search query, and filters
   const filteredListings = useMemo(() => {
@@ -421,13 +326,48 @@ const LiveMapAllScreen: React.FC = () => {
     return filtered;
   }, [mapListings, filters, searchQuery, location, selectedCategory]);
 
+  // Convert listings to MapPoint format for native map
+  const mapPoints: MapPoint[] = useMemo(() => {
+    return filteredListings.map(listing => ({
+      id: listing.id,
+      latitude: listing.latitude,
+      longitude: listing.longitude,
+      rating: listing.rating || null,
+      title: listing.title,
+      description: listing.description,
+      category: listing.category,
+      imageUrl: listing.imageUrl,
+      address: listing.address,
+      city: listing.city,
+      state: listing.state,
+      zip_code: listing.zip_code,
+    }));
+  }, [filteredListings]);
+
+  // Initial region setup
+  const initialRegion: Region = useMemo(
+    () => ({
+      latitude: location?.latitude || 40.7128,
+      longitude: location?.longitude || -74.006,
+      latitudeDelta: 0.1,
+      longitudeDelta: 0.1,
+    }),
+    [location],
+  );
+
   const handleBackPress = useCallback(() => {
     navigation.goBack();
   }, [navigation]);
 
-  const handleMarkerPress = useCallback((listing: MapListing) => {
-    setSelectedListing(listing);
-  }, []);
+  const handleMarkerPress = useCallback(
+    (point: MapPoint) => {
+      const listing = filteredListings.find(l => l.id === point.id);
+      if (listing) {
+        setSelectedListing(listing);
+      }
+    },
+    [filteredListings],
+  );
 
   const handleClosePopup = useCallback(() => {
     setSelectedListing(null);
@@ -449,151 +389,8 @@ const LiveMapAllScreen: React.FC = () => {
     return cat?.color || '#74e1a0';
   };
 
-  // Generate static Google Maps HTML (memoized to prevent re-renders)
-  const mapHTML = useMemo(
-    () => `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <style>
-        body { margin: 0; padding: 0; }
-        #map { width: 100%; height: 100vh; }
-      </style>
-    </head>
-    <body>
-      <div id="map"></div>
-      <script>
-        let map;
-        let markers = [];
-        let currentListings = [];
-
-        function initMap() {
-          map = new google.maps.Map(document.getElementById("map"), {
-            zoom: 13,
-            center: { lat: ${mapRegion.latitude}, lng: ${mapRegion.longitude} },
-            mapTypeId: google.maps.MapTypeId.ROADMAP,
-            styles: [
-              {
-                featureType: "poi",
-                elementType: "labels",
-                stylers: [{ visibility: "off" }]
-              }
-            ],
-            gestureHandling: 'greedy',
-            disableDefaultUI: false,
-            zoomControl: true,
-            mapTypeControl: false,
-            scaleControl: false,
-            streetViewControl: false,
-            rotateControl: false,
-            fullscreenControl: false
-          });
-
-          // Send map loaded message
-          window.ReactNativeWebView.postMessage(JSON.stringify({
-            type: 'map_loaded'
-          }));
-
-          // Add user location marker if available
-          ${
-            location && permissionGranted
-              ? `
-          const userLocationMarker = new google.maps.Marker({
-            position: { lat: ${location.latitude}, lng: ${location.longitude} },
-            map: map,
-            icon: {
-              path: google.maps.SymbolPath.CIRCLE,
-              scale: 8,
-              fillColor: '#4285F4',
-              fillOpacity: 1,
-              strokeColor: '#FFFFFF',
-              strokeWeight: 2
-            },
-            title: 'Your Location'
-          });
-          `
-              : ''
-          }
-        }
-
-        // Function to update markers
-        function updateMarkers(listings) {
-          // Clear existing markers
-          markers.forEach(marker => marker.setMap(null));
-          markers = [];
-          currentListings = listings;
-
-          // Add new markers
-          listings.forEach((listing, index) => {
-            const marker = new google.maps.Marker({
-              position: { lat: listing.lat, lng: listing.lng },
-              map: map,
-              title: listing.title,
-              icon: {
-                path: google.maps.SymbolPath.CIRCLE,
-                scale: 10,
-                fillColor: listing.color,
-                fillOpacity: 0.9,
-                strokeColor: '#FFFFFF',
-                strokeWeight: 2
-              }
-            });
-
-            marker.addListener('click', function() {
-              window.ReactNativeWebView.postMessage(JSON.stringify({
-                type: 'marker_click',
-                listing: listing
-              }));
-            });
-
-            markers.push(marker);
-          });
-
-          // Fit bounds to show all markers
-          if (listings.length > 0) {
-            const bounds = new google.maps.LatLngBounds();
-            listings.forEach(listing => {
-              bounds.extend({ lat: listing.lat, lng: listing.lng });
-            });
-            map.fitBounds(bounds);
-          }
-        }
-      </script>
-      <script src="https://maps.googleapis.com/maps/api/js?key=${
-        configService.googlePlacesApiKey
-      }&callback=initMap" async defer></script>
-    </body>
-    </html>
-  `,
-    [mapRegion, location, permissionGranted],
-  );
-
-  const handleWebViewMessage = useCallback(
-    (event: any) => {
-      try {
-        const data = JSON.parse(event.nativeEvent.data);
-
-        if (data.type === 'map_loaded') {
-          setMapLoaded(true);
-          debugLog('🗺️ Map loaded successfully');
-        } else if (data.type === 'marker_click') {
-          const listing = mapListings.find(l => l.id === data.listing.id);
-          if (listing) {
-            handleMarkerPress(listing);
-          }
-        }
-      } catch (error) {
-        debugLog('🗺️ Error parsing WebView message:', error);
-      }
-    },
-    [mapListings, handleMarkerPress],
-  );
-
   const handleCategoryPress = useCallback((categoryKey: string) => {
     setSelectedCategory(categoryKey);
-    setIsUserInteracting(true);
-    setTimeout(() => setIsUserInteracting(false), 1000);
   }, []);
 
   const handleSearchFocus = useCallback(() => {
@@ -611,11 +408,21 @@ const LiveMapAllScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       {/* Map */}
-      <MemoizedWebView
-        mapHTML={mapHTML}
-        onMessage={handleWebViewMessage}
-        webViewRef={webViewRef}
-      />
+      <View style={styles.mapContainer}>
+        {mapPoints && mapPoints.length >= 0 ? (
+          <NativeMapView
+            points={mapPoints}
+            initialRegion={initialRegion}
+            userLocation={location}
+            selectedId={selectedListing?.id}
+            onMarkerPress={handleMarkerPress}
+          />
+        ) : (
+          <View style={styles.loadingContainer}>
+            <Text style={styles.loadingText}>Loading map...</Text>
+          </View>
+        )}
+      </View>
 
       {/* Header with back button */}
       <View
@@ -782,6 +589,22 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+  },
+  mapContainer: {
+    flex: 1,
+    width: screenWidth,
+    height: screenHeight,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F5F5F5',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#666',
+    fontFamily: 'Nunito-Regular',
   },
   map: {
     flex: 1,

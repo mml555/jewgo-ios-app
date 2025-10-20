@@ -8,6 +8,9 @@ require Pod::Executable.execute_command('node', ['-p',
 platform :ios, min_ios_version_supported
 prepare_react_native_project!
 
+# Disable New Architecture - using Legacy-compatible react-native-maps 1.3.2
+ENV['RCT_NEW_ARCH_ENABLED'] = '0'
+
 linkage = ENV['USE_FRAMEWORKS']
 if linkage != nil
   Pod::UI.puts "Configuring Pod with #{linkage}ally linked Frameworks".green
@@ -17,10 +20,17 @@ end
 target 'JewgoAppFinal' do
   config = use_native_modules!
 
+  # Google Maps for react-native-maps
+  rn_maps_path = '../node_modules/react-native-maps'
+  pod 'GoogleMaps', '~> 8.4.0'
+  pod 'Google-Maps-iOS-Utils', '~> 5.0.0'
+
   use_react_native!(
     :path => config[:reactNativePath],
     # An absolute path to your application root.
-    :app_path => "#{Pod::Config.instance.installation_root}/.."
+    :app_path => "#{Pod::Config.instance.installation_root}/..",
+    # Disable Hermes temporarily - the bundleURL() override pattern is complex in React Native 0.81
+    :hermes_enabled => false
   )
 
   post_install do |installer|
@@ -32,10 +42,15 @@ target 'JewgoAppFinal' do
       # :ccache_enabled => true
     )
     
-    # Fix deployment target warnings
+    # Fix deployment target warnings - set to iOS 15.0 to match RN libraries
     installer.pods_project.targets.each do |target|
       target.build_configurations.each do |config|
-        config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.0'
+        config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
+        
+        # Ensure consistent C++ language standard for Hermes compatibility
+        if target.name == 'hermes-engine'
+          config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++17'
+        end
       end
     end
   end

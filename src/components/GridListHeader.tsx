@@ -6,6 +6,8 @@ import React, {
 } from 'react';
 import { View, StyleSheet } from 'react-native';
 import CategoryRail from './CategoryRail';
+import ActionBar from './ActionBar';
+import TopBar from './TopBar';
 import FastButton from './FastButton';
 import { Colors, Spacing, BorderRadius } from '../styles/designSystem';
 import { View as RNView, Text } from 'react-native';
@@ -19,6 +21,14 @@ export interface GridListHeaderProps {
   onLocationPermissionRequest?: () => void;
   onLocationRefresh?: () => void;
   locationLoading?: boolean;
+  showActionBarInHeader?: boolean; // Clear intent: under rail at rest
+  onActionPress?: (action: string) => void;
+  jobMode?: 'seeking' | 'hiring';
+  searchQuery: string;
+  onSearchChange: (query: string) => void;
+  onAddEntity: () => void;
+  getAddButtonText: (category: string) => string;
+  SAFE_TOP: number;
 }
 
 export interface GridListHeaderRef {
@@ -35,11 +45,17 @@ const GridListHeader = forwardRef<GridListHeaderRef, GridListHeaderProps>(
       onLocationPermissionRequest,
       onLocationRefresh,
       locationLoading = false,
+      showActionBarInHeader = false,
+      onActionPress,
+      jobMode,
+      searchQuery,
+      onSearchChange,
+      onAddEntity,
+      getAddButtonText,
+      SAFE_TOP,
     },
     ref,
   ) => {
-    const [railHeightMeasured, setRailHeightMeasured] = useState(false);
-    const [bannerHeightMeasured, setBannerHeightMeasured] = useState(false);
     const railRef = React.useRef<any>(null);
     const { location, permissionGranted } = useLocation();
 
@@ -51,28 +67,24 @@ const GridListHeader = forwardRef<GridListHeaderRef, GridListHeaderProps>(
       },
     }));
 
-    // One-shot measurement for CategoryRail
+    // Measurement for CategoryRail
     const handleRailLayout = useCallback(
       (event: any) => {
-        if (!railHeightMeasured) {
-          const { height } = event.nativeEvent.layout;
-          setRailHeightMeasured(true);
-          onRailLayout?.(height);
-        }
+        const { height } = event.nativeEvent.layout;
+        onRailLayout?.(height);
       },
-      [railHeightMeasured, onRailLayout],
+      [onRailLayout],
     );
 
-    // One-shot measurement for LocationBanner
+    // Measurement for LocationBanner
     const handleBannerLayout = useCallback(
       (event: any) => {
-        if (!bannerHeightMeasured) {
+        if (event && event.nativeEvent && event.nativeEvent.layout) {
           const { height } = event.nativeEvent.layout;
-          setBannerHeightMeasured(true);
           onBannerLayout?.(height);
         }
       },
-      [bannerHeightMeasured, onBannerLayout],
+      [onBannerLayout],
     );
 
     // Determine which banner to show
@@ -83,14 +95,60 @@ const GridListHeader = forwardRef<GridListHeaderRef, GridListHeaderProps>(
 
     return (
       <View style={styles.container}>
+        {/* TopBar */}
+        <TopBar
+          onQueryChange={onSearchChange}
+          placeholder={
+            activeCategory === 'jobs'
+              ? 'Find a job'
+              : 'Search places, events...'
+          }
+          onAddEntity={onAddEntity}
+          addButtonText={getAddButtonText(activeCategory)}
+        />
+
         {/* CategoryRail with measurement */}
-        <View onLayout={handleRailLayout}>
+        <View
+          onLayout={event => {
+            if (event && event.nativeEvent && event.nativeEvent.layout) {
+              const h = event.nativeEvent.layout.height;
+              onRailLayout?.(h);
+            }
+          }}
+        >
           <CategoryRail
             activeCategory={activeCategory}
             onCategoryChange={onCategoryChange}
             compact={false}
           />
         </View>
+
+        {/* ActionBar - only when not sticky */}
+        {showActionBarInHeader && (
+          <View
+            accessible
+            importantForAccessibility="yes"
+            accessibilityElementsHidden={false}
+          >
+            <ActionBar
+              onActionPress={onActionPress}
+              currentCategory={activeCategory}
+              jobMode={jobMode}
+            />
+          </View>
+        )}
+
+        {/* Debug logging */}
+        {__DEV__ &&
+          (() => {
+            console.log('🔍 GridListHeader render:', {
+              showActionBarInHeader,
+              activeCategory,
+              onActionPress: !!onActionPress,
+              jobMode,
+            });
+            return null;
+          })()}
 
         {/* LocationBanner with measurement */}
         {shouldShowBanner && (

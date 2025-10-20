@@ -26,6 +26,13 @@ export const Colors = {
   brandGreenTint: '#EAF6EF', // Light brand green tint
   charcoal: '#111111', // Charcoal for selected states
 
+  // 3-Step Form Design Tokens
+  jewgoGreen: '#C6FFD1', // Primary accent, active step
+  mintField: '#EFFFF5', // Input backgrounds
+  jetBlack: '#292B2D', // Headings, buttons
+  softGray: '#6B6B6B', // Subtitles, placeholders
+  errorRed: '#FFB3B3', // Validation
+
   // Background Colors
   background: {
     primary: '#f8f8f8', // Main background
@@ -68,7 +75,7 @@ export const Colors = {
 
   // Legacy colors for backward compatibility
   jewgoBlack: '#292B2D', // Primary JewGo Black
-  jewgoGreen: '#74E1A0', // Primary JewGo Green
+  jewgoGreenLegacy: '#74E1A0', // Primary JewGo Green (legacy)
   jewgoPurple: '#BEBBE7', // Primary JewGo Purple
   jewgoGray: '#f8f8f8', // Primary JewGo Gray
   jewgoWhite: '#FFFFFF', // Primary JewGo White
@@ -249,6 +256,36 @@ export const Typography = {
     '4xl': Math.max(32 * fontScale, 32), // Display headings
   },
 
+  // 3-Step Form Typography Tokens
+  formTitle: {
+    fontFamily: 'HoboStd-Bold',
+    fontSize: 24,
+    lineHeight: 30,
+    color: '#292B2D',
+    fontWeight: '700' as const,
+  },
+  formSubtitle: {
+    fontFamily: 'Nunito-Regular',
+    fontSize: 15,
+    lineHeight: 20,
+    color: '#6B6B6B',
+    fontWeight: '400' as const,
+  },
+  formFieldLabel: {
+    fontFamily: 'Nunito-SemiBold',
+    fontSize: 14,
+    lineHeight: 18,
+    color: '#292B2D',
+    fontWeight: '600' as const,
+  },
+  formButton: {
+    fontFamily: 'Nunito-Bold',
+    fontSize: 16,
+    lineHeight: 20,
+    color: '#FFFFFF',
+    fontWeight: '700' as const,
+  },
+
   // Sizes alias for backward compatibility
   sizes: {
     xs: Math.max(10 * fontScale, 10), // Minimum 10pt for readability
@@ -425,6 +462,15 @@ export const Spacing = {
   '2xl': 40, // 40px
   '3xl': 48, // 48px
   '4xl': 64, // 64px
+
+  // 3-Step Form Spacing Tokens
+  formFieldHeight: 56, // Field height
+  formFieldRadius: 12, // Field radius
+  formButtonHeight: 56, // Button height
+  formButtonRadius: 16, // Button radius
+  formVerticalSpacing: 20, // Vertical spacing between elements
+  formSidePadding: 24, // Side padding
+  formStepCircle: 48, // Step circle size
 
   // Common spacing patterns
   padding: {
@@ -719,12 +765,17 @@ export const ResponsiveTypography = {
 // StickyLayout constants for sticky header system
 // Contract: These are the single source of truth for sticky measurements
 export const StickyLayout = {
-  searchBarHeight: 56, // TopBar/SearchBar fixed height
-  laneGap: 0, // Vertical gap between Lane A and Lane B
+  searchBarHeight: 56, // TopBar/SearchBar fixed height (visual, without safe area)
+  laneGap: 8, // Vertical gap between search bar and the next lane
+  railActionGap: 12, // Gap between category rail and action bar when in rest state
   actionBarHeight: 48, // ActionBar height when shown in Lane B
   scrollBuffer: 6, // Hysteresis buffer to prevent threshold flicker
-  categoryRailHeightDefault: 96, // Conservative fallback for CategoryRail
+  stickyHysteresis: 8, // pixels - hysteresis for sticky state transitions
+  categoryRailHeightDefault: 50, // Further reduced to account for Boost/Filter lane (8+50+12+48=118px)
   locationBannerHeightDefault: 80, // Conservative fallback for LocationBanner
+  overlayGridInset: 4, // Extra grid offset when ActionBar is sticky to avoid overlap
+  overlayFadeHeight: 6, // Height of the gradient fade between ActionBar and grid
+  stickyRevealOffset: 40, // pixels - show sticky bar this much earlier than full header height
 };
 
 // Initialize accessibility validation in development

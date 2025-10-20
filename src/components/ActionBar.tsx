@@ -10,6 +10,8 @@ import {
   Shadows,
   ResponsiveSpacing,
   ResponsiveTypography,
+  StickyLayout,
+  Spacing,
 } from '../styles/designSystem';
 
 interface ActionBarProps {
@@ -19,8 +21,6 @@ interface ActionBarProps {
 }
 
 const HEIGHT = ResponsiveSpacing.get(36); // thinner, more compact pill height
-const PILL_HPADDING = ResponsiveSpacing.get(16);
-
 const ActionBar: React.FC<ActionBarProps> = ({
   onActionPress,
   currentCategory = 'mikvah',
@@ -282,8 +282,9 @@ const styles = StyleSheet.create({
     alignItems: 'center', // vertical centering for all buttons
     justifyContent: 'space-between',
     marginHorizontal: ResponsiveSpacing.md, // Add horizontal margin for screen edge padding
-    marginTop: 0, // Remove top margin to position directly below search bar
-    paddingBottom: ResponsiveSpacing.get(12), // anchor closer to grid
+    marginTop: StickyLayout.laneGap,
+    marginBottom: Spacing.sm,
+    paddingBottom: 0,
     backgroundColor: 'transparent',
     gap: ResponsiveSpacing.xs, // tighter gap between buttons
     minHeight: HEIGHT, // Ensure consistent height for the row

@@ -266,10 +266,10 @@ const EnhancedProgressIndicator: React.FC<EnhancedProgressIndicatorProps> =
 
       // Get step status color
       const getStepStatusColor = useCallback((step: FormStep) => {
-        if (step.isCurrent) return Colors.primary.main;
-        if (step.isCompleted) return Colors.success;
-        if (step.hasErrors) return Colors.error;
-        return Colors.text.secondary;
+        if (step.isCurrent) return Colors.jewgoGreen;
+        if (step.isCompleted) return Colors.jewgoGreen;
+        if (step.hasErrors) return Colors.errorRed;
+        return Colors.softGray;
       }, []);
 
       // Render horizontal layout
@@ -690,20 +690,23 @@ const styles = StyleSheet.create({
     ...Typography.styles.body,
     fontWeight: '600',
     color: Colors.text.secondary,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: Colors.gray100,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#E9F9EF',
     textAlign: 'center',
-    lineHeight: 24,
+    lineHeight: 48,
+    fontSize: 18,
   },
   stepNumberCurrent: {
-    color: Colors.white,
-    backgroundColor: Colors.primary.main,
+    color: Colors.jetBlack,
+    backgroundColor: Colors.jewgoGreen,
+    fontWeight: '700',
   },
   stepNumberCompleted: {
-    color: Colors.white,
-    backgroundColor: Colors.success,
+    color: Colors.jetBlack,
+    backgroundColor: Colors.jewgoGreen,
+    fontWeight: '700',
   },
   stepNumberError: {
     color: Colors.white,

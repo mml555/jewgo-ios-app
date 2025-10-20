@@ -15,6 +15,7 @@ import {
   PixelRatio,
 } from 'react-native';
 import Icon, { IconName } from './Icon';
+import { StickyLayout } from '../styles/designSystem';
 
 interface CategoryRailProps {
   activeCategory: string;
@@ -244,7 +245,7 @@ const CategoryRail: React.FC<CategoryRailProps> = ({
     [],
   );
 
-  // For sticky variant, don't show the horizontal scroll; show a static row instead
+  // For sticky variant, use horizontal scroll but without the indicator
   if (variant === 'sticky') {
     return (
       <View
@@ -254,28 +255,31 @@ const CategoryRail: React.FC<CategoryRailProps> = ({
           compact && styles.containerCompact,
         ]}
       >
-        <View
-          style={[
+        <FlatList
+          ref={listRef}
+          horizontal
+          data={CATEGORIES}
+          keyExtractor={item => item.id}
+          renderItem={renderItem}
+          getItemLayout={getItemLayout}
+          ItemSeparatorComponent={ItemSeparator}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={[
             styles.scrollContent,
-            styles.stickyContent,
             compact && styles.scrollContentCompact,
           ]}
-        >
-          {CATEGORIES.map((item, index) => {
-            const isActive = activeCategory === item.id;
-            return (
-              <React.Fragment key={item.id}>
-                {index > 0 && <View style={styles.separator} />}
-                <CategoryChip
-                  item={item}
-                  isActive={isActive}
-                  compact={compact}
-                  onPress={onCategoryChange}
-                />
-              </React.Fragment>
-            );
-          })}
-        </View>
+          style={[
+            styles.scrollViewStyle,
+            compact && styles.scrollViewStyleCompact,
+          ]}
+          decelerationRate="fast"
+          snapToOffsets={snapToOffsets}
+          directionalLockEnabled={true}
+          bounces={false}
+          removeClippedSubviews={true}
+          onScrollToIndexFailed={handleScrollToIndexFailed}
+          scrollEventThrottle={16}
+        />
       </View>
     );
   }
@@ -352,19 +356,16 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: '#f8f8f8',
     borderBottomWidth: 0,
-    height: 96, // Taller container for taller buttons
+    height: 96, // Restored original height
     position: 'relative',
-    marginBottom: 26, // 20px visual gap to ActionBar (rail extends down 6px, so 20+6=26)
+    marginBottom: StickyLayout.railActionGap,
   },
   containerSticky: {
     marginBottom: 0, // No margin bottom for sticky variant
+    height: 96, // Match the default container height exactly
   },
   containerCompact: {
     height: 50, // Reduced height for compact mode
-  },
-  stickyContent: {
-    flexWrap: 'nowrap', // Don't wrap in sticky mode
-    justifyContent: 'flex-start',
   },
   scrollViewStyle: {
     flexGrow: 0, // Prevent ScrollView from expanding unnecessarily

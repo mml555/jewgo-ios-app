@@ -161,8 +161,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.md,
-    paddingBottom: 14, // Consistent 20px visual spacing to category rail line
+    paddingTop: 8, // Minimal top padding
+    paddingBottom: 0,
   },
   searchWrapper: {
     flexDirection: 'row',

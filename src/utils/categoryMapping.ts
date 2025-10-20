@@ -60,6 +60,7 @@ export interface CategoryInfo {
   displayName: string;
   emoji: string;
   backgroundImage: string;
+  listingImageUrl?: string; // First listing's image for this category
 }
 
 /**
@@ -83,15 +84,21 @@ export function getCategoryInfo(entityType: string): CategoryInfo {
  * Get all available categories with their counts
  */
 export function getCategoriesWithCounts(
-  favorites: Array<{ entity_type: string }>,
+  favorites: Array<{ entity_type: string; image_url?: string | null }>,
 ): Array<CategoryInfo & { count: number }> {
   const categoryCounts = new Map<string, number>();
+  const categoryFirstImages = new Map<string, string>();
 
-  // Count favorites by category
+  // Count favorites by category and capture first image for each
   favorites.forEach(favorite => {
     const key = favorite.entity_type.toLowerCase();
     const categoryKey = key in CATEGORY_DISPLAY_NAMES ? key : 'other';
     categoryCounts.set(categoryKey, (categoryCounts.get(categoryKey) || 0) + 1);
+
+    // Store the first valid image URL for this category
+    if (favorite.image_url && !categoryFirstImages.has(categoryKey)) {
+      categoryFirstImages.set(categoryKey, favorite.image_url);
+    }
   });
 
   // Define all available categories in the app (in preferred order)
@@ -113,9 +120,18 @@ export function getCategoriesWithCounts(
   allCategories.forEach(key => {
     const categoryInfo = getCategoryInfo(key);
     const count = categoryCounts.get(key) || 0;
+    const listingImageUrl = categoryFirstImages.get(key);
+
+    // Force override the backgroundImage to use our placeholder
+    const placeholderImage =
+      'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=400&h=300&fit=crop&crop=center';
+
     categories.push({
       ...categoryInfo,
+      listingImageUrl,
       count,
+      // Always use placeholder image as background for consistency - no more rainbow gradients
+      backgroundImage: placeholderImage,
     });
   });
 

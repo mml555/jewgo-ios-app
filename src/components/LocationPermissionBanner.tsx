@@ -130,9 +130,17 @@ export const LocationPermissionBanner: React.FC<
             <Text style={styles.title}>{content.title}</Text>
             <Text style={styles.subtitle}>{content.subtitle}</Text>
           </View>
-          <Text style={[styles.button, loading && styles.buttonDisabled]}>
-            {content.buttonText}
-          </Text>
+          <View
+            style={[
+              styles.ctaPill,
+              styles.ctaPillPrimary,
+              loading && styles.ctaPillDisabled,
+            ]}
+          >
+            <Text style={[styles.ctaText, styles.ctaTextPrimary]}>
+              {content.buttonText}
+            </Text>
+          </View>
         </View>
       </TouchableOpacity>
 
@@ -183,12 +191,16 @@ export const LocationAccuracyBanner: React.FC<LocationAccuracyBannerProps> = ({
         <View style={styles.content}>
           <Text style={styles.icon}>📍</Text>
           <View style={styles.textContainer}>
-            <Text style={styles.title}>Using Approximate Location</Text>
+            <Text style={[styles.title, styles.accuracyTitle]}>
+              Using Approximate Location
+            </Text>
             <Text style={styles.subtitle}>
               Tap to improve accuracy for better distances
             </Text>
           </View>
-          <Text style={styles.button}>Improve</Text>
+          <View style={[styles.ctaPill, styles.ctaPillSuccess]}>
+            <Text style={[styles.ctaText, styles.ctaTextSuccess]}>Improve</Text>
+          </View>
         </View>
       </TouchableOpacity>
 
@@ -228,12 +240,14 @@ export const LocationErrorBanner: React.FC<LocationErrorBannerProps> = ({
         <View style={styles.content}>
           <Text style={styles.icon}>⚠️</Text>
           <View style={styles.textContainer}>
-            <Text style={styles.title}>Location Error</Text>
+            <Text style={[styles.title, styles.errorTitle]}>
+              Location Error
+            </Text>
             <Text style={styles.subtitle}>{error}</Text>
           </View>
           {onRetry && (
             <TouchableOpacity
-              style={styles.retryButton}
+              style={styles.retryCta}
               onPress={onRetry}
               accessible={true}
               accessibilityRole="button"
@@ -264,38 +278,40 @@ const styles = StyleSheet.create({
   container: {
     position: 'relative',
     marginHorizontal: Spacing.md,
-    marginVertical: Spacing.sm,
+    marginTop: Spacing.sm,
+    marginBottom: 0,
   },
 
   banner: {
-    backgroundColor: Colors.primary.main,
-    borderRadius: BorderRadius.md,
-    padding: Spacing.md,
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.lg,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: Colors.border.primary,
   },
 
   accuracyBanner: {
-    backgroundColor: Colors.warning,
+    backgroundColor: Colors.brandGreenTint,
+    borderColor: Colors.brandGreen,
   },
 
   errorBanner: {
-    backgroundColor: Colors.error,
+    backgroundColor: Colors.background.secondary,
+    borderColor: Colors.status.error,
   },
 
   content: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    minHeight: TouchTargets.minimum,
   },
 
   icon: {
-    fontSize: 20,
+    fontSize: 18,
     marginRight: Spacing.sm,
   },
 
@@ -306,66 +322,97 @@ const styles = StyleSheet.create({
 
   title: {
     ...Typography.styles.body,
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
-    color: Colors.white,
+    color: Colors.text.primary,
     marginBottom: 2,
+  },
+
+  accuracyTitle: {
+    color: Colors.brandGreen,
+  },
+
+  errorTitle: {
+    color: Colors.status.error,
   },
 
   subtitle: {
     ...Typography.styles.caption,
-    fontSize: 14,
-    color: Colors.white,
-    opacity: 0.9,
+    fontSize: 13,
+    color: Colors.text.secondary,
   },
 
-  button: {
-    ...Typography.styles.body,
-    fontSize: 16,
+  ctaPill: {
+    borderRadius: BorderRadius.full,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  ctaPillDisabled: {
+    opacity: 0.5,
+  },
+
+  ctaPillPrimary: {
+    borderColor: Colors.primary.main,
+    backgroundColor: Colors.surface,
+  },
+
+  ctaPillSuccess: {
+    borderColor: Colors.brandGreen,
+    backgroundColor: Colors.brandGreenTint,
+  },
+
+  ctaText: {
+    ...Typography.styles.caption,
+    fontSize: 13,
     fontWeight: '600',
-    color: Colors.white,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderRadius: BorderRadius.sm,
+    textTransform: 'uppercase',
   },
 
-  buttonDisabled: {
-    opacity: 0.6,
+  ctaTextPrimary: {
+    color: Colors.primary.main,
   },
 
-  retryButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  ctaTextSuccess: {
+    color: Colors.brandGreen,
+  },
+
+  retryCta: {
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderRadius: BorderRadius.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
+    borderColor: Colors.status.error,
+    backgroundColor: Colors.background.secondary,
   },
 
   retryText: {
     ...Typography.styles.body,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
-    color: Colors.white,
+    color: Colors.status.error,
+    textTransform: 'uppercase',
   },
 
   dismissButton: {
     position: 'absolute',
     top: Spacing.xs,
     right: Spacing.xs,
-    width: TouchTargets.minimum,
-    height: TouchTargets.minimum,
-    borderRadius: TouchTargets.minimum / 2,
-    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    padding: Spacing.xs,
+    borderRadius: BorderRadius.full,
     justifyContent: 'center',
     alignItems: 'center',
   },
 
   dismissText: {
     ...Typography.styles.body,
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
-    color: Colors.white,
-    lineHeight: 16,
+    color: Colors.text.secondary,
+    lineHeight: 18,
   },
 });
 
