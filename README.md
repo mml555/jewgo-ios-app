@@ -9,6 +9,12 @@ A React Native iOS application for the Jewish community, providing easy access t
 - **[Testing Guide](TESTING_GUIDE.md)** - How to run tests
 - **[Deployment Guide](RENDER_NEON_QUICK_FIX.md)** - Deploy to production (Render + Neon)
 
+**iOS Build (Important!)**:
+- **[iOS Build Notes](IOS_BUILD_NOTES.md)** - ⚠️ START HERE for iOS setup
+- [iOS Quick Start](docs/ios/QUICK_START_IOS.md) - Quick commands
+- [iOS Build Fixes](docs/ios/IOS_BUILD_FIXES.md) - Complete technical guide
+- [Yoga Explanation](docs/ios/YOGA_EXPLANATION.md) - What is Yoga and why it matters
+
 **Quick Links**:
 
 - [Deployment Checklist](docs/deployment/DEPLOYMENT_CHECKLIST.md)

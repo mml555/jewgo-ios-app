@@ -5,134 +5,79 @@ require Pod::Executable.execute_command('node', ['-p',
     {paths: [process.argv[1]]},
   )', __dir__]).strip
 
-platform :ios, min_ios_version_supported
+platform :ios, '14.0'
 prepare_react_native_project!
 
-# Disable New Architecture - using Legacy-compatible react-native-maps 1.3.2
-ENV['RCT_NEW_ARCH_ENABLED'] = '0'
+project 'JewgoAppFinal.xcodeproj'
 
-linkage = ENV['USE_FRAMEWORKS']
-if linkage != nil
-  Pod::UI.puts "Configuring Pod with #{linkage}ally linked Frameworks".green
-  use_frameworks! :linkage => linkage.to_sym
-end
+use_frameworks! :linkage => :static
 
 target 'JewgoAppFinal' do
   config = use_native_modules!
 
-  # Google Maps for react-native-maps
-  rn_maps_path = '../node_modules/react-native-maps'
+  use_react_native!(
+    :path => config[:reactNativePath],
+    :hermes_enabled => true,
+    :fabric_enabled => false,
+    :app_path => "#{Pod::Config.instance.installation_root}/.."
+  )
+
   pod 'GoogleMaps', '~> 8.4.0'
   pod 'Google-Maps-iOS-Utils', '~> 5.0.0'
 
-  use_react_native!(
-    :path => config[:reactNativePath],
-    # An absolute path to your application root.
-    :app_path => "#{Pod::Config.instance.installation_root}/..",
-    # Enable Hermes for better performance
-    :hermes_enabled => true
-  )
-
   post_install do |installer|
-    # https://github.com/facebook/react-native/blob/main/packages/react-native/scripts/react_native_pods.rb#L197-L202
-    react_native_post_install(
-      installer,
-      config[:reactNativePath],
-      :mac_catalyst_enabled => false,
-      # :ccache_enabled => true
-    )
-    
-    puts "\n🔧 Starting JEWGO Build Configuration..."
-    puts "=" * 60
-    
-    # SECTION 1: Deployment Target Standardization
-    # Fix deployment target warnings - set to iOS 15.0 to match RN libraries
-    puts "\n📱 Configuring deployment targets..."
-    
-    installer.pods_project.targets.each do |target|
-      target.build_configurations.each do |config|
-        # Standardize deployment target to iOS 15.0
-        config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
-        
-        # Ensure proper architecture support
-        config.build_settings['ONLY_ACTIVE_ARCH'] = 'NO'
-        config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'arm64' if ENV['CI']
-        
-        puts "  ✅ #{target.name}: iOS 15.0"
+    react_native_post_install(installer)
+
+    installer.pods_project.targets.each do |t|
+      t.build_configurations.each do |cfg|
+        s = cfg.build_settings
+        s['IPHONEOS_DEPLOYMENT_TARGET']   = '14.0'
+        s['ALWAYS_SEARCH_USER_PATHS']     = 'NO'
+        s['USE_HEADERMAP']                = 'YES'
+        s['CLANG_ENABLE_MODULES']         = 'YES'
+        s['CLANG_CXX_LIBRARY']            = 'libc++'
+        s['CLANG_CXX_LANGUAGE_STANDARD']  = 'gnu++20'
+
+        defs = (s['GCC_PREPROCESSOR_DEFINITIONS'] || '$(inherited)').to_s.split(' ')
+        defs |= %w[FOLLY_NO_CONFIG=1 HAVE_PTHREAD=1]
+        s['GCC_PREPROCESSOR_DEFINITIONS'] = defs.join(' ')
+
+        cxx = (s['OTHER_CPLUSPLUSFLAGS'] || '$(inherited)').to_s.split(' ')
+        cxx |= %w[-std=gnu++20]
+        s['OTHER_CPLUSPLUSFLAGS'] = cxx.join(' ')
+
+        cflags = (s['OTHER_CFLAGS'] || '$(inherited)').to_s.split(' ')
+        cflags |= %w[-DHAVE_PTHREAD=1]
+        s['OTHER_CFLAGS'] = cflags.join(' ')
       end
     end
-    
-    # SECTION 2: Rsync Sandbox Fix - Replace with ditto command
-    # FIX: Replace rsync with ditto to avoid macOS sandbox restrictions
-    # ditto is a macOS-native tool that works within sandboxed environments
-    puts "\n🔧 Replacing rsync with ditto in CocoaPods scripts to avoid sandbox issues..."
-    
-    rsync_fixes_applied = 0
-    Dir.glob("Pods/Target Support Files/**/*.sh") do |script_path|
-      script_content = File.read(script_path)
-      original_content = script_content.dup
-      
-      # Replace rsync commands with ditto
-      # Pattern 1: rsync with complex flags and variables: rsync --delete -av "${ARRAY[@]}" --filter... "${source}"/* "${destination}"
-      script_content.gsub!(/rsync\s+--delete.*?\s+"?\$\{source\}"?\/?(\*\s+)?"?\$\{destination\}"?/) do |match|
-        'ditto "${source}" "${destination}"'
-      end
-      
-      # Pattern 2: rsync with quoted paths
-      script_content.gsub!(/rsync\s+[^"]*?"([^"]+)"\s+"([^"]+)"/) do |match|
-        source = $1
-        target = $2
-        "ditto \"#{source}\" \"#{target}\""
-      end
-      
-      # Pattern 3: Simple rsync  with variables
-      script_content.gsub!(/rsync\s+(-[a-z]+\s+)+([^\s]+)\s+([^\s]+)/) do |match|
-        source = $2
-        target = $3
-        "ditto #{source} #{target}"
-      end
-      
-      # Write back if changed
-      if script_content != original_content
-        File.write(script_path, script_content)
-        rsync_fixes_applied += 1
-        puts "  ✅ Fixed: #{File.basename(script_path)}"
-      end
-    end
-    
-    puts "  📊 Total rsync->ditto fixes applied: #{rsync_fixes_applied} files"
-    
-    # SECTION 3: Yoga Header Fix for React Native 0.76.x
-    # Fix: Add Yoga header search paths to resolve Yoga header not found errors
-    puts "\n🧘 Fixing Yoga header paths for React Native 0.76.x..."
-    
-    # Define Yoga header paths - include the React Native Yoga source directory
-    yoga_header_paths = [
-      '"$(PODS_ROOT)/Yoga/yoga"',
-      '"$(PODS_ROOT)/Headers/Public/Yoga"',
-      '"$(SRCROOT)/../node_modules/react-native/ReactCommon/yoga/yoga"',
-      '"$(SRCROOT)/../node_modules/react-native/ReactCommon/yoga/yoga/numeric"',
-      '"$(SRCROOT)/../node_modules/react-native/ReactCommon/yoga/yoga/enums"',
-      '"$(SRCROOT)/../node_modules/react-native/ReactCommon/yoga/yoga/config"',
-      '"$(SRCROOT)/../node_modules/react-native/ReactCommon/yoga"'
-    ]
-    
-    # Apply to all targets that might need Yoga headers
-    installer.pods_project.targets.each do |target|
-      if ['Yoga', 'React-Core', 'React-Fabric', 'React-FabricComponents'].include?(target.name)
-        target.build_configurations.each do |config|
-          # Add comprehensive Yoga header search paths
-          config.build_settings['HEADER_SEARCH_PATHS'] ||= []
-          yoga_header_paths.each do |path|
-            config.build_settings['HEADER_SEARCH_PATHS'] << path unless config.build_settings['HEADER_SEARCH_PATHS'].include?(path)
-          end
-          puts "  ✅ #{target.name}: Added comprehensive Yoga header paths"
+
+    installer.aggregate_targets.each do |agg|
+      agg.user_project.native_targets.each do |nt|
+        next unless nt.name == 'JewgoAppFinal'
+
+        nt.build_configurations.each do |cfg|
+          s = cfg.build_settings
+          s['IPHONEOS_DEPLOYMENT_TARGET']   = '14.0'
+          s['ALWAYS_SEARCH_USER_PATHS']     = 'NO'
+          s['USE_HEADERMAP']                = 'YES'
+          s['CLANG_ENABLE_MODULES']         = 'YES'
+          s['CLANG_CXX_LIBRARY']            = 'libc++'
+          s['CLANG_CXX_LANGUAGE_STANDARD']  = 'gnu++20'
+
+          defs = (s['GCC_PREPROCESSOR_DEFINITIONS'] || '$(inherited)').to_s.split(' ')
+          defs |= %w[FOLLY_NO_CONFIG=1 HAVE_PTHREAD=1]
+          s['GCC_PREPROCESSOR_DEFINITIONS'] = defs.join(' ')
+
+          cxx = (s['OTHER_CPLUSPLUSFLAGS'] || '$(inherited)').to_s.split(' ')
+          cxx |= %w[-std=gnu++20]
+          s['OTHER_CPLUSPLUSFLAGS'] = cxx.join(' ')
+
+          cflags = (s['OTHER_CFLAGS'] || '$(inherited)').to_s.split(' ')
+          cflags |= %w[-DHAVE_PTHREAD=1]
+          s['OTHER_CFLAGS'] = cflags.join(' ')
         end
       end
     end
-    
-    puts "\n" + "=" * 60
-    puts "✅ JEWGO Build Configuration Complete!"
-    puts "=" * 60 + "\n"
   end
 end

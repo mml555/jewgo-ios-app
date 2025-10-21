@@ -1,54 +1,37 @@
-#!/bin/bash
-set -e
+#!/usr/bin/env bash
+set -euo pipefail
 
-echo "🔨 Building JewgoAppFinal for iOS Simulator..."
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$REPO_ROOT"
 
-# Build the app
-xcodebuild -workspace JewgoAppFinal.xcworkspace \
-  -scheme JewgoAppFinal \
-  -configuration Debug \
-  -sdk iphonesimulator \
-  -destination 'id=4F2DF094-9D7C-4054-A8CB-3C2ECB024584' \
-  build CODE_SIGNING_ALLOWED=NO
+APP_SCHEME="JewgoAppFinal"
+WORKSPACE="ios/JewgoAppFinal.xcworkspace"
+CONFIGURATION="Debug"
 
-echo ""
-echo "📦 Copying Hermes framework..."
+# Discover bundle identifier from Info.plist unless overridden
+default_bundle_id=$( /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' ios/JewgoAppFinal/Info.plist ) || default_bundle_id="org.reactjs.native.example.JewgoAppFinal"
+BUNDLE_ID="${BUNDLE_ID_OVERRIDE:-$default_bundle_id}"
 
-# Find DerivedData path
-DERIVED_DATA=$(find ~/Library/Developer/Xcode/DerivedData -name "JewgoAppFinal-*" -type d -maxdepth 1 | head -1)
-APP_PATH="$DERIVED_DATA/Build/Products/Debug-iphonesimulator/JewgoAppFinal.app"
+# Prefer an already booted simulator; otherwise fall back to a common device name
+if destination_id=$(xcrun simctl list devices booted | awk -F'[()]' '/iPhone/{print $2; exit}'); then
+  DESTINATION="id=$destination_id"
+else
+  DESTINATION="platform=iOS Simulator,name=iPhone 16"
+fi
 
-# Create Frameworks directory
-mkdir -p "$APP_PATH/Frameworks"
+xcodebuild \
+  -workspace "$WORKSPACE" \
+  -scheme "$APP_SCHEME" \
+  -configuration "$CONFIGURATION" \
+  -destination "$DESTINATION" \
+  clean build
 
-# Copy Hermes framework
-cp -R "$(pwd)/Pods/hermes-engine/destroot/Library/Frameworks/universal/hermes.xcframework/ios-arm64_x86_64-simulator/hermes.framework" \
-  "$APP_PATH/Frameworks/"
-
-echo "✅ Hermes framework copied successfully"
-echo ""
-echo "🚀 Installing and launching app..."
-
-# Boot simulator if not running
-xcrun simctl boot 4F2DF094-9D7C-4054-A8CB-3C2ECB024584 2>/dev/null || true
-
-# Open Simulator app
-open -a Simulator
-
-# Wait for simulator to boot
-sleep 3
-
-# Uninstall old version
-xcrun simctl uninstall 4F2DF094-9D7C-4054-A8CB-3C2ECB024584 org.reactjs.native.example.JewgoAppFinal 2>/dev/null || true
-
-# Install new version
-xcrun simctl install 4F2DF094-9D7C-4054-A8CB-3C2ECB024584 "$APP_PATH"
-
-# Launch the app
-xcrun simctl launch 4F2DF094-9D7C-4054-A8CB-3C2ECB024584 org.reactjs.native.example.JewgoAppFinal
-
-echo ""
-echo "✨ JewgoAppFinal is now running on the simulator!"
-echo ""
-echo "💡 Tip: For faster builds, use Xcode GUI (Cmd+R) which doesn't have sandbox restrictions."
-
+# Install and launch when destination resolved to a concrete simulator ID
+if [[ "$DESTINATION" == id=* ]]; then
+  UDID="${DESTINATION#id=}"
+  BUILD_DIR=$(xcodebuild -workspace "$WORKSPACE" -scheme "$APP_SCHEME" -configuration "$CONFIGURATION" -showBuildSettings | awk -F' = ' '/CONFIGURATION_BUILD_DIR/{dir=$2} /FULL_PRODUCT_NAME/{name=$2} END{if(dir && name) print dir "/" name}')
+  if [[ -n "$BUILD_DIR" && -d "$BUILD_DIR" ]]; then
+    xcrun simctl install "$UDID" "$BUILD_DIR" || true
+    xcrun simctl launch "$UDID" "$BUNDLE_ID" || true
+  fi
+fi
