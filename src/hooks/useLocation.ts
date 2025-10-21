@@ -1,97 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
-import Geolocation from '@react-native-community/geolocation';
-import { PermissionsAndroid, Platform, Alert } from 'react-native';
+import { useCallback, useEffect } from 'react';
+import Geolocation from 'react-native-geolocation-service';
+import { PermissionsAndroid, Platform } from 'react-native';
 import { debugLog, errorLog } from '../utils/logger';
 import { reverseGeocode } from '../utils/geocoding';
-
-// Global location state to share across all components
-let globalLocationState: LocationState = {
-  location: null,
-  loading: false,
-  error: null,
-  permissionGranted: false,
-  permissionRequested: false,
-};
-
-// Listeners for state changes
-const listeners = new Set<(state: LocationState) => void>();
-
-// Track last notified state to prevent unnecessary updates
-let lastNotifiedState: LocationState | null = null;
-
-// Throttle notifications to prevent excessive re-renders
-let notificationTimeout: NodeJS.Timeout | null = null;
-const NOTIFICATION_THROTTLE = 100; // ms
-
-const notifyListeners = () => {
-  // Cancel pending notification
-  if (notificationTimeout) {
-    clearTimeout(notificationTimeout);
-  }
-
-  notificationTimeout = setTimeout(() => {
-    // Shallow comparison - only notify if state actually changed
-    if (lastNotifiedState) {
-      const locationChanged =
-        lastNotifiedState.location?.latitude !==
-          globalLocationState.location?.latitude ||
-        lastNotifiedState.location?.longitude !==
-          globalLocationState.location?.longitude ||
-        lastNotifiedState.location?.zipCode !==
-          globalLocationState.location?.zipCode;
-
-      const statusChanged =
-        lastNotifiedState.loading !== globalLocationState.loading ||
-        lastNotifiedState.error !== globalLocationState.error ||
-        lastNotifiedState.permissionGranted !==
-          globalLocationState.permissionGranted;
-
-      // Only notify if something actually changed
-      if (!locationChanged && !statusChanged) {
-        return;
-      }
-    }
-
-    // Update last notified state
-    lastNotifiedState = { ...globalLocationState };
-
-    // Only log location changes very occasionally to reduce console noise
-    if (__DEV__ && Math.random() < 0.01) {
-      debugLog('🔥 Location state changed:', {
-        listeners: listeners.size,
-        hasLocation: !!globalLocationState.location,
-        location: globalLocationState.location
-          ? `${globalLocationState.location.latitude}, ${globalLocationState.location.longitude}`
-          : 'null',
-        zipCode: globalLocationState.location?.zipCode,
-        permissionGranted: globalLocationState.permissionGranted,
-        permissionRequested: globalLocationState.permissionRequested,
-        loading: globalLocationState.loading,
-        error: globalLocationState.error,
-      });
-    }
-
-    listeners.forEach(listener => listener(globalLocationState));
-  }, NOTIFICATION_THROTTLE);
-};
-
-export interface LocationData {
-  latitude: number;
-  longitude: number;
-  accuracy: number;
-  timestamp: number;
-  zipCode?: string;
-  city?: string;
-  state?: string;
-}
-
-export interface LocationState {
-  location: LocationData | null;
-  loading: boolean;
-  error: string | null;
-  permissionGranted: boolean;
-  permissionRequested: boolean;
-}
+import { useLocationStore, LocationData } from '../stores/locationStore';
 
 // Calculate distance between two coordinates in miles
 export const calculateDistance = (
@@ -114,41 +26,24 @@ export const calculateDistance = (
 };
 
 export const useLocation = () => {
-  const [state, setState] = useState<LocationState>(globalLocationState);
-
-  // Subscribe to global state changes
-  useEffect(() => {
-    const listener = (newState: LocationState) => {
-      setState(newState);
-    };
-
-    listeners.add(listener);
-
-    return () => {
-      listeners.delete(listener);
-    };
-  }, []);
-
-  // Update global state and notify listeners
-  const updateGlobalState = useCallback(
-    (updater: (prev: LocationState) => LocationState) => {
-      const newState = updater(globalLocationState);
-      // debugLog('🔥 Updating global location state:', {
-      //   oldLocation: globalLocationState.location ? 'has location' : 'no location',
-      //   newLocation: newState.location ? 'has location' : 'no location',
-      //   listeners: listeners.size
-      // });
-      globalLocationState = newState;
-      notifyListeners();
-    },
-    [],
-  );
+  const {
+    location,
+    loading,
+    error,
+    permissionGranted,
+    permissionRequested,
+    permissionDenied,
+    setLocation,
+    setLoading,
+    setError,
+    setPermissionState,
+  } = useLocationStore();
 
   const requestLocationPermission = useCallback(async (): Promise<boolean> => {
     if (Platform.OS === 'ios') {
       // For iOS, we need to actually get the location to trigger the permission dialog
       try {
-        updateGlobalState(prev => ({ ...prev, loading: true, error: null }));
+        setLoading(true);
 
         return new Promise(resolve => {
           Geolocation.getCurrentPosition(
@@ -171,31 +66,21 @@ export const useLocation = () => {
                   locationData.city = addressInfo.city;
                   locationData.state = addressInfo.state;
                 }
-              } catch (error) {
+              } catch (err) {
                 // Silently fail - zip code is optional
-                debugLog('⚠️ Failed to reverse geocode location:', error);
+                debugLog('⚠️ Failed to reverse geocode location:', err);
               }
 
-              updateGlobalState(prev => ({
-                ...prev,
-                location: locationData,
-                loading: false,
-                error: null,
-                permissionGranted: true,
-                permissionRequested: true,
-              }));
-
+              setLocation(locationData);
+              setPermissionState(true, true, false);
+              setLoading(false);
               resolve(true);
             },
-            error => {
-              errorLog('🔥 iOS location permission error:', error);
-              updateGlobalState(prev => ({
-                ...prev,
-                loading: false,
-                error: error.message,
-                permissionGranted: false,
-                permissionRequested: true,
-              }));
+            err => {
+              errorLog('🔥 iOS location permission error:', err);
+              const isDenied = err.code === 1; // PERMISSION_DENIED
+              setPermissionState(false, true, isDenied);
+              setError(err.message);
               resolve(false);
             },
             { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 },
@@ -203,10 +88,7 @@ export const useLocation = () => {
         });
       } catch (err) {
         errorLog('Error requesting iOS location permission:', err);
-        updateGlobalState(prev => ({
-          ...prev,
-          error: 'Failed to request location permission',
-        }));
+        setError('Failed to request location permission');
         return false;
       }
     }
@@ -225,142 +107,107 @@ export const useLocation = () => {
       );
 
       const isGranted = granted === PermissionsAndroid.RESULTS.GRANTED;
-      updateGlobalState(prev => ({
-        ...prev,
-        permissionGranted: isGranted,
-        permissionRequested: true,
-      }));
+      const isDenied = granted === PermissionsAndroid.RESULTS.DENIED;
+      setPermissionState(isGranted, true, isDenied);
       return isGranted;
     } catch (err) {
       errorLog('Error requesting location permission:', err);
-      updateGlobalState(prev => ({
-        ...prev,
-        error: 'Failed to request location permission',
-      }));
+      setError('Failed to request location permission');
       return false;
     }
-  }, [updateGlobalState]);
+  }, [setLocation, setLoading, setError, setPermissionState]);
 
-  const getCurrentLocation =
-    useCallback(async (): Promise<LocationData | null> => {
-      // Use globalLocationState instead of state to avoid dependency issues
-      if (
-        !globalLocationState.permissionGranted &&
-        !globalLocationState.permissionRequested
-      ) {
-        const permissionGranted = await requestLocationPermission();
-        if (!permissionGranted) {
-          return null;
-        }
+  const getCurrentLocation = useCallback(async (): Promise<LocationData | null> => {
+    if (!permissionGranted && !permissionRequested) {
+      const granted = await requestLocationPermission();
+      if (!granted) {
+        return null;
       }
+    }
 
-      updateGlobalState(prev => ({ ...prev, loading: true, error: null }));
+    setLoading(true);
+    setError(null);
 
-      return new Promise(resolve => {
-        Geolocation.getCurrentPosition(
-          async position => {
-            const locationData: LocationData = {
-              latitude: position.coords.latitude,
-              longitude: position.coords.longitude,
-              accuracy: position.coords.accuracy,
-              timestamp: position.timestamp,
-            };
+    return new Promise(resolve => {
+      Geolocation.getCurrentPosition(
+        async position => {
+          const locationData: LocationData = {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            accuracy: position.coords.accuracy,
+            timestamp: position.timestamp,
+          };
 
-            // Reverse geocode to get zip code
-            try {
-              const addressInfo = await reverseGeocode(
-                position.coords.latitude,
-                position.coords.longitude,
-              );
-              if (addressInfo) {
-                locationData.zipCode = addressInfo.zipCode;
-                locationData.city = addressInfo.city;
-                locationData.state = addressInfo.state;
-              }
-            } catch (error) {
-              // Silently fail - zip code is optional
-              debugLog('⚠️ Failed to reverse geocode location:', error);
+          // Reverse geocode to get zip code
+          try {
+            const addressInfo = await reverseGeocode(
+              position.coords.latitude,
+              position.coords.longitude,
+            );
+            if (addressInfo) {
+              locationData.zipCode = addressInfo.zipCode;
+              locationData.city = addressInfo.city;
+              locationData.state = addressInfo.state;
             }
+          } catch (err) {
+            // Silently fail - zip code is optional
+            debugLog('⚠️ Failed to reverse geocode location:', err);
+          }
 
-            // Only update if location changed significantly (more than 50 meters)
-            const prevLocation = globalLocationState.location;
-            let shouldUpdate = true;
+          // Only update if location changed significantly (more than 50 meters)
+          if (location) {
+            const distanceMeters =
+              calculateDistance(
+                location.latitude,
+                location.longitude,
+                locationData.latitude,
+                locationData.longitude,
+              ) * 1609.34; // Convert miles to meters
 
-            if (prevLocation) {
-              const distanceMeters =
-                calculateDistance(
-                  prevLocation.latitude,
-                  prevLocation.longitude,
-                  locationData.latitude,
-                  locationData.longitude,
-                ) * 1609.34; // Convert miles to meters
-
-              // Only update if moved more than 50 meters to reduce excessive updates
-              shouldUpdate = distanceMeters > 50;
-
-              // Removed excessive logging to prevent memory issues
-              // Only log very occasionally (0.1% of the time)
-              if (!shouldUpdate && __DEV__ && Math.random() < 0.001) {
-                debugLog(
-                  '🔥 Location change too small, skipping update:',
-                  distanceMeters.toFixed(2),
-                  'meters',
-                );
-              }
+            // Only update if moved more than 50 meters
+            if (distanceMeters <= 50) {
+              setLoading(false);
+              resolve(location);
+              return;
             }
+          }
 
-            if (shouldUpdate) {
-              updateGlobalState(prev => ({
-                ...prev,
-                location: locationData,
-                loading: false,
-                error: null,
-              }));
-            } else {
-              updateGlobalState(prev => ({
-                ...prev,
-                loading: false,
-              }));
-            }
+          setLocation(locationData);
+          setLoading(false);
+          resolve(locationData);
+        },
+        err => {
+          errorLog('Error getting location:', err);
+          let errorMessage = 'Failed to get location';
 
-            resolve(locationData);
-          },
-          error => {
-            errorLog('Error getting location:', error);
-            let errorMessage = 'Failed to get location';
+          switch (err.code) {
+            case 1: // PERMISSION_DENIED
+              errorMessage = 'Location permission denied';
+              break;
+            case 2: // POSITION_UNAVAILABLE
+              errorMessage = 'Location unavailable';
+              break;
+            case 3: // TIMEOUT
+              errorMessage = 'Location request timed out';
+              break;
+          }
 
-            switch (error.code) {
-              case 1: // PERMISSION_DENIED
-                errorMessage = 'Location permission denied';
-                break;
-              case 2: // POSITION_UNAVAILABLE
-                errorMessage = 'Location unavailable';
-                break;
-              case 3: // TIMEOUT
-                errorMessage = 'Location request timed out';
-                break;
-            }
-
-            updateGlobalState(prev => ({
-              ...prev,
-              loading: false,
-              error: errorMessage,
-              permissionGranted: false,
-            }));
-
-            resolve(null);
-          },
-          {
-            enableHighAccuracy: true,
-            timeout: 15000,
-            maximumAge: 10000,
-          },
-        );
-      });
-    }, [requestLocationPermission, updateGlobalState]);
+          const isDenied = err.code === 1; // PERMISSION_DENIED
+          setPermissionState(false, true, isDenied);
+          setError(errorMessage);
+          resolve(null);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 10000,
+        },
+      );
+    });
+  }, [permissionGranted, permissionRequested, requestLocationPermission, location, setLocation, setLoading, setError, setPermissionState]);
 
   const watchLocation = useCallback(() => {
-    if (!globalLocationState.permissionGranted) {
+    if (!permissionGranted) {
       return;
     }
 
@@ -384,50 +231,32 @@ export const useLocation = () => {
             locationData.city = addressInfo.city;
             locationData.state = addressInfo.state;
           }
-        } catch (error) {
+        } catch (err) {
           // Silently fail - zip code is optional
-          debugLog('⚠️ Failed to reverse geocode location:', error);
+          debugLog('⚠️ Failed to reverse geocode location:', err);
         }
 
         // Only update if location changed significantly (more than 50 meters)
-        const prevLocation = globalLocationState.location;
-        let shouldUpdate = true;
-
-        if (prevLocation) {
+        if (location) {
           const distanceMeters =
             calculateDistance(
-              prevLocation.latitude,
-              prevLocation.longitude,
+              location.latitude,
+              location.longitude,
               locationData.latitude,
               locationData.longitude,
             ) * 1609.34; // Convert miles to meters
 
           // Only update if moved more than 50 meters to reduce excessive updates
-          shouldUpdate = distanceMeters > 50;
-
-          if (!shouldUpdate && __DEV__ && Math.random() < 0.1) {
-            debugLog(
-              '🔥 Location change too small in watch, skipping update:',
-              distanceMeters.toFixed(2),
-              'meters',
-            );
+          if (distanceMeters <= 50) {
+            return;
           }
         }
 
-        if (shouldUpdate) {
-          updateGlobalState(prev => ({
-            ...prev,
-            location: locationData,
-            error: null,
-          }));
-        }
+        setLocation(locationData);
       },
-      error => {
-        errorLog('Error watching location:', error);
-        updateGlobalState(prev => ({
-          ...prev,
-          error: 'Failed to watch location',
-        }));
+      err => {
+        errorLog('Error watching location:', err);
+        setError('Failed to watch location');
       },
       {
         enableHighAccuracy: false, // Disable for better performance
@@ -440,7 +269,7 @@ export const useLocation = () => {
     return () => {
       Geolocation.clearWatch(watchId);
     };
-  }, [updateGlobalState]);
+  }, [permissionGranted, location, setLocation, setError]);
 
   // Auto-request location on mount - ONLY for iOS to set permission status
   // Actual location fetching happens lazily when needed
@@ -452,11 +281,7 @@ export const useLocation = () => {
         // On iOS, just set permission as granted (assuming Info.plist is configured)
         // Don't fetch location automatically to prevent cascading updates
         if (isMounted) {
-          updateGlobalState(prev => ({
-            ...prev,
-            permissionGranted: true,
-            permissionRequested: true,
-          }));
+          setPermissionState(true, true, false);
         }
       }
       // On Android, don't do anything - let user trigger permission request
@@ -468,15 +293,16 @@ export const useLocation = () => {
     return () => {
       isMounted = false;
       clearTimeout(timer);
-      // Clear any pending notifications
-      if (notificationTimeout) {
-        clearTimeout(notificationTimeout);
-      }
     };
-  }, []); // Empty deps - only run once on mount
+  }, [setPermissionState]);
 
   return {
-    ...state,
+    location,
+    loading,
+    error,
+    permissionGranted,
+    permissionRequested,
+    permissionDenied,
     requestLocationPermission,
     getCurrentLocation,
     watchLocation,

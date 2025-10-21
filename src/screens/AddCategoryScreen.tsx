@@ -53,7 +53,7 @@ export interface ListingFormData {
   business_images: string[]; // Moved from Step 4
 
   // Step 2: Kosher & Dietary Info
-  dietary_category: 'Meat' | 'Dairy' | 'Pareve'; // Renamed from kosher_category
+  dietary_category: 'Meat' | 'Dairy' | 'Pareve' | 'Vegan'; // Renamed from kosher_category
   kosher_tags: string[]; // New field for multiple tags
   hechsher: string; // Renamed from certifying_agency
   short_description: string; // Max 70 chars
@@ -62,6 +62,7 @@ export interface ListingFormData {
   // Step 3: Amenities & Reviews
   amenities: string[]; // New array field for selected amenities
   google_reviews_link: string; // New field
+  is_owner_submission: boolean; // New field for owner verification
 
   // Legacy fields for backward compatibility
   listing_type: 'Eatery' | 'Catering' | 'Food Truck';
@@ -136,6 +137,7 @@ const defaultFormData: ListingFormData = {
   // Step 3: Amenities & Reviews
   amenities: [],
   google_reviews_link: '',
+  is_owner_submission: false,
 
   // Legacy fields for backward compatibility
   listing_type: 'Eatery',
@@ -653,56 +655,62 @@ const AddCategoryScreen: React.FC = () => {
 
     setIsSubmitting(true);
 
-    // Transform form data to API format for new 3-step structure
+    // Transform form data to API format for backend submission
+    // Backend will auto-calculate geom, lat, lng from address
+    // Backend will set approval_status = 'pending_review'
+    
     const services = [];
     if (formData.amenities?.includes('Delivery Available'))
       services.push('delivery');
     if (formData.amenities?.includes('Dine-In')) services.push('dine_in');
     if (formData.amenities?.includes('Catering')) services.push('catering');
 
-    // Map dietary category to kosher level
-    const kosherLevelMap: Record<string, string> = {
-      Meat: 'glatt',
-      Dairy: 'chalav_yisrael',
-      Pareve: 'regular',
-    };
-
-    // Map price range to description
-    const priceRangeText = formData.price_range
-      ? ` (${formData.price_range})`
-      : '';
+    // Normalize kosher type to lowercase for backend
+    const kosherType = formData.dietary_category.toLowerCase(); // 'meat', 'dairy', 'pareve', 'vegan'
+    
+    // Normalize hechsher to lowercase
+    const hechsher = formData.hechsher.toLowerCase(); // 'orb', 'ok', etc.
 
     const apiData = {
-      entityType: 'restaurant',
+      // Entity type
+      type: 'eatery',
+      
+      // Basic info (Step 1)
       name: formData.name,
-      description: formData.short_description + priceRangeText,
-      longDescription: formData.short_description,
-      ownerId: user?.id || null, // Use authenticated user's ID
       address: formData.address,
-      city: (formData as any).city || '',
-      state: (formData as any).state || '',
-      zipCode: (formData as any).zip_code || formData.zipCode || '',
       phone: formData.phone,
       email: formData.business_email,
       website: formData.website,
-      facebookUrl: (formData as any).facebook_link || '',
-      instagramUrl: (formData as any).instagram_link || '',
-      whatsappUrl: (formData as any).whatsapp_url || '',
-      tiktokUrl: (formData as any).tiktok_link || '',
-      latitude: (formData as any).latitude || 0,
-      longitude: (formData as any).longitude || 0,
-      kosherLevel: kosherLevelMap[formData.dietary_category] || 'regular',
-      kosherCertification: formData.hechsher || '',
-      kosherCertificateNumber: '',
-      kosherExpiresAt: null,
-      denomination: null,
-      storeType: null,
+      
+      // Hours (Step 1) - backend will parse this
+      hours_of_operation: formData.hours_of_operation,
+      
+      // Photos (Step 1)
+      business_images: formData.business_images || [],
+      photo_urls: formData.business_images || [], // Legacy field
+      
+      // Kosher info (Step 2)
+      kosher_type: kosherType, // 'meat', 'dairy', 'pareve', 'vegan'
+      hechsher: hechsher, // 'orb', 'ok', 'kosher miami', etc.
+      kosher_tags: formData.kosher_tags || [],
+      short_description: formData.short_description,
+      price_range: formData.price_range, // "$10-$20" format
+      
+      // Amenities (Step 3)
+      amenities: formData.amenities || [],
       services: services,
-      // Add new fields for 3-step structure
-      kosherTags: formData.kosher_tags || [],
-      googleReviewsLink: formData.google_reviews_link || '',
-      businessImages: formData.business_images || [],
-      hoursOfOperation: formData.hours_of_operation || '',
+      
+      // Google reviews (Step 3)
+      google_reviews_link: formData.google_reviews_link || '',
+      
+      // Owner submission flag (Step 3)
+      is_owner_submission: formData.is_owner_submission || false,
+      
+      // System fields - backend will set these
+      // approval_status: 'pending_review' (set by backend)
+      // lat, lng, geom: calculated from address by backend
+      // created_at, updated_at: set by backend
+      user_id: user?.id || null,
     };
 
     try {
@@ -711,8 +719,14 @@ const AddCategoryScreen: React.FC = () => {
 
       debugLog('Submitting eatery listing to API:', apiData);
 
-      // Call the actual API using the entities endpoint
-      const response = await (apiV5Service as any).request('/entities', {
+      // Call the eatery submission endpoint
+      // Backend will:
+      // 1. Validate required fields
+      // 2. Geocode address → lat/lng/geom
+      // 3. Parse hours → JSON format
+      // 4. Set approval_status = 'pending_review'
+      // 5. Insert into entities + eatery_fields tables
+      const response = await (apiV5Service as any).request('/api/v5/eatery-submit', {
         method: 'POST',
         body: JSON.stringify(apiData),
       });
