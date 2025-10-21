@@ -34,7 +34,7 @@ export const useLocationStore = create<LocationState>((set) => ({
   setLocation: (location) => set({ location, error: null }),
   setLoading: (loading) => set({ loading }),
   setError: (error) => set({ error, loading: false }),
-  setPermissionState: (granted, requested, denied) => 
+  setPermissionState: (granted, requested, denied) =>
     set({ permissionGranted: granted, permissionRequested: requested, permissionDenied: denied }),
   reset: () => set({
     location: null,

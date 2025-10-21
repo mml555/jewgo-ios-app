@@ -3,7 +3,7 @@
  * Uses react-native-geolocation-service for better performance and reliability
  */
 
-import Geolocation from 'react-native-geolocation-service';
+import * as Geolocation from 'react-native-geolocation-service';
 import { Platform } from 'react-native';
 import { safeAsyncStorage } from './SafeAsyncStorage';
 import { debugLog, warnLog } from '../utils/logger';

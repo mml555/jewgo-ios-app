@@ -1,5 +1,5 @@
 import { useCallback, useEffect } from 'react';
-import Geolocation from 'react-native-geolocation-service';
+import * as Geolocation from 'react-native-geolocation-service';
 import { PermissionsAndroid, Platform } from 'react-native';
 import { debugLog, errorLog } from '../utils/logger';
 import { reverseGeocode } from '../utils/geocoding';
