@@ -37,6 +37,7 @@ const eventsRoutes = require('./routes/events');
 const claimsRoutes = require('./routes/claims');
 const adminRoutes = require('./routes/admin');
 const userStatsRoutes = require('./routes/userStats');
+const eaterySubmitRoutes = require('./routes/eatery-submit');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -255,6 +256,14 @@ app.use(
   rateLimiters.write,
   authSystem.getAuthMiddleware().requireAuthOrGuest(),
   claimsRoutes,
+);
+
+// Eatery submission endpoint (with write rate limiting)
+app.use(
+  '/api/v5',
+  rateLimiters.write,
+  authSystem.getAuthMiddleware().requireAuthOrGuest(),
+  eaterySubmitRoutes,
 );
 
 // General endpoints
