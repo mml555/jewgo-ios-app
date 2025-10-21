@@ -278,7 +278,43 @@ const CategoryRail: React.FC<CategoryRailProps> = ({
           bounces={false}
           removeClippedSubviews={true}
           onScrollToIndexFailed={handleScrollToIndexFailed}
+          onScroll={handleScroll}
           scrollEventThrottle={16}
+        />
+
+        {/* Background rail line - full width track */}
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            left: CONTAINER_PADDING,
+            right: CONTAINER_PADDING,
+            bottom: -6,
+            height: 2,
+            backgroundColor: '#FFFFFF',
+            borderRadius: 1,
+            zIndex: 1,
+          }}
+        />
+
+        {/* Static indicator - shows under active category only */}
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            left: indicatorX,
+            bottom: -6,
+            height: 2, // Thinner indicator
+            width: INDICATOR_WIDTH,
+            backgroundColor: '#74E1A0', // Official Jewgo green from design system
+            borderRadius: 1,
+            zIndex: 999,
+            shadowColor: '#74E1A0',
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.2,
+            shadowRadius: 1,
+            elevation: 2,
+          }}
         />
       </View>
     );
@@ -338,7 +374,7 @@ const CategoryRail: React.FC<CategoryRailProps> = ({
           bottom: -6,
           height: 2, // Thinner indicator
           width: INDICATOR_WIDTH,
-          backgroundColor: '#74E1A0', // Official Jewgo green from design system
+          backgroundColor: '#74E1A0', // Official Jewgo green from design system - solid background for shadow
           borderRadius: 1,
           zIndex: 999,
           shadowColor: '#74E1A0',
@@ -358,10 +394,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0,
     height: 96, // Restored original height
     position: 'relative',
-    marginBottom: StickyLayout.railActionGap,
+    marginTop: StickyLayout.laneGap, // 8px top
+    marginBottom: 14, // 8px (desired gap from line) + 6px (line offset below container) = 14px
   },
   containerSticky: {
-    marginBottom: 0, // No margin bottom for sticky variant
+    marginTop: 0, // No margin for sticky variant
+    marginBottom: 0, // No margin for sticky variant
     height: 96, // Match the default container height exactly
   },
   containerCompact: {

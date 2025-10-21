@@ -47,9 +47,83 @@ target 'JewgoAppFinal' do
       target.build_configurations.each do |config|
         config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
         
-        # Ensure consistent C++ language standard for Hermes compatibility
+        # Completely disable Hermes to avoid rsync sandbox issues
+        config.build_settings['USE_HERMES'] = 'false'
+        
+        # Remove Hermes framework copy script phases that cause rsync errors
         if target.name == 'hermes-engine'
-          config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++17'
+          target.shell_script_build_phases.each do |phase|
+            if phase.name&.include?('hermes') || phase.shell_script&.include?('rsync')
+              phase.shell_script = 'echo "Hermes disabled - skipping framework copy"'
+            end
+          end
+        end
+      end
+    end
+    
+    # FIX: Replace all bare 'rsync' with '/usr/bin/rsync' in generated CocoaPods scripts
+    # This prevents macOS sandbox issues by using absolute path to system rsync
+    # The sandbox triggers on ANY executable at path 'ios/rsync', so we must use absolute paths
+    puts "🔧 Fixing rsync paths in generated CocoaPods scripts..."
+    
+    Dir.glob("Pods/Target Support Files/**/*.sh") do |script_path|
+      script_content = File.read(script_path)
+      original_content = script_content.dup
+      
+      # Replace bare 'rsync' commands with absolute path '/usr/bin/rsync'
+      # Match rsync at start of line (with optional whitespace) or after common shell constructs
+      script_content.gsub!(/^(\s*)rsync /, '\1/usr/bin/rsync ')
+      script_content.gsub!(/([\s;|&])rsync /, '\1/usr/bin/rsync ')
+      
+      # Write back if changed
+      if script_content != original_content
+        File.write(script_path, script_content)
+        puts "  ✅ Fixed: #{File.basename(script_path)}"
+      end
+    end
+    
+    puts "✅ rsync sandbox fix applied to all generated scripts"
+    
+    # CRITICAL FIX: Completely disable Hermes embedding by removing it from input/output lists
+    puts "🔧 Disabling Hermes framework embedding..."
+    
+    # Remove hermes from input files list
+    input_list = "Pods/Target Support Files/Pods-JewgoAppFinal/Pods-JewgoAppFinal-frameworks-Debug-input-files.xcfilelist"
+    if File.exist?(input_list)
+      content = File.read(input_list)
+      content.gsub!(/^.*hermes\.framework.*$\n/, '')
+      File.write(input_list, content)
+      puts "  ✅ Removed hermes from input filelist"
+    end
+    
+    # Remove hermes from output files list  
+    output_list = "Pods/Target Support Files/Pods-JewgoAppFinal/Pods-JewgoAppFinal-frameworks-Debug-output-files.xcfilelist"
+    if File.exist?(output_list)
+      content = File.read(output_list)
+      content.gsub!(/^.*hermes\.framework.*$\n/, '')
+      File.write(output_list, content)
+      puts "  ✅ Removed hermes from output filelist"
+    end
+    
+    # Comment out install_framework calls in the script
+    frameworks_script = "Pods/Target Support Files/Pods-JewgoAppFinal/Pods-JewgoAppFinal-frameworks.sh"
+    if File.exist?(frameworks_script)
+      script_content = File.read(frameworks_script)
+      script_content.gsub!(/^(\s*)install_framework "\$\{PODS_XCFRAMEWORKS_BUILD_DIR\}\/hermes-engine\/Pre-built\/hermes\.framework"/, '\1# install_framework "${PODS_XCFRAMEWORKS_BUILD_DIR}/hermes-engine/Pre-built/hermes.framework" # DISABLED')
+      File.write(frameworks_script, script_content)
+      puts "  ✅ Disabled hermes in frameworks script"
+    end
+    
+    puts "✅ Hermes embedding completely disabled"
+    
+    # Remove [CP] Embed Pods Frameworks phase for Hermes
+    installer.pods_project.targets.each do |target|
+      if target.name == 'JewgoAppFinal'
+        target.shell_script_build_phases.each do |phase|
+          if phase.name == '[CP] Embed Pods Frameworks' && phase.shell_script&.include?('hermes')
+            # Replace rsync with ditto (Apple's sandbox-friendly copy tool)
+            phase.shell_script = phase.shell_script.gsub(/\brsync\b/, '/usr/bin/ditto')
+          end
         end
       end
     end

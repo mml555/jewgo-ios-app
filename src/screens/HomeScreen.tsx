@@ -8,8 +8,14 @@ import {
   Platform,
   LayoutAnimation,
   UIManager,
+  InteractionManager,
 } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import {
+  useNavigation,
+  useRoute,
+  useIsFocused,
+  useFocusEffect,
+} from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import { BlurView } from '@react-native-community/blur';
@@ -20,8 +26,8 @@ import GridListScrollHeader, {
   GridListScrollHeaderRef,
 } from '../components/GridListScrollHeader';
 import { useCategoryGridRenderProps } from './CategoryGridScreen';
-import EnhancedJobsScreen from './EnhancedJobsScreen';
 import { SkeletonGrid } from '../components/SkeletonLoader';
+import JobListingsScreen from './jobs/JobListingsScreen';
 import type { AppStackParamList } from '../types/navigation';
 import { Colors, StickyLayout } from '../styles/designSystem';
 import { debugLog, errorLog } from '../utils/logger';
@@ -36,6 +42,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
   const route = useRoute();
   const insets = useSafeAreaInsets();
   const headerRailRef = useRef<GridListScrollHeaderRef>(null);
+  const isFocused = useIsFocused();
+  const isTransitioning = useRef(false);
 
   // Core state
   const [activeCategory, setActiveCategory] = useState('mikvah');
@@ -73,6 +81,26 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
       navigation.setParams({ category: undefined } as any);
     }
   }, [route.params, navigation]);
+
+  // Manage transition state during focus/blur
+  useFocusEffect(
+    useCallback(() => {
+      // Mark as transitioning during navigation
+      isTransitioning.current = true;
+
+      // Use InteractionManager to clear transition flag after animation
+      const task = InteractionManager.runAfterInteractions(() => {
+        debugLog('🧭 HomeScreen focused');
+        isTransitioning.current = false;
+      });
+
+      return () => {
+        debugLog('👋 HomeScreen blurred');
+        isTransitioning.current = true;
+        task.cancel();
+      };
+    }, []),
+  );
 
   // Live measurements - single source of truth (no more magic numbers!)
   const SAFE_TOP = insets.top;
@@ -170,18 +198,23 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
     }
   }, []);
 
+  // Only animate when screen is focused and not transitioning
   useEffect(() => {
-    LayoutAnimation.configureNext(
-      LayoutAnimation.create(
-        120,
-        LayoutAnimation.Types.easeInEaseOut,
-        LayoutAnimation.Properties.opacity,
-      ),
-    );
-  }, [showSticky]);
+    if (isFocused && !isTransitioning.current) {
+      LayoutAnimation.configureNext(
+        LayoutAnimation.create(
+          120,
+          LayoutAnimation.Types.easeInEaseOut,
+          LayoutAnimation.Properties.opacity,
+        ),
+      );
+    }
+  }, [showSticky, isFocused]);
 
   // Fallback: if no measurement happens within 1 second, use estimated height and LOCK it
   useEffect(() => {
+    if (!isFocused) return; // Don't run timers when screen is not focused
+
     const timer = setTimeout(() => {
       if (restHeaderHRef.current === 0 && showActionBarInHeader) {
         const estimatedHeight =
@@ -198,7 +231,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [showActionBarInHeader]);
+  }, [showActionBarInHeader, isFocused]);
 
   // Immediate fallback: if restHeaderH is still 0 after component mount, use estimated and LOCK it
   useEffect(() => {
@@ -283,19 +316,23 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
   const handleCategoryChange = useCallback(
     (category: string) => {
       console.log('🔄 Category changing from', activeCategory, 'to', category);
-      setActiveCategory(category);
 
-      // Reset measurement on category change to allow re-locking
-      restHeaderHRef.current = 0;
-      setScrollHeaderH(0);
-      console.log('🔓 Unlocked header measurement for new category');
+      // Use InteractionManager to defer state updates
+      InteractionManager.runAfterInteractions(() => {
+        setActiveCategory(category);
 
-      // Auto-center the real header Rail on next frame
-      if (headerRailRef.current) {
-        requestAnimationFrame(() => {
-          headerRailRef.current?.scrollToCategory(category);
-        });
-      }
+        // Reset measurement on category change to allow re-locking
+        restHeaderHRef.current = 0;
+        setScrollHeaderH(0);
+        console.log('🔓 Unlocked header measurement for new category');
+
+        // Auto-center the real header Rail on next frame
+        if (headerRailRef.current) {
+          requestAnimationFrame(() => {
+            headerRailRef.current?.scrollToCategory(category);
+          });
+        }
+      });
     },
     [activeCategory],
   );
@@ -397,13 +434,16 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
 
   // Swap logic with hysteresis
   // Scroll handler with proper threshold logic
+  // Scroll handler with hysteresis - only update when focused
   const handleScroll = useCallback(
     (event: any) => {
+      if (!isFocused || isTransitioning.current) return;
+
       const y = event.nativeEvent.contentOffset.y;
       setScrollY(y);
       setShowSticky(prev => (prev ? y >= STICKY_EXIT : y >= STICKY_ENTER));
     },
-    [STICKY_ENTER, STICKY_EXIT],
+    [STICKY_ENTER, STICKY_EXIT, isFocused],
   );
 
   // Get grid render props from CategoryGridScreen hook
@@ -465,12 +505,19 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
   ]);
 
   // Show skeleton loader on initial load
+  const topBarPlaceholder =
+    activeCategory === 'jobs' ? 'Find a job' : 'Search places, events...';
+
+  if (activeCategory === 'jobs') {
+    return <JobListingsScreen />;
+  }
+
   if (gridRenderProps.isInitialLoading) {
     return (
       <View style={styles.container}>
         <TopBar
           onQueryChange={handleSearchChange}
-          placeholder="Search places, events..."
+          placeholder={topBarPlaceholder}
           onAddEntity={handleAddEntity}
           addButtonText={getAddButtonText(activeCategory)}
         />
@@ -487,28 +534,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
       <View style={styles.container}>
         <TopBar
           onQueryChange={handleSearchChange}
-          placeholder="Search places, events..."
+          placeholder={topBarPlaceholder}
           onAddEntity={handleAddEntity}
-          addButtonText="Add"
+          addButtonText={getAddButtonText(activeCategory)}
         />
         <View style={styles.container}>{gridRenderProps.errorComponent}</View>
-      </View>
-    );
-  }
-
-  // Special handling for jobs category (use EnhancedJobsScreen for now)
-  if (activeCategory === 'jobs') {
-    return (
-      <View style={styles.container}>
-        <TopBar
-          onQueryChange={handleSearchChange}
-          placeholder="Search places, events..."
-          onAddEntity={handleAddEntity}
-          addButtonText="Add"
-        />
-        <View style={styles.container}>
-          <EnhancedJobsScreen />
-        </View>
       </View>
     );
   }
@@ -573,7 +603,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
       </View>
 
       {/* Layer 1.5: Background fill between TopBar and sticky ActionBar */}
-      {showSticky && (
+      {showSticky && isFocused && !isTransitioning.current && (
         <>
           <View
             pointerEvents="none"
@@ -648,18 +678,18 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
 
       {/* Layer 2: Sticky ActionBar overlay - always render for measurement, show when sticky */}
       <View
-        pointerEvents={showSticky ? 'box-none' : 'none'} // Disable touch when not sticky
-        accessible={showSticky}
-        importantForAccessibility={showSticky ? 'yes' : 'no'}
-        accessibilityElementsHidden={!showSticky}
+        pointerEvents={showSticky && isFocused ? 'box-none' : 'none'} // Disable touch when not sticky or not focused
+        accessible={showSticky && isFocused}
+        importantForAccessibility={showSticky && isFocused ? 'yes' : 'no'}
+        accessibilityElementsHidden={!showSticky || !isFocused}
         style={{
           position: 'absolute',
           top: stickyLaneOffset, // Align ActionBar directly under TopBar
           left: 0,
           right: 0,
           zIndex: 999, // Below TopBar (1000) but above FlatList
-          backgroundColor: 'transparent',
-          opacity: showSticky ? 1 : 0, // Hide when not sticky
+          backgroundColor: '#f8f8f8', // Solid background required for efficient shadow rendering
+          opacity: showSticky && isFocused && !isTransitioning.current ? 1 : 0, // Hide when not sticky, not focused, or transitioning
           ...Platform.select({
             android: { elevation: 16 }, // stronger elevation ensures tap priority
             ios: {

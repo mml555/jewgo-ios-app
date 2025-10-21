@@ -230,6 +230,9 @@ const categoryDataCache = new Map<
   }
 >();
 
+// Global in-flight request tracker to prevent duplicate fetches
+const inFlightRequests = new Map<string, Promise<any>>();
+
 export const useCategoryData = ({
   categoryKey,
   query = '',
@@ -322,20 +325,32 @@ export const useCategoryData = ({
       return;
     }
 
+    // Calculate offset based on current page and page size
+    const offset = (currentPageRef.current - 1) * pageSize;
+    const requestKey = `${categoryKey}-${offset}-${pageSize}`;
+
+    // Check if this exact request is already in flight
+    if (inFlightRequests.has(requestKey)) {
+      debugLog(`🚫 Skipping duplicate fetch for ${requestKey}`);
+      return inFlightRequests.get(requestKey);
+    }
+
     loadingRef.current = true;
     setLoading(true);
     setError(null);
 
     try {
-      // Calculate offset based on current page and page size
-      const offset = (currentPageRef.current - 1) * pageSize;
-
       // Try to fetch from API first with category-specific call and pagination
-      const response = await apiService.getListingsByCategory(
+      const requestPromise = apiService.getListingsByCategory(
         categoryKey,
         pageSize,
         offset,
       );
+
+      // Store the in-flight request
+      inFlightRequests.set(requestKey, requestPromise);
+
+      const response = await requestPromise;
 
       // Handle special redirect for specials category
       if (response.success && (response as any).redirectTo === 'specials') {
@@ -426,7 +441,20 @@ export const useCategoryData = ({
       } else {
         // API failed - show error instead of mock data
         warnLog('API failed:', response.error);
-        setError(response.error || 'Failed to load data');
+
+        // Provide user-friendly fallback messages for specific entity types
+        const entityTypeMessages: Record<string, string> = {
+          schools: 'School listings are temporarily unavailable',
+          services: 'Service listings are temporarily unavailable',
+          housing: 'Housing listings are temporarily unavailable',
+        };
+
+        const fallbackMessage =
+          entityTypeMessages[categoryKey] ||
+          response.error ||
+          'No data available';
+
+        setError(fallbackMessage);
         setHasMore(false);
       }
     } catch (err) {
@@ -435,6 +463,11 @@ export const useCategoryData = ({
     } finally {
       setLoading(false);
       loadingRef.current = false;
+
+      // Clean up in-flight request tracking
+      const offset = (currentPageRef.current - 1) * pageSize;
+      const requestKey = `${categoryKey}-${offset}-${pageSize}`;
+      inFlightRequests.delete(requestKey);
     }
   }, [categoryKey, pageSize, transformListing]); // Use refs for currentPage and hasMore to avoid recreating
 

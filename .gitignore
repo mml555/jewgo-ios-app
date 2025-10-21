@@ -161,4 +161,4 @@ Thumbs.db
 # Expo
 .expo
 dist/
-web-build/
+web-build/ios/rsync

@@ -1,18 +1,20 @@
 import React from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import TopBar from './TopBar';
 import CategoryRail from './CategoryRail';
 import ActionBar from './ActionBar';
 import { Colors, StickyLayout } from '../styles/designSystem';
+import { debugLog } from '../utils/logger';
 
 export interface StickyStackProps {
   activeCategory: string;
   searchQuery: string;
   onSearchChange: (query: string) => void;
+  onCategoryChange: (category: string) => void;
   onAddEntity?: () => void;
   onActionPress?: (action: string) => void;
   jobMode?: 'seeking' | 'hiring';
+  jobFiltersCount?: number;
   LANE_B_H: number; // Pass this as calculated value from parent
   scrollY: number; // Current scroll position for visual polish
   onLayout?: (event: any) => void; // Layout measurement callback
@@ -22,12 +24,14 @@ const StickyStack: React.FC<StickyStackProps> = ({
   activeCategory,
   searchQuery,
   onSearchChange,
+  onCategoryChange,
   onAddEntity,
   onActionPress,
   jobMode,
   LANE_B_H,
   scrollY,
   onLayout,
+  jobFiltersCount,
 }) => {
   // Get appropriate add button text based on category
   const getAddButtonText = (category: string): string => {
@@ -47,13 +51,17 @@ const StickyStack: React.FC<StickyStackProps> = ({
   // Show subtle divider only when scrolled (y > 0)
   const showDivider = scrollY > 0;
 
-  console.log('🔍 StickyStack rendering with LANE_B_H:', LANE_B_H);
+  debugLog('🔍 StickyStack render', {
+    LANE_B_H,
+    activeCategory,
+    scrollY,
+  });
 
   return (
     <View
       style={styles.container}
       onLayout={event => {
-        console.log('🔍 StickyStack container onLayout called');
+        debugLog('🔍 StickyStack onLayout fired');
         onLayout?.(event);
       }}
     >
@@ -76,22 +84,31 @@ const StickyStack: React.FC<StickyStackProps> = ({
         <View style={{ height: StickyLayout.laneGap }} />
       )}
 
-      {/* Lane B: ActionBar only (no Rail clone) */}
-      <View
-        style={[
-          styles.laneB,
-          {
-            height: LANE_B_H,
-            justifyContent: 'center', // Vertically center content
-            alignItems: 'stretch', // Let content use full width
-          },
-        ]}
-      >
-        <ActionBar
-          onActionPress={onActionPress}
-          currentCategory={activeCategory}
-          jobMode={activeCategory === 'jobs' ? jobMode : undefined}
-        />
+      {/* Lane B: Category rail + action bar */}
+      <View style={[styles.laneB, { height: LANE_B_H }]}>
+        <View style={styles.railWrapper}>
+          <CategoryRail
+            activeCategory={activeCategory}
+            variant="sticky"
+            onCategoryChange={onCategoryChange}
+          />
+        </View>
+
+        <View
+          style={[
+            styles.actionWrapper,
+            { height: StickyLayout.actionBarHeight },
+          ]}
+        >
+          <ActionBar
+            onActionPress={onActionPress}
+            currentCategory={activeCategory}
+            jobMode={activeCategory === 'jobs' ? jobMode : undefined}
+            jobFiltersCount={
+              activeCategory === 'jobs' ? jobFiltersCount : undefined
+            }
+          />
+        </View>
       </View>
 
       {/* Hairline divider - only visible when scrolled */}
@@ -130,6 +147,16 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     // Height is set dynamically via props
     // Content is vertically centered via justifyContent: 'center'
+    justifyContent: 'flex-start',
+  },
+  railWrapper: {
+    justifyContent: 'center',
+    width: '100%',
+    marginBottom: StickyLayout.railActionGap,
+  },
+  actionWrapper: {
+    justifyContent: 'center',
+    width: '100%',
   },
   divider: {
     height: 1,

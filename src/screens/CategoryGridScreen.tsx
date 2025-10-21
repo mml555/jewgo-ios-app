@@ -14,17 +14,12 @@ import CategoryCard from '../components/CategoryCard';
 import JobCard from '../components/JobCard';
 import FastButton from '../components/FastButton';
 import { SkeletonGrid } from '../components/SkeletonLoader';
-import {
-  Colors,
-  Typography,
-  Spacing,
-  BorderRadius,
-  Shadows,
-} from '../styles/designSystem';
+import { Colors, Spacing, BorderRadius, Shadows } from '../styles/designSystem';
 import { debugLog, errorLog } from '../utils/logger';
 import { usePrefetchDetails } from '../hooks/usePrefetchNavigation';
 import { enhancedApiService } from '../services/EnhancedApiService';
 import { Event } from '../services/EventsService';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface CategoryGridScreenProps {
   categoryKey: string;
@@ -75,6 +70,15 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
   onActionPress,
 }) => {
   const navigation = useNavigation();
+  const { bottom: insetBottom } = useSafeAreaInsets();
+
+  const listBottomPadding = useMemo(() => {
+    return Spacing.xl + Math.max(insetBottom, Spacing.md);
+  }, [insetBottom]);
+
+  const footerBottomPadding = useMemo(() => {
+    return Math.max(insetBottom + Spacing.sm, Spacing.lg);
+  }, [insetBottom]);
 
   // Redirect to ShtetlScreen for shtetl category
   React.useEffect(() => {
@@ -285,15 +289,47 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
     const hasData =
       categoryKey === 'events' ? eventsData.length > 0 : data.length > 0;
 
-    if (!isLoading || !hasData) return null;
+    const hasMoreItems = categoryKey === 'events' ? eventsHasMore : hasMore;
 
-    return (
-      <View style={styles.footerLoader}>
-        <ActivityIndicator size="small" color={Colors.link} />
-        <Text style={styles.footerText}>Loading more...</Text>
-      </View>
-    );
-  }, [categoryKey, loading, data.length, eventsLoading, eventsData.length]);
+    if (isLoading && hasData) {
+      return (
+        <View
+          style={[styles.footerLoader, { paddingBottom: footerBottomPadding }]}
+        >
+          <ActivityIndicator size="small" color={Colors.link} />
+          <Text style={styles.footerText}>Loading more...</Text>
+        </View>
+      );
+    }
+
+    if (!isLoading && hasData && !hasMoreItems) {
+      return (
+        <View
+          style={[
+            styles.endOfListContainer,
+            { paddingBottom: footerBottomPadding },
+          ]}
+        >
+          <View style={styles.endOfListDivider} />
+          <Text style={styles.endOfListTitle}>You're all caught up</Text>
+          <Text style={styles.endOfListSubtitle}>
+            You've reached the end of the list.
+          </Text>
+        </View>
+      );
+    }
+
+    return null;
+  }, [
+    categoryKey,
+    loading,
+    data.length,
+    eventsLoading,
+    eventsData.length,
+    eventsHasMore,
+    hasMore,
+    footerBottomPadding,
+  ]);
 
   // Memoized empty component
   const renderEmpty = useCallback(() => {
@@ -365,7 +401,10 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
     refreshControl,
     onEndReached: handleEndReached,
     columnWrapperStyle,
-    contentContainerStyle: styles.listContent,
+    contentContainerStyle: [
+      styles.listContent,
+      { paddingBottom: listBottomPadding },
+    ],
     isInitialLoading,
     hasError: !!error && data.length === 0,
     errorComponent: renderError(),
@@ -401,6 +440,29 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontSize: 14,
     color: '#8E8E93',
+  },
+  endOfListContainer: {
+    alignItems: 'center',
+    paddingVertical: Spacing.lg,
+  },
+  endOfListDivider: {
+    width: 48,
+    height: 2,
+    backgroundColor: Colors.border.primary,
+    borderRadius: 1,
+    marginBottom: Spacing.sm,
+  },
+  endOfListTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text.primary,
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  endOfListSubtitle: {
+    fontSize: 14,
+    color: Colors.text.secondary,
+    textAlign: 'center',
   },
   emptyContainer: {
     flex: 1,
@@ -452,6 +514,15 @@ export const useCategoryGridRenderProps = (
 ): CategoryGridRenderProps => {
   const navigation = useNavigation();
   const { categoryKey, query = '', jobMode = 'hiring' } = props;
+  const { bottom: insetBottom } = useSafeAreaInsets();
+
+  const listBottomPadding = useMemo(() => {
+    return Spacing.xl + Math.max(insetBottom, Spacing.md);
+  }, [insetBottom]);
+
+  const footerBottomPadding = useMemo(() => {
+    return Math.max(insetBottom + Spacing.sm, Spacing.lg);
+  }, [insetBottom]);
 
   // Use the grid data hook
   const gridData = useGridData({
@@ -576,16 +647,47 @@ export const useCategoryGridRenderProps = (
     const isLoading = categoryKey === 'events' ? eventsLoading : loading;
     const hasData =
       categoryKey === 'events' ? eventsData.length > 0 : data.length > 0;
+    const hasMoreItems = categoryKey === 'events' ? eventsHasMore : hasMore;
 
-    if (!isLoading || !hasData) return null;
+    if (isLoading && hasData) {
+      return (
+        <View
+          style={[styles.footerLoader, { paddingBottom: footerBottomPadding }]}
+        >
+          <ActivityIndicator size="small" color={Colors.link} />
+          <Text style={styles.footerText}>Loading more...</Text>
+        </View>
+      );
+    }
 
-    return (
-      <View style={styles.footerLoader}>
-        <ActivityIndicator size="small" color={Colors.link} />
-        <Text style={styles.footerText}>Loading more...</Text>
-      </View>
-    );
-  }, [categoryKey, loading, data.length, eventsLoading, eventsData.length]);
+    if (!isLoading && hasData && !hasMoreItems) {
+      return (
+        <View
+          style={[
+            styles.endOfListContainer,
+            { paddingBottom: footerBottomPadding },
+          ]}
+        >
+          <View style={styles.endOfListDivider} />
+          <Text style={styles.endOfListTitle}>You're all caught up</Text>
+          <Text style={styles.endOfListSubtitle}>
+            You've reached the end of the list.
+          </Text>
+        </View>
+      );
+    }
+
+    return null;
+  }, [
+    categoryKey,
+    loading,
+    data.length,
+    eventsLoading,
+    eventsData.length,
+    eventsHasMore,
+    hasMore,
+    footerBottomPadding,
+  ]);
 
   const renderEmpty = useCallback(() => {
     const isLoading = categoryKey === 'events' ? eventsLoading : loading;
@@ -638,7 +740,10 @@ export const useCategoryGridRenderProps = (
     refreshControl,
     onEndReached: handleEndReached,
     columnWrapperStyle,
-    contentContainerStyle: styles.listContent,
+    contentContainerStyle: [
+      styles.listContent,
+      { paddingBottom: listBottomPadding },
+    ],
     isInitialLoading,
     hasError: !!error && data.length === 0,
     errorComponent: renderError(),

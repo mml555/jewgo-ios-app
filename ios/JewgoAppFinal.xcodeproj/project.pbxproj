@@ -10,9 +10,10 @@
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		1B312936FEA8465627BB5CD4 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
 		278091D70A014A309C0D625D /* Nunito-Light.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 915CCCA40ECD44358DDC5AD5 /* Nunito-Light.ttf */; };
-		41A2DCB4C5F2F2D218FD9294 /* libPods-JewgoAppFinal.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 18110D4A1558681C4681C8E8 /* libPods-JewgoAppFinal.a */; };
-		761780ED2CA45674006654EE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
+		761780ED2CA45674006654EE /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.m */; };
+		761780EE2CA45674006654EE /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 761780EB2CA45674006654EE /* main.m */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
+		8EC797FBE58E506707199B87 /* libPods-JewgoAppFinal.a in Frameworks */ = {isa = PBXBuildFile; fileRef = E49E31446F49A7BCF1E24A74 /* libPods-JewgoAppFinal.a */; };
 		8F5F1F8ED5F241A7A22EFDE5 /* Nunito-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 23C30B345AB8466794B4E5EA /* Nunito-Regular.ttf */; };
 		B48C9B3A9C3A4B9FABDB7FF3 /* Nunito-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = DBA98A07BBF2473DB2861C1D /* Nunito-SemiBold.ttf */; };
 		EDCCE1720890438794FAE913 /* Nunito-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = D318D5AC342E4619965CCF63 /* Nunito-Bold.ttf */; };
@@ -23,15 +24,17 @@
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = JewgoAppFinal/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = JewgoAppFinal/Info.plist; sourceTree = "<group>"; };
 		13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = PrivacyInfo.xcprivacy; path = JewgoAppFinal/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
-		18110D4A1558681C4681C8E8 /* libPods-JewgoAppFinal.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-JewgoAppFinal.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		23C30B345AB8466794B4E5EA /* Nunito-Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Nunito-Regular.ttf"; path = "../src/assets/fonts/Nunito-Regular.ttf"; sourceTree = "<group>"; };
-		44484E4D7C63B96AF2F0A39D /* Pods-JewgoAppFinal.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-JewgoAppFinal.release.xcconfig"; path = "Target Support Files/Pods-JewgoAppFinal/Pods-JewgoAppFinal.release.xcconfig"; sourceTree = "<group>"; };
-		50FB79813AF600A8AC0F2102 /* Pods-JewgoAppFinal.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-JewgoAppFinal.debug.xcconfig"; path = "Target Support Files/Pods-JewgoAppFinal/Pods-JewgoAppFinal.debug.xcconfig"; sourceTree = "<group>"; };
-		761780EC2CA45674006654EE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = JewgoAppFinal/AppDelegate.swift; sourceTree = "<group>"; };
+		252AD6FFABD9326F19BDEEAF /* Pods-JewgoAppFinal.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-JewgoAppFinal.release.xcconfig"; path = "Target Support Files/Pods-JewgoAppFinal/Pods-JewgoAppFinal.release.xcconfig"; sourceTree = "<group>"; };
+		6212EE312D48523E1F0C2795 /* Pods-JewgoAppFinal.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-JewgoAppFinal.debug.xcconfig"; path = "Target Support Files/Pods-JewgoAppFinal/Pods-JewgoAppFinal.debug.xcconfig"; sourceTree = "<group>"; };
+		761780EB2CA45674006654EE /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = main.m; path = JewgoAppFinal/main.m; sourceTree = "<group>"; };
+		761780EC2CA45674006654EE /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = AppDelegate.m; path = JewgoAppFinal/AppDelegate.m; sourceTree = "<group>"; };
+		761780EF2CA45674006654EE /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = AppDelegate.h; path = JewgoAppFinal/AppDelegate.h; sourceTree = "<group>"; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = JewgoAppFinal/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		915CCCA40ECD44358DDC5AD5 /* Nunito-Light.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Nunito-Light.ttf"; path = "../src/assets/fonts/Nunito-Light.ttf"; sourceTree = "<group>"; };
 		D318D5AC342E4619965CCF63 /* Nunito-Bold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Nunito-Bold.ttf"; path = "../src/assets/fonts/Nunito-Bold.ttf"; sourceTree = "<group>"; };
 		DBA98A07BBF2473DB2861C1D /* Nunito-SemiBold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Nunito-SemiBold.ttf"; path = "../src/assets/fonts/Nunito-SemiBold.ttf"; sourceTree = "<group>"; };
+		E49E31446F49A7BCF1E24A74 /* libPods-JewgoAppFinal.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-JewgoAppFinal.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
@@ -40,7 +43,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				41A2DCB4C5F2F2D218FD9294 /* libPods-JewgoAppFinal.a in Frameworks */,
+				8EC797FBE58E506707199B87 /* libPods-JewgoAppFinal.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -51,7 +54,9 @@
 			isa = PBXGroup;
 			children = (
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
-				761780EC2CA45674006654EE /* AppDelegate.swift */,
+				761780EB2CA45674006654EE /* main.m */,
+				761780EF2CA45674006654EE /* AppDelegate.h */,
+				761780EC2CA45674006654EE /* AppDelegate.m */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */,
 				13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */,
@@ -63,7 +68,7 @@
 			isa = PBXGroup;
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
-				18110D4A1558681C4681C8E8 /* libPods-JewgoAppFinal.a */,
+				E49E31446F49A7BCF1E24A74 /* libPods-JewgoAppFinal.a */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -112,8 +117,8 @@
 		BBD78D7AC51CEA395F1C20DB /* Pods */ = {
 			isa = PBXGroup;
 			children = (
-				50FB79813AF600A8AC0F2102 /* Pods-JewgoAppFinal.debug.xcconfig */,
-				44484E4D7C63B96AF2F0A39D /* Pods-JewgoAppFinal.release.xcconfig */,
+				6212EE312D48523E1F0C2795 /* Pods-JewgoAppFinal.debug.xcconfig */,
+				252AD6FFABD9326F19BDEEAF /* Pods-JewgoAppFinal.release.xcconfig */,
 			);
 			path = Pods;
 			sourceTree = "<group>";
@@ -125,13 +130,13 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "JewgoAppFinal" */;
 			buildPhases = (
-				6F4365E94A91CF62BFE8F008 /* [CP] Check Pods Manifest.lock */,
+				A11BCCF5ED98C44B9C454200 /* [CP] Check Pods Manifest.lock */,
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
-				97333DCD0CB54CC7AF751E8D /* [CP] Embed Pods Frameworks */,
-				DDA63DC08AA7F9EB1AB26B07 /* [CP] Copy Pods Resources */,
+				473688FBBE257BF4B34315F0 /* [CP] Embed Pods Frameworks */,
+				682B935848E09D9AF907928A /* [CP] Copy Pods Resources */,
 			);
 			buildRules = (
 			);
@@ -210,7 +215,41 @@
 			shellPath = /bin/sh;
 			shellScript = "set -e\n\nWITH_ENVIRONMENT=\"$REACT_NATIVE_PATH/scripts/xcode/with-environment.sh\"\nREACT_NATIVE_XCODE=\"$REACT_NATIVE_PATH/scripts/react-native-xcode.sh\"\n\n/bin/sh -c \"$WITH_ENVIRONMENT $REACT_NATIVE_XCODE\"\n";
 		};
-		6F4365E94A91CF62BFE8F008 /* [CP] Check Pods Manifest.lock */ = {
+		473688FBBE257BF4B34315F0 /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-JewgoAppFinal/Pods-JewgoAppFinal-frameworks-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-JewgoAppFinal/Pods-JewgoAppFinal-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-JewgoAppFinal/Pods-JewgoAppFinal-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		682B935848E09D9AF907928A /* [CP] Copy Pods Resources */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-JewgoAppFinal/Pods-JewgoAppFinal-resources-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			name = "[CP] Copy Pods Resources";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-JewgoAppFinal/Pods-JewgoAppFinal-resources-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-JewgoAppFinal/Pods-JewgoAppFinal-resources.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		A11BCCF5ED98C44B9C454200 /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -232,40 +271,6 @@
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
-		97333DCD0CB54CC7AF751E8D /* [CP] Embed Pods Frameworks */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-JewgoAppFinal/Pods-JewgoAppFinal-frameworks-${CONFIGURATION}-input-files.xcfilelist",
-			);
-			name = "[CP] Embed Pods Frameworks";
-			outputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-JewgoAppFinal/Pods-JewgoAppFinal-frameworks-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-JewgoAppFinal/Pods-JewgoAppFinal-frameworks.sh\"\n";
-			showEnvVarsInLog = 0;
-		};
-		DDA63DC08AA7F9EB1AB26B07 /* [CP] Copy Pods Resources */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-JewgoAppFinal/Pods-JewgoAppFinal-resources-${CONFIGURATION}-input-files.xcfilelist",
-			);
-			name = "[CP] Copy Pods Resources";
-			outputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-JewgoAppFinal/Pods-JewgoAppFinal-resources-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-JewgoAppFinal/Pods-JewgoAppFinal-resources.sh\"\n";
-			showEnvVarsInLog = 0;
-		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -273,7 +278,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				761780ED2CA45674006654EE /* AppDelegate.swift in Sources */,
+				761780EE2CA45674006654EE /* main.m in Sources */,
+				761780ED2CA45674006654EE /* AppDelegate.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -282,7 +288,7 @@
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 50FB79813AF600A8AC0F2102 /* Pods-JewgoAppFinal.debug.xcconfig */;
+			baseConfigurationReference = 6212EE312D48523E1F0C2795 /* Pods-JewgoAppFinal.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
@@ -313,7 +319,7 @@
 		};
 		13B07F951A680F5B00A75B9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 44484E4D7C63B96AF2F0A39D /* Pods-JewgoAppFinal.release.xcconfig */;
+			baseConfigurationReference = 252AD6FFABD9326F19BDEEAF /* Pods-JewgoAppFinal.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;

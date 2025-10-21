@@ -1,17 +1,8 @@
-import React, { forwardRef, useCallback, useImperativeHandle } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { forwardRef, useImperativeHandle } from 'react';
+import { View, StyleSheet } from 'react-native';
 import CategoryRail from './CategoryRail';
 import ActionBar from './ActionBar';
-import FastButton from './FastButton';
-import {
-  Colors,
-  StickyLayout,
-  Spacing,
-  BorderRadius,
-  Typography,
-} from '../styles/designSystem';
-import { useLocation } from '../hooks/useLocation';
-import { debugLog, errorLog } from '../utils/logger';
+import { Colors, StickyLayout } from '../styles/designSystem';
 
 export interface GridListScrollHeaderProps {
   activeCategory: string;
@@ -19,6 +10,7 @@ export interface GridListScrollHeaderProps {
   showActionBarInHeader?: boolean; // Clear intent: under rail at rest
   onActionPress?: (action: string) => void;
   jobMode?: 'seeking' | 'hiring';
+  jobFiltersCount?: number;
   onMeasured?: (event: any) => void; // Measurement callback
   actionBarPlaceholderHeight?: number;
 }
@@ -38,6 +30,7 @@ const GridListScrollHeader = forwardRef<
       showActionBarInHeader = false,
       onActionPress,
       jobMode,
+      jobFiltersCount,
       onMeasured,
       actionBarPlaceholderHeight = StickyLayout.actionBarHeight,
     },
@@ -50,48 +43,6 @@ const GridListScrollHeader = forwardRef<
         // This is a placeholder for future enhancements if needed
       },
     }));
-
-    const {
-      location,
-      loading: locationLoading,
-      permissionGranted,
-      requestLocationPermission,
-      getCurrentLocation,
-      error: locationError,
-    } = useLocation();
-
-    const shouldShowPermissionBanner = !location && !permissionGranted;
-    const shouldShowRefreshBanner = !location && permissionGranted;
-    const shouldShowBanner =
-      shouldShowPermissionBanner || shouldShowRefreshBanner;
-
-    const handleEnableLocation = useCallback(async () => {
-      try {
-        debugLog('📍 Location banner enable pressed');
-        await requestLocationPermission();
-      } catch (err) {
-        errorLog('Location permission request failed:', err);
-      }
-    }, [requestLocationPermission]);
-
-    const handleRefreshLocation = useCallback(async () => {
-      try {
-        debugLog('🔄 Location banner refresh pressed');
-        await getCurrentLocation();
-      } catch (err) {
-        errorLog('Location refresh failed:', err);
-      }
-    }, [getCurrentLocation]);
-
-    const bannerButtonTitle = shouldShowPermissionBanner
-      ? 'Enable'
-      : locationLoading
-      ? 'Getting...'
-      : 'Refresh';
-
-    const bannerSubtitle = shouldShowPermissionBanner
-      ? 'See distances to nearby businesses'
-      : 'Tap to get your current location';
 
     console.log('📋 GridListScrollHeader rendering:', {
       activeCategory,
@@ -140,6 +91,7 @@ const GridListScrollHeader = forwardRef<
               onActionPress={onActionPress}
               currentCategory={activeCategory}
               jobMode={jobMode}
+              jobFiltersCount={jobFiltersCount}
             />
           </View>
         )}
@@ -152,58 +104,6 @@ const GridListScrollHeader = forwardRef<
             ]}
           />
         )}
-
-        {shouldShowBanner && (
-          <View style={styles.locationBanner}>
-            <View style={styles.bannerContent}>
-              <Text style={styles.bannerIcon}>
-                {shouldShowPermissionBanner ? '📍' : '🔄'}
-              </Text>
-              <View style={styles.bannerTextContainer}>
-                <Text style={styles.bannerTitle}>
-                  {shouldShowPermissionBanner
-                    ? 'Enable Location'
-                    : 'Refresh Location'}
-                </Text>
-                <Text style={styles.bannerSubtitle}>{bannerSubtitle}</Text>
-              </View>
-              <FastButton
-                title={bannerButtonTitle}
-                onPress={
-                  shouldShowPermissionBanner
-                    ? handleEnableLocation
-                    : handleRefreshLocation
-                }
-                variant="outline"
-                size="small"
-                disabled={locationLoading}
-                loading={locationLoading}
-                style={styles.bannerButtonStyle}
-                textStyle={styles.bannerButtonText}
-              />
-            </View>
-          </View>
-        )}
-
-        {locationError && !shouldShowBanner && (
-          <View style={[styles.locationBanner, styles.locationBannerError]}>
-            <View style={styles.bannerContent}>
-              <Text style={styles.bannerIcon}>⚠️</Text>
-              <View style={styles.bannerTextContainer}>
-                <Text style={styles.bannerTitle}>Location Error</Text>
-                <Text style={styles.bannerSubtitle}>{locationError}</Text>
-              </View>
-              <FastButton
-                title="Retry"
-                onPress={handleRefreshLocation}
-                variant="outline"
-                size="small"
-                style={styles.bannerButtonStyle}
-                textStyle={styles.bannerButtonText}
-              />
-            </View>
-          </View>
-        )}
       </View>
     );
   },
@@ -214,64 +114,15 @@ GridListScrollHeader.displayName = 'GridListScrollHeader';
 const styles = StyleSheet.create({
   container: {
     backgroundColor: Colors.background.primary,
-    paddingTop: StickyLayout.laneGap,
-  },
-  locationBanner: {
-    marginTop: 0,
-    marginHorizontal: Spacing.md,
-    marginBottom: StickyLayout.railActionGap,
-    backgroundColor: Colors.white,
-    borderRadius: BorderRadius['3xl'],
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(15,23,42,0.06)',
-    paddingVertical: Spacing.xs,
-    paddingHorizontal: Spacing.sm,
-  },
-  locationBannerError: {
-    backgroundColor: Colors.error,
-  },
-  bannerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    minHeight: 32,
-  },
-  bannerIcon: {
-    fontSize: 16,
-    color: '#3B82F6',
-  },
-  bannerTextContainer: {
-    flex: 1,
-  },
-  bannerTitle: {
-    ...Typography.styles.body,
-    fontSize: 13,
-    fontWeight: '700',
-    color: Colors.text.primary,
-  },
-  bannerSubtitle: {
-    ...Typography.styles.caption,
-    fontSize: 11,
-    color: Colors.text.secondary,
-  },
-  bannerButtonStyle: {
-    paddingHorizontal: Spacing.xs,
-    paddingVertical: 4,
-    backgroundColor: 'rgba(59,130,246,0.1)',
-    borderColor: 'transparent',
-  },
-  bannerButtonText: {
-    ...Typography.styles.body,
-    fontSize: 11,
-    fontWeight: '700',
-    color: Colors.text.primary,
+    paddingTop: 0, // No padding - children handle their own spacing
+    paddingBottom: StickyLayout.laneGap, // 8px bottom to create 16px gap with ActionBar's 8px bottom margin
   },
   actionBarWrapper: {
-    marginBottom: StickyLayout.railActionGap,
+    // No margin - ActionBar handles its own spacing (8px top + 8px bottom)
   },
   actionBarPlaceholder: {
-    marginTop: 0,
-    marginBottom: StickyLayout.railActionGap,
+    marginTop: StickyLayout.laneGap, // 8px top
+    marginBottom: StickyLayout.laneGap, // 8px bottom
   },
 });
 

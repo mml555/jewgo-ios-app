@@ -8,6 +8,9 @@ export type RootStackParamList = {
 // Main App Navigator - handles all app screens
 export type AppStackParamList = {
   MainTabs: undefined;
+  Home: {
+    category?: string;
+  };
   // Listing screens
   ListingDetail: {
     itemId: string;

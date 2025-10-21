@@ -2,6 +2,7 @@
 
 #import <React/RCTBundleURLProvider.h>
 #import <React/RCTLinkingManager.h>
+@import GoogleMaps;
 
 @implementation AppDelegate
 
@@ -9,16 +10,41 @@
 - (NSURL *)getBundleURL
 {
 #if DEBUG
-  // Metro bundler URL for development
-  return [[RCTBundleURLProvider sharedSettings] jsBundleURLForBundleRoot:@"index" fallbackResource:nil];
+  RCTBundleURLProvider *provider = [RCTBundleURLProvider sharedSettings];
+
+  // Preferred (newer) 1-arg API
+  if ([provider respondsToSelector:@selector(jsBundleURLForBundleRoot:)]) {
+    return [provider jsBundleURLForBundleRoot:@"index"];
+  }
+
+  // Older 2-arg API, call via selector to avoid compile-time error
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Warc-performSelector-leaks"
+  SEL sel = NSSelectorFromString(@"jsBundleURLForBundleRoot:fallbackResource:");
+  if ([provider respondsToSelector:sel]) {
+    return [provider performSelector:sel withObject:@"index" withObject:nil];
+  }
+#pragma clang diagnostic pop
+
+  // Last-resort fallback: explicit Metro URL
+  return [NSURL URLWithString:@"http://localhost:8081/index.bundle?platform=ios&dev=true&minify=false"];
 #else
-  // Packaged bundle for production
   return [[NSBundle mainBundle] URLForResource:@"main" withExtension:@"jsbundle"];
 #endif
 }
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
+  // Initialize Google Maps with API key from Info.plist
+  // The key is stored as "GMSApiKey" in Info.plist
+  NSString *googleMapsApiKey = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"GMSApiKey"];
+  if (googleMapsApiKey && googleMapsApiKey.length > 0) {
+    [GMSServices provideAPIKey:googleMapsApiKey];
+    NSLog(@"✅ Google Maps initialized with API key from Info.plist");
+  } else {
+    NSLog(@"⚠️ Google Maps API key not found in Info.plist - Maps may not work correctly");
+  }
+  
   // Configure RN module name
   self.moduleName = @"JewgoAppFinal";
   self.initialProps = @{};

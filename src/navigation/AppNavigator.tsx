@@ -1,7 +1,12 @@
 import React from 'react';
-import { createStackNavigator } from '@react-navigation/stack';
+import { Platform } from 'react-native';
+import {
+  createStackNavigator,
+  TransitionPresets,
+} from '@react-navigation/stack';
 import { AppStackParamList } from '../types/navigation';
 import RootTabs from './RootTabs';
+import HomeScreen from '../screens/HomeScreen';
 import ListingDetailScreen from '../screens/ListingDetailScreen';
 import CategoryFavoritesScreen from '../screens/CategoryFavoritesScreen';
 import SpecialDetailScreen from '../screens/SpecialDetailScreen';
@@ -56,380 +61,132 @@ import JobBoostScreen from '../screens/boost/JobBoostScreen';
 
 const Stack = createStackNavigator<AppStackParamList>();
 
+// Optimized screen options for smooth transitions
+const defaultScreenOptions = {
+  headerShown: false,
+  presentation: 'card' as const,
+  ...Platform.select({
+    ios: {
+      ...TransitionPresets.SlideFromRightIOS,
+      gestureEnabled: true,
+      gestureResponseDistance: 50,
+      cardOverlayEnabled: true,
+    },
+    android: {
+      ...TransitionPresets.FadeFromBottomAndroid,
+      gestureEnabled: false, // Android handles this natively
+    },
+  }),
+  // Optimization flags
+  detachPreviousScreen: true, // Unmount previous screen to save memory
+  freezeOnBlur: true, // Freeze screens when not visible
+  animationEnabled: true,
+  // Animation timing for smooth transitions
+  transitionSpec: {
+    open: {
+      animation: 'timing',
+      config: {
+        duration: 300,
+        useNativeDriver: true,
+      },
+    },
+    close: {
+      animation: 'timing',
+      config: {
+        duration: 250,
+        useNativeDriver: true,
+      },
+    },
+  },
+  cardStyleInterpolator: ({ current, layouts }: any) => {
+    return {
+      cardStyle: {
+        opacity: current.progress,
+      },
+    };
+  },
+};
+
 const AppNavigator: React.FC = () => {
   return (
-    <Stack.Navigator
-      screenOptions={{
-        headerShown: false,
-      }}
-    >
-      <Stack.Screen name="MainTabs" component={RootTabs} />
+    <Stack.Navigator screenOptions={defaultScreenOptions}>
       <Stack.Screen
-        name="ListingDetail"
-        component={ListingDetailScreen}
+        name="MainTabs"
+        component={RootTabs}
         options={{
-          headerShown: false,
-          presentation: 'card',
+          animationEnabled: false, // No animation for main tabs
         }}
       />
-      <Stack.Screen
-        name="SpecialDetail"
-        component={SpecialDetailScreen}
-        options={{
-          headerShown: false,
-          presentation: 'card',
-        }}
-      />
+      <Stack.Screen name="Home" component={HomeScreen} />
+      <Stack.Screen name="ListingDetail" component={ListingDetailScreen} />
+      <Stack.Screen name="SpecialDetail" component={SpecialDetailScreen} />
       <Stack.Screen
         name="CategoryFavorites"
         component={CategoryFavoritesScreen}
-        options={{
-          headerShown: false,
-          presentation: 'card',
-        }}
       />
-      <Stack.Screen
-        name="AddCategory"
-        component={AddCategoryScreen}
-        options={{
-          headerShown: false,
-          presentation: 'card',
-        }}
-      />
-      <Stack.Screen
-        name="AddMikvah"
-        component={AddMikvahScreen}
-        options={{
-          headerShown: false,
-          presentation: 'card',
-        }}
-      />
-      <Stack.Screen
-        name="AddSynagogue"
-        component={AddSynagogueScreen}
-        options={{
-          headerShown: false,
-          presentation: 'card',
-        }}
-      />
-      <Stack.Screen
-        name="LiveMap"
-        component={LiveMapScreen}
-        options={{
-          headerShown: false,
-          presentation: 'card',
-        }}
-      />
+      <Stack.Screen name="AddCategory" component={AddCategoryScreen} />
+      <Stack.Screen name="AddMikvah" component={AddMikvahScreen} />
+      <Stack.Screen name="AddSynagogue" component={AddSynagogueScreen} />
+      <Stack.Screen name="LiveMap" component={LiveMapScreen} />
       {/* Shtetl Marketplace Screens */}
-      <Stack.Screen
-        name="Shtetl"
-        component={ShtetlScreen}
-        options={{
-          headerShown: false,
-          presentation: 'card',
-        }}
-      />
-      <Stack.Screen
-        name="StoreDetail"
-        component={StoreDetailScreen}
-        options={{
-          headerShown: false,
-          presentation: 'card',
-        }}
-      />
-      <Stack.Screen
-        name="CreateStore"
-        component={CreateStoreScreen}
-        options={{
-          headerShown: false,
-          presentation: 'card',
-        }}
-      />
+      <Stack.Screen name="Shtetl" component={ShtetlScreen} />
+      <Stack.Screen name="StoreDetail" component={StoreDetailScreen} />
+      <Stack.Screen name="CreateStore" component={CreateStoreScreen} />
       <Stack.Screen
         name="ProductManagement"
         component={ProductManagementScreen}
-        options={{
-          headerShown: false,
-          presentation: 'card',
-        }}
       />
-      <Stack.Screen
-        name="ProductDetail"
-        component={ProductDetailScreen}
-        options={{
-          headerShown: false,
-          presentation: 'card',
-        }}
-      />
-      <Stack.Screen
-        name="EditStore"
-        component={EditStoreScreen}
-        options={{
-          headerShown: false,
-          presentation: 'card',
-        }}
-      />
-      <Stack.Screen
-        name="StoreSpecials"
-        component={StoreSpecialsScreen}
-        options={{
-          headerShown: false,
-          presentation: 'card',
-        }}
-      />
-      <Stack.Screen
-        name="EditSpecial"
-        component={EditSpecialScreen}
-        options={{
-          headerShown: false,
-          presentation: 'card',
-        }}
-      />
-      <Stack.Screen
-        name="DatabaseDashboard"
-        component={DatabaseDashboard}
-        options={{
-          headerShown: false,
-          presentation: 'card',
-        }}
-      />
-      <Stack.Screen
-        name="Settings"
-        component={SettingsScreen}
-        options={{
-          headerShown: false,
-          presentation: 'card',
-        }}
-      />
+      <Stack.Screen name="ProductDetail" component={ProductDetailScreen} />
+      <Stack.Screen name="EditStore" component={EditStoreScreen} />
+      <Stack.Screen name="StoreSpecials" component={StoreSpecialsScreen} />
+      <Stack.Screen name="EditSpecial" component={EditSpecialScreen} />
+      <Stack.Screen name="DatabaseDashboard" component={DatabaseDashboard} />
+      <Stack.Screen name="Settings" component={SettingsScreen} />
       <Stack.Screen
         name="DashboardAnalytics"
         component={DashboardAnalyticsScreen}
-        options={{
-          headerShown: false,
-          presentation: 'card',
-        }}
       />
-      <Stack.Screen
-        name="PaymentInfo"
-        component={PaymentInfoScreen}
-        options={{
-          headerShown: false,
-          presentation: 'card',
-        }}
-      />
-      <Stack.Screen
-        name="JobDetail"
-        component={JobDetailScreen as any}
-        options={{
-          headerShown: false,
-          presentation: 'card',
-        }}
-      />
-      <Stack.Screen
-        name="JobSeeking"
-        component={JobSeekingScreen}
-        options={{
-          headerShown: false,
-          presentation: 'card',
-        }}
-      />
-      <Stack.Screen
-        name="JobSeekers"
-        component={JobSeekersScreen}
-        options={{
-          headerShown: false,
-          presentation: 'card',
-        }}
-      />
+      <Stack.Screen name="PaymentInfo" component={PaymentInfoScreen} />
+      <Stack.Screen name="JobDetail" component={JobDetailScreen as any} />
+      <Stack.Screen name="JobSeeking" component={JobSeekingScreen} />
+      <Stack.Screen name="JobSeekers" component={JobSeekersScreen} />
       {/* Enhanced Jobs System */}
-      <Stack.Screen
-        name="JobListings"
-        component={JobListingsScreen}
-        options={{
-          headerShown: false,
-          presentation: 'card',
-        }}
-      />
-      <Stack.Screen
-        name="CreateJobV2"
-        component={CreateJobScreenV2}
-        options={{
-          headerShown: false,
-          presentation: 'card',
-        }}
-      />
-      <Stack.Screen
-        name="MyJobs"
-        component={MyJobsScreen}
-        options={{
-          headerShown: false,
-          presentation: 'card',
-        }}
-      />
+      <Stack.Screen name="JobListings" component={JobListingsScreen} />
+      <Stack.Screen name="CreateJobV2" component={CreateJobScreenV2} />
+      <Stack.Screen name="MyJobs" component={MyJobsScreen} />
       <Stack.Screen
         name="JobSeekerProfiles"
         component={JobSeekerProfilesScreen}
-        options={{
-          headerShown: false,
-          presentation: 'card',
-        }}
       />
       <Stack.Screen
         name="JobSeekerDetailV2"
         component={JobSeekerDetailScreenV2}
-        options={{
-          headerShown: false,
-          presentation: 'card',
-        }}
       />
       <Stack.Screen
         name="CreateJobSeekerProfile"
         component={CreateJobSeekerProfileScreen}
-        options={{
-          headerShown: false,
-          presentation: 'card',
-        }}
       />
       {/* Events System */}
-      <Stack.Screen
-        name="Events"
-        component={EventsScreen}
-        options={{
-          headerShown: false,
-          presentation: 'card',
-        }}
-      />
-      <Stack.Screen
-        name="EventDetail"
-        component={EventDetailScreen}
-        options={{
-          headerShown: false,
-          presentation: 'card',
-        }}
-      />
-      <Stack.Screen
-        name="CreateEvent"
-        component={CreateEventScreen}
-        options={{
-          headerShown: false,
-          presentation: 'card',
-        }}
-      />
-      <Stack.Screen
-        name="MyEvents"
-        component={MyEventsScreen}
-        options={{
-          headerShown: false,
-          presentation: 'card',
-        }}
-      />
+      <Stack.Screen name="Events" component={EventsScreen} />
+      <Stack.Screen name="EventDetail" component={EventDetailScreen} />
+      <Stack.Screen name="CreateEvent" component={CreateEventScreen} />
+      <Stack.Screen name="MyEvents" component={MyEventsScreen} />
       {/* Claims System */}
-      <Stack.Screen
-        name="ClaimListing"
-        component={ClaimListingScreen}
-        options={{
-          headerShown: false,
-          presentation: 'card',
-        }}
-      />
-      <Stack.Screen
-        name="MyClaims"
-        component={MyClaimsScreen}
-        options={{
-          headerShown: false,
-          presentation: 'card',
-        }}
-      />
-      <Stack.Screen
-        name="ClaimDetail"
-        component={ClaimDetailScreen}
-        options={{
-          headerShown: false,
-          presentation: 'card',
-        }}
-      />
+      <Stack.Screen name="ClaimListing" component={ClaimListingScreen} />
+      <Stack.Screen name="MyClaims" component={MyClaimsScreen} />
+      <Stack.Screen name="ClaimDetail" component={ClaimDetailScreen} />
       {/* Admin System */}
-      <Stack.Screen
-        name="AdminDashboard"
-        component={AdminDashboard}
-        options={{
-          headerShown: false,
-          presentation: 'card',
-        }}
-      />
-      <Stack.Screen
-        name="ReviewQueue"
-        component={ReviewQueueScreen}
-        options={{
-          headerShown: false,
-          presentation: 'card',
-        }}
-      />
-      <Stack.Screen
-        name="FlaggedContent"
-        component={FlaggedContentScreen}
-        options={{
-          headerShown: false,
-          presentation: 'card',
-        }}
-      />
+      <Stack.Screen name="AdminDashboard" component={AdminDashboard} />
+      <Stack.Screen name="ReviewQueue" component={ReviewQueueScreen} />
+      <Stack.Screen name="FlaggedContent" component={FlaggedContentScreen} />
       {/* Boost Screens */}
-      <Stack.Screen
-        name="MikvahBoost"
-        component={MikvahBoostScreen}
-        options={{
-          headerShown: false,
-          presentation: 'card',
-        }}
-      />
-      <Stack.Screen
-        name="EateryBoost"
-        component={EateryBoostScreen}
-        options={{
-          headerShown: false,
-          presentation: 'card',
-        }}
-      />
-      <Stack.Screen
-        name="ShulBoost"
-        component={ShulBoostScreen}
-        options={{
-          headerShown: false,
-          presentation: 'card',
-        }}
-      />
-      <Stack.Screen
-        name="StoreBoost"
-        component={StoreBoostScreen}
-        options={{
-          headerShown: false,
-          presentation: 'card',
-        }}
-      />
-      <Stack.Screen
-        name="SpecialsBoost"
-        component={SpecialsBoostScreen}
-        options={{
-          headerShown: false,
-          presentation: 'card',
-        }}
-      />
-      <Stack.Screen
-        name="EventBoost"
-        component={EventBoostScreen}
-        options={{
-          headerShown: false,
-          presentation: 'card',
-        }}
-      />
-      <Stack.Screen
-        name="JobBoost"
-        component={JobBoostScreen}
-        options={{
-          headerShown: false,
-          presentation: 'card',
-        }}
-      />
+      <Stack.Screen name="MikvahBoost" component={MikvahBoostScreen} />
+      <Stack.Screen name="EateryBoost" component={EateryBoostScreen} />
+      <Stack.Screen name="ShulBoost" component={ShulBoostScreen} />
+      <Stack.Screen name="StoreBoost" component={StoreBoostScreen} />
+      <Stack.Screen name="SpecialsBoost" component={SpecialsBoostScreen} />
+      <Stack.Screen name="EventBoost" component={EventBoostScreen} />
+      <Stack.Screen name="JobBoost" component={JobBoostScreen} />
     </Stack.Navigator>
   );
 };

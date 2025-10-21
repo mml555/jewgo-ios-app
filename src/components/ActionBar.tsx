@@ -1,10 +1,9 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useFilters } from '../hooks/useFilters';
 import FiltersModal from './FiltersModal';
 import Icon from './Icon';
-import SeekingHiringToggle from './SeekingHiringToggle';
 import {
   Colors,
   Shadows,
@@ -18,13 +17,16 @@ interface ActionBarProps {
   onActionPress?: (action: string) => void;
   currentCategory?: string;
   jobMode?: 'seeking' | 'hiring';
+  jobFiltersCount?: number;
 }
 
-const HEIGHT = ResponsiveSpacing.get(36); // thinner, more compact pill height
+const HEIGHT = ResponsiveSpacing.get(36);
+
 const ActionBar: React.FC<ActionBarProps> = ({
   onActionPress,
   currentCategory = 'mikvah',
-  jobMode: externalJobMode,
+  jobMode,
+  jobFiltersCount,
 }) => {
   const navigation = useNavigation();
   const {
@@ -35,47 +37,6 @@ const ActionBar: React.FC<ActionBarProps> = ({
     closeFiltersModal,
     getActiveFiltersCount,
   } = useFilters();
-
-  const [internalJobMode, setInternalJobMode] = useState<'seeking' | 'hiring'>(
-    'hiring',
-  );
-  const jobMode = externalJobMode || internalJobMode;
-
-  const handleJobModeChange = useCallback(
-    (mode: 'seeking' | 'hiring') => {
-      setInternalJobMode(mode);
-      onActionPress?.(`jobMode:${mode}`);
-    },
-    [onActionPress],
-  );
-
-  const getCategoryDisplayName = (key: string) => {
-    const map: Record<string, string> = {
-      mikvah: 'Mikvah',
-      eatery: 'Eatery',
-      shul: 'Shul',
-      stores: 'Store',
-      specials: 'Special',
-      shtetl: 'Shtetl',
-      events: 'Events',
-      jobs: 'Jobs',
-    };
-    return map[key] || 'Place';
-  };
-
-  const getCategoryBoostRoute = (key: string) => {
-    const map: Record<string, string> = {
-      mikvah: 'MikvahBoost',
-      eatery: 'EateryBoost',
-      shul: 'ShulBoost',
-      stores: 'StoreBoost',
-      specials: 'SpecialsBoost',
-      shtetl: 'StoreBoost',
-      events: 'EventBoost',
-      jobs: 'JobBoost',
-    };
-    return map[key] || 'EateryBoost';
-  };
 
   const handleActionPress = useCallback(
     (action: string) => {
@@ -94,7 +55,17 @@ const ActionBar: React.FC<ActionBarProps> = ({
       }
 
       if (action === 'boost') {
-        (navigation as any).navigate(getCategoryBoostRoute(currentCategory));
+        const map: Record<string, string> = {
+          mikvah: 'MikvahBoost',
+          eatery: 'EateryBoost',
+          shul: 'ShulBoost',
+          stores: 'StoreBoost',
+          specials: 'SpecialsBoost',
+          shtetl: 'StoreBoost',
+          events: 'EventBoost',
+          jobs: 'JobBoost',
+        };
+        (navigation as any).navigate(map[currentCategory] || 'EateryBoost');
         return;
       }
 
@@ -113,82 +84,88 @@ const ActionBar: React.FC<ActionBarProps> = ({
     [currentCategory, navigation, onActionPress, openFiltersModal],
   );
 
-  // JOBS VARIANT
   if (currentCategory === 'jobs') {
+    const filtersCount = jobFiltersCount ?? 0;
+    const mode = jobMode ?? 'hiring';
+
     return (
       <>
-        <View style={styles.row}>
-          <SeekingHiringToggle
-            currentMode={jobMode}
-            onModeChange={handleJobModeChange}
-          />
-
-          <View style={styles.rowRight}>
-            <TouchableOpacity
-              style={styles.square}
-              onPress={() => {
-                if (jobMode === 'hiring') handleActionPress('addCategory');
-                else (navigation as any).navigate('JobSeeking');
-              }}
-              accessible
-              accessibilityRole="button"
-              accessibilityLabel={
-                jobMode === 'hiring' ? 'Add new job' : 'Post your resume'
-              }
-              accessibilityHint={
-                jobMode === 'hiring'
-                  ? 'Tap to add a new job listing'
-                  : 'Tap to post your resume'
-              }
-              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-            >
-              <Icon name="plus-circle" size={16} color={Colors.textPrimary} />
-            </TouchableOpacity>
-
-            <TouchableOpacity
+        <View style={[styles.row, styles.jobRow]}>
+          <TouchableOpacity
+            style={[
+              styles.boostButton,
+              styles.jobPill,
+              mode === 'hiring' && styles.jobPillActive,
+            ]}
+            onPress={() => onActionPress?.('jobFeed')}
+            accessible
+            accessibilityRole="button"
+            accessibilityState={{ selected: mode === 'hiring' }}
+            accessibilityLabel="Job feed"
+            accessibilityHint="Browse job listings"
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+          >
+            <Text
               style={[
-                styles.square,
-                getActiveFiltersCount() > 0 && styles.squareActive,
+                styles.pillText,
+                mode === 'hiring' && styles.pillTextActive,
               ]}
-              onPress={() => handleActionPress('filters')}
-              accessible
-              accessibilityRole="button"
-              accessibilityLabel="Open filters"
-              accessibilityHint="Tap to open filter options"
-              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
             >
-              <Icon
-                name="filter"
-                size={16}
-                color={
-                  getActiveFiltersCount() > 0
-                    ? Colors.primary.main
-                    : Colors.textSecondary
-                }
-              />
-              {getActiveFiltersCount() > 0 && (
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>
-                    {getActiveFiltersCount()}
-                  </Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          </View>
-        </View>
+              Job feed
+            </Text>
+          </TouchableOpacity>
 
-        <FiltersModal
-          visible={showFiltersModal}
-          onClose={closeFiltersModal}
-          onApplyFilters={applyFilters}
-          currentFilters={filters}
-          category={currentCategory}
-        />
+          <TouchableOpacity
+            style={[
+              styles.boostButton,
+              styles.jobPill,
+              mode === 'seeking' && styles.jobPillActive,
+            ]}
+            onPress={() => onActionPress?.('resumeFeed')}
+            accessible
+            accessibilityRole="button"
+            accessibilityState={{ selected: mode === 'seeking' }}
+            accessibilityLabel="Resume feed"
+            accessibilityHint="View job seeker profiles"
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+          >
+            <Text
+              style={[
+                styles.pillText,
+                mode === 'seeking' && styles.pillTextActive,
+              ]}
+            >
+              Resume Feed
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.square, filtersCount > 0 && styles.squareActive]}
+            onPress={() => onActionPress?.('toggleJobFilters')}
+            accessible
+            accessibilityRole="button"
+            accessibilityLabel="Open job filters"
+            accessibilityHint="Show or hide filter options"
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+          >
+            <Icon
+              name="filter"
+              size={16}
+              color={
+                filtersCount > 0 ? Colors.primary.main : Colors.textSecondary
+              }
+            />
+            {filtersCount > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{filtersCount}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
       </>
     );
   }
 
-  // DEFAULT VARIANT
   return (
     <>
       <View style={styles.row}>
@@ -217,12 +194,8 @@ const ActionBar: React.FC<ActionBarProps> = ({
           onPress={() => handleActionPress('boost')}
           accessible
           accessibilityRole="button"
-          accessibilityLabel={`Join ${getCategoryDisplayName(
-            currentCategory,
-          )} Boost`}
-          accessibilityHint={`Tap to view premium features for ${getCategoryDisplayName(
-            currentCategory,
-          ).toLowerCase()}`}
+          accessibilityLabel={`Join ${currentCategory} Boost`}
+          accessibilityHint={'Tap to view premium features for this category'}
           hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
         >
           <Text
@@ -231,7 +204,11 @@ const ActionBar: React.FC<ActionBarProps> = ({
             adjustsFontSizeToFit
             minimumFontScale={0.7}
           >
-            Join {getCategoryDisplayName(currentCategory)} Boost
+            Join{' '}
+            {currentCategory === 'stores'
+              ? 'Store'
+              : getCategoryName(currentCategory)}{' '}
+            Boost
           </Text>
           <Icon name="star" size={14} color="#FFD700" />
         </TouchableOpacity>
@@ -276,31 +253,46 @@ const ActionBar: React.FC<ActionBarProps> = ({
   );
 };
 
+function getCategoryName(key: string) {
+  const map: Record<string, string> = {
+    mikvah: 'Mikvah',
+    eatery: 'Eatery',
+    shul: 'Shul',
+    stores: 'Store',
+    specials: 'Special',
+    shtetl: 'Shtetl',
+    events: 'Event',
+    jobs: 'Jobs',
+  };
+  return map[key] || 'Place';
+}
+
 const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
-    alignItems: 'center', // vertical centering for all buttons
+    alignItems: 'center',
     justifyContent: 'space-between',
-    marginHorizontal: ResponsiveSpacing.md, // Add horizontal margin for screen edge padding
-    marginTop: StickyLayout.laneGap,
-    marginBottom: Spacing.sm,
+    marginHorizontal: ResponsiveSpacing.md,
+    marginTop: StickyLayout.laneGap, // 8px top
+    marginBottom: StickyLayout.laneGap, // 8px bottom
     paddingBottom: 0,
     backgroundColor: 'transparent',
-    gap: ResponsiveSpacing.xs, // tighter gap between buttons
-    minHeight: HEIGHT, // Ensure consistent height for the row
+    gap: ResponsiveSpacing.xs,
+    minHeight: HEIGHT,
   },
-  rowRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: ResponsiveSpacing.xs, // tighter gap to match main row
-    height: HEIGHT, // Match the height of other buttons
+  jobRow: {
+    marginTop: StickyLayout.laneGap, // 8px top (same as default)
+    marginBottom: StickyLayout.laneGap, // 8px bottom (same as default)
+  },
+  jobPill: {
+    flex: 1,
   },
   liveMapButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     height: HEIGHT,
-    paddingHorizontal: ResponsiveSpacing.get(18), // consistent internal spacing
+    paddingHorizontal: ResponsiveSpacing.get(18),
     backgroundColor: Colors.white,
     borderRadius: HEIGHT / 2,
     gap: ResponsiveSpacing.get(4),
@@ -312,7 +304,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     height: HEIGHT,
-    paddingHorizontal: ResponsiveSpacing.get(18), // same internal spacing as Live Map
+    paddingHorizontal: ResponsiveSpacing.get(18),
     backgroundColor: Colors.white,
     borderRadius: HEIGHT / 2,
     gap: ResponsiveSpacing.get(4),
@@ -329,20 +321,23 @@ const styles = StyleSheet.create({
   boostText: {
     fontSize: ResponsiveTypography.fontSize(11),
     fontWeight: '700',
-    color: Colors.textPrimary, // keep text readable; star handles gold accent
+    color: Colors.textPrimary,
     flexShrink: 1,
     textAlign: 'center',
     includeFontPadding: false,
   },
+  jobPillActive: {
+    backgroundColor: Colors.primary.main,
+  },
   square: {
-    width: ResponsiveSpacing.get(42), // larger filter button
+    width: ResponsiveSpacing.get(42),
     height: HEIGHT,
     borderRadius: HEIGHT / 2,
     backgroundColor: Colors.gray200,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
-    alignSelf: 'center', // Ensure vertical alignment with other buttons
+    alignSelf: 'center',
     ...Shadows.sm,
   },
   squareActive: {
@@ -362,6 +357,9 @@ const styles = StyleSheet.create({
   badgeText: {
     fontSize: ResponsiveTypography.fontSize(10),
     fontWeight: '700',
+    color: Colors.white,
+  },
+  pillTextActive: {
     color: Colors.white,
   },
 });
