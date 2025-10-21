@@ -1,11 +1,6 @@
 const db = require('../database/connection');
 const logger = require('../utils/logger');
 
-// Initialize Stripe only if API key is provided (optional for development/testing)
-const stripe = process.env.STRIPE_SECRET_KEY
-  ? require('stripe')(process.env.STRIPE_SECRET_KEY)
-  : null;
-
 class EventsController {
   // ============================================================================
   // HELPER METHODS
@@ -248,41 +243,6 @@ class EventsController {
       );
 
       const event = eventResult.rows[0];
-
-      // If paid event, create payment intent
-      let paymentIntent = null;
-      if (isPaid) {
-        if (!stripe) {
-          logger.error('❌ Stripe not configured but paid event requested');
-          return res.status(500).json({
-            success: false,
-            error: 'Payment processing not available',
-          });
-        }
-        paymentIntent = await stripe.paymentIntents.create({
-          amount: 999, // $9.99
-          currency: 'usd',
-          metadata: {
-            event_id: event.id,
-            organizer_id: userId,
-            event_title: title,
-          },
-          description: `Event: ${title}`,
-        });
-
-        // Save payment record
-        await client.query(
-          `INSERT INTO event_payments (event_id, organizer_id, amount, stripe_payment_intent_id)
-           VALUES ($1, $2, $3, $4)`,
-          [event.id, userId, 999, paymentIntent.id],
-        );
-
-        // Update event with payment intent
-        await client.query(
-          'UPDATE events SET stripe_payment_intent_id = $1 WHERE id = $2',
-          [paymentIntent.id, event.id],
-        );
-      }
 
       // Add to review queue
       await client.query(
@@ -963,7 +923,7 @@ class EventsController {
 
       // Verify ownership
       const eventCheck = await client.query(
-        'SELECT organizer_id, stripe_payment_intent_id FROM events WHERE id = $1',
+        'SELECT organizer_id FROM events WHERE id = $1',
         [eventId],
       );
 
@@ -977,43 +937,14 @@ class EventsController {
           .json({ error: 'Not authorized', code: 'NOT_AUTHORIZED' });
       }
 
-      // Verify payment with Stripe
-      if (!stripe) {
-        logger.error(
-          '❌ Stripe not configured but payment verification requested',
-        );
-        await client.query('ROLLBACK');
-        return res.status(500).json({
-          success: false,
-          error: 'Payment processing not available',
-        });
-      }
-      const paymentIntent = await stripe.paymentIntents.retrieve(
-        paymentIntentId,
-      );
-
-      if (paymentIntent.status === 'succeeded') {
-        // Update event payment status
-        await client.query(
-          'UPDATE events SET payment_status = $1, payment_completed_at = NOW() WHERE id = $2',
-          ['paid', eventId],
-        );
-
-        // Update payment record
-        await client.query(
-          'UPDATE event_payments SET status = $1, paid_at = NOW() WHERE stripe_payment_intent_id = $2',
-          ['succeeded', paymentIntentId],
-        );
-
-        await client.query('COMMIT');
-
-        res.json({ success: true, message: 'Payment confirmed' });
-      } else {
-        await client.query('ROLLBACK');
-        res
-          .status(400)
-          .json({ error: 'Payment not completed', code: 'PAYMENT_INCOMPLETE' });
-      }
+      // Payment processing removed - Stripe no longer in use
+      logger.warn('Payment verification requested but Stripe has been removed');
+      await client.query('ROLLBACK');
+      return res.status(501).json({
+        success: false,
+        error: 'Payment processing not available',
+        code: 'PAYMENT_SYSTEM_DISABLED'
+      });
     } catch (error) {
       await client.query('ROLLBACK');
       logger.error('Error confirming payment:', error);

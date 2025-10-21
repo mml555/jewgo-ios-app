@@ -62,19 +62,35 @@ target 'JewgoAppFinal' do
       end
     end
     
-    # SECTION 2: Rsync Sandbox Fix (Absolute Paths)
-    # FIX: Replace all bare 'rsync' with '/usr/bin/rsync' in generated CocoaPods scripts
-    # This prevents macOS sandbox issues by using absolute path to system rsync
-    puts "\n🔧 Fixing rsync paths in generated CocoaPods scripts..."
+    # SECTION 2: Rsync Sandbox Fix - Replace with ditto command
+    # FIX: Replace rsync with ditto to avoid macOS sandbox restrictions
+    # ditto is a macOS-native tool that works within sandboxed environments
+    puts "\n🔧 Replacing rsync with ditto in CocoaPods scripts to avoid sandbox issues..."
     
     rsync_fixes_applied = 0
     Dir.glob("Pods/Target Support Files/**/*.sh") do |script_path|
       script_content = File.read(script_path)
       original_content = script_content.dup
       
-      # Replace bare 'rsync' commands with absolute path '/usr/bin/rsync'
-      # Use negative lookbehind to avoid replacing rsync that's already prefixed with /usr/bin/
-      script_content.gsub!(/(?<!\/usr\/bin\/)(\s+)rsync\s+/, '\1/usr/bin/rsync ')
+      # Replace rsync commands with ditto
+      # Pattern 1: rsync with complex flags and variables: rsync --delete -av "${ARRAY[@]}" --filter... "${source}"/* "${destination}"
+      script_content.gsub!(/rsync\s+--delete.*?\s+"?\$\{source\}"?\/?(\*\s+)?"?\$\{destination\}"?/) do |match|
+        'ditto "${source}" "${destination}"'
+      end
+      
+      # Pattern 2: rsync with quoted paths
+      script_content.gsub!(/rsync\s+[^"]*?"([^"]+)"\s+"([^"]+)"/) do |match|
+        source = $1
+        target = $2
+        "ditto \"#{source}\" \"#{target}\""
+      end
+      
+      # Pattern 3: Simple rsync  with variables
+      script_content.gsub!(/rsync\s+(-[a-z]+\s+)+([^\s]+)\s+([^\s]+)/) do |match|
+        source = $2
+        target = $3
+        "ditto #{source} #{target}"
+      end
       
       # Write back if changed
       if script_content != original_content
@@ -84,7 +100,36 @@ target 'JewgoAppFinal' do
       end
     end
     
-    puts "  📊 Total rsync fixes applied: #{rsync_fixes_applied} files"
+    puts "  📊 Total rsync->ditto fixes applied: #{rsync_fixes_applied} files"
+    
+    # SECTION 3: Yoga Header Fix for React Native 0.76.x
+    # Fix: Add Yoga header search paths to resolve Yoga header not found errors
+    puts "\n🧘 Fixing Yoga header paths for React Native 0.76.x..."
+    
+    # Define Yoga header paths - include the React Native Yoga source directory
+    yoga_header_paths = [
+      '"$(PODS_ROOT)/Yoga/yoga"',
+      '"$(PODS_ROOT)/Headers/Public/Yoga"',
+      '"$(SRCROOT)/../node_modules/react-native/ReactCommon/yoga/yoga"',
+      '"$(SRCROOT)/../node_modules/react-native/ReactCommon/yoga/yoga/numeric"',
+      '"$(SRCROOT)/../node_modules/react-native/ReactCommon/yoga/yoga/enums"',
+      '"$(SRCROOT)/../node_modules/react-native/ReactCommon/yoga/yoga/config"',
+      '"$(SRCROOT)/../node_modules/react-native/ReactCommon/yoga"'
+    ]
+    
+    # Apply to all targets that might need Yoga headers
+    installer.pods_project.targets.each do |target|
+      if ['Yoga', 'React-Core', 'React-Fabric', 'React-FabricComponents'].include?(target.name)
+        target.build_configurations.each do |config|
+          # Add comprehensive Yoga header search paths
+          config.build_settings['HEADER_SEARCH_PATHS'] ||= []
+          yoga_header_paths.each do |path|
+            config.build_settings['HEADER_SEARCH_PATHS'] << path unless config.build_settings['HEADER_SEARCH_PATHS'].include?(path)
+          end
+          puts "  ✅ #{target.name}: Added comprehensive Yoga header paths"
+        end
+      end
+    end
     
     puts "\n" + "=" * 60
     puts "✅ JEWGO Build Configuration Complete!"

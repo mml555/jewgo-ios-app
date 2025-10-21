@@ -1391,51 +1391,8 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
-  - react-native-maps (1.26.17):
-    - react-native-maps/Maps (= 1.26.17)
-  - react-native-maps/Generated (1.26.17):
-    - DoubleConversion
-    - glog
-    - hermes-engine
-    - RCT-Folly (= 2024.10.14.00)
-    - RCTRequired
-    - RCTTypeSafety
+  - react-native-maps (2.0.0-beta.15):
     - React-Core
-    - React-debug
-    - React-Fabric
-    - React-featureflags
-    - React-graphics
-    - React-ImageManager
-    - React-NativeModulesApple
-    - React-RCTFabric
-    - React-rendererdebug
-    - React-utils
-    - ReactCodegen
-    - ReactCommon/turbomodule/bridging
-    - ReactCommon/turbomodule/core
-    - Yoga
-  - react-native-maps/Maps (1.26.17):
-    - DoubleConversion
-    - glog
-    - hermes-engine
-    - RCT-Folly (= 2024.10.14.00)
-    - RCTRequired
-    - RCTTypeSafety
-    - React-Core
-    - React-debug
-    - React-Fabric
-    - React-featureflags
-    - React-graphics
-    - React-ImageManager
-    - react-native-maps/Generated
-    - React-NativeModulesApple
-    - React-RCTFabric
-    - React-rendererdebug
-    - React-utils
-    - ReactCodegen
-    - ReactCommon/turbomodule/bridging
-    - ReactCommon/turbomodule/core
-    - Yoga
   - react-native-safe-area-context (5.6.1):
     - React-Core
   - react-native-webview (13.16.0):
@@ -1739,7 +1696,7 @@ PODS:
     - React-Core
   - RNDeviceInfo (14.1.1):
     - React-Core
-  - RNGestureHandler (2.28.0):
+  - RNGestureHandler (2.20.2):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -1786,7 +1743,7 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
-  - RNScreens (4.17.1):
+  - RNScreens (4.4.0):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -1832,42 +1789,6 @@ PODS:
     - ReactCommon/turbomodule/core
     - Yoga
   - SocketRocket (0.7.1)
-  - Stripe (24.23.3):
-    - StripeApplePay (= 24.23.3)
-    - StripeCore (= 24.23.3)
-    - StripePayments (= 24.23.3)
-    - StripePaymentsUI (= 24.23.3)
-    - StripeUICore (= 24.23.3)
-  - stripe-react-native (0.54.1):
-    - React-Core
-    - Stripe (~> 24.23.0)
-    - StripeApplePay (~> 24.23.0)
-    - StripeFinancialConnections (~> 24.23.0)
-    - StripePayments (~> 24.23.0)
-    - StripePaymentSheet (~> 24.23.0)
-    - StripePaymentsUI (~> 24.23.0)
-  - StripeApplePay (24.23.3):
-    - StripeCore (= 24.23.3)
-  - StripeCore (24.23.3)
-  - StripeFinancialConnections (24.23.3):
-    - StripeCore (= 24.23.3)
-    - StripeUICore (= 24.23.3)
-  - StripePayments (24.23.3):
-    - StripeCore (= 24.23.3)
-    - StripePayments/Stripe3DS2 (= 24.23.3)
-  - StripePayments/Stripe3DS2 (24.23.3):
-    - StripeCore (= 24.23.3)
-  - StripePaymentSheet (24.23.3):
-    - StripeApplePay (= 24.23.3)
-    - StripeCore (= 24.23.3)
-    - StripePayments (= 24.23.3)
-    - StripePaymentsUI (= 24.23.3)
-  - StripePaymentsUI (24.23.3):
-    - StripeCore (= 24.23.3)
-    - StripePayments (= 24.23.3)
-    - StripeUICore (= 24.23.3)
-  - StripeUICore (24.23.3):
-    - StripeCore (= 24.23.3)
   - Yoga (0.0.0)
 
 DEPENDENCIES:
@@ -1957,7 +1878,6 @@ DEPENDENCIES:
   - RNScreens (from `../node_modules/react-native-screens`)
   - RNSVG (from `../node_modules/react-native-svg`)
   - RNVectorIcons (from `../node_modules/react-native-vector-icons`)
-  - "stripe-react-native (from `../node_modules/@stripe/stripe-react-native`)"
   - Yoga (from `../node_modules/react-native/ReactCommon/yoga`)
 
 SPEC REPOS:
@@ -1972,14 +1892,6 @@ SPEC REPOS:
     - GTMSessionFetcher
     - PromisesObjC
     - SocketRocket
-    - Stripe
-    - StripeApplePay
-    - StripeCore
-    - StripeFinancialConnections
-    - StripePayments
-    - StripePaymentSheet
-    - StripePaymentsUI
-    - StripeUICore
 
 EXTERNAL SOURCES:
   boost:
@@ -2147,8 +2059,6 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-svg"
   RNVectorIcons:
     :path: "../node_modules/react-native-vector-icons"
-  stripe-react-native:
-    :path: "../node_modules/@stripe/stripe-react-native"
   Yoga:
     :path: "../node_modules/react-native/ReactCommon/yoga"
 
@@ -2203,7 +2113,7 @@ SPEC CHECKSUMS:
   react-native-document-picker: befd8fe34fcfc606ec7ee427ab21747fbdb6bc44
   react-native-geolocation-service: 32b2c2a3b91e70ce2a8d0c684801aaeb0a07e0ec
   react-native-image-picker: 29261670d6bd4913d5c1c3881c728b3e01cb5789
-  react-native-maps: 790cc61ecb095d6225bd7259366bf35eef806b30
+  react-native-maps: b5cd8e934e9702b6b3242f838974bdf4e4e6d970
   react-native-safe-area-context: 2243039f43d10cb1ea30ec5ac57fc6d1448413f4
   react-native-webview: 290559634cdeb20d4e270e4d637a65ebc77b063f
   React-nativeconfig: 8efdb1ef1e9158c77098a93085438f7e7b463678
@@ -2237,25 +2147,16 @@ SPEC CHECKSUMS:
   RNCPicker: 7de564dce1f90b53e386a24001aafc3578233dfe
   RNDateTimePicker: 8c12d12e8660697c2e176d2f98775764431c141f
   RNDeviceInfo: bcce8752b5043a623fe3c26789679b473f705d3c
-  RNGestureHandler: 06c449f80e61931fcc8223d660617b07eaf00637
+  RNGestureHandler: 32336458ef842088a459ccfcc10b583186de2633
   RNGoogleSignin: 2792145770d2bbd5656bf91c5c83db4cadb5ebe0
   RNPermissions: 0b0cdb0dfcc2fabc136a3d596220cc3d91977d79
   RNReactNativeHapticFeedback: 9e40918e714999589d7d4adc740bc345158bd733
-  RNScreens: e1bc7d33b017bdd4e5d6edd391474a6a21d73146
+  RNScreens: 295d9c0aaeb7f680d03d7e9b476569a4959aae89
   RNSVG: 4d487e94540ec512ad5a94fbb4f2db9c7e9c1b91
   RNVectorIcons: 2e5faaeb07fcb842b924f92f10b4404ee2984b49
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
-  Stripe: a4b6584549bac3698733ed564e55b0b067cfda8a
-  stripe-react-native: 597a6159ad4845de426e94c2797a8c2be47d5964
-  StripeApplePay: c8b005f1b5a242c455f76b42eda08660e9e33102
-  StripeCore: 9a87da02c7fefc9b965218210a0902acd71157ab
-  StripeFinancialConnections: 331ece5b6446dbf6eac62b94f8e365d0af9e000a
-  StripePayments: 95ca9bc60eca45f02cd35b125a67a969c9d62ce7
-  StripePaymentSheet: 7bc20a0ab10d91acc06dc449ab61bb2cf221b0f4
-  StripePaymentsUI: 1590647b3f635a58fb0e7058d86d3e9ff89250d4
-  StripeUICore: a63d95d604e70a5895f9d6b09c49a46757e86353
   Yoga: feb4910aba9742cfedc059e2b2902e22ffe9954a
 
-PODFILE CHECKSUM: 30b59b7961c35954acc7ceb63f950dbe361ec4a8
+PODFILE CHECKSUM: 75121083be72f7bd16708eaa860ee95f46aeb6c4
 
 COCOAPODS: 1.16.2

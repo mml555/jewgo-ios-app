@@ -34,6 +34,8 @@ const config = {
       // Exclude other build artifacts
       /\.buckd\/.*/,
       /\.gradle\/.*/,
+      // Exclude problematic React Native 0.76.9 paths that no longer exist
+      /node_modules\/react-native\/src\/private\/webapis\/webidl\/.*/,
     ],
   },
 };
