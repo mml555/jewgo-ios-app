@@ -204,7 +204,9 @@ const RegisterScreen: React.FC = () => {
 
     // Remove empty errors
     Object.keys(newErrors).forEach(key => {
-      if (!newErrors[key]) delete newErrors[key];
+      if (!newErrors[key]) {
+        delete newErrors[key];
+      }
     });
 
     setErrors(newErrors);
@@ -310,7 +312,9 @@ const RegisterScreen: React.FC = () => {
   }, []);
 
   const formatDate = useCallback((date: Date | null) => {
-    if (!date) return '';
+    if (!date) {
+      return '';
+    }
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     const year = date.getFullYear();

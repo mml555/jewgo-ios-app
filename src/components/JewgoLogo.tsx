@@ -8,22 +8,22 @@ interface JewgoLogoProps {
   color?: string;
 }
 
-const JewgoLogo: React.FC<JewgoLogoProps> = ({ 
-  width = 32, 
-  height = 32, 
-  color = '#a5ffc6' 
+const JewgoLogo: React.FC<JewgoLogoProps> = ({
+  width = 32,
+  height = 32,
+  color = '#a5ffc6',
 }) => {
   // Make logo circular by setting borderRadius to half of the smaller dimension
   const borderRadius = Math.min(width, height) / 2;
-  
+
   return (
     <View style={[styles.container, { width, height, borderRadius }]}>
       <Svg width={width} height={height} viewBox="0 0 810 810">
         <Defs />
-        
+
         {/* Background - Updated to use brand color */}
         <Rect x="0" y="0" width="810" height="810" fill="#c6ffd1" />
-        
+
         {/* Icon - Hebrew-inspired "J" character from brand design */}
         <G fill="#292b2d">
           <G transform="translate(258, 6)">

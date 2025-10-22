@@ -18,7 +18,9 @@ class ClaimsController {
 
   static async getEntity(entityId, entityType, client = db) {
     const tableName = this.getTableName(entityType);
-    if (!tableName) return null;
+    if (!tableName) {
+      return null;
+    }
 
     const result = await client.query(
       `SELECT id, name, address, is_claimed, owner_id FROM ${tableName} WHERE id = $1`,
@@ -218,7 +220,7 @@ class ClaimsController {
         params.push(status);
       }
 
-      query += ` ORDER BY lc.created_at DESC`;
+      query += ' ORDER BY lc.created_at DESC';
       query += ` LIMIT $${paramCount + 1} OFFSET $${paramCount + 2}`;
       params.push(
         parseInt(limit, 10),
@@ -245,7 +247,7 @@ class ClaimsController {
 
       // Get claim
       const claimResult = await db.query(
-        `SELECT lc.* FROM listing_claims lc WHERE lc.id = $1 AND lc.claimant_id = $2`,
+        'SELECT lc.* FROM listing_claims lc WHERE lc.id = $1 AND lc.claimant_id = $2',
         [claimId, userId],
       );
 
@@ -303,12 +305,10 @@ class ClaimsController {
 
       if (claim.rows.length === 0) {
         await client.query('ROLLBACK');
-        return res
-          .status(404)
-          .json({
-            error: 'Claim not found or cannot be cancelled',
-            code: 'CLAIM_NOT_FOUND',
-          });
+        return res.status(404).json({
+          error: 'Claim not found or cannot be cancelled',
+          code: 'CLAIM_NOT_FOUND',
+        });
       }
 
       await client.query(
@@ -351,7 +351,7 @@ class ClaimsController {
         params.push(entityType);
       }
 
-      query += ` ORDER BY priority DESC, created_at ASC`;
+      query += ' ORDER BY priority DESC, created_at ASC';
       query += ` LIMIT $${paramCount + 1} OFFSET $${paramCount + 2}`;
       params.push(
         parseInt(limit, 10),
@@ -393,12 +393,10 @@ class ClaimsController {
 
       if (claim.rows.length === 0) {
         await client.query('ROLLBACK');
-        return res
-          .status(404)
-          .json({
-            error: 'Claim not found or already processed',
-            code: 'CLAIM_NOT_FOUND',
-          });
+        return res.status(404).json({
+          error: 'Claim not found or already processed',
+          code: 'CLAIM_NOT_FOUND',
+        });
       }
 
       const claimData = claim.rows[0];

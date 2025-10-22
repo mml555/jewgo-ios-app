@@ -306,7 +306,9 @@ class LocationPrivacyService {
   }
 
   private sanitizeLogData(data?: Record<string, any>): Record<string, any> {
-    if (!data) return {};
+    if (!data) {
+      return {};
+    }
 
     const sanitized = { ...data };
 

@@ -94,7 +94,9 @@ export const useGridData = ({
   // Memoized fetch function to avoid recreating on every render
   const fetchEventsData = useCallback(
     async (page = 1, isRefresh = false, isLoadMore = false) => {
-      if (categoryKey !== 'events') return;
+      if (categoryKey !== 'events') {
+        return;
+      }
 
       // Create a stable key from params to detect actual changes
       const paramsKey = JSON.stringify({
@@ -113,7 +115,9 @@ export const useGridData = ({
       }
 
       // Prevent concurrent fetches
-      if (isFetchingEventsRef.current) return;
+      if (isFetchingEventsRef.current) {
+        return;
+      }
 
       try {
         // Cancel any in-flight request
@@ -212,7 +216,9 @@ export const useGridData = ({
 
   // Load events when dependencies change
   useEffect(() => {
-    if (categoryKey !== 'events') return;
+    if (categoryKey !== 'events') {
+      return;
+    }
 
     fetchEventsData(1, false, false);
   }, [categoryKey, query, eventsFilters, fetchEventsData]);
@@ -572,31 +578,55 @@ export const useGridData = ({
       }
 
       // Amenity filters
-      if (filters.hasParking && !item.hasParking) return false;
-      if (filters.hasWifi && !item.hasWifi) return false;
-      if (filters.hasAccessibility && !item.hasAccessibility) return false;
-      if (filters.hasDelivery && !item.hasDelivery) return false;
-      if (filters.hasPrivateRooms && !(item as any).hasPrivateRooms)
+      if (filters.hasParking && !item.hasParking) {
         return false;
-      if (filters.hasHeating && !(item as any).hasHeating) return false;
-      if (filters.hasAirConditioning && !(item as any).hasAirConditioning)
+      }
+      if (filters.hasWifi && !item.hasWifi) {
         return false;
-      if (filters.hasKosherKitchen && !(item as any).hasKosherKitchen)
+      }
+      if (filters.hasAccessibility && !item.hasAccessibility) {
         return false;
-      if (filters.hasMikvah && !(item as any).hasMikvah) return false;
-      if (filters.hasLibrary && !(item as any).hasLibrary) return false;
-      if (filters.hasYouthPrograms && !(item as any).hasYouthPrograms)
+      }
+      if (filters.hasDelivery && !item.hasDelivery) {
         return false;
-      if (filters.hasAdultEducation && !(item as any).hasAdultEducation)
+      }
+      if (filters.hasPrivateRooms && !(item as any).hasPrivateRooms) {
         return false;
-      if (filters.hasSocialEvents && !(item as any).hasSocialEvents)
+      }
+      if (filters.hasHeating && !(item as any).hasHeating) {
         return false;
+      }
+      if (filters.hasAirConditioning && !(item as any).hasAirConditioning) {
+        return false;
+      }
+      if (filters.hasKosherKitchen && !(item as any).hasKosherKitchen) {
+        return false;
+      }
+      if (filters.hasMikvah && !(item as any).hasMikvah) {
+        return false;
+      }
+      if (filters.hasLibrary && !(item as any).hasLibrary) {
+        return false;
+      }
+      if (filters.hasYouthPrograms && !(item as any).hasYouthPrograms) {
+        return false;
+      }
+      if (filters.hasAdultEducation && !(item as any).hasAdultEducation) {
+        return false;
+      }
+      if (filters.hasSocialEvents && !(item as any).hasSocialEvents) {
+        return false;
+      }
 
       // Open now filter
-      if (filters.openNow && !item.isOpen) return false;
+      if (filters.openNow && !item.isOpen) {
+        return false;
+      }
 
       // Weekend filter
-      if (filters.openWeekends && !item.openWeekends) return false;
+      if (filters.openWeekends && !item.openWeekends) {
+        return false;
+      }
 
       return true;
     });
@@ -620,10 +650,12 @@ export const useGridData = ({
           return distanceA - distanceB;
         }
 
-        if (a.latitude && a.longitude && (!b.latitude || !b.longitude))
+        if (a.latitude && a.longitude && (!b.latitude || !b.longitude)) {
           return -1;
-        if ((!a.latitude || !a.longitude) && b.latitude && b.longitude)
+        }
+        if ((!a.latitude || !a.longitude) && b.latitude && b.longitude) {
           return 1;
+        }
 
         return 0;
       });

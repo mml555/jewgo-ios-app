@@ -1,37 +1,41 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-cd "$REPO_ROOT"
+APP_SCHEME="${APP_SCHEME:-JewgoAppFinal}"
+APP_CONFIGURATION="${APP_CONFIGURATION:-Debug}"
+SIM_NAME="${SIM_NAME:-iPhone 16}"
+WORKSPACE="JewgoAppFinal.xcworkspace"
 
-APP_SCHEME="JewgoAppFinal"
-WORKSPACE="ios/JewgoAppFinal.xcworkspace"
-CONFIGURATION="Debug"
-
-# Discover bundle identifier from Info.plist unless overridden
-default_bundle_id=$( /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' ios/JewgoAppFinal/Info.plist ) || default_bundle_id="org.reactjs.native.example.JewgoAppFinal"
-BUNDLE_ID="${BUNDLE_ID_OVERRIDE:-$default_bundle_id}"
-
-# Prefer an already booted simulator; otherwise fall back to a common device name
-if destination_id=$(xcrun simctl list devices booted | awk -F'[()]' '/iPhone/{print $2; exit}'); then
-  DESTINATION="id=$destination_id"
-else
-  DESTINATION="platform=iOS Simulator,name=iPhone 16"
+# Find a matching simulator device ID dynamically
+DEVICE_ID="$(xcrun simctl list devices booted | awk -v n="$SIM_NAME" '$0 ~ n {print $NF}' | tr -d '()' || true)"
+if [[ -z "${DEVICE_ID}" ]]; then
+  xcrun simctl bootstatus booted >/dev/null 2>&1 || true
+  xcrun simctl boot "${SIM_NAME}" || true
+  DEVICE_ID="$(xcrun simctl list devices | awk -v n="$SIM_NAME" '$0 ~ n && $0 ~ /(Booted|Shutdown)/ {print $NF}' | head -1 | tr -d '()')"
 fi
 
+pushd ios >/dev/null
+  bundle exec pod install || pod install
+popd >/dev/null
+
+watchman watch-del-all || true
+rm -rf ~/Library/Developer/Xcode/DerivedData/*
+
+# Start Metro if not running
+if ! lsof -i :8081 >/dev/null 2>&1; then
+  echo "Starting Metro…"
+  (node --version; npx react-native start) &
+  sleep 2
+fi
+
+# Build
 xcodebuild \
-  -workspace "$WORKSPACE" \
-  -scheme "$APP_SCHEME" \
-  -configuration "$CONFIGURATION" \
-  -destination "$DESTINATION" \
-  clean build
+  -workspace "ios/${WORKSPACE}" \
+  -scheme "${APP_SCHEME}" \
+  -configuration "${APP_CONFIGURATION}" \
+  -destination "platform=iOS Simulator,id=${DEVICE_ID}" \
+  -derivedDataPath "ios/build" \
+  build | xcpretty || exit 1
 
-# Install and launch when destination resolved to a concrete simulator ID
-if [[ "$DESTINATION" == id=* ]]; then
-  UDID="${DESTINATION#id=}"
-  BUILD_DIR=$(xcodebuild -workspace "$WORKSPACE" -scheme "$APP_SCHEME" -configuration "$CONFIGURATION" -showBuildSettings | awk -F' = ' '/CONFIGURATION_BUILD_DIR/{dir=$2} /FULL_PRODUCT_NAME/{name=$2} END{if(dir && name) print dir "/" name}')
-  if [[ -n "$BUILD_DIR" && -d "$BUILD_DIR" ]]; then
-    xcrun simctl install "$UDID" "$BUILD_DIR" || true
-    xcrun simctl launch "$UDID" "$BUNDLE_ID" || true
-  fi
-fi
+# Install & launch
+npx react-native run-ios --simulator "${SIM_NAME}"

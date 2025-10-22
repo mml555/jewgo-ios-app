@@ -106,10 +106,14 @@ const EnhancedProgressIndicator: React.FC<EnhancedProgressIndicatorProps> =
       // Handle step press
       const handleStepPress = useCallback(
         (stepNumber: number) => {
-          if (!allowStepJumping) return;
+          if (!allowStepJumping) {
+            return;
+          }
 
           const step = steps.find(s => s.number === stepNumber);
-          if (!step || step.isCurrent) return;
+          if (!step || step.isCurrent) {
+            return;
+          }
 
           // Animate step selection
           steps.forEach(s => {
@@ -137,7 +141,9 @@ const EnhancedProgressIndicator: React.FC<EnhancedProgressIndicatorProps> =
       // Handle step expand/collapse
       const handleStepExpand = useCallback(
         (stepNumber: number) => {
-          if (!showStepDescriptions) return;
+          if (!showStepDescriptions) {
+            return;
+          }
 
           hapticButtonPress();
           setExpandedStep(expandedStep === stepNumber ? null : stepNumber);
@@ -256,19 +262,33 @@ const EnhancedProgressIndicator: React.FC<EnhancedProgressIndicatorProps> =
 
       // Get step icon
       const getStepIcon = useCallback((step: FormStep) => {
-        if (step.icon) return step.icon;
+        if (step.icon) {
+          return step.icon;
+        }
 
-        if (step.isCompleted) return '✅';
-        if (step.hasErrors) return '❌';
-        if (step.isCurrent) return '🔄';
+        if (step.isCompleted) {
+          return '✅';
+        }
+        if (step.hasErrors) {
+          return '❌';
+        }
+        if (step.isCurrent) {
+          return '🔄';
+        }
         return '⭕';
       }, []);
 
       // Get step status color
       const getStepStatusColor = useCallback((step: FormStep) => {
-        if (step.isCurrent) return Colors.jewgoGreen;
-        if (step.isCompleted) return Colors.jewgoGreen;
-        if (step.hasErrors) return Colors.errorRed;
+        if (step.isCurrent) {
+          return Colors.jewgoGreen;
+        }
+        if (step.isCompleted) {
+          return Colors.jewgoGreen;
+        }
+        if (step.hasErrors) {
+          return Colors.errorRed;
+        }
         return Colors.softGray;
       }, []);
 

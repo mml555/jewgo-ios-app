@@ -1,3 +1,7 @@
+diff --git a/node_modules/react-native/.DS_Store b/node_modules/react-native/.DS_Store
+new file mode 100644
+index 0000000..d52f9f3
+Binary files /dev/null and b/node_modules/react-native/.DS_Store differ
 diff --git a/node_modules/react-native/React/Fabric/RCTThirdPartyFabricComponentsProvider.h b/node_modules/react-native/React/Fabric/RCTThirdPartyFabricComponentsProvider.h
 new file mode 100644
 index 0000000..f56ef31
@@ -311,6 +315,18 @@ index 0000000..6b48742
 +  }
 +  return nil;
 +}
+diff --git a/node_modules/react-native/ReactCommon/react/renderer/graphics/platform/ios/react/renderer/graphics/Float.h b/node_modules/react-native/ReactCommon/react/renderer/graphics/platform/ios/react/renderer/graphics/Float.h
+index ef09235..44dfe3a 100644
+--- a/node_modules/react-native/ReactCommon/react/renderer/graphics/platform/ios/react/renderer/graphics/Float.h
++++ b/node_modules/react-native/ReactCommon/react/renderer/graphics/platform/ios/react/renderer/graphics/Float.h
+@@ -7,6 +7,7 @@
+ 
+ #pragma once
+ 
++#include <CoreFoundation/CoreFoundation.h>
+ #include <CoreGraphics/CoreGraphics.h>
+ #include <limits>
+ 
 diff --git a/node_modules/react-native/ReactCommon/yoga/Yoga.podspec b/node_modules/react-native/ReactCommon/yoga/Yoga.podspec
 index ec404ec..8c408c0 100644
 --- a/node_modules/react-native/ReactCommon/yoga/Yoga.podspec

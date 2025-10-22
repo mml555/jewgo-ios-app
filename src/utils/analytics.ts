@@ -4,32 +4,32 @@
  */
 
 export interface JobsSearchSubmittedEvent {
-  q: string;                    // Search query
-  filters_count: number;        // Active filter count
+  q: string; // Search query
+  filters_count: number; // Active filter count
   tab: 'job_feed' | 'resume_feed';
 }
 
 export interface JobsTabChangedEvent {
   to: 'job_feed' | 'resume_feed' | 'post_job';
-  from: string;                 // Previous tab
+  from: string; // Previous tab
   timestamp: number;
 }
 
 export interface JobCardImpressionEvent {
   job_id: string;
-  rank: number;                 // Position in feed
-  grid_position: number;        // 1-2 (left/right)
-  visible_percent: number;      // 0-100
+  rank: number; // Position in feed
+  grid_position: number; // 1-2 (left/right)
+  visible_percent: number; // 0-100
 }
 
 export interface JobCardFavoritedEvent {
   job_id: string;
-  favored: boolean;             // true|false
+  favored: boolean; // true|false
   source: 'card' | 'detail';
 }
 
 export interface FilterAppliedEvent {
-  filter_keys: string[];        // ['job_type', 'industry', 'zip']
+  filter_keys: string[]; // ['job_type', 'industry', 'zip']
   result_count: number;
   tab: string;
 }
@@ -146,15 +146,15 @@ class JobsAnalytics {
   private logEvent(event: any): void {
     // Replace with your actual analytics SDK call
     console.log('Analytics Event:', event);
-    
+
     // Example implementations:
-    
+
     // Firebase Analytics
     // firebase.analytics().logEvent(event.event_name, event.properties);
-    
+
     // Mixpanel
     // mixpanel.track(event.event_name, event.properties);
-    
+
     // Amplitude
     // amplitude.getInstance().logEvent(event.event_name, event.properties);
   }
@@ -164,17 +164,17 @@ class JobsAnalytics {
 export const jobsAnalytics = JobsAnalytics.getInstance();
 
 // Convenience functions for direct use
-export const trackJobsSearchSubmitted = (event: JobsSearchSubmittedEvent) => 
+export const trackJobsSearchSubmitted = (event: JobsSearchSubmittedEvent) =>
   jobsAnalytics.trackJobsSearchSubmitted(event);
 
-export const trackJobsTabChanged = (event: JobsTabChangedEvent) => 
+export const trackJobsTabChanged = (event: JobsTabChangedEvent) =>
   jobsAnalytics.trackJobsTabChanged(event);
 
-export const trackJobCardImpression = (event: JobCardImpressionEvent) => 
+export const trackJobCardImpression = (event: JobCardImpressionEvent) =>
   jobsAnalytics.trackJobCardImpression(event);
 
-export const trackJobCardFavorited = (event: JobCardFavoritedEvent) => 
+export const trackJobCardFavorited = (event: JobCardFavoritedEvent) =>
   jobsAnalytics.trackJobCardFavorited(event);
 
-export const trackFilterApplied = (event: FilterAppliedEvent) => 
+export const trackFilterApplied = (event: FilterAppliedEvent) =>
   jobsAnalytics.trackFilterApplied(event);

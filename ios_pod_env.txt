@@ -1,0 +1,30 @@
+
+### Stack
+
+```
+   CocoaPods : 1.16.2
+        Ruby : ruby 3.4.5 (2025-07-16 revision 20cda200d3) +PRISM [arm64-darwin24]
+    RubyGems : 3.6.9
+        Host : macOS 26.0.1 (25A362)
+       Xcode : 26.0.1 (17A400)
+         Git : git version 2.50.1 (Apple Git-155)
+Ruby lib dir : /opt/homebrew/Cellar/ruby/3.4.5/lib
+Repositories : trunk - CDN - https://cdn.cocoapods.org/
+```
+
+### Installation Source
+
+```
+Executable Path: /opt/homebrew/Cellar/cocoapods/1.16.2_1/libexec/bin/pod
+```
+
+### Plugins
+
+```
+cocoapods-deintegrate : 1.0.5
+cocoapods-plugins     : 1.0.0
+cocoapods-search      : 1.0.1
+cocoapods-trunk       : 1.6.0
+cocoapods-try         : 1.2.0
+```
+

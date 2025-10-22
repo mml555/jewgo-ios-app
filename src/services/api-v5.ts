@@ -266,15 +266,30 @@ class ApiV5Service {
   ): Promise<ApiResponse<{ entities: T[] }>> {
     const queryParams = new URLSearchParams();
 
-    if (params?.page) queryParams.append('page', params.page.toString());
-    if (params?.limit) queryParams.append('limit', params.limit.toString());
-    if (params?.query) queryParams.append('q', params.query);
-    if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
-    if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
-    if (params?.latitude) queryParams.append('lat', params.latitude.toString());
-    if (params?.longitude)
+    if (params?.page) {
+      queryParams.append('page', params.page.toString());
+    }
+    if (params?.limit) {
+      queryParams.append('limit', params.limit.toString());
+    }
+    if (params?.query) {
+      queryParams.append('q', params.query);
+    }
+    if (params?.sortBy) {
+      queryParams.append('sortBy', params.sortBy);
+    }
+    if (params?.sortOrder) {
+      queryParams.append('sortOrder', params.sortOrder);
+    }
+    if (params?.latitude) {
+      queryParams.append('lat', params.latitude.toString());
+    }
+    if (params?.longitude) {
       queryParams.append('lng', params.longitude.toString());
-    if (params?.radius) queryParams.append('radius', params.radius.toString());
+    }
+    if (params?.radius) {
+      queryParams.append('radius', params.radius.toString());
+    }
 
     // Add filters
     if (params?.filters) {
@@ -347,15 +362,30 @@ class ApiV5Service {
   ): Promise<ApiResponse<{ entities: Entity[] }>> {
     const queryParams = new URLSearchParams();
 
-    if (params.query) queryParams.append('q', params.query);
-    if (params.page) queryParams.append('page', params.page.toString());
-    if (params.limit) queryParams.append('limit', params.limit.toString());
-    if (params.sortBy) queryParams.append('sortBy', params.sortBy);
-    if (params.sortOrder) queryParams.append('sortOrder', params.sortOrder);
-    if (params.latitude) queryParams.append('lat', params.latitude.toString());
-    if (params.longitude)
+    if (params.query) {
+      queryParams.append('q', params.query);
+    }
+    if (params.page) {
+      queryParams.append('page', params.page.toString());
+    }
+    if (params.limit) {
+      queryParams.append('limit', params.limit.toString());
+    }
+    if (params.sortBy) {
+      queryParams.append('sortBy', params.sortBy);
+    }
+    if (params.sortOrder) {
+      queryParams.append('sortOrder', params.sortOrder);
+    }
+    if (params.latitude) {
+      queryParams.append('lat', params.latitude.toString());
+    }
+    if (params.longitude) {
       queryParams.append('lng', params.longitude.toString());
-    if (params.radius) queryParams.append('radius', params.radius.toString());
+    }
+    if (params.radius) {
+      queryParams.append('radius', params.radius.toString());
+    }
 
     // Add filters
     if (params.filters) {
@@ -378,15 +408,30 @@ class ApiV5Service {
   ): Promise<ApiResponse<{ entities: Entity[] }>> {
     const queryParams = new URLSearchParams();
 
-    if (params.query) queryParams.append('q', params.query);
-    if (params.page) queryParams.append('page', params.page.toString());
-    if (params.limit) queryParams.append('limit', params.limit.toString());
-    if (params.sortBy) queryParams.append('sortBy', params.sortBy);
-    if (params.sortOrder) queryParams.append('sortOrder', params.sortOrder);
-    if (params.latitude) queryParams.append('lat', params.latitude.toString());
-    if (params.longitude)
+    if (params.query) {
+      queryParams.append('q', params.query);
+    }
+    if (params.page) {
+      queryParams.append('page', params.page.toString());
+    }
+    if (params.limit) {
+      queryParams.append('limit', params.limit.toString());
+    }
+    if (params.sortBy) {
+      queryParams.append('sortBy', params.sortBy);
+    }
+    if (params.sortOrder) {
+      queryParams.append('sortOrder', params.sortOrder);
+    }
+    if (params.latitude) {
+      queryParams.append('lat', params.latitude.toString());
+    }
+    if (params.longitude) {
       queryParams.append('lng', params.longitude.toString());
-    if (params.radius) queryParams.append('radius', params.radius.toString());
+    }
+    if (params.radius) {
+      queryParams.append('radius', params.radius.toString());
+    }
 
     // Add filters
     if (params.filters) {
@@ -427,8 +472,12 @@ class ApiV5Service {
     if (params?.entityId) {
       // Get reviews for a specific entity
       const queryParams = new URLSearchParams();
-      if (params.page) queryParams.append('page', params.page.toString());
-      if (params.limit) queryParams.append('limit', params.limit.toString());
+      if (params.page) {
+        queryParams.append('page', params.page.toString());
+      }
+      if (params.limit) {
+        queryParams.append('limit', params.limit.toString());
+      }
 
       const queryString = queryParams.toString();
       const endpoint = `/reviews/entity/${params.entityId}${
@@ -439,9 +488,15 @@ class ApiV5Service {
     }
 
     const queryParams = new URLSearchParams();
-    if (params?.entityType) queryParams.append('entityType', params.entityType);
-    if (params?.page) queryParams.append('page', params.page.toString());
-    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.entityType) {
+      queryParams.append('entityType', params.entityType);
+    }
+    if (params?.page) {
+      queryParams.append('page', params.page.toString());
+    }
+    if (params?.limit) {
+      queryParams.append('limit', params.limit.toString());
+    }
 
     const queryString = queryParams.toString();
     const endpoint = `/reviews${queryString ? `?${queryString}` : ''}`;

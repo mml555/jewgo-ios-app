@@ -90,7 +90,9 @@ const PhoneInput: React.FC<PhoneInputProps> = ({
 
   const isValidNumber = (text: string): boolean => {
     try {
-      if (!text) return true; // Empty is valid (not required yet)
+      if (!text) {
+        return true;
+      } // Empty is valid (not required yet)
       const phoneNumber = parsePhoneNumber(text, selectedCountry.code);
       return phoneNumber ? phoneNumber.isValid() : false;
     } catch {

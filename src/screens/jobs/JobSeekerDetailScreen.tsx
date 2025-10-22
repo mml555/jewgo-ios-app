@@ -40,8 +40,12 @@ const isLargeScreen = screenHeight >= 850;
 
 // Dynamic sizing based on screen size
 const getResponsiveSize = (small: number, medium: number, large: number) => {
-  if (isSmallScreen) return small;
-  if (isMediumScreen) return medium;
+  if (isSmallScreen) {
+    return small;
+  }
+  if (isMediumScreen) {
+    return medium;
+  }
   return large;
 };
 
@@ -95,7 +99,9 @@ const JobSeekerDetailScreen: React.FC = () => {
   };
 
   const handleContact = () => {
-    if (!profile) return;
+    if (!profile) {
+      return;
+    }
 
     Alert.prompt(
       `Contact ${profile.name}`,
@@ -105,7 +111,9 @@ const JobSeekerDetailScreen: React.FC = () => {
         {
           text: 'Send',
           onPress: async (message?: string) => {
-            if (!message?.trim()) return;
+            if (!message?.trim()) {
+              return;
+            }
 
             try {
               await JobsService.contactSeeker(profileId, message);
@@ -179,10 +187,18 @@ const JobSeekerDetailScreen: React.FC = () => {
       (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24),
     );
 
-    if (diffInDays === 0) return 'Today';
-    if (diffInDays === 1) return 'Yesterday';
-    if (diffInDays < 7) return `${diffInDays} days ago`;
-    if (diffInDays < 30) return `${Math.floor(diffInDays / 7)} weeks ago`;
+    if (diffInDays === 0) {
+      return 'Today';
+    }
+    if (diffInDays === 1) {
+      return 'Yesterday';
+    }
+    if (diffInDays < 7) {
+      return `${diffInDays} days ago`;
+    }
+    if (diffInDays < 30) {
+      return `${Math.floor(diffInDays / 7)} weeks ago`;
+    }
     return `${Math.floor(diffInDays / 30)} months ago`;
   };
 

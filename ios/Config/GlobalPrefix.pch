@@ -1,0 +1,13 @@
+// Precompiled header for all Pods (wired via GCC_PREFIX_HEADER)
+// This ensures CoreFoundation/CoreGraphics/UIKit are visible where needed.
+
+#ifdef __OBJC__
+  #import <Foundation/Foundation.h>
+  #import <UIKit/UIKit.h>
+#endif
+
+#ifdef __cplusplus
+  #import <CoreFoundation/CoreFoundation.h>
+  #import <CoreGraphics/CoreGraphics.h>
+#endif
+

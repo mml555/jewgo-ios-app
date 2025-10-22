@@ -72,7 +72,9 @@ const SpecialsDashboard: React.FC<SpecialsDashboardProps> = ({
 
   // Load location-based restaurants with specials
   const loadNearbyRestaurants = useCallback(async () => {
-    if (!latitude || !longitude) return;
+    if (!latitude || !longitude) {
+      return;
+    }
 
     try {
       const response = await specialsService.getNearbyRestaurantsWithSpecials(

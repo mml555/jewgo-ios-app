@@ -105,7 +105,9 @@ const EditSpecialScreen: React.FC = () => {
   }, [specialId]);
 
   const loadSpecialData = useCallback(async () => {
-    if (!specialId) return;
+    if (!specialId) {
+      return;
+    }
 
     try {
       setLoading(true);
@@ -151,7 +153,9 @@ const EditSpecialScreen: React.FC = () => {
   }, [specialId, navigation]);
 
   const handleSaveSpecial = useCallback(async () => {
-    if (!editorState) return;
+    if (!editorState) {
+      return;
+    }
 
     setSaving(true);
     try {

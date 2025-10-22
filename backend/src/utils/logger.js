@@ -32,7 +32,9 @@ class Logger {
   }
 
   log(level, levelName, message, ...args) {
-    if (!this.shouldLog()) return;
+    if (!this.shouldLog()) {
+      return;
+    }
 
     // Prevent message overflow
     if (this.messageCount >= this.maxMessages) {
@@ -48,7 +50,9 @@ class Logger {
     // Console logging
     switch (level) {
       case 0: // DEBUG
-        if (isDevelopment) console.log(formattedMessage);
+        if (isDevelopment) {
+          console.log(formattedMessage);
+        }
         break;
       case 1: // INFO
         console.info(formattedMessage);

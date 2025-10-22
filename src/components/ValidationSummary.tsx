@@ -6,7 +6,12 @@ import {
   TouchableOpacity,
   ScrollView,
 } from 'react-native';
-import { Colors, Typography, Spacing, BorderRadius } from '../styles/designSystem';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+} from '../styles/designSystem';
 
 interface ValidationSummaryProps {
   totalErrors: number;
@@ -41,16 +46,28 @@ const ValidationSummary: React.FC<ValidationSummaryProps> = ({
   }
 
   const getStatusColor = () => {
-    if (totalErrors > 0) return Colors.error;
-    if (totalWarnings > 0) return Colors.warning;
-    if (readyToSubmit) return Colors.success;
+    if (totalErrors > 0) {
+      return Colors.error;
+    }
+    if (totalWarnings > 0) {
+      return Colors.warning;
+    }
+    if (readyToSubmit) {
+      return Colors.success;
+    }
     return Colors.primary.main;
   };
 
   const getStatusIcon = () => {
-    if (totalErrors > 0) return '❌';
-    if (totalWarnings > 0) return '⚠️';
-    if (readyToSubmit) return '✅';
+    if (totalErrors > 0) {
+      return '❌';
+    }
+    if (totalWarnings > 0) {
+      return '⚠️';
+    }
+    if (readyToSubmit) {
+      return '✅';
+    }
     return '📝';
   };
 
@@ -107,14 +124,14 @@ const ValidationSummary: React.FC<ValidationSummaryProps> = ({
       {/* Progress Bar */}
       <View style={styles.progressContainer}>
         <View style={styles.progressBar}>
-          <View 
+          <View
             style={[
-              styles.progressFill, 
-              { 
+              styles.progressFill,
+              {
                 width: `${(completedSteps / totalSteps) * 100}%`,
                 backgroundColor: statusColor,
-              }
-            ]} 
+              },
+            ]}
           />
         </View>
         <Text style={styles.progressText}>
@@ -128,7 +145,10 @@ const ValidationSummary: React.FC<ValidationSummaryProps> = ({
           <Text style={[styles.sectionTitle, { color: Colors.error }]}>
             Errors to Fix:
           </Text>
-          <ScrollView style={styles.issuesList} showsVerticalScrollIndicator={false}>
+          <ScrollView
+            style={styles.issuesList}
+            showsVerticalScrollIndicator={false}
+          >
             {errors.map((error, index) => (
               <View key={index} style={styles.issueItem}>
                 <Text style={styles.issueIcon}>❌</Text>
@@ -147,7 +167,10 @@ const ValidationSummary: React.FC<ValidationSummaryProps> = ({
           <Text style={[styles.sectionTitle, { color: Colors.warning }]}>
             Warnings:
           </Text>
-          <ScrollView style={styles.issuesList} showsVerticalScrollIndicator={false}>
+          <ScrollView
+            style={styles.issuesList}
+            showsVerticalScrollIndicator={false}
+          >
             {warnings.map((warning, index) => (
               <View key={index} style={styles.issueItem}>
                 <Text style={styles.issueIcon}>⚠️</Text>

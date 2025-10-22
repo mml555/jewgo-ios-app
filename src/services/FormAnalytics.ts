@@ -128,7 +128,9 @@ class FormAnalyticsService {
     stepName: string,
     userId?: string,
   ): Promise<void> {
-    if (!this.currentSession) return;
+    if (!this.currentSession) {
+      return;
+    }
 
     const now = Date.now();
     const timeSpentOnPreviousStep = now - this.stepStartTime;
@@ -172,7 +174,9 @@ class FormAnalyticsService {
     stepNumber: number,
     userId?: string,
   ): Promise<void> {
-    if (!this.currentSession) return;
+    if (!this.currentSession) {
+      return;
+    }
 
     this.currentSession.validationErrors++;
 
@@ -200,7 +204,9 @@ class FormAnalyticsService {
     fieldName?: string,
     userId?: string,
   ): Promise<void> {
-    if (!this.currentSession) return;
+    if (!this.currentSession) {
+      return;
+    }
 
     this.currentSession.recoveryActions++;
 
@@ -220,7 +226,9 @@ class FormAnalyticsService {
 
   // Track auto-save events
   async trackAutoSave(stepNumber: number, userId?: string): Promise<void> {
-    if (!this.currentSession) return;
+    if (!this.currentSession) {
+      return;
+    }
 
     this.currentSession.autoSaves++;
 
@@ -238,7 +246,9 @@ class FormAnalyticsService {
 
   // Track form submission
   async trackFormSubmission(userId?: string, formData?: any): Promise<void> {
-    if (!this.currentSession) return;
+    if (!this.currentSession) {
+      return;
+    }
 
     const now = Date.now();
     const timeSpentOnLastStep = now - this.stepStartTime;
@@ -271,7 +281,9 @@ class FormAnalyticsService {
     stepNumber: number,
     userId?: string,
   ): Promise<void> {
-    if (!this.currentSession) return;
+    if (!this.currentSession) {
+      return;
+    }
 
     const now = Date.now();
     const timeSpentOnCurrentStep = now - this.stepStartTime;
@@ -368,7 +380,9 @@ class FormAnalyticsService {
       .forEach(e => {
         const { fieldName, errorMessage } = e.errorDetails!;
         const key = `${fieldName}:${errorMessage}`;
-        if (!errorCounts[fieldName]) errorCounts[fieldName] = {};
+        if (!errorCounts[fieldName]) {
+          errorCounts[fieldName] = {};
+        }
         errorCounts[fieldName][errorMessage] =
           (errorCounts[fieldName][errorMessage] || 0) + 1;
       });
@@ -501,7 +515,9 @@ class FormAnalyticsService {
   }
 
   private async saveCurrentSession(): Promise<void> {
-    if (!this.currentSession) return;
+    if (!this.currentSession) {
+      return;
+    }
 
     try {
       await safeAsyncStorage.setItem(
@@ -521,7 +537,10 @@ class FormAnalyticsService {
         sessions.push(this.currentSession);
       }
 
-      await safeAsyncStorage.setItem('@form_sessions', JSON.stringify(sessions));
+      await safeAsyncStorage.setItem(
+        '@form_sessions',
+        JSON.stringify(sessions),
+      );
     } catch (error) {
       errorLog('Error saving current session:', error);
     }
@@ -548,7 +567,9 @@ class FormAnalyticsService {
   }
 
   private sanitizeFormData(formData: any): any {
-    if (!formData) return null;
+    if (!formData) {
+      return null;
+    }
 
     // Remove sensitive information before storing
     const sanitized = { ...formData };

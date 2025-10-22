@@ -269,7 +269,9 @@ class CaptchaService {
   }
 
   isSuspiciousUserAgent(userAgent) {
-    if (!userAgent) return true;
+    if (!userAgent) {
+      return true;
+    }
 
     const suspiciousPatterns = [
       /bot/i,

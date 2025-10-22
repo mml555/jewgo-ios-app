@@ -144,7 +144,9 @@ const EnhancedServiceSelection: React.FC<EnhancedServiceSelectionProps> = memo(
     // Handle service toggle
     const handleServiceToggle = useCallback(
       (serviceId: string) => {
-        if (disabled) return;
+        if (disabled) {
+          return;
+        }
 
         const currentValue = services[serviceId];
         const newServices = { ...services, [serviceId]: !currentValue };
@@ -197,9 +199,15 @@ const EnhancedServiceSelection: React.FC<EnhancedServiceSelectionProps> = memo(
 
     // Get grid columns based on screen size
     const getGridColumns = useCallback(() => {
-      if (compact) return 2;
-      if (dimensions.isTablet) return 3;
-      if (dimensions.isSmallScreen) return 2;
+      if (compact) {
+        return 2;
+      }
+      if (dimensions.isTablet) {
+        return 3;
+      }
+      if (dimensions.isSmallScreen) {
+        return 2;
+      }
       return 3;
     }, [compact, dimensions.isTablet, dimensions.isSmallScreen]);
 

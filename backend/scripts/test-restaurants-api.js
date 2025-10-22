@@ -42,7 +42,7 @@ async function testRestaurantsAPI() {
       console.log(
         `   Description: ${restaurant.description?.substring(0, 50)}...`,
       );
-      console.log(`   Amenities:`);
+      console.log('   Amenities:');
       console.log(`     - Wifi: ${restaurant.has_wifi ? '✓' : '✗'}`);
       console.log(`     - Parking: ${restaurant.has_parking ? '✓' : '✗'}`);
       console.log(`     - Delivery: ${restaurant.has_delivery ? '✓' : '✗'}`);
@@ -52,7 +52,7 @@ async function testRestaurantsAPI() {
       );
 
       if (restaurant.social_links && restaurant.social_links.length > 0) {
-        console.log(`   Social Media:`);
+        console.log('   Social Media:');
         restaurant.social_links.forEach(link => {
           console.log(`     - ${link.platform}: ${link.url}`);
         });

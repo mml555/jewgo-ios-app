@@ -62,7 +62,9 @@ export const usePerformanceMonitor = (
 
   // Start monitoring
   const startMonitoring = useCallback(() => {
-    if (isMonitoring) return;
+    if (isMonitoring) {
+      return;
+    }
 
     setIsMonitoring(true);
     renderStartTime.current = performance.now();
@@ -82,7 +84,9 @@ export const usePerformanceMonitor = (
 
   // Stop monitoring
   const stopMonitoring = useCallback(() => {
-    if (!isMonitoring) return;
+    if (!isMonitoring) {
+      return;
+    }
 
     setIsMonitoring(false);
 
@@ -119,7 +123,9 @@ export const usePerformanceMonitor = (
 
   // Record interaction latency
   const recordInteractionStart = useCallback(() => {
-    if (!finalConfig.enableInteractionTracking) return;
+    if (!finalConfig.enableInteractionTracking) {
+      return;
+    }
 
     const startTime = performance.now();
     return () => {
@@ -233,10 +239,18 @@ export const usePerformanceMonitor = (
     // Calculate performance score (0-100)
     let performanceScore = 100;
 
-    if (averageRenderTime > 100) performanceScore -= 20;
-    if (averageFrameRate < 50) performanceScore -= 20;
-    if (averageMemoryUsage > 150) performanceScore -= 20;
-    if (averageInteractionLatency > 100) performanceScore -= 20;
+    if (averageRenderTime > 100) {
+      performanceScore -= 20;
+    }
+    if (averageFrameRate < 50) {
+      performanceScore -= 20;
+    }
+    if (averageMemoryUsage > 150) {
+      performanceScore -= 20;
+    }
+    if (averageInteractionLatency > 100) {
+      performanceScore -= 20;
+    }
 
     performanceScore = Math.max(0, performanceScore);
 

@@ -103,7 +103,9 @@ const BusinessJobsSection: React.FC<BusinessJobsSectionProps> = ({
   };
 
   const truncateText = (text: string | string[], maxLength: number): string => {
-    if (!text) return '';
+    if (!text) {
+      return '';
+    }
 
     // Handle array format (from database text[] fields)
     let textString = '';
@@ -113,12 +115,16 @@ const BusinessJobsSection: React.FC<BusinessJobsSectionProps> = ({
       textString = text;
     }
 
-    if (textString.length <= maxLength) return textString;
+    if (textString.length <= maxLength) {
+      return textString;
+    }
     return textString.substring(0, maxLength).trim() + '...';
   };
 
   const formatSalary = (min?: number, max?: number, structure?: string) => {
-    if (!min && !max) return 'Salary TBD';
+    if (!min && !max) {
+      return 'Salary TBD';
+    }
 
     const formatAmount = (amount: number) => {
       return `$${(amount / 100).toLocaleString()}`;

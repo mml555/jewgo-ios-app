@@ -84,7 +84,9 @@ const TimePickerInput: React.FC<TimePickerInputProps> = memo(
     // Format time for display (12-hour format)
     const formatDisplayTime = useCallback(
       (timeString: string): string => {
-        if (!timeString) return placeholder;
+        if (!timeString) {
+          return placeholder;
+        }
 
         const [hours, minutes] = timeString.split(':').map(Number);
         const period = hours >= 12 ? 'PM' : 'AM';

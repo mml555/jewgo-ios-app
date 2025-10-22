@@ -42,7 +42,9 @@ const ShtetlStoreCard: React.FC<ShtetlStoreCardProps> = ({
   };
 
   const renderRating = () => {
-    if (store.reviewCount === 0) return null;
+    if (store.reviewCount === 0) {
+      return null;
+    }
 
     return (
       <View style={styles.ratingContainer}>

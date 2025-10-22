@@ -493,7 +493,9 @@ export const useCategoryData = ({
   }, [categoryKey, query, loadMore, isInitializing, hasAnyAuth]); // Now with proper dependencies
 
   const refresh = useCallback(async () => {
-    if (loadingRef.current) return;
+    if (loadingRef.current) {
+      return;
+    }
 
     setRefreshing(true);
     setError(null);

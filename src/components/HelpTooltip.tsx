@@ -197,7 +197,9 @@ const HelpTooltip: React.FC<HelpTooltipProps> = ({
   );
 
   const handleLongPress = () => {
-    if (disabled || !showOnLongPress) return;
+    if (disabled || !showOnLongPress) {
+      return;
+    }
 
     if (helpContent) {
       setShowModal(true);
@@ -208,7 +210,9 @@ const HelpTooltip: React.FC<HelpTooltipProps> = ({
   };
 
   const handlePress = () => {
-    if (disabled || !showOnPress) return;
+    if (disabled || !showOnPress) {
+      return;
+    }
 
     if (progressiveContent) {
       if (interactionCount >= 3 && helpContent) {

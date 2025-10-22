@@ -95,7 +95,9 @@ export const useFormAutoSave = (
 
   // Debounced save function
   const debouncedSave = useCallback(async () => {
-    if (!enabled || !isInitializedRef.current) return;
+    if (!enabled || !isInitializedRef.current) {
+      return;
+    }
 
     try {
       await formPersistenceService.saveFormData(
@@ -167,7 +169,9 @@ export const useFormAutoSave = (
 
   // Save when app goes to background
   useEffect(() => {
-    if (!saveOnAppBackground) return;
+    if (!saveOnAppBackground) {
+      return;
+    }
 
     const handleAppStateChange = (nextAppState: AppStateStatus) => {
       if (nextAppState === 'background' || nextAppState === 'inactive') {

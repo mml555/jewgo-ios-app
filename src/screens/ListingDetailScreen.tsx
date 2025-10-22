@@ -350,7 +350,9 @@ const ListingDetailScreen: React.FC = () => {
     title: string;
     content: string;
   }) => {
-    if (!item) return;
+    if (!item) {
+      return;
+    }
 
     const success = await writeReview(item.id, {
       rating: review.rating,
@@ -370,7 +372,9 @@ const ListingDetailScreen: React.FC = () => {
 
   // Get paginated reviews
   const getPaginatedReviews = () => {
-    if (!reviews) return [];
+    if (!reviews) {
+      return [];
+    }
 
     let sortedReviews = [...reviews];
 
@@ -427,7 +431,9 @@ const ListingDetailScreen: React.FC = () => {
 
   // Get total pages
   const getTotalPages = () => {
-    if (!reviews) return 1;
+    if (!reviews) {
+      return 1;
+    }
 
     let sortedReviews = [...reviews];
 
@@ -510,7 +516,9 @@ const ListingDetailScreen: React.FC = () => {
 
   // Transform business hours from API format (array with day_of_week numbers) to display format (object with day names)
   const transformBusinessHours = (businessHours: any[]) => {
-    if (!businessHours || !Array.isArray(businessHours)) return {};
+    if (!businessHours || !Array.isArray(businessHours)) {
+      return {};
+    }
 
     const dayNames = [
       'sunday',
@@ -539,7 +547,9 @@ const ListingDetailScreen: React.FC = () => {
 
   // Get business hours status
   const getBusinessHoursStatus = () => {
-    if (!item?.business_hours) return { isOpen: false, nextChange: null };
+    if (!item?.business_hours) {
+      return { isOpen: false, nextChange: null };
+    }
 
     const transformedHours = transformBusinessHours(item.business_hours);
     const now = new Date();

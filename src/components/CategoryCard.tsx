@@ -131,7 +131,9 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
     const checkStatus = async () => {
       try {
         // Check if already aborted before starting
-        if (abortController.signal.aborted) return;
+        if (abortController.signal.aborted) {
+          return;
+        }
 
         const status = await checkFavoriteStatus(item.id);
 

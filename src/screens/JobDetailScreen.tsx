@@ -171,10 +171,18 @@ const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
     const diffTime = now.getTime() - posted.getTime();
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
-    if (diffDays === 0) return 'today';
-    if (diffDays === 1) return '1 day ago';
-    if (diffDays < 7) return `${diffDays} days ago`;
-    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+    if (diffDays === 0) {
+      return 'today';
+    }
+    if (diffDays === 1) {
+      return '1 day ago';
+    }
+    if (diffDays < 7) {
+      return `${diffDays} days ago`;
+    }
+    if (diffDays < 30) {
+      return `${Math.floor(diffDays / 7)} weeks ago`;
+    }
     return `${Math.floor(diffDays / 30)} months ago`;
   };
 
@@ -264,7 +272,9 @@ const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
   };
 
   const handleApply = async () => {
-    if (!job) return;
+    if (!job) {
+      return;
+    }
 
     setApplying(true);
     try {
@@ -299,7 +309,9 @@ const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
   };
 
   const handleShare = async () => {
-    if (!job) return;
+    if (!job) {
+      return;
+    }
 
     try {
       await Share.share({
@@ -314,7 +326,9 @@ const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
   };
 
   const handleFavorite = async () => {
-    if (!job) return;
+    if (!job) {
+      return;
+    }
 
     try {
       await toggleFavorite(job.id, {
@@ -371,7 +385,9 @@ const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
   };
 
   const getLocationText = () => {
-    if (!job) return '';
+    if (!job) {
+      return '';
+    }
 
     if (job.is_remote || job.location_type === 'remote') {
       return 'Remote';
@@ -384,7 +400,9 @@ const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
   };
 
   const getCompensationText = () => {
-    if (!job) return '';
+    if (!job) {
+      return '';
+    }
 
     if (job.compensation_display) {
       return job.compensation_display;

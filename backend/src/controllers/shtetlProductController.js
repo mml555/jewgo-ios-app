@@ -61,9 +61,9 @@ class ShtetlProductController {
 
       if (inStock !== undefined) {
         if (inStock === 'true') {
-          query += ` AND p.stock_quantity > 0`;
+          query += ' AND p.stock_quantity > 0';
         } else {
-          query += ` AND p.stock_quantity = 0`;
+          query += ' AND p.stock_quantity = 0';
         }
       }
 
@@ -306,7 +306,7 @@ class ShtetlProductController {
       }
 
       paramCount++;
-      updateFields.push(`updated_at = CURRENT_TIMESTAMP`);
+      updateFields.push('updated_at = CURRENT_TIMESTAMP');
       values.push(id);
 
       const query = `
@@ -477,9 +477,9 @@ class ShtetlProductController {
 
       if (inStock !== undefined) {
         if (inStock === 'true') {
-          query += ` AND p.stock_quantity > 0`;
+          query += ' AND p.stock_quantity > 0';
         } else {
-          query += ` AND p.stock_quantity = 0`;
+          query += ' AND p.stock_quantity = 0';
         }
       }
 

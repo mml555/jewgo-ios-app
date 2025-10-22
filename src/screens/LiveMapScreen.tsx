@@ -47,6 +47,10 @@ interface MapListing {
   price?: string;
   isOpen?: boolean;
   openWeekends?: boolean;
+  address?: string;
+  city?: string;
+  state?: string;
+  zip_code?: string;
 }
 
 const LiveMapScreen: React.FC = () => {
@@ -290,10 +294,12 @@ const LiveMapScreen: React.FC = () => {
         }
 
         // If only one has coordinates, prioritize it
-        if (a.latitude && a.longitude && (!b.latitude || !b.longitude))
+        if (a.latitude && a.longitude && (!b.latitude || !b.longitude)) {
           return -1;
-        if ((!a.latitude || !a.longitude) && b.latitude && b.longitude)
+        }
+        if ((!a.latitude || !a.longitude) && b.latitude && b.longitude) {
           return 1;
+        }
 
         // If neither has coordinates, maintain original order
         return 0;

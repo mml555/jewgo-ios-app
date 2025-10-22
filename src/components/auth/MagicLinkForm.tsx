@@ -53,7 +53,9 @@ const MagicLinkForm: React.FC<MagicLinkFormProps> = ({
   }, []);
 
   const handleSendMagicLink = useCallback(async () => {
-    if (isLoading || disabled) return;
+    if (isLoading || disabled) {
+      return;
+    }
 
     const trimmedEmail = email.trim().toLowerCase();
 
@@ -127,21 +129,31 @@ const MagicLinkForm: React.FC<MagicLinkFormProps> = ({
   );
 
   const getButtonText = () => {
-    if (isLoading) return 'Sending...';
-    if (isSent) return 'Resend Magic Link';
-    if (buttonText) return buttonText;
+    if (isLoading) {
+      return 'Sending...';
+    }
+    if (isSent) {
+      return 'Resend Magic Link';
+    }
+    if (buttonText) {
+      return buttonText;
+    }
     return purpose === 'register'
       ? 'Send Registration Link'
       : 'Send Magic Link';
   };
 
   const getPlaceholder = () => {
-    if (placeholder) return placeholder;
+    if (placeholder) {
+      return placeholder;
+    }
     return 'Enter your email address';
   };
 
   const getExpirationText = () => {
-    if (!isSent || !expiresAt) return '';
+    if (!isSent || !expiresAt) {
+      return '';
+    }
 
     const timeLeft = magicLinkService.formatExpirationTime(expiresAt);
     return `Link expires in ${timeLeft}`;

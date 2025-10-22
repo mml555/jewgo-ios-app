@@ -156,7 +156,9 @@ const StoreDetailScreen: React.FC = () => {
   );
 
   const handleContactStore = useCallback(() => {
-    if (!store) return;
+    if (!store) {
+      return;
+    }
 
     Alert.alert('Contact Store', `Choose how to contact ${store.name}`, [
       {
@@ -198,7 +200,9 @@ const StoreDetailScreen: React.FC = () => {
   }
 
   const renderHeader = () => {
-    if (!store) return null;
+    if (!store) {
+      return null;
+    }
 
     return (
       <View style={styles.header}>
@@ -330,7 +334,9 @@ const StoreDetailScreen: React.FC = () => {
   };
 
   const renderAbout = () => {
-    if (!store) return null;
+    if (!store) {
+      return null;
+    }
 
     return (
       <View style={styles.aboutContainer}>

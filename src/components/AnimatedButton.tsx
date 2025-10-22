@@ -82,7 +82,9 @@ const AnimatedButton: React.FC<AnimatedButtonProps> = memo(
 
     // Optimize press handlers with better memoization
     const handlePressIn = useCallback(() => {
-      if (disabled || loading) return;
+      if (disabled || loading) {
+        return;
+      }
 
       if (animatePress) {
         createScaleAnimation(scaleAnim, 0.95, AnimationConfig.fast).start();
@@ -94,7 +96,9 @@ const AnimatedButton: React.FC<AnimatedButtonProps> = memo(
     }, [disabled, loading, animatePress, hapticFeedback, scaleAnim]);
 
     const handlePressOut = useCallback(() => {
-      if (disabled || loading) return;
+      if (disabled || loading) {
+        return;
+      }
 
       if (animatePress) {
         createScaleAnimation(scaleAnim, 1, AnimationConfig.fast).start();
@@ -102,7 +106,9 @@ const AnimatedButton: React.FC<AnimatedButtonProps> = memo(
     }, [disabled, loading, animatePress, scaleAnim]);
 
     const handlePress = useCallback(() => {
-      if (disabled || loading) return;
+      if (disabled || loading) {
+        return;
+      }
       onPress();
     }, [disabled, loading, onPress]);
 

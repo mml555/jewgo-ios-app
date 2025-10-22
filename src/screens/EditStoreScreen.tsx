@@ -88,7 +88,9 @@ const EditStoreScreen: React.FC = () => {
   }, [storeId, navigation]);
 
   const loadStore = useCallback(async () => {
-    if (!storeId) return;
+    if (!storeId) {
+      return;
+    }
     try {
       setLoading(true);
       const response = await shtetlService.getStore(storeId);

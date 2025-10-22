@@ -39,7 +39,7 @@ class MemoryProfiler {
     this.snapshots.push(snapshotData);
 
     console.log(`✅ Snapshot saved: ${snapshot}`);
-    console.log(`📊 Heap Stats:`, stats);
+    console.log('📊 Heap Stats:', stats);
 
     return snapshotData;
   }
@@ -72,7 +72,7 @@ class MemoryProfiler {
    * Compare two snapshots
    */
   compareSnapshots(snapshot1, snapshot2) {
-    console.log(`\n🔍 Comparing snapshots:`);
+    console.log('\n🔍 Comparing snapshots:');
     console.log(`  Before: ${snapshot1.label} (${snapshot1.timestamp})`);
     console.log(`  After:  ${snapshot2.label} (${snapshot2.timestamp})`);
 
@@ -81,18 +81,18 @@ class MemoryProfiler {
     const growth = after - before;
     const growthPercent = ((growth / before) * 100).toFixed(2);
 
-    console.log(`\n📈 Memory Growth:`);
+    console.log('\n📈 Memory Growth:');
     console.log(`  Before: ${snapshot1.stats.usedHeapSize}`);
     console.log(`  After:  ${snapshot2.stats.usedHeapSize}`);
     console.log(`  Growth: ${this.formatBytes(growth)} (${growthPercent}%)`);
 
     if (growth > 10 * 1024 * 1024) {
       // 10MB
-      console.log(`  ⚠️  WARNING: Significant memory growth detected!`);
+      console.log('  ⚠️  WARNING: Significant memory growth detected!');
     } else if (growth > 0) {
-      console.log(`  ✅ Memory growth is within acceptable range`);
+      console.log('  ✅ Memory growth is within acceptable range');
     } else {
-      console.log(`  ✨ Memory usage decreased`);
+      console.log('  ✨ Memory usage decreased');
     }
 
     return {
@@ -148,7 +148,9 @@ class MemoryProfiler {
    * Format bytes to human readable
    */
   formatBytes(bytes) {
-    if (bytes === 0) return '0 Bytes';
+    if (bytes === 0) {
+      return '0 Bytes';
+    }
 
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
@@ -162,7 +164,9 @@ class MemoryProfiler {
    */
   parseSize(sizeStr) {
     const match = sizeStr.match(/^([\d.]+)\s*(\w+)$/);
-    if (!match) return 0;
+    if (!match) {
+      return 0;
+    }
 
     const value = parseFloat(match[1]);
     const unit = match[2];

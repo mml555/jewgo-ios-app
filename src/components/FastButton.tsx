@@ -49,7 +49,9 @@ const FastButton: React.FC<FastButtonProps> = memo(
   }) => {
     // Memoize press handler
     const handlePress = useCallback(() => {
-      if (disabled || loading) return;
+      if (disabled || loading) {
+        return;
+      }
 
       if (hapticFeedback) {
         hapticButtonPress();

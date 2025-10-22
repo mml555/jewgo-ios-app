@@ -279,22 +279,24 @@ const PhotosReviewPage: React.FC<PhotosReviewPageProps> = ({
               {formData.hours_of_operation}
             </Text>
           </View>
-          {formData.seating_capacity > 0 && (
-            <View style={styles.reviewItem}>
-              <Text style={styles.reviewLabel}>Seating Capacity:</Text>
-              <Text style={styles.reviewValue}>
-                {formData.seating_capacity}
-              </Text>
-            </View>
-          )}
-          {formData.years_in_business > 0 && (
-            <View style={styles.reviewItem}>
-              <Text style={styles.reviewLabel}>Years in Business:</Text>
-              <Text style={styles.reviewValue}>
-                {formData.years_in_business}
-              </Text>
-            </View>
-          )}
+          {formData.seating_capacity &&
+            parseInt(formData.seating_capacity) > 0 && (
+              <View style={styles.reviewItem}>
+                <Text style={styles.reviewLabel}>Seating Capacity:</Text>
+                <Text style={styles.reviewValue}>
+                  {formData.seating_capacity}
+                </Text>
+              </View>
+            )}
+          {formData.years_in_business &&
+            parseInt(formData.years_in_business) > 0 && (
+              <View style={styles.reviewItem}>
+                <Text style={styles.reviewLabel}>Years in Business:</Text>
+                <Text style={styles.reviewValue}>
+                  {formData.years_in_business}
+                </Text>
+              </View>
+            )}
         </View>
 
         {/* Service Options */}

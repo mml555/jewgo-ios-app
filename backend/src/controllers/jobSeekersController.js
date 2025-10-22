@@ -226,11 +226,11 @@ class JobSeekersController {
       }
 
       if (willingToRelocate === 'true') {
-        query += ` AND jsp.willing_to_relocate = true`;
+        query += ' AND jsp.willing_to_relocate = true';
       }
 
       if (willingToRemote === 'true') {
-        query += ` AND jsp.willing_to_remote = true`;
+        query += ' AND jsp.willing_to_remote = true';
       }
 
       if (search) {
@@ -313,9 +313,13 @@ class JobSeekersController {
     try {
       const { id } = req.params;
       const userId = req.user?.id;
-      
+
       // Check if userId is a valid UUID (not a guest token)
-      const isValidUUID = userId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId);
+      const isValidUUID =
+        userId &&
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+          userId,
+        );
 
       const result = await db.query(
         `SELECT 
@@ -325,7 +329,7 @@ class JobSeekersController {
           el.name as experience_level_name,
           ${
             isValidUUID
-              ? `(SELECT COUNT(*) > 0 FROM saved_seeker_profiles WHERE employer_id = $2 AND job_seeker_profile_id = jsp.id) as is_saved`
+              ? '(SELECT COUNT(*) > 0 FROM saved_seeker_profiles WHERE employer_id = $2 AND job_seeker_profile_id = jsp.id) as is_saved'
               : 'false as is_saved'
           }
         FROM job_seeker_profiles jsp
@@ -348,9 +352,9 @@ class JobSeekersController {
         [id],
       );
 
-      res.json({ 
+      res.json({
         success: true,
-        data: result.rows[0] 
+        data: result.rows[0],
       });
     } catch (error) {
       logger.error('Error getting job seeker profile:', error);

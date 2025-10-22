@@ -131,10 +131,18 @@ export function formatDistanceWithAccuracy(
  * Get distance category for sorting/filtering
  */
 export function getDistanceCategory(distanceMeters: number): string {
-  if (distanceMeters < 500) return 'very_close';
-  if (distanceMeters < 1000) return 'close';
-  if (distanceMeters < 5000) return 'nearby';
-  if (distanceMeters < 25000) return 'far';
+  if (distanceMeters < 500) {
+    return 'very_close';
+  }
+  if (distanceMeters < 1000) {
+    return 'close';
+  }
+  if (distanceMeters < 5000) {
+    return 'nearby';
+  }
+  if (distanceMeters < 25000) {
+    return 'far';
+  }
   return 'very_far';
 }
 

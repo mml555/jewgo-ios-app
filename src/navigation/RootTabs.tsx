@@ -105,7 +105,9 @@ export default function RootTabs() {
           tabBar={({ routeName, selectedTab, navigate }: any) => {
             const active = selectedTab === routeName;
             const color = active ? SELECTED : UNSELECTED;
-            if (routeName === 'Specials') return null; // handled by center circle
+            if (routeName === 'Specials') {
+              return null;
+            } // handled by center circle
 
             return (
               <TouchableOpacity

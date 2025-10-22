@@ -4,14 +4,14 @@ const jwt = require('jsonwebtoken');
 
 // Mock database connection
 jest.mock('pg', () => ({
-  Pool: jest.fn()
+  Pool: jest.fn(),
 }));
 
 // Mock jwt
 jest.mock('jsonwebtoken', () => ({
   sign: jest.fn(),
   verify: jest.fn(),
-  decode: jest.fn()
+  decode: jest.fn(),
 }));
 
 describe('OIDCService', () => {
@@ -24,14 +24,14 @@ describe('OIDCService', () => {
     mockClient = {
       query: jest.fn(),
       release: jest.fn(),
-      connect: jest.fn()
+      connect: jest.fn(),
     };
 
     // Mock database pool
     mockPool = {
       connect: jest.fn().mockResolvedValue(mockClient),
       query: jest.fn(),
-      end: jest.fn()
+      end: jest.fn(),
     };
 
     // Mock Pool constructor
@@ -39,7 +39,8 @@ describe('OIDCService', () => {
 
     // Set up environment variables
     process.env.JWT_SECRET = 'test-jwt-secret-key-32-characters-long';
-    process.env.JWT_REFRESH_SECRET = 'test-refresh-secret-key-32-characters-long';
+    process.env.JWT_REFRESH_SECRET =
+      'test-refresh-secret-key-32-characters-long';
     process.env.JWT_ISSUER = 'test-issuer';
     process.env.JWT_AUDIENCE = 'test-audience';
     process.env.API_BASE_URL = 'http://localhost:3001';
@@ -56,10 +57,18 @@ describe('OIDCService', () => {
       const config = oidcService.getConfiguration();
 
       expect(config.issuer).toBe('test-issuer');
-      expect(config.authorization_endpoint).toBe('http://localhost:3001/api/v5/auth/authorize');
-      expect(config.token_endpoint).toBe('http://localhost:3001/api/v5/auth/token');
-      expect(config.userinfo_endpoint).toBe('http://localhost:3001/api/v5/auth/userinfo');
-      expect(config.jwks_uri).toBe('http://localhost:3001/api/v5/auth/jwks.json');
+      expect(config.authorization_endpoint).toBe(
+        'http://localhost:3001/api/v5/auth/authorize',
+      );
+      expect(config.token_endpoint).toBe(
+        'http://localhost:3001/api/v5/auth/token',
+      );
+      expect(config.userinfo_endpoint).toBe(
+        'http://localhost:3001/api/v5/auth/userinfo',
+      );
+      expect(config.jwks_uri).toBe(
+        'http://localhost:3001/api/v5/auth/jwks.json',
+      );
       expect(config.response_types_supported).toContain('code');
       expect(config.grant_types_supported).toContain('authorization_code');
       expect(config.grant_types_supported).toContain('refresh_token');
@@ -78,7 +87,7 @@ describe('OIDCService', () => {
         'http://localhost:3000/callback',
         ['openid', 'profile'],
         'challenge-123',
-        'S256'
+        'S256',
       );
 
       expect(code).toMatch(/^[a-f0-9]{64}$/); // 64 hex characters
@@ -93,18 +102,26 @@ describe('OIDCService', () => {
         redirect_uri: 'http://localhost:3000/callback',
         scopes: ['openid', 'profile'],
         code_challenge: 'challenge-123',
-        code_challenge_method: 'S256'
+        code_challenge_method: 'S256',
       };
 
       const mockUser = {
         id: 'user-123',
         primary_email: 'test@example.com',
         status: 'active',
-        created_at: new Date()
+        created_at: new Date(),
       };
 
       mockClient.query
-        .mockResolvedValueOnce({ rows: [{ user_id: 'user-123', expires_at: new Date(), details: JSON.stringify(mockCodeDetails) }] }) // Find code
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              user_id: 'user-123',
+              expires_at: new Date(),
+              details: JSON.stringify(mockCodeDetails),
+            },
+          ],
+        }) // Find code
         .mockResolvedValueOnce({ rows: [] }) // Mark code as used
         .mockResolvedValueOnce({ rows: [mockUser] }) // Get user
         .mockResolvedValueOnce({ rows: [] }) // Insert refresh token
@@ -118,7 +135,7 @@ describe('OIDCService', () => {
         'valid-code',
         'client-123',
         'http://localhost:3000/callback',
-        'code-verifier'
+        'code-verifier',
       );
 
       expect(tokens.access_token).toBe('access-token');
@@ -131,29 +148,39 @@ describe('OIDCService', () => {
     it('should reject invalid authorization code', async () => {
       mockClient.query.mockResolvedValueOnce({ rows: [] }); // No code found
 
-      await expect(oidcService.exchangeCodeForTokens(
-        'invalid-code',
-        'client-123',
-        'http://localhost:3000/callback',
-        'code-verifier'
-      )).rejects.toThrow('Invalid or expired authorization code');
+      await expect(
+        oidcService.exchangeCodeForTokens(
+          'invalid-code',
+          'client-123',
+          'http://localhost:3000/callback',
+          'code-verifier',
+        ),
+      ).rejects.toThrow('Invalid or expired authorization code');
     });
 
     it('should reject invalid code verifier', async () => {
       const mockCodeDetails = {
-        code_challenge: 'expected-challenge'
+        code_challenge: 'expected-challenge',
       };
 
-      mockClient.query.mockResolvedValueOnce({ 
-        rows: [{ user_id: 'user-123', expires_at: new Date(), details: JSON.stringify(mockCodeDetails) }] 
+      mockClient.query.mockResolvedValueOnce({
+        rows: [
+          {
+            user_id: 'user-123',
+            expires_at: new Date(),
+            details: JSON.stringify(mockCodeDetails),
+          },
+        ],
       });
 
-      await expect(oidcService.exchangeCodeForTokens(
-        'valid-code',
-        'client-123',
-        'http://localhost:3000/callback',
-        'wrong-verifier'
-      )).rejects.toThrow('Invalid code verifier');
+      await expect(
+        oidcService.exchangeCodeForTokens(
+          'valid-code',
+          'client-123',
+          'http://localhost:3000/callback',
+          'wrong-verifier',
+        ),
+      ).rejects.toThrow('Invalid code verifier');
     });
   });
 
@@ -162,7 +189,7 @@ describe('OIDCService', () => {
       const user = {
         id: 'user-123',
         primary_email: 'test@example.com',
-        status: 'active'
+        status: 'active',
       };
 
       jwt.sign
@@ -171,7 +198,10 @@ describe('OIDCService', () => {
 
       mockPool.query.mockResolvedValueOnce({ rows: [] }); // Insert refresh token
 
-      const tokens = await oidcService.generateTokens(user, ['openid', 'profile']);
+      const tokens = await oidcService.generateTokens(user, [
+        'openid',
+        'profile',
+      ]);
 
       expect(tokens.access_token).toBe('access-token');
       expect(tokens.id_token).toBe('id-token');
@@ -185,7 +215,7 @@ describe('OIDCService', () => {
       const user = {
         id: 'user-123',
         primary_email: 'test@example.com',
-        status: 'active'
+        status: 'active',
       };
 
       jwt.sign.mockReturnValueOnce('access-token');
@@ -205,11 +235,13 @@ describe('OIDCService', () => {
         id: 'user-123',
         primary_email: 'test@example.com',
         status: 'active',
-        created_at: new Date()
+        created_at: new Date(),
       };
 
       mockClient.query
-        .mockResolvedValueOnce({ rows: [{ user_id: 'user-123', expires_at: new Date() }] }) // Find refresh token
+        .mockResolvedValueOnce({
+          rows: [{ user_id: 'user-123', expires_at: new Date() }],
+        }) // Find refresh token
         .mockResolvedValueOnce({ rows: [mockUser] }) // Get user
         .mockResolvedValueOnce({ rows: [] }) // Mark old token as used
         .mockResolvedValueOnce({ rows: [] }) // Insert new refresh token
@@ -219,7 +251,10 @@ describe('OIDCService', () => {
         .mockReturnValueOnce('new-access-token')
         .mockReturnValueOnce('new-id-token');
 
-      const tokens = await oidcService.refreshAccessToken('valid-refresh-token', ['openid']);
+      const tokens = await oidcService.refreshAccessToken(
+        'valid-refresh-token',
+        ['openid'],
+      );
 
       expect(tokens.access_token).toBe('new-access-token');
       expect(tokens.refresh_token).toBeDefined();
@@ -229,8 +264,9 @@ describe('OIDCService', () => {
     it('should reject invalid refresh token', async () => {
       mockClient.query.mockResolvedValueOnce({ rows: [] }); // No token found
 
-      await expect(oidcService.refreshAccessToken('invalid-token', ['openid']))
-        .rejects.toThrow('Invalid or expired refresh token');
+      await expect(
+        oidcService.refreshAccessToken('invalid-token', ['openid']),
+      ).rejects.toThrow('Invalid or expired refresh token');
     });
   });
 
@@ -240,14 +276,14 @@ describe('OIDCService', () => {
         sub: 'user-123',
         scope: 'openid profile email',
         iss: 'test-issuer',
-        aud: 'test-audience'
+        aud: 'test-audience',
       };
 
       const mockUser = {
         id: 'user-123',
         primary_email: 'test@example.com',
         status: 'active',
-        created_at: new Date()
+        created_at: new Date(),
       };
 
       jwt.verify.mockReturnValue(mockDecoded);
@@ -265,14 +301,14 @@ describe('OIDCService', () => {
         sub: 'user-123',
         scope: 'openid',
         iss: 'test-issuer',
-        aud: 'test-audience'
+        aud: 'test-audience',
       };
 
       const mockUser = {
         id: 'user-123',
         primary_email: 'test@example.com',
         status: 'active',
-        created_at: new Date()
+        created_at: new Date(),
       };
 
       jwt.verify.mockReturnValue(mockDecoded);
@@ -287,19 +323,25 @@ describe('OIDCService', () => {
     it('should reject expired access token', async () => {
       const error = new Error('Token expired');
       error.name = 'TokenExpiredError';
-      jwt.verify.mockImplementation(() => { throw error; });
+      jwt.verify.mockImplementation(() => {
+        throw error;
+      });
 
-      await expect(oidcService.getUserInfo('expired-token'))
-        .rejects.toThrow('Access token has expired');
+      await expect(oidcService.getUserInfo('expired-token')).rejects.toThrow(
+        'Access token has expired',
+      );
     });
 
     it('should reject invalid access token', async () => {
       const error = new Error('Invalid token');
       error.name = 'JsonWebTokenError';
-      jwt.verify.mockImplementation(() => { throw error; });
+      jwt.verify.mockImplementation(() => {
+        throw error;
+      });
 
-      await expect(oidcService.getUserInfo('invalid-token'))
-        .rejects.toThrow('Invalid access token');
+      await expect(oidcService.getUserInfo('invalid-token')).rejects.toThrow(
+        'Invalid access token',
+      );
     });
   });
 
@@ -324,12 +366,14 @@ describe('OIDCService', () => {
         aud: 'test-audience',
         exp: Date.now() / 1000 + 3600,
         iat: Date.now() / 1000,
-        scope: 'openid profile'
+        scope: 'openid profile',
       };
 
       jwt.verify.mockReturnValue(mockDecoded);
 
-      const introspection = await oidcService.introspectToken('valid-access-token');
+      const introspection = await oidcService.introspectToken(
+        'valid-access-token',
+      );
 
       expect(introspection.active).toBe(true);
       expect(introspection.sub).toBe('user-123');
@@ -337,10 +381,16 @@ describe('OIDCService', () => {
     });
 
     it('should introspect valid refresh token', async () => {
-      jwt.verify.mockImplementation(() => { throw new Error('Not a JWT'); });
-      mockPool.query.mockResolvedValueOnce({ rows: [{ user_id: 'user-123', expires_at: new Date() }] });
+      jwt.verify.mockImplementation(() => {
+        throw new Error('Not a JWT');
+      });
+      mockPool.query.mockResolvedValueOnce({
+        rows: [{ user_id: 'user-123', expires_at: new Date() }],
+      });
 
-      const introspection = await oidcService.introspectToken('valid-refresh-token');
+      const introspection = await oidcService.introspectToken(
+        'valid-refresh-token',
+      );
 
       expect(introspection.active).toBe(true);
       expect(introspection.sub).toBe('user-123');
@@ -348,7 +398,9 @@ describe('OIDCService', () => {
     });
 
     it('should return inactive for invalid token', async () => {
-      jwt.verify.mockImplementation(() => { throw new Error('Invalid token'); });
+      jwt.verify.mockImplementation(() => {
+        throw new Error('Invalid token');
+      });
       mockPool.query.mockResolvedValueOnce({ rows: [] });
 
       const introspection = await oidcService.introspectToken('invalid-token');
@@ -383,21 +435,45 @@ describe('OIDCService', () => {
 
   describe('validateRedirectUri', () => {
     it('should validate allowed redirect URI', () => {
-      const allowedUris = ['http://localhost:3000/callback', 'https://app.example.com/callback'];
-      
-      expect(oidcService.validateRedirectUri('http://localhost:3000/callback', allowedUris)).toBe(true);
-      expect(oidcService.validateRedirectUri('https://app.example.com/callback', allowedUris)).toBe(true);
-      expect(oidcService.validateRedirectUri('http://malicious.com/callback', allowedUris)).toBe(false);
+      const allowedUris = [
+        'http://localhost:3000/callback',
+        'https://app.example.com/callback',
+      ];
+
+      expect(
+        oidcService.validateRedirectUri(
+          'http://localhost:3000/callback',
+          allowedUris,
+        ),
+      ).toBe(true);
+      expect(
+        oidcService.validateRedirectUri(
+          'https://app.example.com/callback',
+          allowedUris,
+        ),
+      ).toBe(true);
+      expect(
+        oidcService.validateRedirectUri(
+          'http://malicious.com/callback',
+          allowedUris,
+        ),
+      ).toBe(false);
     });
   });
 
   describe('validateScopes', () => {
     it('should validate allowed scopes', () => {
       const allowedScopes = ['openid', 'profile', 'email'];
-      
-      expect(oidcService.validateScopes('openid profile', allowedScopes)).toBe(true);
-      expect(oidcService.validateScopes('openid email', allowedScopes)).toBe(true);
-      expect(oidcService.validateScopes('openid admin', allowedScopes)).toBe(false);
+
+      expect(oidcService.validateScopes('openid profile', allowedScopes)).toBe(
+        true,
+      );
+      expect(oidcService.validateScopes('openid email', allowedScopes)).toBe(
+        true,
+      );
+      expect(oidcService.validateScopes('openid admin', allowedScopes)).toBe(
+        false,
+      );
     });
   });
 

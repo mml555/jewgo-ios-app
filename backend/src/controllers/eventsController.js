@@ -12,14 +12,16 @@ class EventsController {
   }
 
   static async validateFlyerAspectRatio(width, height) {
-    if (!width || !height) return false;
+    if (!width || !height) {
+      return false;
+    }
     const aspectRatio = width / height;
     const expectedRatio = 8.5 / 11; // 0.773
     return Math.abs(aspectRatio - expectedRatio) <= 0.05; // 5% tolerance
   }
 
   static async isFirstEventFree(organizerId) {
-    const result = await db.query(`SELECT is_first_event_free($1) as is_free`, [
+    const result = await db.query('SELECT is_first_event_free($1) as is_free', [
       organizerId,
     ]);
     return result.rows[0].is_free;
@@ -262,12 +264,7 @@ class EventsController {
         event,
         isPaid,
         isFirstFree,
-        paymentIntent: isPaid
-          ? {
-              clientSecret: paymentIntent.client_secret,
-              amount: paymentIntent.amount,
-            }
-          : null,
+        paymentIntent: null, // Payment intent creation moved to separate endpoint
       });
     } catch (error) {
       await client.query('ROLLBACK');
@@ -365,16 +362,16 @@ class EventsController {
       }
 
       if (isRsvpRequired === 'true') {
-        query += ` AND is_rsvp_required = true`;
+        query += ' AND is_rsvp_required = true';
       }
 
       if (isSponsorshipAvailable === 'true') {
-        query += ` AND is_sponsorship_available = true`;
+        query += ' AND is_sponsorship_available = true';
       }
 
       // New filters
       if (isFree === 'true') {
-        query += ` AND is_free = true`;
+        query += ' AND is_free = true';
       }
 
       if (zipCode) {
@@ -522,12 +519,12 @@ class EventsController {
           END as location_display,
           ${
             cleanUserId
-              ? `(SELECT COUNT(*) > 0 FROM event_rsvps WHERE event_id = e.id AND user_id = $2) as has_rsvped,`
+              ? '(SELECT COUNT(*) > 0 FROM event_rsvps WHERE event_id = e.id AND user_id = $2) as has_rsvped,'
               : 'false as has_rsvped,'
           }
           ${
             cleanUserId
-              ? `(SELECT status FROM event_rsvps WHERE event_id = e.id AND user_id = $2) as rsvp_status`
+              ? '(SELECT status FROM event_rsvps WHERE event_id = e.id AND user_id = $2) as rsvp_status'
               : 'NULL as rsvp_status'
           }
         FROM events e
@@ -753,7 +750,7 @@ class EventsController {
         params.push(status);
       }
 
-      query += ` ORDER BY e.event_date DESC`;
+      query += ' ORDER BY e.event_date DESC';
       query += ` LIMIT $${paramCount + 1} OFFSET $${paramCount + 2}`;
       params.push(
         parseInt(limit, 10),
@@ -943,7 +940,7 @@ class EventsController {
       return res.status(501).json({
         success: false,
         error: 'Payment processing not available',
-        code: 'PAYMENT_SYSTEM_DISABLED'
+        code: 'PAYMENT_SYSTEM_DISABLED',
       });
     } catch (error) {
       await client.query('ROLLBACK');

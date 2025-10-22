@@ -1,6 +1,10 @@
 import React from 'react';
 import { Text, View, StyleSheet, AccessibilityInfo } from 'react-native';
-import { formatDistanceWithAccuracy, getDistanceColor, formatDistanceForAccessibility } from '../utils/distanceUtils';
+import {
+  formatDistanceWithAccuracy,
+  getDistanceColor,
+  formatDistanceForAccessibility,
+} from '../utils/distanceUtils';
 import { Colors, Typography } from '../styles/designSystem';
 
 export interface DistanceDisplayProps {
@@ -32,26 +36,27 @@ export const DistanceDisplay: React.FC<DistanceDisplayProps> = ({
   showApproximateIndicator = true,
   accessibilityLabel,
   testID,
-  options = {}
+  options = {},
 }) => {
   // Format the distance
-  const formatted = formatDistanceWithAccuracy(distanceMeters, accuracyContext, options);
-  
+  const formatted = formatDistanceWithAccuracy(
+    distanceMeters,
+    accuracyContext,
+    options,
+  );
+
   // Get accessibility text
-  const accessibilityText = accessibilityLabel || 
+  const accessibilityText =
+    accessibilityLabel ||
     formatDistanceForAccessibility(distanceMeters, accuracyContext);
-  
+
   // Get color based on distance
   const distanceColor = getDistanceColor(distanceMeters);
-  
+
   return (
     <View style={[styles.container, style]} testID={testID}>
       <Text
-        style={[
-          styles.distanceText,
-          { color: distanceColor },
-          textStyle
-        ]}
+        style={[styles.distanceText, { color: distanceColor }, textStyle]}
         accessibilityLabel={accessibilityText}
         accessibilityRole="text"
       >
@@ -84,38 +89,40 @@ export const DistanceChip: React.FC<DistanceChipProps> = ({
   style,
   onPress,
   testID,
-  options = {}
+  options = {},
 }) => {
-  const formatted = formatDistanceWithAccuracy(distanceMeters, accuracyContext, options);
+  const formatted = formatDistanceWithAccuracy(
+    distanceMeters,
+    accuracyContext,
+    options,
+  );
   const distanceColor = getDistanceColor(distanceMeters);
-  const accessibilityText = formatDistanceForAccessibility(distanceMeters, accuracyContext);
-  
+  const accessibilityText = formatDistanceForAccessibility(
+    distanceMeters,
+    accuracyContext,
+  );
+
   return (
     <View
       style={[
         styles.chip,
         { backgroundColor: distanceColor + '20', borderColor: distanceColor },
-        style
+        style,
       ]}
       testID={testID}
       accessible={true}
       accessibilityLabel={accessibilityText}
-      accessibilityRole={onPress ? "button" : "text"}
-      accessibilityHint={onPress ? "Tap to improve location accuracy" : undefined}
+      accessibilityRole={onPress ? 'button' : 'text'}
+      accessibilityHint={
+        onPress ? 'Tap to improve location accuracy' : undefined
+      }
     >
-      <Text
-        style={[
-          styles.chipText,
-          { color: distanceColor }
-        ]}
-      >
+      <Text style={[styles.chipText, { color: distanceColor }]}>
         {formatted.display}
       </Text>
-      
+
       {formatted.isApproximate && (
-        <Text style={[styles.chipText, { color: distanceColor }]}>
-          ~
-        </Text>
+        <Text style={[styles.chipText, { color: distanceColor }]}>~</Text>
       )}
     </View>
   );
@@ -144,34 +151,34 @@ export const DistanceIndicator: React.FC<DistanceIndicatorProps> = ({
   showIcon = true,
   style,
   testID,
-  options = {}
+  options = {},
 }) => {
-  const formatted = formatDistanceWithAccuracy(distanceMeters, accuracyContext, options);
+  const formatted = formatDistanceWithAccuracy(
+    distanceMeters,
+    accuracyContext,
+    options,
+  );
   const distanceColor = getDistanceColor(distanceMeters);
-  const accessibilityText = formatDistanceForAccessibility(distanceMeters, accuracyContext);
-  
+  const accessibilityText = formatDistanceForAccessibility(
+    distanceMeters,
+    accuracyContext,
+  );
+
   return (
     <View style={[styles.indicator, style]} testID={testID}>
       {showIcon && (
-        <Text style={[styles.icon, { color: distanceColor }]}>
-          📍
-        </Text>
+        <Text style={[styles.icon, { color: distanceColor }]}>📍</Text>
       )}
-      
+
       <Text
-        style={[
-          styles.indicatorText,
-          { color: distanceColor }
-        ]}
+        style={[styles.indicatorText, { color: distanceColor }]}
         accessibilityLabel={accessibilityText}
       >
         {formatted.display}
       </Text>
-      
+
       {formatted.isApproximate && (
-        <Text style={[styles.indicatorText, { color: distanceColor }]}>
-          ~
-        </Text>
+        <Text style={[styles.indicatorText, { color: distanceColor }]}>~</Text>
       )}
     </View>
   );
@@ -182,20 +189,20 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     justifyContent: 'center',
   },
-  
+
   distanceText: {
     ...Typography.styles.body,
     fontSize: 14,
     fontWeight: '500',
   },
-  
+
   approximateIndicator: {
     ...Typography.styles.body,
     fontSize: 14,
     fontWeight: '500',
     marginLeft: 2,
   },
-  
+
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -204,23 +211,23 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
   },
-  
+
   chipText: {
     ...Typography.styles.caption,
     fontSize: 12,
     fontWeight: '600',
   },
-  
+
   indicator: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  
+
   icon: {
     fontSize: 12,
     marginRight: 4,
   },
-  
+
   indicatorText: {
     ...Typography.styles.caption,
     fontSize: 12,

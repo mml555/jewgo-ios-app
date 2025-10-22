@@ -493,7 +493,7 @@ class AuthService {
 
       // Try to find existing device
       const existingResult = await dbClient.query(
-        `SELECT id FROM devices WHERE user_id = $1 AND device_handle = $2`,
+        'SELECT id FROM devices WHERE user_id = $1 AND device_handle = $2',
         [userId, deviceHandle],
       );
 
@@ -571,7 +571,9 @@ class AuthService {
 
   parseTTL(ttl) {
     const match = ttl.match(/^(\d+)([smhd])$/);
-    if (!match) throw new Error(`Invalid TTL format: ${ttl}`);
+    if (!match) {
+      throw new Error(`Invalid TTL format: ${ttl}`);
+    }
 
     const value = parseInt(match[1], 10);
     const unit = match[2];

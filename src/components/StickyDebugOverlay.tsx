@@ -39,7 +39,9 @@ const StickyDebugOverlay: React.FC<StickyDebugOverlayProps> = ({
   stickyOverlayHeight = STICKY_H,
   paddingExtra = 0,
 }) => {
-  if (!__DEV__) return null;
+  if (!__DEV__) {
+    return null;
+  }
 
   const expectedSticky = SEARCH_H + LANE_GAP + ACTION_H;
   const expectedPadding = SEARCH_H + LANE_GAP + paddingExtra;

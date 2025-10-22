@@ -3,7 +3,7 @@ import { debugLog, errorLog } from '../utils/logger';
 
 /**
  * ImageCacheService - Manages image prefetching and caching
- * 
+ *
  * Features:
  * - Prefetch images before they're needed
  * - Track loading states
@@ -29,8 +29,15 @@ class ImageCacheService {
   /**
    * Prefetch a single image
    */
-  async prefetchImage(url: string, priority: ImagePriority = 'medium'): Promise<void> {
-    if (!url || this.prefetchedImages.has(url) || this.prefetchingImages.has(url)) {
+  async prefetchImage(
+    url: string,
+    priority: ImagePriority = 'medium',
+  ): Promise<void> {
+    if (
+      !url ||
+      this.prefetchedImages.has(url) ||
+      this.prefetchingImages.has(url)
+    ) {
       return;
     }
 
@@ -53,9 +60,15 @@ class ImageCacheService {
   /**
    * Prefetch multiple images
    */
-  async prefetchImages(urls: string[], priority: ImagePriority = 'medium'): Promise<void> {
-    const uniqueUrls = urls.filter(url => 
-      url && !this.prefetchedImages.has(url) && !this.prefetchingImages.has(url)
+  async prefetchImages(
+    urls: string[],
+    priority: ImagePriority = 'medium',
+  ): Promise<void> {
+    const uniqueUrls = urls.filter(
+      url =>
+        url &&
+        !this.prefetchedImages.has(url) &&
+        !this.prefetchingImages.has(url),
     );
 
     uniqueUrls.forEach(url => {
@@ -78,7 +91,7 @@ class ImageCacheService {
    */
   private sortQueue(): void {
     const priorityOrder = { high: 0, medium: 1, low: 2 };
-    
+
     this.prefetchQueue.sort((a, b) => {
       if (a.priority !== b.priority) {
         return priorityOrder[a.priority] - priorityOrder[b.priority];
@@ -100,9 +113,9 @@ class ImageCacheService {
     while (this.prefetchQueue.length > 0) {
       // Process in batches
       const batch = this.prefetchQueue.splice(0, this.maxConcurrentPrefetch);
-      
+
       await Promise.allSettled(
-        batch.map(task => this.prefetchSingle(task.url))
+        batch.map(task => this.prefetchSingle(task.url)),
       );
     }
 
@@ -173,4 +186,3 @@ class ImageCacheService {
 }
 
 export const imageCacheService = new ImageCacheService();
-

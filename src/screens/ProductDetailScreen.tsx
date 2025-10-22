@@ -53,7 +53,9 @@ const ProductDetailScreen: React.FC = () => {
   }, [productId, storeId, navigation]);
 
   const loadProduct = useCallback(async () => {
-    if (!productId || !storeId) return;
+    if (!productId || !storeId) {
+      return;
+    }
     try {
       setLoading(true);
       setError(null);

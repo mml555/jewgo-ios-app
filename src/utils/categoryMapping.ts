@@ -138,8 +138,12 @@ export function getCategoriesWithCounts(
   // Sort by count (descending) then by display name, but always keep 'eatery-plus' last
   return categories.sort((a, b) => {
     // Always put 'eatery-plus' at the end
-    if (a.key === 'eatery-plus') return 1;
-    if (b.key === 'eatery-plus') return -1;
+    if (a.key === 'eatery-plus') {
+      return 1;
+    }
+    if (b.key === 'eatery-plus') {
+      return -1;
+    }
 
     // For all other categories, sort by count (descending) then by display name
     if (b.count !== a.count) {

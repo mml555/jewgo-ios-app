@@ -17,8 +17,8 @@ export interface ResponsiveLayout {
   // Device detection
   isTablet: boolean;
   isPhone: boolean;
-  deviceType: DeviceType;
-  screenSize: ScreenSize;
+  deviceType: (typeof DeviceType)[keyof typeof DeviceType];
+  screenSize: (typeof ScreenSize)[keyof typeof ScreenSize];
 
   // Screen dimensions
   screenWidth: number;

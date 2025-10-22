@@ -62,7 +62,9 @@ class Logger {
     message: string,
     ...args: any[]
   ): void {
-    if (!this.shouldLog(level)) return;
+    if (!this.shouldLog(level)) {
+      return;
+    }
 
     // Prevent message overflow
     if (

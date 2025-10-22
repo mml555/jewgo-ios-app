@@ -161,14 +161,30 @@ const AddMikvahScreen: React.FC = () => {
       switch (step) {
         case 1: // Basic Info
           const basicErrors = [];
-          if (!formData.name.trim()) basicErrors.push('Mikvah name');
-          if (!formData.address.trim()) basicErrors.push('Address');
-          if (!formData.city.trim()) basicErrors.push('City');
-          if (!formData.state.trim()) basicErrors.push('State');
-          if (!formData.zip_code.trim()) basicErrors.push('ZIP code');
-          if (!formData.phone.trim()) basicErrors.push('Phone number');
-          if (!formData.kosher_level) basicErrors.push('Kosher level');
-          if (!formData.denomination) basicErrors.push('Denomination');
+          if (!formData.name.trim()) {
+            basicErrors.push('Mikvah name');
+          }
+          if (!formData.address.trim()) {
+            basicErrors.push('Address');
+          }
+          if (!formData.city.trim()) {
+            basicErrors.push('City');
+          }
+          if (!formData.state.trim()) {
+            basicErrors.push('State');
+          }
+          if (!formData.zip_code.trim()) {
+            basicErrors.push('ZIP code');
+          }
+          if (!formData.phone.trim()) {
+            basicErrors.push('Phone number');
+          }
+          if (!formData.kosher_level) {
+            basicErrors.push('Kosher level');
+          }
+          if (!formData.denomination) {
+            basicErrors.push('Denomination');
+          }
 
           return {
             isValid: basicErrors.length === 0,

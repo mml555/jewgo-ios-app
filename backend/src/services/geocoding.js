@@ -15,53 +15,60 @@ const logger = require('../utils/logger');
 async function geocodeAddress(address) {
   try {
     const apiKey = process.env.GOOGLE_MAPS_API_KEY;
-    
+
     if (!apiKey) {
       logger.warn('GOOGLE_MAPS_API_KEY not set, using fallback geocoding');
       // Fallback: return default coordinates (you can enhance this)
       return {
         lat: 40.7128,
-        lng: -74.0060,
-        geom: `POINT(-74.0060 40.7128)`,
-        formatted_address: address
+        lng: -74.006,
+        geom: 'POINT(-74.0060 40.7128)',
+        formatted_address: address,
       };
     }
 
-    const response = await axios.get('https://maps.googleapis.com/maps/api/geocode/json', {
-      params: {
-        address: address,
-        key: apiKey
+    const response = await axios.get(
+      'https://maps.googleapis.com/maps/api/geocode/json',
+      {
+        params: {
+          address: address,
+          key: apiKey,
+        },
+        timeout: 5000, // 5 second timeout
       },
-      timeout: 5000 // 5 second timeout
-    });
+    );
 
     if (response.data.status === 'OK' && response.data.results[0]) {
       const result = response.data.results[0];
       const location = result.geometry.location;
-      
-      logger.info(`Geocoded address: ${address} -> (${location.lat}, ${location.lng})`);
-      
+
+      logger.info(
+        `Geocoded address: ${address} -> (${location.lat}, ${location.lng})`,
+      );
+
       return {
         lat: location.lat,
         lng: location.lng,
         geom: `POINT(${location.lng} ${location.lat})`, // PostGIS format: lng, lat
-        formatted_address: result.formatted_address
+        formatted_address: result.formatted_address,
       };
     } else {
-      logger.error(`Geocoding failed for address: ${address}, status: ${response.data.status}`);
+      logger.error(
+        `Geocoding failed for address: ${address}, status: ${response.data.status}`,
+      );
       throw new Error(`Geocoding failed: ${response.data.status}`);
     }
   } catch (error) {
     logger.error('Geocoding error:', error.message);
-    
+
     // Fallback: return approximate coordinates based on zip code or city
     // For production, you might want to use a backup geocoding service
     logger.warn('Using fallback coordinates for address:', address);
     return {
       lat: 40.7128,
-      lng: -74.0060,
-      geom: `POINT(-74.0060 40.7128)`,
-      formatted_address: address
+      lng: -74.006,
+      geom: 'POINT(-74.0060 40.7128)',
+      formatted_address: address,
     };
   }
 }
@@ -74,31 +81,44 @@ async function geocodeAddress(address) {
 function parseHoursString(hoursString) {
   try {
     const hours = {};
-    const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-    
+    const days = [
+      'monday',
+      'tuesday',
+      'wednesday',
+      'thursday',
+      'friday',
+      'saturday',
+      'sunday',
+    ];
+
     // Split by comma and parse each day
-    const dayEntries = hoursString.toLowerCase().split(',').map(s => s.trim());
-    
+    const dayEntries = hoursString
+      .toLowerCase()
+      .split(',')
+      .map(s => s.trim());
+
     dayEntries.forEach(entry => {
       const match = entry.match(/(\w+):\s*(.+)/);
       if (match) {
         const [, day, timeStr] = match;
-        
+
         if (timeStr.includes('closed')) {
           hours[day] = { closed: true };
         } else {
-          const timeMatch = timeStr.match(/(\d+:\d+\s*[ap]m)\s*[-→]\s*(\d+:\d+\s*[ap]m)/i);
+          const timeMatch = timeStr.match(
+            /(\d+:\d+\s*[ap]m)\s*[-→]\s*(\d+:\d+\s*[ap]m)/i,
+          );
           if (timeMatch) {
             hours[day] = {
               open: timeMatch[1].trim(),
               close: timeMatch[2].trim(),
-              closed: false
+              closed: false,
             };
           }
         }
       }
     });
-    
+
     return hours;
   } catch (error) {
     logger.error('Error parsing hours string:', error);
@@ -108,5 +128,5 @@ function parseHoursString(hoursString) {
 
 module.exports = {
   geocodeAddress,
-  parseHoursString
+  parseHoursString,
 };

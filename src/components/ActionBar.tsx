@@ -40,17 +40,20 @@ const ActionBar: React.FC<ActionBarProps> = ({
 
   const handleActionPress = useCallback(
     (action: string) => {
-      if (action === 'filters') return openFiltersModal();
+      if (action === 'filters') {
+        return openFiltersModal();
+      }
 
       if (action === 'addCategory') {
-        if (currentCategory === 'mikvah')
+        if (currentCategory === 'mikvah') {
           (navigation as any).navigate('AddMikvah');
-        else if (currentCategory === 'shul')
+        } else if (currentCategory === 'shul') {
           (navigation as any).navigate('AddSynagogue');
-        else
+        } else {
           (navigation as any).navigate('AddCategory', {
             category: currentCategory,
           });
+        }
         return;
       }
 
@@ -70,12 +73,13 @@ const ActionBar: React.FC<ActionBarProps> = ({
       }
 
       if (action === 'liveMap') {
-        if (currentCategory === 'jobs')
+        if (currentCategory === 'jobs') {
           (navigation as any).navigate('JobSeeking');
-        else
+        } else {
           (navigation as any).navigate('LiveMap', {
             category: currentCategory,
           });
+        }
         return;
       }
 

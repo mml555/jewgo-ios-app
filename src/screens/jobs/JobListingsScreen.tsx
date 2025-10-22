@@ -137,7 +137,9 @@ const JobListingsScreen: React.FC = () => {
 
   // Fallback: if no measurement happens within 1 second, use estimated height
   useEffect(() => {
-    if (!isFocused) return; // Don't run timers when screen is not focused
+    if (!isFocused) {
+      return;
+    } // Don't run timers when screen is not focused
 
     const timer = setTimeout(() => {
       if (restHeaderHRef.current === 0 && showActionBarInHeader) {
@@ -212,8 +214,12 @@ const JobListingsScreen: React.FC = () => {
 
   const jobFiltersCount = useMemo(() => {
     let count = getActiveFiltersCount();
-    if (selectedIndustry) count += 1;
-    if (selectedJobType) count += 1;
+    if (selectedIndustry) {
+      count += 1;
+    }
+    if (selectedJobType) {
+      count += 1;
+    }
     return count;
   }, [selectedIndustry, selectedJobType, getActiveFiltersCount]);
 
@@ -282,7 +288,9 @@ const JobListingsScreen: React.FC = () => {
       }
 
       try {
-        if (!append) setLoading(true);
+        if (!append) {
+          setLoading(true);
+        }
 
         debugLog('📥 Fetching jobs list', {
           page: pageNum,
@@ -304,19 +312,20 @@ const JobListingsScreen: React.FC = () => {
 
         const rawListings =
           response?.jobListings ||
-          response?.listings ||
-          response?.data?.jobListings ||
-          response?.data?.listings ||
+          (response as any)?.listings ||
+          (response as any)?.data?.jobListings ||
+          (response as any)?.data?.listings ||
+          (response as any)?.data ||
           [];
 
         const pagination = response?.pagination ||
-          response?.data?.pagination ||
-          response?.meta || {
+          (response as any)?.data?.pagination ||
+          (response as any)?.meta || {
             page: pageNum,
             totalPages:
-              response?.data?.totalPages ||
-              (response?.data?.totalCount
-                ? Math.ceil(response.data.totalCount / PAGE_SIZE)
+              (response as any)?.data?.totalPages ||
+              ((response as any)?.data?.totalCount
+                ? Math.ceil((response as any).data.totalCount / PAGE_SIZE)
                 : pageNum),
           };
 
@@ -374,8 +383,11 @@ const JobListingsScreen: React.FC = () => {
   const loadJobSeekers = useCallback(
     async (pageNum = 1, append = false) => {
       try {
-        if (!append) setJobSeekersLoading(true);
-        else setJobSeekersLoading(true);
+        if (!append) {
+          setJobSeekersLoading(true);
+        } else {
+          setJobSeekersLoading(true);
+        }
 
         const response = await jobSeekersService.getJobSeekers({
           page: pageNum,
@@ -402,7 +414,9 @@ const JobListingsScreen: React.FC = () => {
         setJobSeekersHasMore(hasMorePages);
       } catch (error) {
         console.error('Error loading job seekers:', error);
-        if (!append) setJobSeekers([]);
+        if (!append) {
+          setJobSeekers([]);
+        }
       } finally {
         setJobSeekersLoading(false);
       }
@@ -496,7 +510,9 @@ const JobListingsScreen: React.FC = () => {
   // Scroll handler with hysteresis - only update when focused
   const handleScroll = useCallback(
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-      if (!isFocused || isTransitioning.current) return;
+      if (!isFocused || isTransitioning.current) {
+        return;
+      }
 
       const y = event.nativeEvent.contentOffset.y;
       setScrollY(y);
@@ -511,7 +527,9 @@ const JobListingsScreen: React.FC = () => {
 
   const handleCategoryChange = useCallback(
     (category: string) => {
-      if (category === activeCategory) return;
+      if (category === activeCategory) {
+        return;
+      }
       navigation.navigate('Home', { category } as never);
     },
     [navigation, activeCategory],
@@ -548,7 +566,9 @@ const JobListingsScreen: React.FC = () => {
 
   const formatSalary = useCallback(
     (min?: number, max?: number, structure?: string): string => {
-      if (!min && !max) return 'Salary not disclosed';
+      if (!min && !max) {
+        return 'Salary not disclosed';
+      }
 
       const formatAmount = (amount: number) => {
         return `$${(amount / 100).toLocaleString()}`;
@@ -740,7 +760,7 @@ const JobListingsScreen: React.FC = () => {
   );
 
   const isResumeMode = jobMode === 'seeking';
-  const listData = isResumeMode ? jobSeekers : jobCardData;
+  const listData: any = isResumeMode ? jobSeekers : jobCardData;
   const showFooterLoader = isResumeMode
     ? jobSeekersLoading && !refreshing
     : loading && !refreshing;
@@ -762,7 +782,7 @@ const JobListingsScreen: React.FC = () => {
         key={`jobs-grid-${jobMode}`}
         data={listData}
         keyExtractor={item => item.id}
-        renderItem={isResumeMode ? renderJobSeekerCard : renderJobCard}
+        renderItem={(isResumeMode ? renderJobSeekerCard : renderJobCard) as any}
         numColumns={2}
         columnWrapperStyle={styles.columnWrapper}
         ListHeaderComponent={combinedListHeader}

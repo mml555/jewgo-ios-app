@@ -235,7 +235,9 @@ const EventDetailScreen: React.FC = () => {
       });
 
       // Only update UI if still mounted
-      if (!isMountedRef.current) return;
+      if (!isMountedRef.current) {
+        return;
+      }
 
       if (response.waitlisted) {
         Alert.alert('Waitlisted', response.message || 'Added to waitlist');
@@ -276,7 +278,9 @@ const EventDetailScreen: React.FC = () => {
             await EventsService.cancelRsvp(eventId);
 
             // Only update UI if still mounted
-            if (!isMountedRef.current) return;
+            if (!isMountedRef.current) {
+              return;
+            }
 
             Alert.alert('Success', 'RSVP cancelled');
             loadEvent();
@@ -336,7 +340,9 @@ const EventDetailScreen: React.FC = () => {
     );
   }
 
-  if (!event) return null;
+  if (!event) {
+    return null;
+  }
 
   return (
     <SafeAreaView style={styles.container}>

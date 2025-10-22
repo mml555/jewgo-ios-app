@@ -48,7 +48,9 @@ const BusinessSpecials: React.FC<BusinessSpecialsProps> = ({
     const now = new Date();
     const timeLeftMs = validUntilDate.getTime() - now.getTime();
 
-    if (timeLeftMs <= 0) return 'Expired';
+    if (timeLeftMs <= 0) {
+      return 'Expired';
+    }
 
     const days = Math.floor(timeLeftMs / (1000 * 60 * 60 * 24));
     const hours = Math.floor(
@@ -165,19 +167,42 @@ const BusinessSpecials: React.FC<BusinessSpecialsProps> = ({
   // Get emoji for special type
   const getSpecialEmoji = (title: string): string => {
     const lowerTitle = title.toLowerCase();
-    if (lowerTitle.includes('happy hour') || lowerTitle.includes('drink'))
+    if (lowerTitle.includes('happy hour') || lowerTitle.includes('drink')) {
       return '🍺';
-    if (lowerTitle.includes('student')) return '🎓';
-    if (lowerTitle.includes('weekend')) return '🎉';
-    if (lowerTitle.includes('lunch')) return '🍽️';
-    if (lowerTitle.includes('dinner')) return '🍴';
-    if (lowerTitle.includes('breakfast')) return '🥞';
-    if (lowerTitle.includes('pizza')) return '🍕';
-    if (lowerTitle.includes('burger')) return '🍔';
-    if (lowerTitle.includes('coffee')) return '☕';
-    if (lowerTitle.includes('catering')) return '🍽️';
-    if (lowerTitle.includes('family')) return '👨‍👩‍👧‍👦';
-    if (lowerTitle.includes('free')) return '🎁';
+    }
+    if (lowerTitle.includes('student')) {
+      return '🎓';
+    }
+    if (lowerTitle.includes('weekend')) {
+      return '🎉';
+    }
+    if (lowerTitle.includes('lunch')) {
+      return '🍽️';
+    }
+    if (lowerTitle.includes('dinner')) {
+      return '🍴';
+    }
+    if (lowerTitle.includes('breakfast')) {
+      return '🥞';
+    }
+    if (lowerTitle.includes('pizza')) {
+      return '🍕';
+    }
+    if (lowerTitle.includes('burger')) {
+      return '🍔';
+    }
+    if (lowerTitle.includes('coffee')) {
+      return '☕';
+    }
+    if (lowerTitle.includes('catering')) {
+      return '🍽️';
+    }
+    if (lowerTitle.includes('family')) {
+      return '👨‍👩‍👧‍👦';
+    }
+    if (lowerTitle.includes('free')) {
+      return '🎁';
+    }
     return '⭐';
   };
 

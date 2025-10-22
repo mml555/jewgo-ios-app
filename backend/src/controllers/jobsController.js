@@ -104,8 +104,11 @@ class JobsController {
 
       // Determine location_type
       let locationType = 'on-site';
-      if (isRemote) locationType = 'remote';
-      else if (isHybrid) locationType = 'hybrid';
+      if (isRemote) {
+        locationType = 'remote';
+      } else if (isHybrid) {
+        locationType = 'hybrid';
+      }
 
       // Determine compensation_type and values
       let compensationType = 'salary';
@@ -268,11 +271,11 @@ class JobsController {
       }
 
       if (isRemote === 'true') {
-        query += ` AND j.is_remote = true`;
+        query += ' AND j.is_remote = true';
       }
 
       if (isHybrid === 'true') {
-        query += ` AND j.location_type = 'hybrid'`;
+        query += " AND j.location_type = 'hybrid'";
       }
 
       if (salaryMin) {
@@ -406,7 +409,7 @@ class JobsController {
           false as is_saved,
           ${
             validUserId
-              ? `(SELECT COUNT(*) > 0 FROM job_applications WHERE applicant_id = $2 AND job_id = j.id) as has_applied`
+              ? '(SELECT COUNT(*) > 0 FROM job_applications WHERE applicant_id = $2 AND job_id = j.id) as has_applied'
               : 'false as has_applied'
           }
         FROM jobs j
@@ -728,7 +731,7 @@ class JobsController {
         params.push(is_active === 'true');
       }
 
-      query += ` ORDER BY j.created_at DESC`;
+      query += ' ORDER BY j.created_at DESC';
 
       // Add pagination
       paramCount++;

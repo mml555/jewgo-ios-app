@@ -14,10 +14,11 @@ const testEateryData = {
   phone: '(718) 555-1234',
   email: 'test@restaurant.com',
   website: 'https://testrestaurant.com',
-  hours_of_operation: 'monday: 9:00 AM-5:00 PM, tuesday: 9:00 AM-5:00 PM, wednesday: 9:00 AM-5:00 PM, thursday: 9:00 AM-5:00 PM, friday: 9:00 AM-3:00 PM, saturday: Closed, sunday: 10:00 AM-5:00 PM',
+  hours_of_operation:
+    'monday: 9:00 AM-5:00 PM, tuesday: 9:00 AM-5:00 PM, wednesday: 9:00 AM-5:00 PM, thursday: 9:00 AM-5:00 PM, friday: 9:00 AM-3:00 PM, saturday: Closed, sunday: 10:00 AM-5:00 PM',
   business_images: [
     'https://example.com/image1.jpg',
-    'https://example.com/image2.jpg'
+    'https://example.com/image2.jpg',
   ],
   kosher_type: 'meat',
   hechsher: 'orb',
@@ -28,22 +29,25 @@ const testEateryData = {
   services: ['dine_in'],
   google_reviews_link: 'https://maps.google.com/test',
   is_owner_submission: true,
-  user_id: null
+  user_id: null,
 };
 
 async function testSubmission() {
   try {
     console.log('🧪 Testing eatery submission endpoint...\n');
-    console.log('📤 Sending test data:', JSON.stringify(testEateryData, null, 2));
-    
+    console.log(
+      '📤 Sending test data:',
+      JSON.stringify(testEateryData, null, 2),
+    );
+
     const response = await axios.post(
       `${API_URL}/api/v5/eatery-submit`,
       testEateryData,
       {
         headers: {
-          'Content-Type': 'application/json'
-        }
-      }
+          'Content-Type': 'application/json',
+        },
+      },
     );
 
     console.log('\n✅ Success!');
@@ -51,12 +55,14 @@ async function testSubmission() {
     console.log('\n📊 Entity ID:', response.data.data.entity_id);
     console.log('📊 Status:', response.data.data.status);
     console.log('📊 Submitted at:', response.data.data.submitted_at);
-
   } catch (error) {
     console.error('\n❌ Error:', error.message);
     if (error.response) {
       console.error('Response status:', error.response.status);
-      console.error('Response data:', JSON.stringify(error.response.data, null, 2));
+      console.error(
+        'Response data:',
+        JSON.stringify(error.response.data, null, 2),
+      );
     }
     process.exit(1);
   }
@@ -65,20 +71,25 @@ async function testSubmission() {
 async function testGetSubmissions() {
   try {
     console.log('\n\n🧪 Testing get submissions endpoint...\n');
-    
+
     const response = await axios.get(
-      `${API_URL}/api/v5/eatery-submissions?status=pending_review&limit=5`
+      `${API_URL}/api/v5/eatery-submissions?status=pending_review&limit=5`,
     );
 
     console.log('✅ Success!');
     console.log('Pending submissions:', response.data.data.submissions.length);
-    console.log('Submissions:', JSON.stringify(response.data.data.submissions, null, 2));
-
+    console.log(
+      'Submissions:',
+      JSON.stringify(response.data.data.submissions, null, 2),
+    );
   } catch (error) {
     console.error('\n❌ Error:', error.message);
     if (error.response) {
       console.error('Response status:', error.response.status);
-      console.error('Response data:', JSON.stringify(error.response.data, null, 2));
+      console.error(
+        'Response data:',
+        JSON.stringify(error.response.data, null, 2),
+      );
     }
   }
 }

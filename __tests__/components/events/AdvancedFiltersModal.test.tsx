@@ -1,7 +1,11 @@
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import AdvancedFiltersModal from '../../../src/components/events/AdvancedFiltersModal';
-import { EventCategory, EventType, EventFilters } from '../../../src/services/EventsService';
+import {
+  EventCategory,
+  EventType,
+  EventFilters,
+} from '../../../src/services/EventsService';
 
 // Mock safe area insets
 jest.mock('react-native-safe-area-context', () => ({
@@ -13,8 +17,20 @@ jest.mock('react-native-safe-area-context', () => ({
 
 describe('AdvancedFiltersModal', () => {
   const mockCategories: EventCategory[] = [
-    { id: '1', key: 'religious', name: 'Religious & Spiritual', icon_name: 'star-of-david', sort_order: 1 },
-    { id: '2', key: 'education', name: 'Education & Workshops', icon_name: 'book', sort_order: 2 },
+    {
+      id: '1',
+      key: 'religious',
+      name: 'Religious & Spiritual',
+      icon_name: 'star-of-david',
+      sort_order: 1,
+    },
+    {
+      id: '2',
+      key: 'education',
+      name: 'Education & Workshops',
+      icon_name: 'book',
+      sort_order: 2,
+    },
   ];
 
   const mockEventTypes: EventType[] = [
@@ -37,7 +53,7 @@ describe('AdvancedFiltersModal', () => {
 
   it('renders modal when visible', () => {
     const { getByText } = render(<AdvancedFiltersModal {...defaultProps} />);
-    
+
     expect(getByText('Advanced Filters')).toBeTruthy();
     expect(getByText('Date Range')).toBeTruthy();
     expect(getByText('Event Type')).toBeTruthy();
@@ -48,15 +64,15 @@ describe('AdvancedFiltersModal', () => {
 
   it('does not render modal when not visible', () => {
     const { queryByText } = render(
-      <AdvancedFiltersModal {...defaultProps} visible={false} />
+      <AdvancedFiltersModal {...defaultProps} visible={false} />,
     );
-    
+
     expect(queryByText('Advanced Filters')).toBeNull();
   });
 
   it('calls onClose when Cancel button is pressed', () => {
     const { getByText } = render(<AdvancedFiltersModal {...defaultProps} />);
-    
+
     const cancelButton = getByText('Cancel');
     fireEvent.press(cancelButton);
 
@@ -65,7 +81,7 @@ describe('AdvancedFiltersModal', () => {
 
   it('calls onApplyFilters when Apply button is pressed', () => {
     const { getByText } = render(<AdvancedFiltersModal {...defaultProps} />);
-    
+
     const applyButton = getByText('Apply');
     fireEvent.press(applyButton);
 
@@ -75,7 +91,7 @@ describe('AdvancedFiltersModal', () => {
 
   it('updates filters when form inputs change', async () => {
     const { getByText, getByPlaceholderText } = render(
-      <AdvancedFiltersModal {...defaultProps} />
+      <AdvancedFiltersModal {...defaultProps} />,
     );
 
     // Test date range inputs
@@ -125,7 +141,7 @@ describe('AdvancedFiltersModal', () => {
       expect.objectContaining({
         isFree: true,
         isRsvpRequired: true,
-      })
+      }),
     );
   });
 
@@ -177,7 +193,10 @@ describe('AdvancedFiltersModal', () => {
     };
 
     const { getByText } = render(
-      <AdvancedFiltersModal {...defaultProps} currentFilters={currentFilters} />
+      <AdvancedFiltersModal
+        {...defaultProps}
+        currentFilters={currentFilters}
+      />,
     );
 
     expect(getByText('3 filters applied')).toBeTruthy();
@@ -189,14 +208,19 @@ describe('AdvancedFiltersModal', () => {
     };
 
     const { getByText } = render(
-      <AdvancedFiltersModal {...defaultProps} currentFilters={currentFilters} />
+      <AdvancedFiltersModal
+        {...defaultProps}
+        currentFilters={currentFilters}
+      />,
     );
 
     expect(getByText('1 filter applied')).toBeTruthy();
   });
 
   it('has proper accessibility labels', () => {
-    const { getByLabelText } = render(<AdvancedFiltersModal {...defaultProps} />);
+    const { getByLabelText } = render(
+      <AdvancedFiltersModal {...defaultProps} />,
+    );
 
     expect(getByLabelText('Start date filter')).toBeTruthy();
     expect(getByLabelText('End date filter')).toBeTruthy();

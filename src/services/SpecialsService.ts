@@ -126,16 +126,33 @@ class SpecialsService {
   ): Promise<ApiResponse<{ specials: Special[] }>> {
     const queryParams = new URLSearchParams();
 
-    if (params?.page) queryParams.append('page', params.page.toString());
-    if (params?.limit) queryParams.append('limit', params.limit.toString());
-    if (params?.query) queryParams.append('q', params.query);
-    if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
-    if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
-    if (params?.latitude) queryParams.append('lat', params.latitude.toString());
-    if (params?.longitude)
+    if (params?.page) {
+      queryParams.append('page', params.page.toString());
+    }
+    if (params?.limit) {
+      queryParams.append('limit', params.limit.toString());
+    }
+    if (params?.query) {
+      queryParams.append('q', params.query);
+    }
+    if (params?.sortBy) {
+      queryParams.append('sortBy', params.sortBy);
+    }
+    if (params?.sortOrder) {
+      queryParams.append('sortOrder', params.sortOrder);
+    }
+    if (params?.latitude) {
+      queryParams.append('lat', params.latitude.toString());
+    }
+    if (params?.longitude) {
       queryParams.append('lng', params.longitude.toString());
-    if (params?.radius) queryParams.append('radius', params.radius.toString());
-    if (params?.onlyActive) queryParams.append('onlyActive', 'true');
+    }
+    if (params?.radius) {
+      queryParams.append('radius', params.radius.toString());
+    }
+    if (params?.onlyActive) {
+      queryParams.append('onlyActive', 'true');
+    }
 
     // Add filters
     if (params?.filters) {
@@ -168,12 +185,18 @@ class SpecialsService {
   }): Promise<ApiResponse<{ specials: Special[] }>> {
     const queryParams = new URLSearchParams();
 
-    if (params?.q) queryParams.append('q', params.q);
-    if (params?.category) queryParams.append('category', params.category);
-    if (params?.business_id)
+    if (params?.q) {
+      queryParams.append('q', params.q);
+    }
+    if (params?.category) {
+      queryParams.append('category', params.category);
+    }
+    if (params?.business_id) {
       queryParams.append('business_id', params.business_id);
-    if (params?.active_only !== undefined)
+    }
+    if (params?.active_only !== undefined) {
       queryParams.append('active_only', params.active_only.toString());
+    }
 
     const queryString = queryParams.toString();
     const endpoint = `/specials/search${queryString ? `?${queryString}` : ''}`;
@@ -225,14 +248,27 @@ class SpecialsService {
   }): Promise<ApiResponse<{ restaurants: RestaurantWithSpecials[] }>> {
     const queryParams = new URLSearchParams();
 
-    if (params?.page) queryParams.append('page', params.page.toString());
-    if (params?.limit) queryParams.append('limit', params.limit.toString());
-    if (params?.latitude) queryParams.append('lat', params.latitude.toString());
-    if (params?.longitude)
+    if (params?.page) {
+      queryParams.append('page', params.page.toString());
+    }
+    if (params?.limit) {
+      queryParams.append('limit', params.limit.toString());
+    }
+    if (params?.latitude) {
+      queryParams.append('lat', params.latitude.toString());
+    }
+    if (params?.longitude) {
       queryParams.append('lng', params.longitude.toString());
-    if (params?.radius) queryParams.append('radius', params.radius.toString());
-    if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
-    if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
+    }
+    if (params?.radius) {
+      queryParams.append('radius', params.radius.toString());
+    }
+    if (params?.sortBy) {
+      queryParams.append('sortBy', params.sortBy);
+    }
+    if (params?.sortOrder) {
+      queryParams.append('sortOrder', params.sortOrder);
+    }
 
     const queryString = queryParams.toString();
     const endpoint = `/specials/restaurants${
@@ -298,12 +334,21 @@ class SpecialsService {
   ): Promise<ApiResponse<{ specials: Special[] }>> {
     const queryParams = new URLSearchParams();
 
-    if (params?.page) queryParams.append('page', params.page.toString());
-    if (params?.limit) queryParams.append('limit', params.limit.toString());
-    if (params?.latitude) queryParams.append('lat', params.latitude.toString());
-    if (params?.longitude)
+    if (params?.page) {
+      queryParams.append('page', params.page.toString());
+    }
+    if (params?.limit) {
+      queryParams.append('limit', params.limit.toString());
+    }
+    if (params?.latitude) {
+      queryParams.append('lat', params.latitude.toString());
+    }
+    if (params?.longitude) {
       queryParams.append('lng', params.longitude.toString());
-    if (params?.radius) queryParams.append('radius', params.radius.toString());
+    }
+    if (params?.radius) {
+      queryParams.append('radius', params.radius.toString());
+    }
 
     const queryString = queryParams.toString();
     const endpoint = `/specials/user/${userId}/available${
@@ -324,9 +369,15 @@ class SpecialsService {
   ): Promise<ApiResponse<{ claims: UserSpecialClaim[] }>> {
     const queryParams = new URLSearchParams();
 
-    if (params?.page) queryParams.append('page', params.page.toString());
-    if (params?.limit) queryParams.append('limit', params.limit.toString());
-    if (params?.status) queryParams.append('status', params.status);
+    if (params?.page) {
+      queryParams.append('page', params.page.toString());
+    }
+    if (params?.limit) {
+      queryParams.append('limit', params.limit.toString());
+    }
+    if (params?.status) {
+      queryParams.append('status', params.status);
+    }
 
     const queryString = queryParams.toString();
     const endpoint = `/specials/user/${userId}/claimed${
@@ -361,9 +412,15 @@ class SpecialsService {
   ): Promise<ApiResponse<{ claims: SpecialClaim[] }>> {
     const queryParams = new URLSearchParams();
 
-    if (params?.page) queryParams.append('page', params.page.toString());
-    if (params?.limit) queryParams.append('limit', params.limit.toString());
-    if (params?.status) queryParams.append('status', params.status);
+    if (params?.page) {
+      queryParams.append('page', params.page.toString());
+    }
+    if (params?.limit) {
+      queryParams.append('limit', params.limit.toString());
+    }
+    if (params?.status) {
+      queryParams.append('status', params.status);
+    }
 
     const queryString = queryParams.toString();
     const endpoint = `/specials/${specialId}/claims${
@@ -410,9 +467,15 @@ class SpecialsService {
   }): Promise<ApiResponse<{ metrics: SpecialsPerformanceMetrics }>> {
     const queryParams = new URLSearchParams();
 
-    if (params?.startDate) queryParams.append('startDate', params.startDate);
-    if (params?.endDate) queryParams.append('endDate', params.endDate);
-    if (params?.businessId) queryParams.append('businessId', params.businessId);
+    if (params?.startDate) {
+      queryParams.append('startDate', params.startDate);
+    }
+    if (params?.endDate) {
+      queryParams.append('endDate', params.endDate);
+    }
+    if (params?.businessId) {
+      queryParams.append('businessId', params.businessId);
+    }
 
     const queryString = queryParams.toString();
     const endpoint = `/specials/metrics${queryString ? `?${queryString}` : ''}`;
@@ -440,9 +503,15 @@ class SpecialsService {
   ): Promise<ApiResponse<{ events: SpecialEvent[] }>> {
     const queryParams = new URLSearchParams();
 
-    if (params?.page) queryParams.append('page', params.page.toString());
-    if (params?.limit) queryParams.append('limit', params.limit.toString());
-    if (params?.eventType) queryParams.append('eventType', params.eventType);
+    if (params?.page) {
+      queryParams.append('page', params.page.toString());
+    }
+    if (params?.limit) {
+      queryParams.append('limit', params.limit.toString());
+    }
+    if (params?.eventType) {
+      queryParams.append('eventType', params.eventType);
+    }
 
     const queryString = queryParams.toString();
     const endpoint = `/specials/${specialId}/events${
@@ -465,10 +534,18 @@ class SpecialsService {
   }): Promise<ApiResponse<{ specials: ActiveSpecial[] }>> {
     const queryParams = new URLSearchParams();
 
-    if (params?.page) queryParams.append('page', params.page.toString());
-    if (params?.limit) queryParams.append('limit', params.limit.toString());
-    if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
-    if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
+    if (params?.page) {
+      queryParams.append('page', params.page.toString());
+    }
+    if (params?.limit) {
+      queryParams.append('limit', params.limit.toString());
+    }
+    if (params?.sortBy) {
+      queryParams.append('sortBy', params.sortBy);
+    }
+    if (params?.sortOrder) {
+      queryParams.append('sortOrder', params.sortOrder);
+    }
 
     const queryString = queryParams.toString();
     const endpoint = `/specials/active${queryString ? `?${queryString}` : ''}`;
@@ -509,8 +586,12 @@ class SpecialsService {
     }>
   > {
     const queryParams = new URLSearchParams();
-    if (userId) queryParams.append('userId', userId);
-    if (guestSessionId) queryParams.append('guestSessionId', guestSessionId);
+    if (userId) {
+      queryParams.append('userId', userId);
+    }
+    if (guestSessionId) {
+      queryParams.append('guestSessionId', guestSessionId);
+    }
 
     const queryString = queryParams.toString();
     const endpoint = `/specials/${specialId}/can-claim${
@@ -532,9 +613,15 @@ class SpecialsService {
   }): Promise<ApiResponse<{ specials: Special[] }>> {
     const queryParams = new URLSearchParams();
 
-    if (params?.days) queryParams.append('days', params.days.toString());
-    if (params?.page) queryParams.append('page', params.page.toString());
-    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.days) {
+      queryParams.append('days', params.days.toString());
+    }
+    if (params?.page) {
+      queryParams.append('page', params.page.toString());
+    }
+    if (params?.limit) {
+      queryParams.append('limit', params.limit.toString());
+    }
 
     const queryString = queryParams.toString();
     const endpoint = `/specials/expiring${
@@ -552,10 +639,15 @@ class SpecialsService {
   }): Promise<ApiResponse<{ specials: Special[] }>> {
     const queryParams = new URLSearchParams();
 
-    if (params?.percentage)
+    if (params?.percentage) {
       queryParams.append('percentage', params.percentage.toString());
-    if (params?.page) queryParams.append('page', params.page.toString());
-    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    }
+    if (params?.page) {
+      queryParams.append('page', params.page.toString());
+    }
+    if (params?.limit) {
+      queryParams.append('limit', params.limit.toString());
+    }
 
     const queryString = queryParams.toString();
     const endpoint = `/specials/near-limit${

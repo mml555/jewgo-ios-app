@@ -67,8 +67,12 @@ const ReviewQueueScreen: React.FC = () => {
   };
 
   const getPriorityColor = (priority: number) => {
-    if (priority >= 2) return '#F44336';
-    if (priority >= 1) return '#FF9800';
+    if (priority >= 2) {
+      return '#F44336';
+    }
+    if (priority >= 1) {
+      return '#FF9800';
+    }
     return '#4CAF50';
   };
 

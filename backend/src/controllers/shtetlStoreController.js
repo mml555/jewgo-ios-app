@@ -301,7 +301,7 @@ class ShtetlStoreController {
       }
 
       paramCount++;
-      updateFields.push(`updated_at = CURRENT_TIMESTAMP`);
+      updateFields.push('updated_at = CURRENT_TIMESTAMP');
       values.push(id);
 
       const query = `

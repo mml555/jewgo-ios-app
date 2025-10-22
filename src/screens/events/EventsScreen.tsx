@@ -175,7 +175,9 @@ const EventsScreen: React.FC = () => {
       abortControllerRef.current = newAbortController;
 
       // Check if already aborted (component unmounting)
-      if (newAbortController.signal.aborted) return;
+      if (newAbortController.signal.aborted) {
+        return;
+      }
 
       if (!append && isMountedRef.current) {
         setLoading(true);
@@ -228,7 +230,9 @@ const EventsScreen: React.FC = () => {
       }
     } catch (error: any) {
       // Ignore abort errors
-      if (error.name === 'AbortError') return;
+      if (error.name === 'AbortError') {
+        return;
+      }
 
       console.error('Error loading events:', error);
       if (isMountedRef.current) {

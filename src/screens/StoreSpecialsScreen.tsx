@@ -55,7 +55,9 @@ const StoreSpecialsScreen: React.FC = () => {
 
   const loadData = useCallback(
     async (showSpinner: boolean = true) => {
-      if (!storeId) return;
+      if (!storeId) {
+        return;
+      }
 
       if (showSpinner) {
         setLoading(true);

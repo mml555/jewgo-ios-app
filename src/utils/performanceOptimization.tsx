@@ -125,7 +125,9 @@ export const createPerformantDebounce = <T extends (...args: any[]) => any>(
   };
 
   const shouldInvoke = (time: number) => {
-    if (lastCallTime === undefined) return true;
+    if (lastCallTime === undefined) {
+      return true;
+    }
     const timeSinceLastCall = time - lastCallTime;
     const timeSinceLastInvoke = time - lastInvokeTime;
 
@@ -340,7 +342,9 @@ export class BatchUpdater<T> {
   }
 
   flush(): void {
-    if (this.updates.length === 0) return;
+    if (this.updates.length === 0) {
+      return;
+    }
 
     if (this.timeoutId !== null) {
       clearTimeout(this.timeoutId);

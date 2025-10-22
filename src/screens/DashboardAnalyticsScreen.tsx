@@ -129,7 +129,9 @@ const DashboardAnalyticsScreen: React.FC = () => {
   };
 
   const handleNavigateToProducts = () => {
-    if (!selectedStoreId) return;
+    if (!selectedStoreId) {
+      return;
+    }
     setShowStoreActions(false);
     (navigation as any).navigate('ProductManagement', {
       storeId: selectedStoreId,
@@ -137,25 +139,33 @@ const DashboardAnalyticsScreen: React.FC = () => {
   };
 
   const handleNavigateToStoreEdit = () => {
-    if (!selectedStoreId) return;
+    if (!selectedStoreId) {
+      return;
+    }
     setShowStoreActions(false);
     (navigation as any).navigate('EditStore', { storeId: selectedStoreId });
   };
 
   const handleNavigateToSpecials = () => {
-    if (!selectedStoreId) return;
+    if (!selectedStoreId) {
+      return;
+    }
     setShowStoreActions(false);
     (navigation as any).navigate('StoreSpecials', { storeId: selectedStoreId });
   };
 
   const shouldShowProductDashboard = () => {
-    if (!selectedStoreId) return false;
+    if (!selectedStoreId) {
+      return false;
+    }
     const selectedStore = stores.find(store => store.id === selectedStoreId);
     return selectedStore?.category === 'shtetl';
   };
 
   const shouldShowSpecialsDashboard = () => {
-    if (!selectedStoreId) return false;
+    if (!selectedStoreId) {
+      return false;
+    }
     const selectedStore = stores.find(store => store.id === selectedStoreId);
     return selectedStore?.category !== 'shtetl';
   };

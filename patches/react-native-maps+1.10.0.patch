@@ -1,0 +1,17 @@
+diff --git a/node_modules/react-native-maps/.DS_Store b/node_modules/react-native-maps/.DS_Store
+new file mode 100644
+index 0000000..5cfb34b
+Binary files /dev/null and b/node_modules/react-native-maps/.DS_Store differ
+diff --git a/node_modules/react-native-maps/react-native-google-maps.podspec b/node_modules/react-native-maps/react-native-google-maps.podspec
+index 0745418..ce9a112 100644
+--- a/node_modules/react-native-maps/react-native-google-maps.podspec
++++ b/node_modules/react-native-maps/react-native-google-maps.podspec
+@@ -17,6 +17,6 @@ Pod::Spec.new do |s|
+   s.pod_target_xcconfig = { 'FRAMEWORK_SEARCH_PATHS' => '"${PODS_CONFIGURATION_BUILD_DIR}/react-native-maps"' }
+ 
+   s.dependency 'React-Core'
+-  s.dependency 'GoogleMaps', '7.4.0'
+-  s.dependency 'Google-Maps-iOS-Utils', '4.2.2'
++  s.dependency 'GoogleMaps', '~> 8.4.0'
++  s.dependency 'Google-Maps-iOS-Utils', '~> 5.0.0'
+ end

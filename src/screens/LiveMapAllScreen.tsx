@@ -45,6 +45,10 @@ interface MapListing {
   longitude: number;
   imageUrl?: string;
   price?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zip_code?: string;
 }
 
 const LiveMapAllScreen: React.FC = () => {
@@ -310,10 +314,12 @@ const LiveMapAllScreen: React.FC = () => {
           return distanceA - distanceB;
         }
 
-        if (a.latitude && a.longitude && (!b.latitude || !b.longitude))
+        if (a.latitude && a.longitude && (!b.latitude || !b.longitude)) {
           return -1;
-        if ((!a.latitude || !a.longitude) && b.latitude && b.longitude)
+        }
+        if ((!a.latitude || !a.longitude) && b.latitude && b.longitude) {
           return 1;
+        }
 
         return 0;
       });

@@ -60,7 +60,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onPress }) => {
   };
 
   const renderKosherBadge = () => {
-    if (!product.isKosher) return null;
+    if (!product.isKosher) {
+      return null;
+    }
 
     return (
       <View style={styles.kosherBadge}>

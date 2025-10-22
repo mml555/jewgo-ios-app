@@ -192,10 +192,18 @@ export const generateAccessibilityTraits = (
 ): string[] => {
   const traits: string[] = [];
 
-  if (isButton) traits.push('button');
-  if (isSelected) traits.push('selected');
-  if (isDisabled) traits.push('notEnabled');
-  if (isHeader) traits.push('header');
+  if (isButton) {
+    traits.push('button');
+  }
+  if (isSelected) {
+    traits.push('selected');
+  }
+  if (isDisabled) {
+    traits.push('notEnabled');
+  }
+  if (isHeader) {
+    traits.push('header');
+  }
 
   return traits;
 };

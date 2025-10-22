@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, Dimensions } from 'react-native';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  Dimensions,
-} from 'react-native';
-import { Colors, Typography, Spacing, BorderRadius } from '../styles/designSystem';
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+} from '../styles/designSystem';
 import OptimizedImage from './OptimizedImage';
 import { imageCacheService } from '../services/ImageCacheService';
 
@@ -34,7 +33,7 @@ const ImageCarousel: React.FC<ImageCarouselProps> = ({
       if (validUrls.length > 0) {
         // Prefetch first image with high priority
         imageCacheService.prefetchImage(validUrls[0], 'high');
-        
+
         // Prefetch remaining images with medium priority
         if (validUrls.length > 1) {
           imageCacheService.prefetchImages(validUrls.slice(1), 'medium');
@@ -46,13 +45,17 @@ const ImageCarousel: React.FC<ImageCarouselProps> = ({
   // Handle image swipe for carousel
   const handleImageSwipe = (event: any) => {
     const contentOffset = event.nativeEvent.contentOffset;
-    const imageIndex = Math.round(contentOffset.x / (screenWidth - (Spacing.md * 2)));
+    const imageIndex = Math.round(
+      contentOffset.x / (screenWidth - Spacing.md * 2),
+    );
     setActiveImageIndex(imageIndex);
   };
 
   // Get working image URL
   const getWorkingImageUrl = (imageUrl: string): string => {
-    if (!imageUrl) return fallbackImageUrl || 'https://picsum.photos/400/300?random=default';
+    if (!imageUrl) {
+      return fallbackImageUrl || 'https://picsum.photos/400/300?random=default';
+    }
     return imageUrl;
   };
 
@@ -65,7 +68,10 @@ const ImageCarousel: React.FC<ImageCarouselProps> = ({
             pagingEnabled
             showsHorizontalScrollIndicator={false}
             onMomentumScrollEnd={handleImageSwipe}
-            style={[styles.imageScrollView, { width: screenWidth - (Spacing.md * 2) }]}
+            style={[
+              styles.imageScrollView,
+              { width: screenWidth - Spacing.md * 2 },
+            ]}
             contentContainerStyle={styles.imageScrollViewContent}
           >
             {images.map((image, index) => {
@@ -79,13 +85,15 @@ const ImageCarousel: React.FC<ImageCarouselProps> = ({
                   accessible={true}
                   accessibilityLabel={`Image ${index + 1} of ${images.length}`}
                   priority={index === 0 ? 'high' : 'medium'}
-                  fallbackSource={fallbackImageUrl ? { uri: fallbackImageUrl } : undefined}
+                  fallbackSource={
+                    fallbackImageUrl ? { uri: fallbackImageUrl } : undefined
+                  }
                   showLoader={true}
                 />
               );
             })}
           </ScrollView>
-          
+
           {/* Image Indicators */}
           {images.length > 1 && (
             <>
@@ -95,7 +103,7 @@ const ImageCarousel: React.FC<ImageCarouselProps> = ({
                   {activeImageIndex + 1} of {images.length}
                 </Text>
               </View>
-              
+
               {/* Image Dots */}
               <View style={styles.imageIndicators}>
                 {images.map((_, index) => (
@@ -103,7 +111,7 @@ const ImageCarousel: React.FC<ImageCarouselProps> = ({
                     key={index}
                     style={[
                       styles.indicator,
-                      index === activeImageIndex && styles.indicatorActive
+                      index === activeImageIndex && styles.indicatorActive,
                     ]}
                   />
                 ))}
@@ -114,7 +122,11 @@ const ImageCarousel: React.FC<ImageCarouselProps> = ({
       ) : (
         <View style={[styles.placeholderImage, { borderRadius }]}>
           <OptimizedImage
-            source={{ uri: fallbackImageUrl || 'https://picsum.photos/400/300?random=default' }}
+            source={{
+              uri:
+                fallbackImageUrl ||
+                'https://picsum.photos/400/300?random=default',
+            }}
             style={[styles.image, { borderRadius }]}
             resizeMode="cover"
             showLoader={true}
@@ -139,7 +151,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   image: {
-    width: screenWidth - (Spacing.md * 2), // Full width of the ScrollView
+    width: screenWidth - Spacing.md * 2, // Full width of the ScrollView
     height: '100%',
     marginHorizontal: 0, // No margins since ScrollView handles positioning
     backgroundColor: Colors.white, // Add solid background for shadow efficiency
@@ -153,7 +165,7 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
   placeholderImage: {
-    width: screenWidth - (Spacing.md * 2),
+    width: screenWidth - Spacing.md * 2,
     backgroundColor: Colors.gray200,
     justifyContent: 'center',
     alignItems: 'center',

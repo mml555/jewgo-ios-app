@@ -41,9 +41,10 @@ const RATE_LIMIT_CONFIG = {
   },
 
   // Block duration for abusive IPs
-  blockDuration: process.env.NODE_ENV === 'development' 
-    ? 5 * 60 * 1000  // 5 minutes in development
-    : 60 * 60 * 1000, // 1 hour in production
+  blockDuration:
+    process.env.NODE_ENV === 'development'
+      ? 5 * 60 * 1000 // 5 minutes in development
+      : 60 * 60 * 1000, // 1 hour in production
 
   // Skip rate limiting for these paths in development
   skipPaths: ['/health', '/api/v5/health', '/api/v5/guest/create'],
@@ -71,7 +72,9 @@ const getClientId = req => {
  */
 const isBlocked = clientId => {
   const blockInfo = blockedIPs.get(clientId);
-  if (!blockInfo) return false;
+  if (!blockInfo) {
+    return false;
+  }
 
   // Check if block has expired
   if (Date.now() > blockInfo.expiresAt) {
@@ -106,7 +109,7 @@ const blockIP = (clientId, reason = 'Rate limit exceeded') => {
 const createRateLimiter = (config = RATE_LIMIT_CONFIG.general) => {
   return (req, res, next) => {
     const clientId = getClientId(req);
-    
+
     // Skip rate limiting for localhost in development
     if (
       process.env.NODE_ENV === 'development' ||
@@ -301,7 +304,7 @@ const clearBlockedIPs = () => {
 /**
  * Clear specific IP block (for development/debugging)
  */
-const clearIPBlock = (clientId) => {
+const clearIPBlock = clientId => {
   const wasBlocked = blockedIPs.has(clientId);
   blockedIPs.delete(clientId);
   blockedIPLogTracker.delete(clientId);

@@ -5,20 +5,18 @@
 
 module.exports = {
   preset: 'react-native',
-  
+
   // Test environment
   testEnvironment: 'jsdom',
-  
+
   // Test file patterns
   testMatch: [
     '<rootDir>/src/__tests__/integration/**/*.integration.test.{js,jsx,ts,tsx}',
   ],
-  
+
   // Setup files
-  setupFilesAfterEnv: [
-    '<rootDir>/src/__tests__/integration/setup.js',
-  ],
-  
+  setupFilesAfterEnv: ['<rootDir>/src/__tests__/integration/setup.js'],
+
   // Module name mapping
   moduleNameMapping: {
     '^@/(.*)$': '<rootDir>/src/$1',
@@ -29,15 +27,15 @@ module.exports = {
     '^@utils/(.*)$': '<rootDir>/src/utils/$1',
     '^@styles/(.*)$': '<rootDir>/src/styles/$1',
   },
-  
+
   // Transform configuration
   transform: {
     '^.+\\.(js|jsx|ts|tsx)$': 'babel-jest',
   },
-  
+
   // Module file extensions
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
-  
+
   // Coverage configuration
   collectCoverage: true,
   collectCoverageFrom: [
@@ -53,16 +51,11 @@ module.exports = {
     '!src/**/*.d.ts',
     '!src/**/__tests__/**',
   ],
-  
+
   coverageDirectory: '<rootDir>/coverage/integration',
-  
-  coverageReporters: [
-    'text',
-    'text-summary',
-    'html',
-    'lcov',
-  ],
-  
+
+  coverageReporters: ['text', 'text-summary', 'html', 'lcov'],
+
   // Coverage thresholds
   coverageThreshold: {
     global: {
@@ -90,42 +83,42 @@ module.exports = {
       statements: 85,
     },
   },
-  
+
   // Test timeout
   testTimeout: 30000, // 30 seconds for integration tests
-  
+
   // Verbose output
   verbose: true,
-  
+
   // Clear mocks between tests
   clearMocks: true,
-  
+
   // Restore mocks after each test
   restoreMocks: true,
-  
+
   // Mock configuration
   modulePathIgnorePatterns: [
     '<rootDir>/node_modules/',
     '<rootDir>/ios/',
     '<rootDir>/android/',
   ],
-  
+
   // Ignore patterns
   testPathIgnorePatterns: [
     '<rootDir>/node_modules/',
     '<rootDir>/ios/',
     '<rootDir>/android/',
   ],
-  
+
   // Transform ignore patterns
   transformIgnorePatterns: [
     'node_modules/(?!(react-native|@react-native|@react-navigation|react-native-.*)/)',
   ],
-  
+
   // Global setup and teardown
   globalSetup: '<rootDir>/src/__tests__/integration/globalSetup.js',
   globalTeardown: '<rootDir>/src/__tests__/integration/globalTeardown.js',
-  
+
   // Reporter configuration
   reporters: [
     'default',
@@ -140,13 +133,10 @@ module.exports = {
       },
     ],
   ],
-  
+
   // Error handling
   errorOnDeprecated: true,
-  
+
   // Watch mode configuration
-  watchPathIgnorePatterns: [
-    '<rootDir>/node_modules/',
-    '<rootDir>/coverage/',
-  ],
+  watchPathIgnorePatterns: ['<rootDir>/node_modules/', '<rootDir>/coverage/'],
 };

@@ -23,10 +23,12 @@ export const testResponsiveLayout = () => {
   testSizes.forEach(({ name, width, height }) => {
     // Mock Dimensions.get for testing
     const originalGet = Dimensions.get;
-    Dimensions.get = () => ({
-      window: { width, height },
-      screen: { width, height },
-    });
+    Dimensions.get = ((type: 'window' | 'screen') => ({
+      width,
+      height,
+      scale: 1,
+      fontScale: 1,
+    })) as any;
 
     const layout = getResponsiveLayout();
 

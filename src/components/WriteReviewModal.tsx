@@ -44,7 +44,9 @@ const WriteReviewModal: React.FC<WriteReviewModalProps> = ({
   });
 
   const handleSubmit = async () => {
-    if (!newReview.content.trim()) return;
+    if (!newReview.content.trim()) {
+      return;
+    }
 
     try {
       await onSubmit(newReview);

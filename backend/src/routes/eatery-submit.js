@@ -33,34 +33,50 @@ router.post('/eatery-submit', async (req, res) => {
       services,
       google_reviews_link,
       is_owner_submission,
-      user_id
+      user_id,
     } = req.body;
 
     logger.info('Received eatery submission:', { name, address, kosher_type });
 
     // 1. Validate required fields
     const missingFields = [];
-    if (!name) missingFields.push('name');
-    if (!address) missingFields.push('address');
-    if (!phone) missingFields.push('phone');
-    if (!kosher_type) missingFields.push('kosher_type');
-    if (!hechsher) missingFields.push('hechsher');
-    if (!short_description) missingFields.push('short_description');
+    if (!name) {
+      missingFields.push('name');
+    }
+    if (!address) {
+      missingFields.push('address');
+    }
+    if (!phone) {
+      missingFields.push('phone');
+    }
+    if (!kosher_type) {
+      missingFields.push('kosher_type');
+    }
+    if (!hechsher) {
+      missingFields.push('hechsher');
+    }
+    if (!short_description) {
+      missingFields.push('short_description');
+    }
 
     if (missingFields.length > 0) {
       return res.status(400).json({
         success: false,
         error: 'Missing required fields',
-        missing_fields: missingFields
+        missing_fields: missingFields,
       });
     }
 
     // 2. Validate images (minimum 2 required)
-    if (!business_images || !Array.isArray(business_images) || business_images.length < 2) {
+    if (
+      !business_images ||
+      !Array.isArray(business_images) ||
+      business_images.length < 2
+    ) {
       return res.status(400).json({
         success: false,
         error: 'Minimum 2 images required',
-        current_count: business_images ? business_images.length : 0
+        current_count: business_images ? business_images.length : 0,
       });
     }
 
@@ -102,7 +118,7 @@ router.post('/eatery-submit', async (req, res) => {
         lng,
         lng, // lng for ST_MakePoint (lng, lat)
         services || [],
-        user_id || null
+        user_id || null,
       ]);
 
       const entityId = entityResult.rows[0].id;
@@ -130,10 +146,12 @@ router.post('/eatery-submit', async (req, res) => {
         google_reviews_link || null,
         is_owner_submission || false,
         JSON.stringify(hours_json),
-        business_images
+        business_images,
       ]);
 
-      logger.info('Eatery fields created:', { eateryFieldsId: eateryFieldsResult.rows[0].id });
+      logger.info('Eatery fields created:', {
+        eateryFieldsId: eateryFieldsResult.rows[0].id,
+      });
 
       // 8. Commit transaction
       await query('COMMIT');
@@ -145,26 +163,25 @@ router.post('/eatery-submit', async (req, res) => {
           entity_id: entityId,
           status: 'pending_review',
           submitted_at: createdAt,
-          message: 'Your eatery has been submitted for review. It will appear on the app within 24-48 hours after approval.'
-        }
+          message:
+            'Your eatery has been submitted for review. It will appear on the app within 24-48 hours after approval.',
+        },
       });
 
       logger.info('Eatery submission successful:', { entityId, name });
-
     } catch (dbError) {
       // Rollback transaction on error
       await query('ROLLBACK');
       throw dbError;
     }
-
   } catch (error) {
     logger.error('Eatery submission error:', error);
-    
+
     res.status(500).json({
       success: false,
       error: 'Failed to submit eatery',
       message: error.message,
-      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined,
     });
   }
 });
@@ -202,7 +219,11 @@ router.get('/eatery-submissions', async (req, res) => {
       LIMIT $2 OFFSET $3
     `;
 
-    const result = await query(sql, [status, parseInt(limit), parseInt(offset)]);
+    const result = await query(sql, [
+      status,
+      parseInt(limit),
+      parseInt(offset),
+    ]);
 
     res.json({
       success: true,
@@ -211,17 +232,16 @@ router.get('/eatery-submissions', async (req, res) => {
         pagination: {
           limit: parseInt(limit),
           offset: parseInt(offset),
-          total: result.rowCount
-        }
-      }
+          total: result.rowCount,
+        },
+      },
     });
-
   } catch (error) {
     logger.error('Error fetching eatery submissions:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch submissions',
-      message: error.message
+      message: error.message,
     });
   }
 });
@@ -248,7 +268,7 @@ router.put('/eatery-submissions/:id/approve', async (req, res) => {
     if (result.rowCount === 0) {
       return res.status(404).json({
         success: false,
-        error: 'Eatery submission not found'
+        error: 'Eatery submission not found',
       });
     }
 
@@ -258,16 +278,15 @@ router.put('/eatery-submissions/:id/approve', async (req, res) => {
       success: true,
       data: {
         entity: result.rows[0],
-        message: 'Eatery approved successfully'
-      }
+        message: 'Eatery approved successfully',
+      },
     });
-
   } catch (error) {
     logger.error('Error approving eatery:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to approve eatery',
-      message: error.message
+      message: error.message,
     });
   }
 });
@@ -294,7 +313,7 @@ router.put('/eatery-submissions/:id/reject', async (req, res) => {
     if (result.rowCount === 0) {
       return res.status(404).json({
         success: false,
-        error: 'Eatery submission not found'
+        error: 'Eatery submission not found',
       });
     }
 
@@ -304,16 +323,15 @@ router.put('/eatery-submissions/:id/reject', async (req, res) => {
       success: true,
       data: {
         entity: result.rows[0],
-        message: 'Eatery rejected'
-      }
+        message: 'Eatery rejected',
+      },
     });
-
   } catch (error) {
     logger.error('Error rejecting eatery:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to reject eatery',
-      message: error.message
+      message: error.message,
     });
   }
 });

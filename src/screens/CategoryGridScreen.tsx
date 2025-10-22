@@ -162,7 +162,7 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
         debugLog('🔥 Manual location refresh successful:', location);
         Alert.alert(
           'Location Updated!',
-          `Your location has been updated. You can now see distances to nearby businesses.`,
+          'Your location has been updated. You can now see distances to nearby businesses.',
           [{ text: 'Great!' }],
         );
       } else {
@@ -337,7 +337,9 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
     const errorMessage =
       categoryKey === 'events' ? gridData.eventsError : error;
 
-    if (isLoading) return null;
+    if (isLoading) {
+      return null;
+    }
 
     return (
       <View style={styles.emptyContainer}>
@@ -358,7 +360,9 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
 
   // Memoized error component
   const renderError = useCallback(() => {
-    if (!error) return null;
+    if (!error) {
+      return null;
+    }
 
     return (
       <View style={styles.errorContainer}>
@@ -694,7 +698,9 @@ export const useCategoryGridRenderProps = (
     const errorMessage =
       categoryKey === 'events' ? gridData.eventsError : error;
 
-    if (isLoading) return null;
+    if (isLoading) {
+      return null;
+    }
 
     return (
       <View style={styles.emptyContainer}>
@@ -714,7 +720,9 @@ export const useCategoryGridRenderProps = (
   }, [categoryKey, loading, eventsLoading, query, error, gridData.eventsError]);
 
   const renderError = useCallback(() => {
-    if (!error) return null;
+    if (!error) {
+      return null;
+    }
 
     return (
       <View style={styles.errorContainer}>

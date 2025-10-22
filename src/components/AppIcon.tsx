@@ -8,19 +8,19 @@ interface AppIconProps {
   color?: string;
 }
 
-const AppIcon: React.FC<AppIconProps> = ({ 
-  width = 24, 
-  height = 24, 
-  color = '#a5ffc6' 
+const AppIcon: React.FC<AppIconProps> = ({
+  width = 24,
+  height = 24,
+  color = '#a5ffc6',
 }) => {
   return (
     <View style={[styles.container, { width, height }]}>
       <Svg width={width} height={height} viewBox="0 0 810 810">
         <Defs />
-        
+
         {/* Background */}
         <Rect x="0" y="0" width="810" height="810" fill="#292b2d" />
-        
+
         {/* Icon - "J" */}
         <G fill={color}>
           <G transform="translate(272.124856, 588.897775)">

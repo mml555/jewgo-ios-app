@@ -61,9 +61,9 @@ let errorCount = 0;
 
 console.log('🔧 Fixing missing Alert imports...\n');
 
-filesToFix.forEach((filePath) => {
+filesToFix.forEach(filePath => {
   const fullPath = path.join(process.cwd(), filePath);
-  
+
   if (!fs.existsSync(fullPath)) {
     console.log(`⚠️  Skipping ${filePath} - file not found`);
     skipCount++;
@@ -72,35 +72,43 @@ filesToFix.forEach((filePath) => {
 
   try {
     let content = fs.readFileSync(fullPath, 'utf8');
-    
+
     // Check if Alert is already imported
-    if (content.match(/import\s+{[^}]*Alert[^}]*}\s+from\s+['"]react-native['"]/)) {
+    if (
+      content.match(/import\s+{[^}]*Alert[^}]*}\s+from\s+['"]react-native['"]/)
+    ) {
       console.log(`✓ Skipping ${filePath} - Alert already imported`);
       skipCount++;
       return;
     }
-    
+
     // Find the react-native import statement
-    const reactNativeImportRegex = /(import\s+{)([^}]+)(}\s+from\s+['"]react-native['"];?)/;
+    const reactNativeImportRegex =
+      /(import\s+{)([^}]+)(}\s+from\s+['"]react-native['"];?)/;
     const match = content.match(reactNativeImportRegex);
-    
+
     if (match) {
-      const imports = match[2].split(',').map(i => i.trim()).filter(i => i);
-      
+      const imports = match[2]
+        .split(',')
+        .map(i => i.trim())
+        .filter(i => i);
+
       // Check if Alert is already in the list
       if (imports.includes('Alert')) {
         console.log(`✓ Skipping ${filePath} - Alert already in imports`);
         skipCount++;
         return;
       }
-      
+
       // Add Alert to imports and sort them
       imports.push('Alert');
       imports.sort();
-      
-      const newImportStatement = `${match[1]}\n  ${imports.join(',\n  ')},\n${match[3]}`;
+
+      const newImportStatement = `${match[1]}\n  ${imports.join(',\n  ')},\n${
+        match[3]
+      }`;
       content = content.replace(reactNativeImportRegex, newImportStatement);
-      
+
       // Write the modified content back
       fs.writeFileSync(fullPath, content, 'utf8');
       console.log(`✅ Fixed ${filePath}`);
@@ -125,4 +133,3 @@ if (successCount > 0) {
   console.log('\n✨ All Alert imports have been fixed!');
   console.log('📝 Please review the changes and run: npm run lint');
 }
-

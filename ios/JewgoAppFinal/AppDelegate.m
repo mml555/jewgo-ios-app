@@ -36,12 +36,12 @@
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
   // Initialize Google Maps with API key from Info.plist
-  NSString *googleMapsApiKey = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"GOOGLE_MAPS_API_KEY"];
+  NSString *googleMapsApiKey = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"GoogleMapsAPIKey"];
   if (googleMapsApiKey && googleMapsApiKey.length > 0) {
     [GMSServices provideAPIKey:googleMapsApiKey];
-    NSLog(@"✅ Google Maps initialized (GOOGLE_MAPS_API_KEY)");
+    NSLog(@"✅ Google Maps initialized with API key from Info.plist");
   } else {
-    NSLog(@"⚠️ GOOGLE_MAPS_API_KEY not set - maps may not work correctly");
+    NSLog(@"⚠️ GoogleMapsAPIKey not set - maps may not work correctly");
   }
   
   // Configure RN module name

@@ -579,9 +579,12 @@ const BusinessHoursSelector: React.FC<BusinessHoursSelectorProps> = memo(
         >
           {dayNames.map(day => {
             const dayErrors = [];
-            if (errors[day]) dayErrors.push(errors[day]);
-            if (validationResult.errors[day])
+            if (errors[day]) {
+              dayErrors.push(errors[day]);
+            }
+            if (validationResult.errors[day]) {
               dayErrors.push(validationResult.errors[day]);
+            }
 
             return (
               <DayHoursRow

@@ -15,7 +15,7 @@ class Entity {
       limit = 50,
       offset = 0,
       sortBy = 'created_at',
-      sortOrder = 'DESC'
+      sortOrder = 'DESC',
     } = params;
 
     let whereConditions = ['e.is_active = true'];
@@ -71,7 +71,7 @@ class Entity {
     }
 
     if (hasKosherCertification) {
-      whereConditions.push(`e.kosher_certification IS NOT NULL`);
+      whereConditions.push('e.kosher_certification IS NOT NULL');
     }
 
     // Add pagination parameters
@@ -138,7 +138,7 @@ class Entity {
       LEFT JOIN users u ON e.owner_id = u.id
       WHERE e.id = $1 AND e.is_active = true
     `;
-    
+
     const result = await query(sql, [id]);
     return result.rows[0];
   }
@@ -148,13 +148,7 @@ class Entity {
   }
 
   static async search(searchQuery, params = {}) {
-    const {
-      entityType,
-      city,
-      state,
-      limit = 50,
-      offset = 0
-    } = params;
+    const { entityType, city, state, limit = 50, offset = 0 } = params;
 
     let whereConditions = ['e.is_active = true'];
     let queryParams = [query];
@@ -255,7 +249,7 @@ class Entity {
       kosherExpiresAt,
       denomination,
       storeType,
-      services
+      services,
     } = data;
 
     const sql = `
@@ -275,13 +269,35 @@ class Entity {
     `;
 
     const values = [
-      entityType, name, description, longDescription, ownerId,
-      address, city, state, zipCode, phone, email, website,
-      facebookUrl, instagramUrl, twitterUrl, whatsappUrl,
-      tiktokUrl, youtubeUrl, snapchatUrl, linkedinUrl,
-      latitude, longitude, kosherLevel, kosherCertification,
-      kosherCertificateNumber, kosherExpiresAt, denomination,
-      storeType, services
+      entityType,
+      name,
+      description,
+      longDescription,
+      ownerId,
+      address,
+      city,
+      state,
+      zipCode,
+      phone,
+      email,
+      website,
+      facebookUrl,
+      instagramUrl,
+      twitterUrl,
+      whatsappUrl,
+      tiktokUrl,
+      youtubeUrl,
+      snapchatUrl,
+      linkedinUrl,
+      latitude,
+      longitude,
+      kosherLevel,
+      kosherCertification,
+      kosherCertificateNumber,
+      kosherExpiresAt,
+      denomination,
+      storeType,
+      services,
     ];
 
     const result = await query(sql, values);
@@ -326,7 +342,7 @@ class Entity {
       WHERE id = $1
       RETURNING *
     `;
-    
+
     const result = await query(sql, [id]);
     return result.rows[0];
   }
@@ -351,7 +367,7 @@ class Entity {
           WHEN 'saturday' THEN 6
         END
     `;
-    
+
     return await query(sql, [entityId]);
   }
 
@@ -367,13 +383,13 @@ class Entity {
       WHERE entity_id = $1
       ORDER BY is_primary DESC, sort_order ASC
     `;
-    
+
     return await query(sql, [entityId]);
   }
 
   static async getReviews(entityId, params = {}) {
     const { limit = 20, offset = 0 } = params;
-    
+
     const sql = `
       SELECT 
         r.id,
@@ -390,11 +406,16 @@ class Entity {
       ORDER BY r.created_at DESC
       LIMIT $2 OFFSET $3
     `;
-    
+
     return await query(sql, [entityId, limit, offset]);
   }
 
-  static async getNearby(latitude, longitude, radiusKm = 10, entityType = null) {
+  static async getNearby(
+    latitude,
+    longitude,
+    radiusKm = 10,
+    entityType = null,
+  ) {
     const sql = `
       SELECT 
         e.id,
@@ -432,7 +453,9 @@ class Entity {
       LIMIT 50
     `;
 
-    const params = entityType ? [latitude, longitude, radiusKm, entityType] : [latitude, longitude, radiusKm];
+    const params = entityType
+      ? [latitude, longitude, radiusKm, entityType]
+      : [latitude, longitude, radiusKm];
     return await query(sql, params);
   }
 }

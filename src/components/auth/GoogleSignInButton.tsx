@@ -35,7 +35,9 @@ const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
   const [isLoading, setIsLoading] = useState(false);
 
   const handleGoogleSignIn = async () => {
-    if (isLoading || disabled) return;
+    if (isLoading || disabled) {
+      return;
+    }
 
     try {
       setIsLoading(true);

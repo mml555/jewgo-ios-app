@@ -144,7 +144,9 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
   }, [visible, category]);
 
   const loadFilterOptions = useCallback(async () => {
-    if (!category) return;
+    if (!category) {
+      return;
+    }
 
     setLoading(true);
     try {
@@ -260,7 +262,9 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
   );
 
   const renderKosherFilter = () => {
-    if (!filterOptions?.kosherLevels.length) return null;
+    if (!filterOptions?.kosherLevels.length) {
+      return null;
+    }
 
     return (
       <View style={styles.filterSection}>
@@ -310,7 +314,9 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
   };
 
   const renderPriceFilter = () => {
-    if (!filterOptions?.priceRanges.length) return null;
+    if (!filterOptions?.priceRanges.length) {
+      return null;
+    }
 
     return (
       <View style={styles.filterSection}>
@@ -342,7 +348,9 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
   };
 
   const renderDenominationFilter = () => {
-    if (!filterOptions?.denominations.length) return null;
+    if (!filterOptions?.denominations.length) {
+      return null;
+    }
 
     return (
       <View style={styles.filterSection}>
@@ -385,7 +393,9 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
   };
 
   const renderStoreTypeFilter = () => {
-    if (!filterOptions?.storeTypes.length) return null;
+    if (!filterOptions?.storeTypes.length) {
+      return null;
+    }
 
     return (
       <View style={styles.filterSection}>
@@ -534,7 +544,9 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
     };
 
     const availableAmenities = getAvailableAmenities();
-    if (!availableAmenities.length) return null;
+    if (!availableAmenities.length) {
+      return null;
+    }
 
     return (
       <View style={styles.filterSection}>

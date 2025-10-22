@@ -98,7 +98,9 @@ const SpecialDetailScreen: React.FC = () => {
 
   // Handle business press - navigate to business/store details
   const handleBusinessPress = (businessId: string) => {
-    if (!special) return;
+    if (!special) {
+      return;
+    }
 
     // Determine category key based on business entity type or category
     const getCategoryKey = (entityType?: string, category?: string): string => {
@@ -194,7 +196,9 @@ const SpecialDetailScreen: React.FC = () => {
 
   // Handle claim special
   const handleClaimSpecial = useCallback(async () => {
-    if (!special) return;
+    if (!special) {
+      return;
+    }
 
     setClaiming(true);
     try {
@@ -242,7 +246,9 @@ const SpecialDetailScreen: React.FC = () => {
 
   // Handle phone call
   const handlePhonePress = useCallback(() => {
-    if (!special?.phone) return;
+    if (!special?.phone) {
+      return;
+    }
 
     const phoneUrl = `tel:${special.phone}`;
     Linking.openURL(phoneUrl).catch(() => {
@@ -252,7 +258,9 @@ const SpecialDetailScreen: React.FC = () => {
 
   // Handle website
   const handleWebsitePress = useCallback(() => {
-    if (!special?.website) return;
+    if (!special?.website) {
+      return;
+    }
 
     Linking.openURL(special.website).catch(() => {
       Alert.alert('Error', 'Could not open website.');
@@ -261,7 +269,9 @@ const SpecialDetailScreen: React.FC = () => {
 
   // Handle address/directions
   const handleAddressPress = useCallback(() => {
-    if (!special?.address) return;
+    if (!special?.address) {
+      return;
+    }
 
     const mapsUrl = `https://maps.google.com/?q=${encodeURIComponent(
       special.address,
@@ -310,8 +320,12 @@ const SpecialDetailScreen: React.FC = () => {
     const diffTime = endDate.getTime() - now.getTime();
     const diffHours = Math.ceil(diffTime / (1000 * 60 * 60));
 
-    if (diffHours <= 0) return 'Expired';
-    if (diffHours < 24) return `${diffHours} hours left`;
+    if (diffHours <= 0) {
+      return 'Expired';
+    }
+    if (diffHours < 24) {
+      return `${diffHours} hours left`;
+    }
 
     const diffDays = Math.ceil(diffHours / 24);
     return `${diffDays} days left`;

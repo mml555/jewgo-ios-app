@@ -118,7 +118,9 @@ const CreateJobScreen: React.FC = () => {
   }, [navigation]);
 
   const loadJobForEdit = useCallback(async () => {
-    if (!jobId) return;
+    if (!jobId) {
+      return;
+    }
 
     try {
       setLoading(true);
@@ -259,8 +261,12 @@ const CreateJobScreen: React.FC = () => {
   };
 
   const handleNext = () => {
-    if (currentStep === 1 && !validateStep1()) return;
-    if (currentStep === 2 && !validateStep2()) return;
+    if (currentStep === 1 && !validateStep1()) {
+      return;
+    }
+    if (currentStep === 2 && !validateStep2()) {
+      return;
+    }
 
     if (currentStep < totalSteps) {
       setCurrentStep(currentStep + 1);
@@ -276,7 +282,9 @@ const CreateJobScreen: React.FC = () => {
   };
 
   const handleSubmit = async () => {
-    if (!validateStep3()) return;
+    if (!validateStep3()) {
+      return;
+    }
 
     try {
       setSubmitting(true);

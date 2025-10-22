@@ -117,9 +117,7 @@ class ShtetlService {
     }
   }
 
-  async getStore(
-    storeId: string,
-  ): Promise<{
+  async getStore(storeId: string): Promise<{
     success: boolean;
     data: { store: ShtetlStore };
     error?: string;
@@ -146,14 +144,12 @@ class ShtetlService {
     }
   }
 
-  async createStore(
-    storeData: CreateStoreForm,
-  ): Promise<{
+  async createStore(storeData: CreateStoreForm): Promise<{
     success: boolean;
     data: { store: ShtetlStore };
     error?: string;
   }> {
-    const response = await this.request<any>(`/shtetl-stores`, {
+    const response = await this.request<any>('/shtetl-stores', {
       method: 'POST',
       body: JSON.stringify(storeData),
     });

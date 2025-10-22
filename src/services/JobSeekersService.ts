@@ -209,22 +209,42 @@ class JobSeekersService {
     try {
       const queryParams = new URLSearchParams();
 
-      if (params?.page) queryParams.append('page', params.page.toString());
-      if (params?.limit) queryParams.append('limit', params.limit.toString());
-      if (params?.search) queryParams.append('search', params.search);
-      if (params?.city) queryParams.append('city', params.city);
-      if (params?.state) queryParams.append('state', params.state);
-      if (params?.experience_level)
+      if (params?.page) {
+        queryParams.append('page', params.page.toString());
+      }
+      if (params?.limit) {
+        queryParams.append('limit', params.limit.toString());
+      }
+      if (params?.search) {
+        queryParams.append('search', params.search);
+      }
+      if (params?.city) {
+        queryParams.append('city', params.city);
+      }
+      if (params?.state) {
+        queryParams.append('state', params.state);
+      }
+      if (params?.experience_level) {
         queryParams.append('experience_level', params.experience_level);
-      if (params?.availability)
+      }
+      if (params?.availability) {
         queryParams.append('availability', params.availability);
-      if (params?.skills) queryParams.append('skills', params.skills);
-      if (params?.job_types) queryParams.append('job_types', params.job_types);
-      if (params?.industries)
+      }
+      if (params?.skills) {
+        queryParams.append('skills', params.skills);
+      }
+      if (params?.job_types) {
+        queryParams.append('job_types', params.job_types);
+      }
+      if (params?.industries) {
         queryParams.append('industries', params.industries);
-      if (params?.sort_by) queryParams.append('sort_by', params.sort_by);
-      if (params?.sort_order)
+      }
+      if (params?.sort_by) {
+        queryParams.append('sort_by', params.sort_by);
+      }
+      if (params?.sort_order) {
         queryParams.append('sort_order', params.sort_order);
+      }
 
       const queryString = queryParams.toString();
       const endpoint = `/jobs/seekers${queryString ? `?${queryString}` : ''}`;

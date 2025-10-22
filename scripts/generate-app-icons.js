@@ -2,10 +2,10 @@
 
 /**
  * Jewgo App Icon Generator (Node.js)
- * 
+ *
  * This script provides instructions for generating iOS and Android app icons
  * using online tools or manual methods.
- * 
+ *
  * For automated generation, you would need additional npm packages like:
  * - sharp (image processing)
  * - jimp (JavaScript image manipulation)
@@ -52,7 +52,9 @@ const androidIcons = {
 
 console.log('📱 iOS Icon Requirements:');
 console.log('=========================');
-console.log('Location: ios/JewgoAppFinal/Images.xcassets/AppIcon.appiconset/\n');
+console.log(
+  'Location: ios/JewgoAppFinal/Images.xcassets/AppIcon.appiconset/\n',
+);
 iosIcons.forEach(icon => {
   console.log(`  - ${icon.name.padEnd(30)} → ${icon.size}`);
 });
@@ -61,7 +63,11 @@ console.log('\n🤖 Android Icon Requirements:');
 console.log('============================');
 console.log('Location: android/app/src/main/res/\n');
 Object.entries(androidIcons).forEach(([folder, size]) => {
-  console.log(`  - ${folder.padEnd(20)} → ic_launcher.png & ic_launcher_round.png (${size})`);
+  console.log(
+    `  - ${folder.padEnd(
+      20,
+    )} → ic_launcher.png & ic_launcher_round.png (${size})`,
+  );
 });
 
 console.log('\n📋 Recommended Methods for Icon Generation:');
@@ -79,7 +85,9 @@ console.log('   → https://appicon.co (upload 1024x1024 PNG)');
 console.log('   → https://makeappicon.com');
 console.log('');
 console.log('3. Generate Android icons:');
-console.log('   → https://romannurik.github.io/AndroidAssetStudio/icons-launcher.html');
+console.log(
+  '   → https://romannurik.github.io/AndroidAssetStudio/icons-launcher.html',
+);
 console.log('   → https://icon.kitchen');
 console.log('');
 
@@ -121,8 +129,23 @@ console.log('   docs/APP_ICON_UPDATE_GUIDE.md');
 console.log('');
 
 // Check if icons exist
-const iosDir = path.join(__dirname, '..', 'ios', 'JewgoAppFinal', 'Images.xcassets', 'AppIcon.appiconset');
-const androidBase = path.join(__dirname, '..', 'android', 'app', 'src', 'main', 'res');
+const iosDir = path.join(
+  __dirname,
+  '..',
+  'ios',
+  'JewgoAppFinal',
+  'Images.xcassets',
+  'AppIcon.appiconset',
+);
+const androidBase = path.join(
+  __dirname,
+  '..',
+  'android',
+  'app',
+  'src',
+  'main',
+  'res',
+);
 
 let existingIosIcons = 0;
 let existingAndroidIcons = 0;
@@ -146,14 +169,22 @@ Object.keys(androidIcons).forEach(folder => {
 
 console.log('📊 Current Status:');
 console.log('==================');
-console.log(`iOS icons:     ${existingIosIcons}/${iosIcons.length} files exist`);
-console.log(`Android icons: ${existingAndroidIcons}/${Object.keys(androidIcons).length} densities exist`);
+console.log(
+  `iOS icons:     ${existingIosIcons}/${iosIcons.length} files exist`,
+);
+console.log(
+  `Android icons: ${existingAndroidIcons}/${
+    Object.keys(androidIcons).length
+  } densities exist`,
+);
 console.log('');
 
-if (existingIosIcons === iosIcons.length && existingAndroidIcons === Object.keys(androidIcons).length) {
+if (
+  existingIosIcons === iosIcons.length &&
+  existingAndroidIcons === Object.keys(androidIcons).length
+) {
   console.log('✅ All icon files exist. Replace them with new versions.');
 } else {
   console.log('⚠️  Some icon files are missing. Generate complete sets.');
 }
 console.log('');
-

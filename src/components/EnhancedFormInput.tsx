@@ -111,11 +111,21 @@ const EnhancedFormInput: React.FC<EnhancedFormInputProps> = memo(
 
     // Determine current validation state
     const currentState = useMemo((): ValidationState => {
-      if (error) return 'error';
-      if (warning) return 'warning';
-      if (suggestion) return 'suggestion';
-      if (validationMessage && validationState === 'success') return 'success';
-      if (isFocused) return 'focused';
+      if (error) {
+        return 'error';
+      }
+      if (warning) {
+        return 'warning';
+      }
+      if (suggestion) {
+        return 'suggestion';
+      }
+      if (validationMessage && validationState === 'success') {
+        return 'success';
+      }
+      if (isFocused) {
+        return 'focused';
+      }
       return 'idle';
     }, [
       error,
@@ -128,9 +138,15 @@ const EnhancedFormInput: React.FC<EnhancedFormInputProps> = memo(
 
     // Get current message
     const currentMessage = useMemo(() => {
-      if (error) return error;
-      if (warning) return warning;
-      if (suggestion) return suggestion;
+      if (error) {
+        return error;
+      }
+      if (warning) {
+        return warning;
+      }
+      if (suggestion) {
+        return suggestion;
+      }
       return validationMessage;
     }, [error, warning, suggestion, validationMessage]);
 

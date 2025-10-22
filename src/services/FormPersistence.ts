@@ -64,7 +64,7 @@ export class FormPersistenceService {
   // Schedule status reset with cleanup
   private scheduleStatusReset(fromStatus: SaveStatus, delay: number): void {
     this.clearStatusResetTimer();
-    
+
     this.statusResetTimer = setTimeout(() => {
       if (this.saveStatus === fromStatus) {
         this.updateSaveStatus(SaveStatus.IDLE);
@@ -122,8 +122,12 @@ export class FormPersistenceService {
   // Load form data from AsyncStorage
   async loadFormData(): Promise<ListingFormData | null> {
     try {
-      const parsedData = await safeAsyncStorage.getJSON<ListingFormData>(FORM_STORAGE_KEY);
-      if (!parsedData) return null;
+      const parsedData = await safeAsyncStorage.getJSON<ListingFormData>(
+        FORM_STORAGE_KEY,
+      );
+      if (!parsedData) {
+        return null;
+      }
 
       // Perform schema migration if needed
       return await this.migrateFormData(parsedData);
@@ -148,7 +152,7 @@ export class FormPersistenceService {
     try {
       // Clear all timers first
       this.clearStatusResetTimer();
-      
+
       await Promise.all([
         safeAsyncStorage.removeItem(FORM_STORAGE_KEY),
         safeAsyncStorage.removeItem(FORM_METADATA_KEY),
@@ -219,16 +223,16 @@ export class FormPersistenceService {
   cleanup(): void {
     // Stop auto-save timer
     this.stopAutoSave();
-    
+
     // Clear status reset timer
     this.clearStatusResetTimer();
-    
+
     // Clear all callbacks to prevent memory leaks
     this.saveStatusCallbacks = [];
-    
+
     // Reset status to idle
     this.saveStatus = SaveStatus.IDLE;
-    
+
     debugLog('FormPersistenceService: Cleanup completed');
   }
 
@@ -250,7 +254,9 @@ export class FormPersistenceService {
   ): Promise<void> {
     try {
       const historyKey = `${FORM_STORAGE_KEY}_history`;
-      const existingHistory = await safeAsyncStorage.getJSON<Array<{ data: ListingFormData; metadata: FormMetadata }>>(historyKey);
+      const existingHistory = await safeAsyncStorage.getJSON<
+        Array<{ data: ListingFormData; metadata: FormMetadata }>
+      >(historyKey);
       let history: Array<{ data: ListingFormData; metadata: FormMetadata }> =
         existingHistory || [];
 
@@ -275,7 +281,11 @@ export class FormPersistenceService {
   > {
     try {
       const historyKey = `${FORM_STORAGE_KEY}_history`;
-      return await safeAsyncStorage.getJSON<Array<{ data: ListingFormData; metadata: FormMetadata }>>(historyKey) || [];
+      return (
+        (await safeAsyncStorage.getJSON<
+          Array<{ data: ListingFormData; metadata: FormMetadata }>
+        >(historyKey)) || []
+      );
     } catch (error) {
       errorLog('Error loading save history:', error);
       return [];
@@ -350,7 +360,9 @@ export class FormPersistenceService {
   // Get form completion percentage
   async getFormCompletionPercentage(): Promise<number> {
     const formData = await this.loadFormData();
-    if (!formData) return 0;
+    if (!formData) {
+      return 0;
+    }
 
     // Define required fields for completion calculation
     const requiredFields = [

@@ -126,7 +126,9 @@ const SpecialsAnalytics: React.FC<SpecialsAnalyticsProps> = ({
   const loadAllAnalytics = useCallback(
     async (showLoading = true) => {
       try {
-        if (showLoading) setLoading(true);
+        if (showLoading) {
+          setLoading(true);
+        }
         setError(null);
 
         await Promise.all([loadPerformanceMetrics(), loadTopSpecials()]);
@@ -136,7 +138,9 @@ const SpecialsAnalytics: React.FC<SpecialsAnalyticsProps> = ({
         setError('Failed to load analytics data');
         errorLog('Error loading analytics:', err);
       } finally {
-        if (showLoading) setLoading(false);
+        if (showLoading) {
+          setLoading(false);
+        }
       }
     },
     [loadPerformanceMetrics, loadTopSpecials],
@@ -165,7 +169,9 @@ const SpecialsAnalytics: React.FC<SpecialsAnalyticsProps> = ({
 
   // Render performance overview
   const renderPerformanceOverview = () => {
-    if (!performanceMetrics) return null;
+    if (!performanceMetrics) {
+      return null;
+    }
 
     return (
       <View style={styles.overviewCard}>
@@ -371,8 +377,12 @@ const SpecialsAnalytics: React.FC<SpecialsAnalyticsProps> = ({
 
   // Get conversion color
   const getConversionColor = (rate: number) => {
-    if (rate >= 10) return Colors.success;
-    if (rate >= 5) return Colors.warning;
+    if (rate >= 10) {
+      return Colors.success;
+    }
+    if (rate >= 5) {
+      return Colors.warning;
+    }
     return Colors.error;
   };
 

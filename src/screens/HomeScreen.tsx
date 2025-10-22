@@ -213,7 +213,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
 
   // Fallback: if no measurement happens within 1 second, use estimated height and LOCK it
   useEffect(() => {
-    if (!isFocused) return; // Don't run timers when screen is not focused
+    if (!isFocused) {
+      return;
+    } // Don't run timers when screen is not focused
 
     const timer = setTimeout(() => {
       if (restHeaderHRef.current === 0 && showActionBarInHeader) {
@@ -411,7 +413,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
         debugLog('🔥 Manual location refresh successful:', location);
         Alert.alert(
           'Location Updated!',
-          `Your location has been updated. You can now see distances to nearby businesses.`,
+          'Your location has been updated. You can now see distances to nearby businesses.',
           [{ text: 'Great!' }],
         );
       } else {
@@ -437,7 +439,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
   // Scroll handler with hysteresis - only update when focused
   const handleScroll = useCallback(
     (event: any) => {
-      if (!isFocused || isTransitioning.current) return;
+      if (!isFocused || isTransitioning.current) {
+        return;
+      }
 
       const y = event.nativeEvent.contentOffset.y;
       setScrollY(y);

@@ -81,7 +81,9 @@ const ProfileScreen: React.FC = () => {
   };
 
   const loadUserData = useCallback(async () => {
-    if (!isAuthenticated && !isGuestAuthenticated) return;
+    if (!isAuthenticated && !isGuestAuthenticated) {
+      return;
+    }
 
     try {
       setStatsLoading(true);

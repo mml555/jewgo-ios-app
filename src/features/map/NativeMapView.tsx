@@ -94,7 +94,9 @@ export function NativeMapView({
 
   const handleClusterPress = useCallback(
     (clusterId: number) => {
-      if (!clusterIndex || !mapRef.current) return;
+      if (!clusterIndex || !mapRef.current) {
+        return;
+      }
 
       try {
         const zoom = Math.round(

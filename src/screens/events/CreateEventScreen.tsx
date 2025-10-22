@@ -197,7 +197,9 @@ const CreateEventScreen: React.FC = () => {
                 mode="datetime"
                 onChange={(event, date) => {
                   setShowDatePicker(false);
-                  if (date) updateFormData('eventDate', date);
+                  if (date) {
+                    updateFormData('eventDate', date);
+                  }
                 }}
               />
             )}

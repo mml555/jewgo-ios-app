@@ -64,7 +64,9 @@ const ShtetlStoreGrid: React.FC<ShtetlStoreGridProps> = ({
   );
 
   const renderEmpty = useCallback(() => {
-    if (loading) return null;
+    if (loading) {
+      return null;
+    }
 
     return (
       <View style={styles.emptyContainer}>
@@ -81,7 +83,9 @@ const ShtetlStoreGrid: React.FC<ShtetlStoreGridProps> = ({
   }, [loading]);
 
   const renderFooter = useCallback(() => {
-    if (!loading && !refreshing) return null;
+    if (!loading && !refreshing) {
+      return null;
+    }
 
     return (
       <View style={styles.footerContainer}>
@@ -92,7 +96,9 @@ const ShtetlStoreGrid: React.FC<ShtetlStoreGridProps> = ({
   }, [loading, refreshing]);
 
   const renderError = useCallback(() => {
-    if (!error) return null;
+    if (!error) {
+      return null;
+    }
 
     return (
       <View style={styles.errorContainer}>

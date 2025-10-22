@@ -301,7 +301,9 @@ const JobSeekersScreen: React.FC = () => {
   );
 
   const renderFooter = () => {
-    if (!loading) return null;
+    if (!loading) {
+      return null;
+    }
     return (
       <View style={styles.footer}>
         <ActivityIndicator size="small" color={Colors.primary.main} />

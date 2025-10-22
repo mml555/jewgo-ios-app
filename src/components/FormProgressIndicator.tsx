@@ -318,10 +318,14 @@ const FormProgressIndicator: React.FC<FormProgressIndicatorProps> = memo(
 
     const handleStepPress = useStableCallback(
       (stepNumber: number) => {
-        if (!onStepPress) return;
+        if (!onStepPress) {
+          return;
+        }
 
         const step = steps.find(s => s.number === stepNumber);
-        if (!step) return;
+        if (!step) {
+          return;
+        }
 
         // Allow navigation to current step or completed steps
         if (allowStepJumping && (step.isCompleted || step.isCurrent)) {
@@ -343,18 +347,24 @@ const FormProgressIndicator: React.FC<FormProgressIndicatorProps> = memo(
 
     // Memoize step styling functions
     const getStepIcon = useCallback((step: FormStep): string => {
-      if (step.isCompleted && step.isValid) return '✓';
+      if (step.isCompleted && step.isValid) {
+        return '✓';
+      }
       // Always show step number, even if there are errors (color will indicate the issue)
       return step.number.toString();
     }, []);
 
     const getStepColor = useCallback((step: FormStep): string => {
-      if (step.isCurrent) return Colors.success; // Current step is green
+      if (step.isCurrent) {
+        return Colors.success;
+      } // Current step is green
       return Colors.textSecondary; // All other steps are grey
     }, []);
 
     const getStepBackgroundColor = useCallback((step: FormStep): string => {
-      if (step.isCurrent) return Colors.success + '10'; // Current step has green background
+      if (step.isCurrent) {
+        return Colors.success + '10';
+      } // Current step has green background
       return Colors.gray100; // All other steps have grey background
     }, []);
 

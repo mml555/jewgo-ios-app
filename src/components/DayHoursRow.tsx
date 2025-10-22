@@ -177,7 +177,9 @@ const DayHoursRow: React.FC<DayHoursRowProps> = memo(
 
     // Validate time logic for error display
     const getTimeError = useCallback(() => {
-      if (!isOpen) return null;
+      if (!isOpen) {
+        return null;
+      }
 
       if (!openTime || !closeTime) {
         return 'Both open and close times are required';

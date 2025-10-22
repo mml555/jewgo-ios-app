@@ -84,14 +84,14 @@ const defaultScreenOptions = {
   // Animation timing for smooth transitions
   transitionSpec: {
     open: {
-      animation: 'timing',
+      animation: 'timing' as const,
       config: {
         duration: 300,
         useNativeDriver: true,
       },
     },
     close: {
-      animation: 'timing',
+      animation: 'timing' as const,
       config: {
         duration: 250,
         useNativeDriver: true,
@@ -114,7 +114,7 @@ const AppNavigator: React.FC = () => {
         name="MainTabs"
         component={RootTabs}
         options={{
-          animationEnabled: false, // No animation for main tabs
+          headerShown: false,
         }}
       />
       <Stack.Screen name="Home" component={HomeScreen} />

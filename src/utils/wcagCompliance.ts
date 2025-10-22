@@ -102,8 +102,12 @@ export const getContrastRating = (
   background: string,
   isLargeText: boolean = false,
 ): 'AAA' | 'AA' | 'FAIL' => {
-  if (meetsWCAGAAA(foreground, background, isLargeText)) return 'AAA';
-  if (meetsWCAGAA(foreground, background, isLargeText)) return 'AA';
+  if (meetsWCAGAAA(foreground, background, isLargeText)) {
+    return 'AAA';
+  }
+  if (meetsWCAGAA(foreground, background, isLargeText)) {
+    return 'AA';
+  }
   return 'FAIL';
 };
 
@@ -232,7 +236,7 @@ export const validateColorPalette = (
   if (!meetsWCAGAA('#FFFFFF', palette.primary)) {
     issues.push('Primary button text contrast may be insufficient');
     recommendations.push(
-      `Consider using darker primary color or different text color for buttons`,
+      'Consider using darker primary color or different text color for buttons',
     );
   }
 
@@ -305,7 +309,9 @@ export const runAccessibilityAudit = (
   componentName: string,
   props: any,
 ): void => {
-  if (!__DEV__) return;
+  if (!__DEV__) {
+    return;
+  }
 
   const issues: string[] = [];
 

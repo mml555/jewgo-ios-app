@@ -161,7 +161,9 @@ const CategoryRail: React.FC<CategoryRailProps> = ({
 
   // Auto-scroll to show active category when it changes
   useEffect(() => {
-    if (!listRef.current || activeIndex < 0) return;
+    if (!listRef.current || activeIndex < 0) {
+      return;
+    }
 
     // Small delay to ensure list is mounted
     const timeoutId = setTimeout(() => {

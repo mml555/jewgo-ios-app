@@ -4,20 +4,20 @@ const speakeasy = require('speakeasy');
 
 // Mock database connection
 jest.mock('pg', () => ({
-  Pool: jest.fn()
+  Pool: jest.fn(),
 }));
 
 // Mock speakeasy
 jest.mock('speakeasy', () => ({
   generateSecret: jest.fn(),
   totp: {
-    verify: jest.fn()
-  }
+    verify: jest.fn(),
+  },
 }));
 
 // Mock QRCode
 jest.mock('qrcode', () => ({
-  toDataURL: jest.fn()
+  toDataURL: jest.fn(),
 }));
 
 describe('MFAService', () => {
@@ -30,14 +30,14 @@ describe('MFAService', () => {
     mockClient = {
       query: jest.fn(),
       release: jest.fn(),
-      connect: jest.fn()
+      connect: jest.fn(),
     };
 
     // Mock database pool
     mockPool = {
       connect: jest.fn().mockResolvedValue(mockClient),
       query: jest.fn(),
-      end: jest.fn()
+      end: jest.fn(),
     };
 
     // Mock Pool constructor
@@ -54,11 +54,14 @@ describe('MFAService', () => {
     it('should setup TOTP for new user', async () => {
       const mockSecret = {
         base32: 'JBSWY3DPEHPK3PXP',
-        otpauth_url: 'otpauth://totp/Jewgo%20App?secret=JBSWY3DPEHPK3PXP&issuer=Jewgo'
+        otpauth_url:
+          'otpauth://totp/Jewgo%20App?secret=JBSWY3DPEHPK3PXP&issuer=Jewgo',
       };
 
       speakeasy.generateSecret.mockReturnValue(mockSecret);
-      require('qrcode').toDataURL.mockResolvedValue('data:image/png;base64,test-qr-code');
+      require('qrcode').toDataURL.mockResolvedValue(
+        'data:image/png;base64,test-qr-code',
+      );
 
       mockClient.query
         .mockResolvedValueOnce({ rows: [] }) // No existing TOTP
@@ -76,11 +79,12 @@ describe('MFAService', () => {
     it('should return existing TOTP if already set up', async () => {
       const existingMeta = {
         secret: 'JBSWY3DPEHPK3PXP',
-        qr_code_url: 'data:image/png;base64,existing-qr-code'
+        qr_code_url: 'data:image/png;base64,existing-qr-code',
       };
 
-      mockClient.query
-        .mockResolvedValueOnce({ rows: [{ id: 'cred-123', meta: existingMeta }] }); // Existing TOTP
+      mockClient.query.mockResolvedValueOnce({
+        rows: [{ id: 'cred-123', meta: existingMeta }],
+      }); // Existing TOTP
 
       const result = await mfaService.setupTOTP('user-123');
 
@@ -92,7 +96,9 @@ describe('MFAService', () => {
     it('should handle database errors', async () => {
       mockClient.query.mockRejectedValueOnce(new Error('Database error'));
 
-      await expect(mfaService.setupTOTP('user-123')).rejects.toThrow('Database error');
+      await expect(mfaService.setupTOTP('user-123')).rejects.toThrow(
+        'Database error',
+      );
       expect(mockClient.query).toHaveBeenCalledWith('ROLLBACK');
     });
   });
@@ -100,7 +106,7 @@ describe('MFAService', () => {
   describe('verifyTOTP', () => {
     it('should verify valid TOTP token', async () => {
       const mockMeta = {
-        secret: 'JBSWY3DPEHPK3PXP'
+        secret: 'JBSWY3DPEHPK3PXP',
       };
 
       speakeasy.totp.verify.mockReturnValue(true);
@@ -116,13 +122,13 @@ describe('MFAService', () => {
         secret: 'JBSWY3DPEHPK3PXP',
         encoding: 'base32',
         token: '123456',
-        window: 2
+        window: 2,
       });
     });
 
     it('should reject invalid TOTP token', async () => {
       const mockMeta = {
-        secret: 'JBSWY3DPEHPK3PXP'
+        secret: 'JBSWY3DPEHPK3PXP',
       };
 
       speakeasy.totp.verify.mockReturnValue(false);
@@ -139,7 +145,9 @@ describe('MFAService', () => {
     it('should throw error if TOTP not set up', async () => {
       mockPool.query.mockResolvedValueOnce({ rows: [] }); // No TOTP found
 
-      await expect(mfaService.verifyTOTP('user-123', '123456')).rejects.toThrow('TOTP not set up for user');
+      await expect(mfaService.verifyTOTP('user-123', '123456')).rejects.toThrow(
+        'TOTP not set up for user',
+      );
     });
   });
 
@@ -186,12 +194,15 @@ describe('MFAService', () => {
     it('should generate WebAuthn challenge', async () => {
       mockPool.query.mockResolvedValueOnce({ rows: [] }); // Insert challenge
 
-      const challenge = await mfaService.generateWebAuthnChallenge('user-123', 'registration');
+      const challenge = await mfaService.generateWebAuthnChallenge(
+        'user-123',
+        'registration',
+      );
 
       expect(challenge).toMatch(/^[A-Za-z0-9_-]+$/); // Base64url format
       expect(mockPool.query).toHaveBeenCalledWith(
         expect.stringContaining('INSERT INTO verification_tokens'),
-        ['user-123', expect.any(String), 'webauthn_registration']
+        ['user-123', expect.any(String), 'webauthn_registration'],
       );
     });
   });
@@ -202,7 +213,11 @@ describe('MFAService', () => {
         .mockResolvedValueOnce({ rows: [{ id: 'token-123' }] }) // Find challenge
         .mockResolvedValueOnce({ rows: [] }); // Mark as used
 
-      const result = await mfaService.verifyWebAuthnChallenge('user-123', 'valid-challenge', 'registration');
+      const result = await mfaService.verifyWebAuthnChallenge(
+        'user-123',
+        'valid-challenge',
+        'registration',
+      );
 
       expect(result).toBe(true);
       expect(mockPool.query).toHaveBeenCalledTimes(2);
@@ -211,8 +226,13 @@ describe('MFAService', () => {
     it('should throw error for invalid challenge', async () => {
       mockPool.query.mockResolvedValueOnce({ rows: [] }); // No challenge found
 
-      await expect(mfaService.verifyWebAuthnChallenge('user-123', 'invalid-challenge', 'registration'))
-        .rejects.toThrow('Invalid or expired WebAuthn challenge');
+      await expect(
+        mfaService.verifyWebAuthnChallenge(
+          'user-123',
+          'invalid-challenge',
+          'registration',
+        ),
+      ).rejects.toThrow('Invalid or expired WebAuthn challenge');
     });
   });
 
@@ -222,7 +242,7 @@ describe('MFAService', () => {
         credentialId: 'cred-123',
         publicKey: 'public-key-data',
         counter: 0,
-        deviceInfo: { platform: 'web' }
+        deviceInfo: { platform: 'web' },
       };
 
       mockClient.query
@@ -230,7 +250,10 @@ describe('MFAService', () => {
         .mockResolvedValueOnce({ rows: [{ id: 'identity-123' }] }) // Create identity
         .mockResolvedValueOnce({ rows: [] }); // Insert credential
 
-      const result = await mfaService.registerWebAuthnCredential('user-123', credentialData);
+      const result = await mfaService.registerWebAuthnCredential(
+        'user-123',
+        credentialData,
+      );
 
       expect(result).toBe(true);
       expect(mockClient.query).toHaveBeenCalledTimes(4); // BEGIN, check identity, create identity, insert credential, COMMIT
@@ -239,14 +262,17 @@ describe('MFAService', () => {
     it('should use existing WebAuthn identity', async () => {
       const credentialData = {
         credentialId: 'cred-123',
-        publicKey: 'public-key-data'
+        publicKey: 'public-key-data',
       };
 
       mockClient.query
         .mockResolvedValueOnce({ rows: [{ id: 'identity-123' }] }) // Existing identity
         .mockResolvedValueOnce({ rows: [] }); // Insert credential
 
-      const result = await mfaService.registerWebAuthnCredential('user-123', credentialData);
+      const result = await mfaService.registerWebAuthnCredential(
+        'user-123',
+        credentialData,
+      );
 
       expect(result).toBe(true);
       expect(mockClient.query).toHaveBeenCalledTimes(3); // BEGIN, get identity, insert credential, COMMIT
@@ -257,15 +283,15 @@ describe('MFAService', () => {
     it('should authenticate valid WebAuthn credential', async () => {
       const credentialData = {
         credentialId: 'cred-123',
-        counter: 1
+        counter: 1,
       };
 
       const mockCredential = {
         public_key: 'public-key-data',
         meta: {
           credentialId: 'cred-123',
-          counter: 0
-        }
+          counter: 0,
+        },
       };
 
       // Mock the verifyWebAuthnSignature method
@@ -275,7 +301,10 @@ describe('MFAService', () => {
         .mockResolvedValueOnce({ rows: [mockCredential] }) // Find credential
         .mockResolvedValueOnce({ rows: [] }); // Update counter
 
-      const result = await mfaService.authenticateWebAuthn('user-123', credentialData);
+      const result = await mfaService.authenticateWebAuthn(
+        'user-123',
+        credentialData,
+      );
 
       expect(result).toBe(true);
       expect(mockClient.query).toHaveBeenCalledTimes(2);
@@ -283,12 +312,15 @@ describe('MFAService', () => {
 
     it('should reject invalid WebAuthn credential', async () => {
       const credentialData = {
-        credentialId: 'invalid-cred'
+        credentialId: 'invalid-cred',
       };
 
       mockClient.query.mockResolvedValueOnce({ rows: [] }); // No credential found
 
-      const result = await mfaService.authenticateWebAuthn('user-123', credentialData);
+      const result = await mfaService.authenticateWebAuthn(
+        'user-123',
+        credentialData,
+      );
 
       expect(result).toBe(false);
     });
@@ -297,12 +329,14 @@ describe('MFAService', () => {
   describe('getMFAStatus', () => {
     it('should return MFA status', async () => {
       const mockWebAuthnCredentials = [
-        { credentialId: 'cred-1', registeredAt: '2024-01-01', deviceInfo: {} }
+        { credentialId: 'cred-1', registeredAt: '2024-01-01', deviceInfo: {} },
       ];
 
       // Mock the methods
       mfaService.isTOTPEnabled = jest.fn().mockResolvedValue(true);
-      mfaService.getWebAuthnCredentials = jest.fn().mockResolvedValue(mockWebAuthnCredentials);
+      mfaService.getWebAuthnCredentials = jest
+        .fn()
+        .mockResolvedValue(mockWebAuthnCredentials);
 
       const result = await mfaService.getMFAStatus('user-123');
 
@@ -310,7 +344,7 @@ describe('MFAService', () => {
         totpEnabled: true,
         webauthnEnabled: true,
         webauthnCredentials: mockWebAuthnCredentials,
-        mfaRequired: true
+        mfaRequired: true,
       });
     });
   });
@@ -318,17 +352,20 @@ describe('MFAService', () => {
   describe('requireMFA', () => {
     it('should require MFA for sensitive operations', async () => {
       mfaService.getMFAStatus = jest.fn().mockResolvedValue({
-        mfaRequired: true
+        mfaRequired: true,
       });
 
-      const result = await mfaService.requireMFA('user-123', 'sensitive_operation');
+      const result = await mfaService.requireMFA(
+        'user-123',
+        'sensitive_operation',
+      );
 
       expect(result).toBe(true);
     });
 
     it('should not require MFA if not enabled', async () => {
       mfaService.getMFAStatus = jest.fn().mockResolvedValue({
-        mfaRequired: false
+        mfaRequired: false,
       });
 
       const result = await mfaService.requireMFA('user-123', 'login');
@@ -343,7 +380,7 @@ describe('MFAService', () => {
 
       const mfaData = {
         method: 'totp',
-        token: '123456'
+        token: '123456',
       };
 
       const result = await mfaService.verifyMFA('user-123', mfaData);
@@ -357,22 +394,26 @@ describe('MFAService', () => {
 
       const mfaData = {
         method: 'webauthn',
-        credentialData: { credentialId: 'cred-123' }
+        credentialData: { credentialId: 'cred-123' },
       };
 
       const result = await mfaService.verifyMFA('user-123', mfaData);
 
       expect(result).toBe(true);
-      expect(mfaService.authenticateWebAuthn).toHaveBeenCalledWith('user-123', { credentialId: 'cred-123' });
+      expect(mfaService.authenticateWebAuthn).toHaveBeenCalledWith('user-123', {
+        credentialId: 'cred-123',
+      });
     });
 
     it('should throw error for unsupported MFA method', async () => {
       const mfaData = {
         method: 'unsupported',
-        token: '123456'
+        token: '123456',
       };
 
-      await expect(mfaService.verifyMFA('user-123', mfaData)).rejects.toThrow('Unsupported MFA method: unsupported');
+      await expect(mfaService.verifyMFA('user-123', mfaData)).rejects.toThrow(
+        'Unsupported MFA method: unsupported',
+      );
     });
   });
 
@@ -386,7 +427,7 @@ describe('MFAService', () => {
       expect(codes[0]).toMatch(/^[A-F0-9]{8}$/); // 8 hex characters
       expect(mockPool.query).toHaveBeenCalledWith(
         expect.stringContaining('INSERT INTO verification_tokens'),
-        ['user-123', expect.any(String), 'mfa_recovery']
+        ['user-123', expect.any(String), 'mfa_recovery'],
       );
     });
   });
@@ -397,7 +438,10 @@ describe('MFAService', () => {
         .mockResolvedValueOnce({ rows: [{ id: 'token-123' }] }) // Find code
         .mockResolvedValueOnce({ rows: [] }); // Mark as used
 
-      const result = await mfaService.verifyRecoveryCode('user-123', 'ABCD1234');
+      const result = await mfaService.verifyRecoveryCode(
+        'user-123',
+        'ABCD1234',
+      );
 
       expect(result).toBe(true);
       expect(mockPool.query).toHaveBeenCalledTimes(2);
@@ -420,7 +464,7 @@ describe('MFAService', () => {
 
       expect(result).toBe(5);
       expect(mockPool.query).toHaveBeenCalledWith(
-        expect.stringContaining('DELETE FROM verification_tokens')
+        expect.stringContaining('DELETE FROM verification_tokens'),
       );
     });
   });

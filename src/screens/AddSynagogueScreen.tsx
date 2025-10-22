@@ -176,16 +176,33 @@ const AddSynagogueScreen: React.FC = () => {
       switch (step) {
         case 1: // Basic Info
           const basicErrors = [];
-          if (!formData.name.trim()) basicErrors.push('Synagogue name');
-          if (!formData.address.trim()) basicErrors.push('Address');
-          if (!formData.city.trim()) basicErrors.push('City');
-          if (!formData.state.trim()) basicErrors.push('State');
-          if (!formData.zip_code.trim()) basicErrors.push('ZIP code');
-          if (!formData.phone.trim()) basicErrors.push('Phone number');
-          if (!formData.denomination) basicErrors.push('Denomination');
-          if (!formData.rabbi_name.trim()) basicErrors.push('Rabbi name');
-          if (!formData.congregation_size)
+          if (!formData.name.trim()) {
+            basicErrors.push('Synagogue name');
+          }
+          if (!formData.address.trim()) {
+            basicErrors.push('Address');
+          }
+          if (!formData.city.trim()) {
+            basicErrors.push('City');
+          }
+          if (!formData.state.trim()) {
+            basicErrors.push('State');
+          }
+          if (!formData.zip_code.trim()) {
+            basicErrors.push('ZIP code');
+          }
+          if (!formData.phone.trim()) {
+            basicErrors.push('Phone number');
+          }
+          if (!formData.denomination) {
+            basicErrors.push('Denomination');
+          }
+          if (!formData.rabbi_name.trim()) {
+            basicErrors.push('Rabbi name');
+          }
+          if (!formData.congregation_size) {
             basicErrors.push('Congregation size');
+          }
 
           return {
             isValid: basicErrors.length === 0,

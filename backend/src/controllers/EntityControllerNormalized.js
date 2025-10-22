@@ -398,7 +398,7 @@ class EntityControllerNormalized {
         params.push(entityType);
       }
 
-      query += ` ORDER BY e.rating DESC, e.review_count DESC`;
+      query += ' ORDER BY e.rating DESC, e.review_count DESC';
       paramCount++;
       query += ` LIMIT $${paramCount}`;
       params.push(parseInt(limit, 10));
@@ -506,7 +506,7 @@ class EntityControllerNormalized {
         params.push(entityType);
       }
 
-      query += ` ORDER BY distance_miles ASC`;
+      query += ' ORDER BY distance_miles ASC';
       paramCount++;
       query += ` LIMIT $${paramCount}`;
       params.push(parseInt(limit, 10));

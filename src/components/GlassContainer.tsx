@@ -60,14 +60,16 @@ const GlassContainer: React.FC<GlassContainerProps> = ({
 
   return (
     <View style={[styles.container, style]}>
-      <View style={[
-        styles.background,
-        {
-          backgroundColor: getBackgroundColor(),
-          borderRadius,
-          margin,
-        }
-      ]} />
+      <View
+        style={[
+          styles.background,
+          {
+            backgroundColor: getBackgroundColor(),
+            borderRadius,
+            margin,
+          },
+        ]}
+      />
       <BlurView
         style={[
           styles.blur,
@@ -76,7 +78,7 @@ const GlassContainer: React.FC<GlassContainerProps> = ({
             margin,
             padding,
             borderColor: getBorderColor(),
-          }
+          },
         ]}
         blurType={getBlurType()}
         blurAmount={intensity}

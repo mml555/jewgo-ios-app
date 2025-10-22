@@ -72,7 +72,9 @@ const ProductManagementScreen: React.FC = () => {
   }, [storeId, navigation]);
 
   const loadProducts = useCallback(async () => {
-    if (!storeId) return;
+    if (!storeId) {
+      return;
+    }
 
     try {
       setLoading(true);

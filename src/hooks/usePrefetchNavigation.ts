@@ -6,7 +6,7 @@ import { debugLog } from '../utils/logger';
 
 /**
  * usePrefetchNavigation - Hook to prefetch data for likely next screens
- * 
+ *
  * This hook intelligently prefetches images and data based on user behavior
  * to eliminate lag when navigating between screens.
  */
@@ -36,10 +36,12 @@ export const usePrefetchScreen = (config: PrefetchConfig) => {
       if (config.apiCalls && config.apiCalls.length > 0) {
         await Promise.all(
           config.apiCalls.map(({ key, fetchFn, ttl }) =>
-            apiCacheService.prefetch(key, fetchFn, ttl)
-          )
+            apiCacheService.prefetch(key, fetchFn, ttl),
+          ),
         );
-        debugLog(`🚀 Prefetched ${config.apiCalls.length} API calls for screen`);
+        debugLog(
+          `🚀 Prefetched ${config.apiCalls.length} API calls for screen`,
+        );
       }
     };
 
@@ -55,10 +57,12 @@ export const usePrefetchScreen = (config: PrefetchConfig) => {
  */
 export const usePrefetchDetails = (
   items: Array<{ id: string; imageUrl?: string }>,
-  detailFetchFn: (id: string) => Promise<any>
+  detailFetchFn: (id: string) => Promise<any>,
 ) => {
   useEffect(() => {
-    if (!items || items.length === 0) return;
+    if (!items || items.length === 0) {
+      return;
+    }
 
     const prefetch = async () => {
       // Prefetch first 5 items' images
@@ -76,10 +80,9 @@ export const usePrefetchDetails = (
       const detailPromises = items
         .slice(0, 3)
         .map(item =>
-          apiCacheService.prefetch(
-            `detail-${item.id}`,
-            () => detailFetchFn(item.id)
-          )
+          apiCacheService.prefetch(`detail-${item.id}`, () =>
+            detailFetchFn(item.id),
+          ),
         );
 
       await Promise.all(detailPromises);
@@ -100,17 +103,19 @@ export const usePrefetchNextPage = (
   currentPage: number,
   hasMore: boolean,
   fetchNextPageFn: () => Promise<any>,
-  imageExtractor?: (data: any) => string[]
+  imageExtractor?: (data: any) => string[],
 ) => {
   useEffect(() => {
-    if (!hasMore) return;
+    if (!hasMore) {
+      return;
+    }
 
     const prefetch = async () => {
       try {
         // Prefetch next page data
         const data = await apiCacheService.prefetch(
           `page-${currentPage + 1}`,
-          fetchNextPageFn
+          fetchNextPageFn,
         );
 
         // Extract and prefetch images if extractor provided
@@ -139,12 +144,14 @@ export const usePrefetchNextPage = (
  */
 export const useInvalidateCacheOnFocus = (
   pattern: string,
-  shouldInvalidate: boolean = false
+  shouldInvalidate: boolean = false,
 ) => {
   const navigation = useNavigation();
 
   useEffect(() => {
-    if (!shouldInvalidate) return;
+    if (!shouldInvalidate) {
+      return;
+    }
 
     const unsubscribe = navigation.addListener('focus', () => {
       apiCacheService.invalidateByPattern(pattern);
@@ -154,4 +161,3 @@ export const useInvalidateCacheOnFocus = (
     return unsubscribe;
   }, [navigation, pattern, shouldInvalidate]);
 };
-

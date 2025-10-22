@@ -122,9 +122,15 @@ const LocationBasedSpecials: React.FC<LocationBasedSpecialsProps> = ({
 
   // Get priority color
   const getPriorityColor = (priority: number) => {
-    if (priority >= 8) return Colors.error;
-    if (priority >= 6) return Colors.warning;
-    if (priority >= 4) return Colors.primary.main;
+    if (priority >= 8) {
+      return Colors.error;
+    }
+    if (priority >= 6) {
+      return Colors.warning;
+    }
+    if (priority >= 4) {
+      return Colors.primary.main;
+    }
     return Colors.textSecondary;
   };
 

@@ -8,7 +8,9 @@ export function useClusteredData(
   region: Region,
 ): ClusterNode[] {
   return useMemo(() => {
-    if (!index) return [];
+    if (!index) {
+      return [];
+    }
 
     const bounds = [
       region.longitude - region.longitudeDelta / 2,

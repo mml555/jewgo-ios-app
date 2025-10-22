@@ -19,13 +19,17 @@ export class KeyboardManager {
    */
   static addListeners(
     onShow?: (event: any) => void,
-    onHide?: (event: any) => void
+    onHide?: (event: any) => void,
   ): () => void {
     const showEvent = 'keyboardDidShow';
     const hideEvent = 'keyboardDidHide';
 
-    const showListener = onShow ? Keyboard.addListener(showEvent, onShow) : null;
-    const hideListener = onHide ? Keyboard.addListener(hideEvent, onHide) : null;
+    const showListener = onShow
+      ? Keyboard.addListener(showEvent, onShow)
+      : null;
+    const hideListener = onHide
+      ? Keyboard.addListener(hideEvent, onHide)
+      : null;
 
     return () => {
       showListener?.remove();
@@ -43,7 +47,9 @@ export class KeyboardManager {
   /**
    * Check if keyboard is likely to be shown for a given input type
    */
-  static shouldShowKeyboard(inputType: 'text' | 'email' | 'phone' | 'number' | 'time'): boolean {
+  static shouldShowKeyboard(
+    inputType: 'text' | 'email' | 'phone' | 'number' | 'time',
+  ): boolean {
     // Time pickers don't show keyboard on iOS
     if (inputType === 'time' && Platform.OS === 'ios') {
       return false;

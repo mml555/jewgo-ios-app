@@ -180,7 +180,9 @@ const EnhancedKosherSelector: React.FC<EnhancedKosherSelectorProps> = memo(
     // Handle category selection
     const handleCategorySelect = useCallback(
       (selectedCategory: string) => {
-        if (disabled) return;
+        if (disabled) {
+          return;
+        }
 
         // Animate selection
         kosherCategories.forEach(cat => {
@@ -208,7 +210,9 @@ const EnhancedKosherSelector: React.FC<EnhancedKosherSelectorProps> = memo(
     // Handle agency selection
     const handleAgencySelect = useCallback(
       (selectedAgency: string) => {
-        if (disabled) return;
+        if (disabled) {
+          return;
+        }
 
         hapticButtonPress();
         onAgencyChange(selectedAgency);
@@ -220,7 +224,9 @@ const EnhancedKosherSelector: React.FC<EnhancedKosherSelectorProps> = memo(
     // Handle requirements toggle
     const handleRequirementsToggle = useCallback(
       (categoryId: string) => {
-        if (disabled) return;
+        if (disabled) {
+          return;
+        }
 
         hapticButtonPress();
         setShowRequirements(

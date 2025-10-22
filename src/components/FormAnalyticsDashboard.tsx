@@ -109,7 +109,9 @@ const FormAnalyticsDashboard: React.FC = () => {
   );
 
   const renderOverviewTab = () => {
-    if (!dashboardData) return null;
+    if (!dashboardData) {
+      return null;
+    }
 
     const { overview, realTimeMetrics } = dashboardData;
 
@@ -211,7 +213,9 @@ const FormAnalyticsDashboard: React.FC = () => {
   };
 
   const renderSessionsTab = () => {
-    if (!dashboardData) return null;
+    if (!dashboardData) {
+      return null;
+    }
 
     return (
       <ScrollView
@@ -282,7 +286,9 @@ const FormAnalyticsDashboard: React.FC = () => {
   };
 
   const renderErrorsTab = () => {
-    if (!dashboardData) return null;
+    if (!dashboardData) {
+      return null;
+    }
 
     const { crashStats } = dashboardData;
 

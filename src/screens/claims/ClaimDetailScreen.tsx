@@ -72,7 +72,9 @@ const ClaimDetailScreen: React.FC = () => {
     );
   }
 
-  if (!claim) return null;
+  if (!claim) {
+    return null;
+  }
 
   return (
     <ScrollView style={styles.container}>

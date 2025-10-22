@@ -23,7 +23,7 @@ class RBACService {
 
   async userHasPermission(userId, permission, resource = null) {
     const result = await this.db.query(
-      `SELECT user_has_permission($1, $2, $3) as has_permission`,
+      'SELECT user_has_permission($1, $2, $3) as has_permission',
       [userId, permission, resource],
     );
 

@@ -35,21 +35,21 @@ const CreateJobSeekerProfileScreen: React.FC = () => {
     gender: '',
     headshotUrl: '',
     zipCode: '',
-    
+
     // Step 2: Professional Information
     preferredIndustryId: '',
     preferredJobTypeId: '',
     experienceLevelId: '',
     bio: '',
     skills: [] as string[],
-    
+
     // Step 3: Compensation & Preferences
     desiredSalaryMin: '',
     desiredSalaryMax: '',
     availability: 'negotiable',
     willingToRelocate: false,
     willingToRemote: true,
-    
+
     // Step 4: Contact & Links
     contactEmail: '',
     contactPhone: '',
@@ -61,7 +61,9 @@ const CreateJobSeekerProfileScreen: React.FC = () => {
 
   const [industries, setIndustries] = useState<Industry[]>([]);
   const [jobTypes, setJobTypes] = useState<JobType[]>([]);
-  const [experienceLevels, setExperienceLevels] = useState<ExperienceLevel[]>([]);
+  const [experienceLevels, setExperienceLevels] = useState<ExperienceLevel[]>(
+    [],
+  );
   const [submitting, setSubmitting] = useState(false);
   const [skillInput, setSkillInput] = useState('');
 
@@ -80,7 +82,7 @@ const CreateJobSeekerProfileScreen: React.FC = () => {
       console.log('✅ Lookup data loaded:', {
         industries: industriesRes.industries?.length,
         jobTypes: jobTypesRes.jobTypes?.length,
-        experienceLevels: experienceRes.experienceLevels?.length
+        experienceLevels: experienceRes.experienceLevels?.length,
       });
       setIndustries(industriesRes.industries);
       setJobTypes(jobTypesRes.jobTypes);
@@ -90,7 +92,7 @@ const CreateJobSeekerProfileScreen: React.FC = () => {
       Alert.alert(
         'Error Loading Form',
         'Failed to load form data from server. Please check your connection and try again.',
-        [{ text: 'OK', onPress: () => navigation.goBack() }]
+        [{ text: 'OK', onPress: () => navigation.goBack() }],
       );
     }
   };
@@ -125,7 +127,10 @@ const CreateJobSeekerProfileScreen: React.FC = () => {
       Alert.alert('Invalid', 'Zip code must be at least 5 digits');
       return false;
     }
-    if (formData.age && (parseInt(formData.age) < 16 || parseInt(formData.age) > 100)) {
+    if (
+      formData.age &&
+      (parseInt(formData.age) < 16 || parseInt(formData.age) > 100)
+    ) {
       Alert.alert('Invalid', 'Please enter a valid age (16-100)');
       return false;
     }
@@ -146,15 +151,24 @@ const CreateJobSeekerProfileScreen: React.FC = () => {
     }
 
     // Validate phone format if provided
-    if (formData.contactPhone && formData.contactPhone.replace(/\D/g, '').length < 10) {
-      Alert.alert('Invalid', 'Please enter a valid phone number (at least 10 digits)');
+    if (
+      formData.contactPhone &&
+      formData.contactPhone.replace(/\D/g, '').length < 10
+    ) {
+      Alert.alert(
+        'Invalid',
+        'Please enter a valid phone number (at least 10 digits)',
+      );
       return false;
     }
 
     // Validate URLs if provided
     const urlRegex = /^https?:\/\/.+\..+/;
     if (formData.resumeUrl && !urlRegex.test(formData.resumeUrl)) {
-      Alert.alert('Invalid', 'Please enter a valid resume URL (starting with http:// or https://)');
+      Alert.alert(
+        'Invalid',
+        'Please enter a valid resume URL (starting with http:// or https://)',
+      );
       return false;
     }
     if (formData.linkedinUrl && !urlRegex.test(formData.linkedinUrl)) {
@@ -171,8 +185,12 @@ const CreateJobSeekerProfileScreen: React.FC = () => {
 
   const handleNext = () => {
     // Validate before moving to next step
-    if (currentStep === 1 && !validateStep1()) return;
-    if (currentStep === 4 && !validateStep4()) return;
+    if (currentStep === 1 && !validateStep1()) {
+      return;
+    }
+    if (currentStep === 4 && !validateStep4()) {
+      return;
+    }
 
     if (currentStep < totalSteps) {
       setCurrentStep(currentStep + 1);
@@ -189,14 +207,21 @@ const CreateJobSeekerProfileScreen: React.FC = () => {
 
   const handleSubmit = async () => {
     // Validate all required fields before submission
-    if (!validateStep1()) return;
-    if (!validateStep4()) return;
+    if (!validateStep1()) {
+      return;
+    }
+    if (!validateStep4()) {
+      return;
+    }
 
     // Additional salary validation
     const salMin = parseFloat(formData.desiredSalaryMin);
     const salMax = parseFloat(formData.desiredSalaryMax);
     if (salMin && salMax && salMax < salMin) {
-      Alert.alert('Invalid', 'Maximum salary must be greater than minimum salary');
+      Alert.alert(
+        'Invalid',
+        'Maximum salary must be greater than minimum salary',
+      );
       return;
     }
 
@@ -245,12 +270,14 @@ const CreateJobSeekerProfileScreen: React.FC = () => {
       <Text style={styles.stepTitle}>Personal Information</Text>
 
       <View style={styles.formGroup}>
-        <Text style={styles.label}>Full Name <Text style={styles.required}>*</Text></Text>
+        <Text style={styles.label}>
+          Full Name <Text style={styles.required}>*</Text>
+        </Text>
         <TextInput
           style={styles.input}
           placeholder="e.g., John Doe"
           value={formData.name}
-          onChangeText={(text) => updateFormData('name', text)}
+          onChangeText={text => updateFormData('name', text)}
         />
       </View>
 
@@ -260,7 +287,7 @@ const CreateJobSeekerProfileScreen: React.FC = () => {
           style={styles.input}
           placeholder="e.g., 25"
           value={formData.age}
-          onChangeText={(text) => updateFormData('age', text)}
+          onChangeText={text => updateFormData('age', text)}
           keyboardType="number-pad"
         />
       </View>
@@ -270,7 +297,7 @@ const CreateJobSeekerProfileScreen: React.FC = () => {
         <View style={styles.pickerContainer}>
           <Picker
             selectedValue={formData.gender}
-            onValueChange={(value) => updateFormData('gender', value)}
+            onValueChange={value => updateFormData('gender', value)}
             style={styles.picker}
           >
             <Picker.Item label="Select gender" value="" />
@@ -283,12 +310,14 @@ const CreateJobSeekerProfileScreen: React.FC = () => {
       </View>
 
       <View style={styles.formGroup}>
-        <Text style={styles.label}>Zip Code <Text style={styles.required}>*</Text></Text>
+        <Text style={styles.label}>
+          Zip Code <Text style={styles.required}>*</Text>
+        </Text>
         <TextInput
           style={styles.input}
           placeholder="e.g., 10001"
           value={formData.zipCode}
-          onChangeText={(text) => updateFormData('zipCode', text)}
+          onChangeText={text => updateFormData('zipCode', text)}
           keyboardType="number-pad"
         />
       </View>
@@ -299,7 +328,7 @@ const CreateJobSeekerProfileScreen: React.FC = () => {
           style={styles.input}
           placeholder="https://example.com/photo.jpg"
           value={formData.headshotUrl}
-          onChangeText={(text) => updateFormData('headshotUrl', text)}
+          onChangeText={text => updateFormData('headshotUrl', text)}
           autoCapitalize="none"
         />
       </View>
@@ -315,12 +344,18 @@ const CreateJobSeekerProfileScreen: React.FC = () => {
         <View style={styles.pickerContainer}>
           <Picker
             selectedValue={formData.preferredIndustryId}
-            onValueChange={(value) => updateFormData('preferredIndustryId', value)}
+            onValueChange={value =>
+              updateFormData('preferredIndustryId', value)
+            }
             style={styles.picker}
           >
             <Picker.Item label="Select industry" value="" />
-            {industries.map((industry) => (
-              <Picker.Item key={industry.id} label={industry.name} value={industry.id} />
+            {industries.map(industry => (
+              <Picker.Item
+                key={industry.id}
+                label={industry.name}
+                value={industry.id}
+              />
             ))}
           </Picker>
         </View>
@@ -331,12 +366,16 @@ const CreateJobSeekerProfileScreen: React.FC = () => {
         <View style={styles.pickerContainer}>
           <Picker
             selectedValue={formData.preferredJobTypeId}
-            onValueChange={(value) => updateFormData('preferredJobTypeId', value)}
+            onValueChange={value => updateFormData('preferredJobTypeId', value)}
             style={styles.picker}
           >
             <Picker.Item label="Select job type" value="" />
-            {jobTypes.map((jobType) => (
-              <Picker.Item key={jobType.id} label={jobType.name} value={jobType.id} />
+            {jobTypes.map(jobType => (
+              <Picker.Item
+                key={jobType.id}
+                label={jobType.name}
+                value={jobType.id}
+              />
             ))}
           </Picker>
         </View>
@@ -347,11 +386,11 @@ const CreateJobSeekerProfileScreen: React.FC = () => {
         <View style={styles.pickerContainer}>
           <Picker
             selectedValue={formData.experienceLevelId}
-            onValueChange={(value) => updateFormData('experienceLevelId', value)}
+            onValueChange={value => updateFormData('experienceLevelId', value)}
             style={styles.picker}
           >
             <Picker.Item label="Select experience level" value="" />
-            {experienceLevels.map((level) => (
+            {experienceLevels.map(level => (
               <Picker.Item key={level.id} label={level.name} value={level.id} />
             ))}
           </Picker>
@@ -364,7 +403,7 @@ const CreateJobSeekerProfileScreen: React.FC = () => {
           style={[styles.input, styles.textArea]}
           placeholder="Tell us about yourself..."
           value={formData.bio}
-          onChangeText={(text) => updateFormData('bio', text)}
+          onChangeText={text => updateFormData('bio', text)}
           multiline
           numberOfLines={4}
         />
@@ -408,14 +447,14 @@ const CreateJobSeekerProfileScreen: React.FC = () => {
             style={[styles.input, { flex: 1, marginRight: 8 }]}
             placeholder="Min (e.g., 50000)"
             value={formData.desiredSalaryMin}
-            onChangeText={(text) => updateFormData('desiredSalaryMin', text)}
+            onChangeText={text => updateFormData('desiredSalaryMin', text)}
             keyboardType="number-pad"
           />
           <TextInput
             style={[styles.input, { flex: 1 }]}
             placeholder="Max (e.g., 80000)"
             value={formData.desiredSalaryMax}
-            onChangeText={(text) => updateFormData('desiredSalaryMax', text)}
+            onChangeText={text => updateFormData('desiredSalaryMax', text)}
             keyboardType="number-pad"
           />
         </View>
@@ -426,7 +465,7 @@ const CreateJobSeekerProfileScreen: React.FC = () => {
         <View style={styles.pickerContainer}>
           <Picker
             selectedValue={formData.availability}
-            onValueChange={(value) => updateFormData('availability', value)}
+            onValueChange={value => updateFormData('availability', value)}
             style={styles.picker}
           >
             <Picker.Item label="Immediate" value="immediate" />
@@ -441,20 +480,38 @@ const CreateJobSeekerProfileScreen: React.FC = () => {
         <Text style={styles.label}>Work Preferences</Text>
         <TouchableOpacity
           style={styles.checkbox}
-          onPress={() => updateFormData('willingToRemote', !formData.willingToRemote)}
+          onPress={() =>
+            updateFormData('willingToRemote', !formData.willingToRemote)
+          }
         >
-          <View style={[styles.checkboxBox, formData.willingToRemote && styles.checkboxBoxChecked]}>
-            {formData.willingToRemote && <Text style={styles.checkboxCheck}>✓</Text>}
+          <View
+            style={[
+              styles.checkboxBox,
+              formData.willingToRemote && styles.checkboxBoxChecked,
+            ]}
+          >
+            {formData.willingToRemote && (
+              <Text style={styles.checkboxCheck}>✓</Text>
+            )}
           </View>
           <Text style={styles.checkboxLabel}>Open to remote work</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.checkbox}
-          onPress={() => updateFormData('willingToRelocate', !formData.willingToRelocate)}
+          onPress={() =>
+            updateFormData('willingToRelocate', !formData.willingToRelocate)
+          }
         >
-          <View style={[styles.checkboxBox, formData.willingToRelocate && styles.checkboxBoxChecked]}>
-            {formData.willingToRelocate && <Text style={styles.checkboxCheck}>✓</Text>}
+          <View
+            style={[
+              styles.checkboxBox,
+              formData.willingToRelocate && styles.checkboxBoxChecked,
+            ]}
+          >
+            {formData.willingToRelocate && (
+              <Text style={styles.checkboxCheck}>✓</Text>
+            )}
           </View>
           <Text style={styles.checkboxLabel}>Willing to relocate</Text>
         </TouchableOpacity>
@@ -467,12 +524,14 @@ const CreateJobSeekerProfileScreen: React.FC = () => {
       <Text style={styles.stepTitle}>Contact & Links</Text>
 
       <View style={styles.formGroup}>
-        <Text style={styles.label}>Contact Email <Text style={styles.required}>*</Text></Text>
+        <Text style={styles.label}>
+          Contact Email <Text style={styles.required}>*</Text>
+        </Text>
         <TextInput
           style={styles.input}
           placeholder="your.email@example.com"
           value={formData.contactEmail}
-          onChangeText={(text) => updateFormData('contactEmail', text)}
+          onChangeText={text => updateFormData('contactEmail', text)}
           keyboardType="email-address"
           autoCapitalize="none"
         />
@@ -484,7 +543,7 @@ const CreateJobSeekerProfileScreen: React.FC = () => {
           style={styles.input}
           placeholder="+1 (555) 123-4567"
           value={formData.contactPhone}
-          onChangeText={(text) => updateFormData('contactPhone', text)}
+          onChangeText={text => updateFormData('contactPhone', text)}
           keyboardType="phone-pad"
         />
       </View>
@@ -495,7 +554,7 @@ const CreateJobSeekerProfileScreen: React.FC = () => {
           style={styles.input}
           placeholder="https://example.com/resume.pdf"
           value={formData.resumeUrl}
-          onChangeText={(text) => updateFormData('resumeUrl', text)}
+          onChangeText={text => updateFormData('resumeUrl', text)}
           autoCapitalize="none"
         />
       </View>
@@ -506,7 +565,7 @@ const CreateJobSeekerProfileScreen: React.FC = () => {
           style={styles.input}
           placeholder="https://linkedin.com/in/yourprofile"
           value={formData.linkedinUrl}
-          onChangeText={(text) => updateFormData('linkedinUrl', text)}
+          onChangeText={text => updateFormData('linkedinUrl', text)}
           autoCapitalize="none"
         />
       </View>
@@ -517,7 +576,7 @@ const CreateJobSeekerProfileScreen: React.FC = () => {
           style={styles.input}
           placeholder="https://yourportfolio.com"
           value={formData.portfolioUrl}
-          onChangeText={(text) => updateFormData('portfolioUrl', text)}
+          onChangeText={text => updateFormData('portfolioUrl', text)}
           autoCapitalize="none"
         />
       </View>
@@ -528,7 +587,7 @@ const CreateJobSeekerProfileScreen: React.FC = () => {
           style={styles.input}
           placeholder="https://zoom.us/j/..."
           value={formData.meetingLink}
-          onChangeText={(text) => updateFormData('meetingLink', text)}
+          onChangeText={text => updateFormData('meetingLink', text)}
           autoCapitalize="none"
         />
       </View>
@@ -562,7 +621,7 @@ const CreateJobSeekerProfileScreen: React.FC = () => {
         </Text>
 
         <View style={styles.progressContainer}>
-          {[1, 2, 3, 4].map((step) => (
+          {[1, 2, 3, 4].map(step => (
             <View
               key={step}
               style={[
@@ -574,9 +633,7 @@ const CreateJobSeekerProfileScreen: React.FC = () => {
         </View>
       </View>
 
-      <ScrollView style={styles.content}>
-        {renderCurrentStep()}
-      </ScrollView>
+      <ScrollView style={styles.content}>{renderCurrentStep()}</ScrollView>
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + 10 }]}>
         <TouchableOpacity style={styles.backButton} onPress={handleBack}>

@@ -41,7 +41,8 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_REGEX = /^[\+]?[1-9][\d]{0,15}$/;
 
 // URL validation regex
-const URL_REGEX = /^https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/;
+const URL_REGEX =
+  /^https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/;
 
 // Validation rules for each step
 export const validationRules: ValidationRule[] = [
@@ -56,10 +57,16 @@ export const validationRules: ValidationRule[] = [
         return { isValid: false, error: 'Business name is required' };
       }
       if (value.trim().length < 2) {
-        return { isValid: false, error: 'Business name must be at least 2 characters' };
+        return {
+          isValid: false,
+          error: 'Business name must be at least 2 characters',
+        };
       }
       if (value.trim().length > 100) {
-        return { isValid: false, error: 'Business name must be less than 100 characters' };
+        return {
+          isValid: false,
+          error: 'Business name must be less than 100 characters',
+        };
       }
       return { isValid: true };
     },
@@ -120,10 +127,17 @@ export const validationRules: ValidationRule[] = [
     trigger: 'onBlur',
     validator: (value: string) => {
       if (!value?.trim()) {
-        return { isValid: true, suggestion: 'Adding a website helps customers find you online' };
+        return {
+          isValid: true,
+          suggestion: 'Adding a website helps customers find you online',
+        };
       }
       if (!URL_REGEX.test(value.trim())) {
-        return { isValid: false, error: 'Please enter a valid website URL (include http:// or https://)' };
+        return {
+          isValid: false,
+          error:
+            'Please enter a valid website URL (include http:// or https://)',
+        };
       }
       return { isValid: true };
     },
@@ -163,7 +177,10 @@ export const validationRules: ValidationRule[] = [
     trigger: 'onBlur',
     validator: (value: string, formData: ListingFormData) => {
       if (!value?.trim() && !formData.custom_certifying_agency?.trim()) {
-        return { isValid: false, error: 'Please select or enter a certifying agency' };
+        return {
+          isValid: false,
+          error: 'Please select or enter a certifying agency',
+        };
       }
       return { isValid: true };
     },
@@ -180,10 +197,16 @@ export const validationRules: ValidationRule[] = [
         return { isValid: false, error: 'Short description is required' };
       }
       if (value.trim().length < 10) {
-        return { isValid: false, error: 'Short description must be at least 10 characters' };
+        return {
+          isValid: false,
+          error: 'Short description must be at least 10 characters',
+        };
       }
       if (value.trim().length > 80) {
-        return { isValid: false, error: 'Short description must be 80 characters or less' };
+        return {
+          isValid: false,
+          error: 'Short description must be 80 characters or less',
+        };
       }
       return { isValid: true };
     },
@@ -195,10 +218,17 @@ export const validationRules: ValidationRule[] = [
     trigger: 'onBlur',
     validator: (value: string) => {
       if (!value?.trim()) {
-        return { isValid: true, suggestion: 'A detailed description helps customers understand your business better' };
+        return {
+          isValid: true,
+          suggestion:
+            'A detailed description helps customers understand your business better',
+        };
       }
       if (value.trim().length > 2000) {
-        return { isValid: false, error: 'Description must be 2000 characters or less' };
+        return {
+          isValid: false,
+          error: 'Description must be 2000 characters or less',
+        };
       }
       return { isValid: true };
     },
@@ -212,27 +242,32 @@ export const validationRules: ValidationRule[] = [
       if (!value || !Array.isArray(value)) {
         return { isValid: false, error: 'Business hours are required' };
       }
-      
-      const hasOpenDay = value.some(day => !day.isClosed && day.openTime && day.closeTime);
+
+      const hasOpenDay = value.some(
+        day => !day.isClosed && day.openTime && day.closeTime,
+      );
       if (!hasOpenDay) {
-        return { isValid: false, error: 'At least one day must have operating hours' };
+        return {
+          isValid: false,
+          error: 'At least one day must have operating hours',
+        };
       }
-      
+
       // Check for time conflicts
       for (const day of value) {
         if (!day.isClosed && day.openTime && day.closeTime) {
           const openTime = new Date(`2000-01-01 ${day.openTime}`);
           const closeTime = new Date(`2000-01-01 ${day.closeTime}`);
-          
+
           if (closeTime <= openTime) {
-            return { 
-              isValid: false, 
-              error: `${day.day}: Closing time must be after opening time` 
+            return {
+              isValid: false,
+              error: `${day.day}: Closing time must be after opening time`,
             };
           }
         }
       }
-      
+
       return { isValid: true };
     },
   },
@@ -243,7 +278,10 @@ export const validationRules: ValidationRule[] = [
     trigger: 'onBlur',
     validator: (value: number) => {
       if (value && (value < 0 || value > 1000)) {
-        return { isValid: false, error: 'Seating capacity must be between 0 and 1000' };
+        return {
+          isValid: false,
+          error: 'Seating capacity must be between 0 and 1000',
+        };
       }
       return { isValid: true };
     },
@@ -255,7 +293,10 @@ export const validationRules: ValidationRule[] = [
     trigger: 'onBlur',
     validator: (value: number) => {
       if (value && (value < 0 || value > 100)) {
-        return { isValid: false, error: 'Years in business must be between 0 and 100' };
+        return {
+          isValid: false,
+          error: 'Years in business must be between 0 and 100',
+        };
       }
       return { isValid: true };
     },
@@ -268,7 +309,9 @@ export const validationRules: ValidationRule[] = [
     required: false,
     trigger: 'onBlur',
     validator: (value: string) => {
-      if (!value?.trim()) return { isValid: true };
+      if (!value?.trim()) {
+        return { isValid: true };
+      }
       if (!value.includes('instagram.com')) {
         return { isValid: false, error: 'Please enter a valid Instagram URL' };
       }
@@ -281,7 +324,9 @@ export const validationRules: ValidationRule[] = [
     required: false,
     trigger: 'onBlur',
     validator: (value: string) => {
-      if (!value?.trim()) return { isValid: true };
+      if (!value?.trim()) {
+        return { isValid: true };
+      }
       if (!value.includes('facebook.com')) {
         return { isValid: false, error: 'Please enter a valid Facebook URL' };
       }
@@ -294,7 +339,9 @@ export const validationRules: ValidationRule[] = [
     required: false,
     trigger: 'onBlur',
     validator: (value: string) => {
-      if (!value?.trim()) return { isValid: true };
+      if (!value?.trim()) {
+        return { isValid: true };
+      }
       if (!value.includes('tiktok.com')) {
         return { isValid: false, error: 'Please enter a valid TikTok URL' };
       }
@@ -310,9 +357,10 @@ export const validationRules: ValidationRule[] = [
     trigger: 'onChange',
     validator: (value: string[]) => {
       if (!value || value.length === 0) {
-        return { 
-          isValid: true, 
-          suggestion: 'Adding photos helps customers see your business and increases engagement' 
+        return {
+          isValid: true,
+          suggestion:
+            'Adding photos helps customers see your business and increases engagement',
         };
       }
       if (value.length > 10) {
@@ -326,17 +374,17 @@ export const validationRules: ValidationRule[] = [
 // Form validation engine
 export class FormValidationEngine {
   private rules: ValidationRule[];
-  
+
   constructor(customRules?: ValidationRule[]) {
     this.rules = customRules || validationRules;
   }
 
   // Validate a single field
   validateField(
-    fieldName: string, 
-    value: any, 
+    fieldName: string,
+    value: any,
     formData: ListingFormData,
-    trigger: 'onChange' | 'onBlur' | 'onSubmit' = 'onBlur'
+    trigger: 'onChange' | 'onBlur' | 'onSubmit' = 'onBlur',
   ): FieldValidationResult {
     const rule = this.rules.find(r => r.field === fieldName);
     if (!rule) {
@@ -352,12 +400,15 @@ export class FormValidationEngine {
   }
 
   // Validate a specific step
-  validateStep(stepNumber: number, formData: ListingFormData): StepValidationResult {
+  validateStep(
+    stepNumber: number,
+    formData: ListingFormData,
+  ): StepValidationResult {
     const stepRules = this.rules.filter(rule => rule.step === stepNumber);
     const errors: { [fieldName: string]: string } = {};
     const warnings: { [fieldName: string]: string } = {};
     const suggestions: string[] = [];
-    
+
     let validFields = 0;
     let totalFields = stepRules.length;
     let requiredFields = 0;
@@ -366,36 +417,37 @@ export class FormValidationEngine {
     for (const rule of stepRules) {
       const fieldValue = formData[rule.field as keyof ListingFormData];
       const result = rule.validator(fieldValue, formData);
-      
+
       if (rule.required) {
         requiredFields++;
         if (result.isValid) {
           validRequiredFields++;
         }
       }
-      
+
       if (result.isValid) {
         validFields++;
       } else if (result.error) {
         errors[rule.field] = result.error;
       }
-      
+
       if (result.warning) {
         warnings[rule.field] = result.warning;
       }
-      
+
       if (result.suggestion && !suggestions.includes(result.suggestion)) {
         suggestions.push(result.suggestion);
       }
     }
 
     // Calculate completion percentage for this step
-    const completionPercentage = totalFields > 0 
-      ? Math.round((validFields / totalFields) * 100) 
-      : 100;
+    const completionPercentage =
+      totalFields > 0 ? Math.round((validFields / totalFields) * 100) : 100;
 
     // Step is valid if all required fields are valid and no errors
-    const isValid = Object.keys(errors).length === 0 && validRequiredFields === requiredFields;
+    const isValid =
+      Object.keys(errors).length === 0 &&
+      validRequiredFields === requiredFields;
 
     return {
       isValid,
@@ -411,7 +463,7 @@ export class FormValidationEngine {
     const stepResults: { [stepNumber: number]: StepValidationResult } = {};
     const overallErrors: string[] = [];
     const overallWarnings: string[] = [];
-    
+
     let totalValidSteps = 0;
     const totalSteps = Math.max(...this.rules.map(rule => rule.step));
 
@@ -419,18 +471,18 @@ export class FormValidationEngine {
     for (let step = 1; step <= totalSteps; step++) {
       const stepResult = this.validateStep(step, formData);
       stepResults[step] = stepResult;
-      
+
       if (stepResult.isValid) {
         totalValidSteps++;
       }
-      
+
       // Collect step errors as overall errors
       Object.values(stepResult.errors).forEach(error => {
         if (!overallErrors.includes(error)) {
           overallErrors.push(error);
         }
       });
-      
+
       // Collect step warnings as overall warnings
       Object.values(stepResult.warnings).forEach(warning => {
         if (!overallWarnings.includes(warning)) {
@@ -440,8 +492,10 @@ export class FormValidationEngine {
     }
 
     // Calculate overall completion percentage
-    const completionPercentage = Math.round((totalValidSteps / totalSteps) * 100);
-    
+    const completionPercentage = Math.round(
+      (totalValidSteps / totalSteps) * 100,
+    );
+
     // Form is valid if all steps are valid
     const isValid = totalValidSteps === totalSteps;
 
@@ -465,18 +519,20 @@ export class FormValidationEngine {
   } {
     const formResult = this.validateForm(formData);
     const totalSteps = Object.keys(formResult.stepResults).length;
-    const completedSteps = Object.values(formResult.stepResults)
-      .filter(step => step.isValid).length;
-    
+    const completedSteps = Object.values(formResult.stepResults).filter(
+      step => step.isValid,
+    ).length;
+
     // Find next required field that has an error
     let nextRequiredField: string | undefined;
     for (let step = 1; step <= totalSteps; step++) {
       const stepResult = formResult.stepResults[step];
       if (stepResult && Object.keys(stepResult.errors).length > 0) {
-        const requiredRule = this.rules.find(rule => 
-          rule.step === step && 
-          rule.required && 
-          stepResult.errors[rule.field]
+        const requiredRule = this.rules.find(
+          rule =>
+            rule.step === step &&
+            rule.required &&
+            stepResult.errors[rule.field],
         );
         if (requiredRule) {
           nextRequiredField = requiredRule.field;
@@ -496,7 +552,10 @@ export class FormValidationEngine {
   }
 
   // Get step completion status
-  getStepCompletionStatus(stepNumber: number, formData: ListingFormData): {
+  getStepCompletionStatus(
+    stepNumber: number,
+    formData: ListingFormData,
+  ): {
     isComplete: boolean;
     hasErrors: boolean;
     hasWarnings: boolean;
@@ -507,7 +566,7 @@ export class FormValidationEngine {
     const stepResult = this.validateStep(stepNumber, formData);
     const stepRules = this.rules.filter(rule => rule.step === stepNumber);
     const requiredRules = stepRules.filter(rule => rule.required);
-    
+
     let requiredFieldsCompleted = 0;
     for (const rule of requiredRules) {
       const fieldValue = formData[rule.field as keyof ListingFormData];
@@ -532,7 +591,7 @@ export class FormValidationEngine {
     fieldName: string,
     newValue: any,
     formData: ListingFormData,
-    trigger: 'onChange' | 'onBlur' = 'onChange'
+    trigger: 'onChange' | 'onBlur' = 'onChange',
   ): {
     fieldResult: FieldValidationResult;
     stepResult: StepValidationResult;
@@ -545,18 +604,23 @@ export class FormValidationEngine {
     };
 
     // Validate the specific field
-    const fieldResult = this.validateField(fieldName, newValue, updatedFormData, trigger);
-    
+    const fieldResult = this.validateField(
+      fieldName,
+      newValue,
+      updatedFormData,
+      trigger,
+    );
+
     // Find which step this field belongs to
     const rule = this.rules.find(r => r.field === fieldName);
     const stepNumber = rule?.step || 1;
-    
+
     // Validate the affected step
     const stepResult = this.validateStep(stepNumber, updatedFormData);
-    
+
     // Check if this change affects other steps (for cross-step validation)
     const affectedSteps = [stepNumber];
-    
+
     return {
       fieldResult,
       stepResult,
@@ -570,19 +634,29 @@ export const defaultValidationEngine = new FormValidationEngine();
 
 // Convenience functions
 export const validateFormField = (
-  fieldName: string, 
-  value: any, 
+  fieldName: string,
+  value: any,
   formData: ListingFormData,
-  trigger: 'onChange' | 'onBlur' | 'onSubmit' = 'onBlur'
+  trigger: 'onChange' | 'onBlur' | 'onSubmit' = 'onBlur',
 ): FieldValidationResult => {
-  return defaultValidationEngine.validateField(fieldName, value, formData, trigger);
+  return defaultValidationEngine.validateField(
+    fieldName,
+    value,
+    formData,
+    trigger,
+  );
 };
 
-export const validateFormStep = (stepNumber: number, formData: ListingFormData): StepValidationResult => {
+export const validateFormStep = (
+  stepNumber: number,
+  formData: ListingFormData,
+): StepValidationResult => {
   return defaultValidationEngine.validateStep(stepNumber, formData);
 };
 
-export const validateEntireForm = (formData: ListingFormData): FormValidationResult => {
+export const validateEntireForm = (
+  formData: ListingFormData,
+): FormValidationResult => {
   return defaultValidationEngine.validateForm(formData);
 };
 
@@ -590,6 +664,9 @@ export const getFormValidationSummary = (formData: ListingFormData) => {
   return defaultValidationEngine.getValidationSummary(formData);
 };
 
-export const getStepCompletionStatus = (stepNumber: number, formData: ListingFormData) => {
+export const getStepCompletionStatus = (
+  stepNumber: number,
+  formData: ListingFormData,
+) => {
   return defaultValidationEngine.getStepCompletionStatus(stepNumber, formData);
 };

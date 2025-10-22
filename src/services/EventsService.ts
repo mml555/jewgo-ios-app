@@ -437,8 +437,12 @@ class EventsService {
     const isToday = date.toDateString() === today.toDateString();
     const isTomorrow = date.toDateString() === tomorrow.toDateString();
 
-    if (isToday) return 'Today';
-    if (isTomorrow) return 'Tomorrow';
+    if (isToday) {
+      return 'Today';
+    }
+    if (isTomorrow) {
+      return 'Tomorrow';
+    }
 
     return date.toLocaleDateString('en-US', {
       weekday: 'short',

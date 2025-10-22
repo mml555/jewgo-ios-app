@@ -155,7 +155,9 @@ const JobCard: React.FC<JobCardProps> = memo(
 
     // Normalize employment type for consistent display
     const normalizeEmploymentType = (jobType?: string): string => {
-      if (!jobType) return 'Full Time';
+      if (!jobType) {
+        return 'Full Time';
+      }
       const normalized = jobType.toLowerCase().replace(/[-_]/g, ' ');
       return normalized
         .split(' ')

@@ -206,7 +206,9 @@ const Icon = memo(function Icon({
   filled = false,
 }: IconProps) {
   const meta = ICONS[name];
-  if (!meta) return fallbackRender({ size, color, style });
+  if (!meta) {
+    return fallbackRender({ size, color, style });
+  }
 
   const common = {
     size,

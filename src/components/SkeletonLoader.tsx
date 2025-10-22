@@ -11,7 +11,7 @@ interface SkeletonLoaderProps {
 
 /**
  * SkeletonLoader - Animated loading placeholder
- * 
+ *
  * Features:
  * - Smooth shimmer animation
  * - Customizable size and shape
@@ -38,7 +38,7 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
           duration: 1000,
           useNativeDriver: true,
         }),
-      ])
+      ]),
     );
 
     animation.start();
@@ -73,7 +73,11 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
 export const SkeletonCard: React.FC = () => {
   return (
     <View style={styles.card}>
-      <SkeletonLoader width="100%" height={200} borderRadius={BorderRadius.md} />
+      <SkeletonLoader
+        width="100%"
+        height={200}
+        borderRadius={BorderRadius.md}
+      />
       <View style={styles.cardContent}>
         <SkeletonLoader width="70%" height={24} style={styles.title} />
         <SkeletonLoader width="100%" height={16} style={styles.subtitle} />
@@ -108,10 +112,7 @@ export const SkeletonGrid: React.FC<{ count?: number; columns?: number }> = ({
       {Array.from({ length: count }).map((_, index) => (
         <View
           key={index}
-          style={[
-            styles.gridItem,
-            { width: `${100 / columns - 2}%` },
-          ]}
+          style={[styles.gridItem, { width: `${100 / columns - 2}%` }]}
         >
           <SkeletonLoader
             width="100%"
@@ -141,21 +142,35 @@ export const SkeletonDetail: React.FC = () => {
   return (
     <View style={styles.detail}>
       {/* Image skeleton */}
-      <SkeletonLoader width="100%" height={280} borderRadius={BorderRadius.lg} />
-      
+      <SkeletonLoader
+        width="100%"
+        height={280}
+        borderRadius={BorderRadius.lg}
+      />
+
       {/* Content skeleton */}
       <View style={styles.detailContent}>
         <SkeletonLoader width="80%" height={28} style={styles.title} />
         <SkeletonLoader width="100%" height={18} style={styles.subtitle} />
         <SkeletonLoader width="90%" height={18} style={styles.subtitle} />
-        
+
         {/* Info badges */}
         <View style={styles.badgeRow}>
           <SkeletonLoader width={80} height={32} borderRadius={16} />
-          <SkeletonLoader width={80} height={32} borderRadius={16} style={{ marginLeft: Spacing.xs }} />
-          <SkeletonLoader width={80} height={32} borderRadius={16} style={{ marginLeft: Spacing.xs }} />
+          <SkeletonLoader
+            width={80}
+            height={32}
+            borderRadius={16}
+            style={{ marginLeft: Spacing.xs }}
+          />
+          <SkeletonLoader
+            width={80}
+            height={32}
+            borderRadius={16}
+            style={{ marginLeft: Spacing.xs }}
+          />
         </View>
-        
+
         {/* Description skeleton */}
         <View style={styles.descriptionSection}>
           <SkeletonLoader width="100%" height={16} style={styles.subtitle} />
@@ -213,4 +228,3 @@ const styles = StyleSheet.create({
     marginTop: Spacing.md,
   },
 });
-

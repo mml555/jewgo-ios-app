@@ -10,9 +10,15 @@ interface ListingMarkerProps {
 }
 
 function getRatingColor(rating: number | null): string {
-  if (rating == null) return '#FF6B6B'; // Red for unknown/null ratings
-  if (rating >= 4.7) return '#66B7FF'; // Blue for excellent ratings (≥4.7)
-  if (rating >= 4.0) return '#FFC44D'; // Yellow for good ratings (≥4.0)
+  if (rating == null) {
+    return '#FF6B6B';
+  } // Red for unknown/null ratings
+  if (rating >= 4.7) {
+    return '#66B7FF';
+  } // Blue for excellent ratings (≥4.7)
+  if (rating >= 4.0) {
+    return '#FFC44D';
+  } // Yellow for good ratings (≥4.0)
   return '#FF6B6B'; // Red for poor ratings (<4.0)
 }
 

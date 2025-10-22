@@ -48,7 +48,9 @@ const ClaimsTracker: React.FC<ClaimsTrackerProps> = ({
   );
   loadClaimsRef.current = async (showLoading = true) => {
     try {
-      if (showLoading) setLoading(true);
+      if (showLoading) {
+        setLoading(true);
+      }
       setError(null);
 
       const response = await specialsService.getUserClaimedSpecials(
@@ -68,7 +70,9 @@ const ClaimsTracker: React.FC<ClaimsTrackerProps> = ({
       setError('Failed to load claims');
       errorLog('Error loading claims:', err);
     } finally {
-      if (showLoading) setLoading(false);
+      if (showLoading) {
+        setLoading(false);
+      }
     }
   };
 
@@ -123,7 +127,9 @@ const ClaimsTracker: React.FC<ClaimsTrackerProps> = ({
     const expiry = new Date(validUntil);
     const diff = expiry.getTime() - now.getTime();
 
-    if (diff <= 0) return 'Expired';
+    if (diff <= 0) {
+      return 'Expired';
+    }
     if (diff < 24 * 60 * 60 * 1000) {
       const hours = Math.floor(diff / (1000 * 60 * 60));
       const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));

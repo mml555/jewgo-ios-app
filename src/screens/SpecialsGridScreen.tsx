@@ -169,7 +169,9 @@ const SpecialsGridScreen: React.FC<SpecialsGridScreenProps> = ({
     const getBadgeType = (
       label: string | undefined,
     ): 'percent' | 'amount' | 'custom' | 'bogo' | 'free_item' => {
-      if (!label) return 'custom';
+      if (!label) {
+        return 'custom';
+      }
 
       const labelLower = label.toLowerCase();
       if (labelLower.includes('%') || labelLower.includes('percent')) {
@@ -240,7 +242,9 @@ const SpecialsGridScreen: React.FC<SpecialsGridScreenProps> = ({
         console.log('🎁 loadSpecials: Response received:', response.success);
       }
 
-      if (!isMountedRef.current) return;
+      if (!isMountedRef.current) {
+        return;
+      }
 
       if (response.success && response.data) {
         const specialsData = response.data.specials || response.data;
@@ -263,7 +267,9 @@ const SpecialsGridScreen: React.FC<SpecialsGridScreenProps> = ({
         setSpecials([]);
       }
     } catch (err) {
-      if (!isMountedRef.current) return;
+      if (!isMountedRef.current) {
+        return;
+      }
       errorLog('Error loading specials:', err);
       setError('Failed to load specials');
       setSpecials([]);
@@ -334,7 +340,9 @@ const SpecialsGridScreen: React.FC<SpecialsGridScreenProps> = ({
     async (dealId: string) => {
       try {
         const special = specials.find(s => s.id === dealId);
-        if (!special) return;
+        if (!special) {
+          return;
+        }
 
         const businessName = special.businessName;
 
@@ -433,7 +441,9 @@ const SpecialsGridScreen: React.FC<SpecialsGridScreenProps> = ({
 
   // Render empty state - MUST be before early returns
   const renderEmpty = useCallback(() => {
-    if (loading) return null;
+    if (loading) {
+      return null;
+    }
 
     return (
       <View style={styles.emptyContainer}>

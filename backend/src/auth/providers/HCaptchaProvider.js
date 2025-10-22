@@ -3,7 +3,7 @@ class HCaptchaProvider {
     this.secretKey = config.secretKey;
     this.siteKey = config.siteKey;
     this.baseUrl = config.baseUrl || 'https://hcaptcha.com/siteverify';
-    
+
     if (!this.secretKey) {
       throw new Error('hCaptcha secret key is required');
     }
@@ -15,14 +15,14 @@ class HCaptchaProvider {
         success: false,
         score: 0,
         error: 'Missing token',
-        details: { error_codes: ['missing-input-response'] }
+        details: { error_codes: ['missing-input-response'] },
       };
     }
 
     try {
       const response = await this.makeVerificationRequest(token, remoteIp);
       const result = await response.json();
-      
+
       return this.processVerificationResult(result);
     } catch (error) {
       console.error('hCaptcha verification request failed:', error);
@@ -30,7 +30,7 @@ class HCaptchaProvider {
         success: false,
         score: 0,
         error: error.message,
-        details: { error_codes: ['network-error'] }
+        details: { error_codes: ['network-error'] },
       };
     }
   }
@@ -52,19 +52,16 @@ class HCaptchaProvider {
     });
 
     if (!response.ok) {
-      throw new Error(`hCaptcha API returned ${response.status}: ${response.statusText}`);
+      throw new Error(
+        `hCaptcha API returned ${response.status}: ${response.statusText}`,
+      );
     }
 
     return response;
   }
 
   processVerificationResult(result) {
-    const {
-      success,
-      challenge_ts,
-      hostname,
-      error_codes = []
-    } = result;
+    const { success, challenge_ts, hostname, error_codes = [] } = result;
 
     if (!success) {
       return {
@@ -74,8 +71,8 @@ class HCaptchaProvider {
         details: {
           error_codes,
           challenge_ts,
-          hostname
-        }
+          hostname,
+        },
       };
     }
 
@@ -85,8 +82,8 @@ class HCaptchaProvider {
       details: {
         hostname,
         challenge_ts,
-        provider: 'hcaptcha'
-      }
+        provider: 'hcaptcha',
+      },
     };
   }
 
@@ -97,7 +94,7 @@ class HCaptchaProvider {
   getFrontendConfig() {
     return {
       siteKey: this.siteKey,
-      provider: 'hcaptcha'
+      provider: 'hcaptcha',
     };
   }
 }

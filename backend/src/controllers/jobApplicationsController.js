@@ -140,7 +140,7 @@ class JobApplicationsController {
         params.push(status);
       }
 
-      query += ` ORDER BY ja.applied_at DESC`;
+      query += ' ORDER BY ja.applied_at DESC';
       query += ` LIMIT $${paramCount + 1} OFFSET $${paramCount + 2}`;
       params.push(
         parseInt(limit, 10),
@@ -190,7 +190,7 @@ class JobApplicationsController {
         params.push(status);
       }
 
-      query += ` ORDER BY ja.applied_at DESC`;
+      query += ' ORDER BY ja.applied_at DESC';
       query += ` LIMIT $${paramCount + 1} OFFSET $${paramCount + 2}`;
       params.push(
         parseInt(limit, 10),

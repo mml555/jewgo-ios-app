@@ -59,7 +59,7 @@ class SpecialsController {
           orderByClause = `s.created_at ${sortOrder.toUpperCase()}, s.priority DESC`;
           break;
         default:
-          orderByClause = `s.priority DESC, s.valid_until ASC`;
+          orderByClause = 's.priority DESC, s.valid_until ASC';
       }
 
       // Query database for active specials with business information
@@ -983,7 +983,7 @@ class SpecialsController {
 
       // Add updated_at and id to values
       paramCount++;
-      updateFields.push(`updated_at = NOW()`);
+      updateFields.push('updated_at = NOW()');
       values.push(id);
 
       const updateQuery = `

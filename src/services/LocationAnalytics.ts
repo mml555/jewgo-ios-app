@@ -92,7 +92,9 @@ class LocationAnalytics {
 
   // Track events
   trackEvent(type: LocationEvent['type'], data?: Record<string, any>): void {
-    if (!this.isEnabled) return;
+    if (!this.isEnabled) {
+      return;
+    }
 
     const event: LocationEvent = {
       type,
@@ -306,7 +308,9 @@ class LocationAnalytics {
 
   // Send data to analytics service (placeholder for production)
   async sendToAnalyticsService(data: any): Promise<void> {
-    if (!this.isEnabled) return;
+    if (!this.isEnabled) {
+      return;
+    }
 
     try {
       // In production, send to your analytics service

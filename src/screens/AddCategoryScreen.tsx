@@ -97,14 +97,6 @@ export interface ListingFormData {
     saturday: { open: string; close: string; closed: boolean };
     sunday: { open: string; close: string; closed: boolean };
   };
-  amenities: {
-    hasParking: boolean;
-    hasWifi: boolean;
-    hasAccessibility: boolean;
-    hasDelivery: boolean;
-    hasTakeout: boolean;
-    hasOutdoorSeating: boolean;
-  };
   kosherLevel:
     | 'glatt'
     | 'chalav-yisrael'
@@ -114,6 +106,34 @@ export interface ListingFormData {
   priceRange: '$' | '$$' | '$$$' | '$$$$';
   specialFeatures: string[];
   photos: string[];
+
+  // Additional fields used by HoursServicesPage
+  business_hours?: Array<{
+    day: string;
+    openTime: string;
+    closeTime: string;
+    isClosed: boolean;
+  }>;
+  description?: string;
+  seating_capacity?: string;
+  years_in_business?: string;
+  business_license?: string;
+  tax_id?: string;
+  google_listing_url?: string;
+  instagram_link?: string;
+  facebook_link?: string;
+  tiktok_link?: string;
+
+  // Additional fields used by PhotosReviewPage
+  owner_name?: string;
+  owner_email?: string;
+  owner_phone?: string;
+  kosher_category?: string;
+  certifying_agency?: string;
+  custom_certifying_agency?: string;
+  is_cholov_yisroel?: boolean;
+  is_pas_yisroel?: boolean;
+  cholov_stam?: boolean;
 }
 
 const defaultFormData: ListingFormData = {
@@ -302,7 +322,9 @@ const AddCategoryScreen: React.FC = () => {
   // Handle step navigation
   const handleStepNavigation = useCallback(
     async (stepNumber: number) => {
-      if (stepNumber === currentPage) return;
+      if (stepNumber === currentPage) {
+        return;
+      }
 
       // If going forward, validate current step
       if (stepNumber > currentPage) {
@@ -658,54 +680,59 @@ const AddCategoryScreen: React.FC = () => {
     // Transform form data to API format for backend submission
     // Backend will auto-calculate geom, lat, lng from address
     // Backend will set approval_status = 'pending_review'
-    
+
     const services = [];
-    if (formData.amenities?.includes('Delivery Available'))
+    if (formData.amenities?.includes('Delivery Available')) {
       services.push('delivery');
-    if (formData.amenities?.includes('Dine-In')) services.push('dine_in');
-    if (formData.amenities?.includes('Catering')) services.push('catering');
+    }
+    if (formData.amenities?.includes('Dine-In')) {
+      services.push('dine_in');
+    }
+    if (formData.amenities?.includes('Catering')) {
+      services.push('catering');
+    }
 
     // Normalize kosher type to lowercase for backend
     const kosherType = formData.dietary_category.toLowerCase(); // 'meat', 'dairy', 'pareve', 'vegan'
-    
+
     // Normalize hechsher to lowercase
     const hechsher = formData.hechsher.toLowerCase(); // 'orb', 'ok', etc.
 
     const apiData = {
       // Entity type
       type: 'eatery',
-      
+
       // Basic info (Step 1)
       name: formData.name,
       address: formData.address,
       phone: formData.phone,
       email: formData.business_email,
       website: formData.website,
-      
+
       // Hours (Step 1) - backend will parse this
       hours_of_operation: formData.hours_of_operation,
-      
+
       // Photos (Step 1)
       business_images: formData.business_images || [],
       photo_urls: formData.business_images || [], // Legacy field
-      
+
       // Kosher info (Step 2)
       kosher_type: kosherType, // 'meat', 'dairy', 'pareve', 'vegan'
       hechsher: hechsher, // 'orb', 'ok', 'kosher miami', etc.
       kosher_tags: formData.kosher_tags || [],
       short_description: formData.short_description,
       price_range: formData.price_range, // "$10-$20" format
-      
+
       // Amenities (Step 3)
       amenities: formData.amenities || [],
       services: services,
-      
+
       // Google reviews (Step 3)
       google_reviews_link: formData.google_reviews_link || '',
-      
+
       // Owner submission flag (Step 3)
       is_owner_submission: formData.is_owner_submission || false,
-      
+
       // System fields - backend will set these
       // approval_status: 'pending_review' (set by backend)
       // lat, lng, geom: calculated from address by backend
@@ -726,10 +753,13 @@ const AddCategoryScreen: React.FC = () => {
       // 3. Parse hours → JSON format
       // 4. Set approval_status = 'pending_review'
       // 5. Insert into entities + eatery_fields tables
-      const response = await (apiV5Service as any).request('/api/v5/eatery-submit', {
-        method: 'POST',
-        body: JSON.stringify(apiData),
-      });
+      const response = await (apiV5Service as any).request(
+        '/api/v5/eatery-submit',
+        {
+          method: 'POST',
+          body: JSON.stringify(apiData),
+        },
+      );
 
       if (!response.success) {
         throw new Error(

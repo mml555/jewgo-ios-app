@@ -75,7 +75,9 @@ const HoursServicesPage: React.FC<HoursServicesPageProps> = memo(
         businessHours.forEach(dayHour => {
           // Convert 12-hour format to 24-hour format for internal use
           const convertTo24Hour = (time12h: string): string => {
-            if (!time12h) return '';
+            if (!time12h) {
+              return '';
+            }
 
             const [time, period] = time12h.split(' ');
             const [hours, minutes] = time.split(':');
@@ -129,7 +131,9 @@ const HoursServicesPage: React.FC<HoursServicesPageProps> = memo(
 
           // Convert 24-hour format to 12-hour format for legacy compatibility
           const convertTo12Hour = (time24h: string): string => {
-            if (!time24h) return '';
+            if (!time24h) {
+              return '';
+            }
 
             const [hours, minutes] = time24h.split(':');
             let hour12 = parseInt(hours, 10);
@@ -161,7 +165,7 @@ const HoursServicesPage: React.FC<HoursServicesPageProps> = memo(
 
     // Get current business hours in new format
     const currentBusinessHours = useMemo(() => {
-      return convertToBusinessHoursData(formData.business_hours);
+      return convertToBusinessHoursData(formData.business_hours || []);
     }, [formData.business_hours, convertToBusinessHoursData]);
 
     const handleHoursChange = useCallback(
@@ -189,7 +193,7 @@ const HoursServicesPage: React.FC<HoursServicesPageProps> = memo(
       }
 
       // Check if at least one day has hours set
-      const hasValidHours = formData.business_hours.some(
+      const hasValidHours = (formData.business_hours || []).some(
         day => !day.isClosed && day.openTime && day.closeTime,
       );
 
@@ -288,7 +292,7 @@ const HoursServicesPage: React.FC<HoursServicesPageProps> = memo(
                 blurOnSubmit={true}
               />
               <Text style={styles.characterCount}>
-                {formData.description.length}/2000 characters
+                {(formData.description || '').length}/2000 characters
               </Text>
             </View>
           </View>
@@ -424,7 +428,7 @@ const HoursServicesPage: React.FC<HoursServicesPageProps> = memo(
 
             <EnhancedFormInput
               label="Google Maps/Google My Business URL"
-              value={formData.google_listing_url}
+              value={formData.google_listing_url || ''}
               onChangeText={value =>
                 handleInputChange('google_listing_url', value)
               }
@@ -433,7 +437,9 @@ const HoursServicesPage: React.FC<HoursServicesPageProps> = memo(
               keyboardType="url"
               autoCapitalize="none"
               validation={text => {
-                if (!text.trim()) return { isValid: true };
+                if (!text.trim()) {
+                  return { isValid: true };
+                }
                 const urlRegex = /^https?:\/\/.+/;
                 return {
                   isValid: urlRegex.test(text),
@@ -450,14 +456,16 @@ const HoursServicesPage: React.FC<HoursServicesPageProps> = memo(
 
             <EnhancedFormInput
               label="Instagram Profile URL"
-              value={formData.instagram_link}
+              value={formData.instagram_link || ''}
               onChangeText={value => handleInputChange('instagram_link', value)}
               placeholder="https://instagram.com/..."
               leftIcon="📸"
               keyboardType="url"
               autoCapitalize="none"
               validation={text => {
-                if (!text.trim()) return { isValid: true };
+                if (!text.trim()) {
+                  return { isValid: true };
+                }
                 const urlRegex = /^https?:\/\/.+/;
                 return {
                   isValid: urlRegex.test(text),
@@ -474,14 +482,16 @@ const HoursServicesPage: React.FC<HoursServicesPageProps> = memo(
 
             <EnhancedFormInput
               label="Facebook Page URL"
-              value={formData.facebook_link}
+              value={formData.facebook_link || ''}
               onChangeText={value => handleInputChange('facebook_link', value)}
               placeholder="https://facebook.com/..."
               leftIcon="📘"
               keyboardType="url"
               autoCapitalize="none"
               validation={text => {
-                if (!text.trim()) return { isValid: true };
+                if (!text.trim()) {
+                  return { isValid: true };
+                }
                 const urlRegex = /^https?:\/\/.+/;
                 return {
                   isValid: urlRegex.test(text),
@@ -498,14 +508,16 @@ const HoursServicesPage: React.FC<HoursServicesPageProps> = memo(
 
             <EnhancedFormInput
               label="TikTok Profile URL"
-              value={formData.tiktok_link}
+              value={formData.tiktok_link || ''}
               onChangeText={value => handleInputChange('tiktok_link', value)}
               placeholder="https://tiktok.com/@..."
               leftIcon="🎵"
               keyboardType="url"
               autoCapitalize="none"
               validation={text => {
-                if (!text.trim()) return { isValid: true };
+                if (!text.trim()) {
+                  return { isValid: true };
+                }
                 const urlRegex = /^https?:\/\/.+/;
                 return {
                   isValid: urlRegex.test(text),

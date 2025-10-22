@@ -14,13 +14,17 @@ class AdminController {
       [adminId],
     );
 
-    if (result.rows.length === 0) return false;
+    if (result.rows.length === 0) {
+      return false;
+    }
 
     const admin = result.rows[0];
     const permissions = admin.admin_permissions || {};
 
     // Super admins have all permissions
-    if (admin.admin_level >= 3 || permissions.all === true) return true;
+    if (admin.admin_level >= 3 || permissions.all === true) {
+      return true;
+    }
 
     return permissions[permission] === true;
   }
@@ -167,7 +171,7 @@ class AdminController {
         params.push(assignedTo);
       }
 
-      query += ` ORDER BY arq.priority DESC, arq.created_at ASC`;
+      query += ' ORDER BY arq.priority DESC, arq.created_at ASC';
       query += ` LIMIT $${paramCount + 1} OFFSET $${paramCount + 2}`;
       params.push(
         parseInt(limit, 10),
@@ -357,7 +361,7 @@ class AdminController {
         params.push(entityType);
       }
 
-      query += ` ORDER BY cf.severity DESC, cf.created_at ASC`;
+      query += ' ORDER BY cf.severity DESC, cf.created_at ASC';
       query += ` LIMIT $${paramCount + 1} OFFSET $${paramCount + 2}`;
       params.push(
         parseInt(limit, 10),
@@ -565,7 +569,7 @@ class AdminController {
         params.push(dateTo);
       }
 
-      query += ` ORDER BY aa.created_at DESC`;
+      query += ' ORDER BY aa.created_at DESC';
       query += ` LIMIT $${paramCount + 1} OFFSET $${paramCount + 2}`;
       params.push(
         parseInt(limit, 10),

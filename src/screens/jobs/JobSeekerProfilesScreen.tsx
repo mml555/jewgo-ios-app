@@ -160,7 +160,9 @@ const JobSeekerProfilesScreen: React.FC = () => {
 
   const loadProfiles = async (pageNum = 1, append = false) => {
     try {
-      if (!append) setLoading(true);
+      if (!append) {
+        setLoading(true);
+      }
 
       const response = await JobsService.getSeekerProfiles({
         industry: selectedIndustry || undefined,
@@ -207,7 +209,9 @@ const JobSeekerProfilesScreen: React.FC = () => {
         {
           text: 'Send',
           onPress: async (message?: string) => {
-            if (!message?.trim()) return;
+            if (!message?.trim()) {
+              return;
+            }
 
             try {
               await JobsService.contactSeeker(profileId, message);

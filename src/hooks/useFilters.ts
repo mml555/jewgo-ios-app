@@ -59,29 +59,47 @@ export const useFilters = (initialFilters?: Partial<FilterOptions>) => {
     let count = 0;
 
     // Check distance (if not default 100)
-    if (filters.maxDistance !== 100) count++;
+    if (filters.maxDistance !== 100) {
+      count++;
+    }
 
     // Check rating (if not 0)
-    if (filters.minRating > 0) count++;
+    if (filters.minRating > 0) {
+      count++;
+    }
 
     // Check kosher level (if not 'any')
-    if (filters.kosherLevel !== 'any') count++;
+    if (filters.kosherLevel !== 'any') {
+      count++;
+    }
 
     // Check price range (if not 'any')
-    if (filters.priceRange !== 'any') count++;
+    if (filters.priceRange !== 'any') {
+      count++;
+    }
 
     // Check denomination (if not 'any')
-    if (filters.denomination !== 'any') count++;
+    if (filters.denomination !== 'any') {
+      count++;
+    }
 
     // Check store type (if not 'any')
-    if (filters.storeType !== 'any') count++;
+    if (filters.storeType !== 'any') {
+      count++;
+    }
 
     // Check location filters
-    if (filters.city) count++;
-    if (filters.state) count++;
+    if (filters.city) {
+      count++;
+    }
+    if (filters.state) {
+      count++;
+    }
 
     // Check sort (if not default distance/asc)
-    if (filters.sortBy !== 'distance' || filters.sortOrder !== 'asc') count++;
+    if (filters.sortBy !== 'distance' || filters.sortOrder !== 'asc') {
+      count++;
+    }
 
     // Check boolean filters
     const booleanFilters = [
@@ -104,7 +122,9 @@ export const useFilters = (initialFilters?: Partial<FilterOptions>) => {
     ];
 
     booleanFilters.forEach(key => {
-      if (filters[key as keyof FilterOptions]) count++;
+      if (filters[key as keyof FilterOptions]) {
+        count++;
+      }
     });
 
     return count;

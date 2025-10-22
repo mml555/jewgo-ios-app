@@ -2,7 +2,7 @@ import { debugLog, warnLog } from '../utils/logger';
 
 /**
  * ApiCacheService - Manages API response caching and request deduplication
- * 
+ *
  * Features:
  * - Request deduplication (prevent duplicate in-flight requests)
  * - Response caching with TTL
@@ -37,7 +37,7 @@ class ApiCacheService {
       ttl?: number;
       forceRefresh?: boolean;
       deduplicate?: boolean;
-    } = {}
+    } = {},
   ): Promise<T> {
     const {
       ttl = this.defaultTTL,
@@ -92,7 +92,7 @@ class ApiCacheService {
    */
   get<T>(key: string): T | null {
     const entry = this.cache.get(key);
-    
+
     if (!entry) {
       return null;
     }
@@ -135,7 +135,7 @@ class ApiCacheService {
    */
   invalidateByPattern(pattern: string): void {
     const keysToDelete: string[] = [];
-    
+
     this.cache.forEach((_, key) => {
       if (key.includes(pattern)) {
         keysToDelete.push(key);
@@ -147,7 +147,9 @@ class ApiCacheService {
     });
 
     if (keysToDelete.length > 0) {
-      debugLog(`🗑️ Cache invalidated by pattern "${pattern}": ${keysToDelete.length} entries`);
+      debugLog(
+        `🗑️ Cache invalidated by pattern "${pattern}": ${keysToDelete.length} entries`,
+      );
     }
   }
 
@@ -229,7 +231,7 @@ class ApiCacheService {
   async prefetch<T>(
     key: string,
     fetchFn: () => Promise<T>,
-    ttl?: number
+    ttl?: number,
   ): Promise<void> {
     try {
       const data = await fetchFn();
@@ -247,4 +249,3 @@ export const apiCacheService = new ApiCacheService();
 setInterval(() => {
   apiCacheService.cleanupExpired();
 }, 5 * 60 * 1000);
-

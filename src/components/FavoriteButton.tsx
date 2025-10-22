@@ -44,7 +44,9 @@ const FavoriteButton: React.FC<FavoriteButtonProps> = ({
   }, [entityId, checkFavoriteStatus]);
 
   const handleToggle = async () => {
-    if (loading) return;
+    if (loading) {
+      return;
+    }
 
     try {
       setLoading(true);
