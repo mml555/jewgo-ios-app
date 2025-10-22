@@ -150,7 +150,7 @@ const KosherPricingPage: React.FC<KosherPricingPageProps> = memo(
           <View style={styles.fieldGroup}>
             <Text style={styles.label}>Certifying Agency (Hechsher) *</Text>
             <TextInput
-              style={styles.input}
+              style={styles.priceInput}
               value={formData.hechsher}
               onChangeText={value => handleInputChange('hechsher', value)}
               placeholder="e.g., OU, Star-K, Kof-K"
@@ -209,9 +209,11 @@ const KosherPricingPage: React.FC<KosherPricingPageProps> = memo(
               <View style={styles.fieldGroup}>
                 <Text style={styles.label}>Minimum Price ($)</Text>
                 <TextInput
-                  style={styles.input}
+                  style={styles.priceInput}
                   value={formData.price_min?.toString() || ''}
-                  onChangeText={(value) => handleInputChange('price_min', parseFloat(value) || 0)}
+                  onChangeText={value =>
+                    handleInputChange('price_min', parseFloat(value) || 0)
+                  }
                   placeholder="e.g., 5"
                   keyboardType="numeric"
                   returnKeyType="next"
@@ -221,9 +223,11 @@ const KosherPricingPage: React.FC<KosherPricingPageProps> = memo(
               <View style={styles.fieldGroup}>
                 <Text style={styles.label}>Maximum Price ($)</Text>
                 <TextInput
-                  style={styles.input}
+                  style={styles.priceInput}
                   value={formData.price_max?.toString() || ''}
-                  onChangeText={(value) => handleInputChange('price_max', parseFloat(value) || 0)}
+                  onChangeText={value =>
+                    handleInputChange('price_max', parseFloat(value) || 0)
+                  }
                   placeholder="e.g., 20"
                   keyboardType="numeric"
                   returnKeyType="done"
@@ -347,7 +351,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Nunito',
   },
   // NEW: Input styles for price range
-  input: {
+  priceInput: {
     borderWidth: 1,
     borderColor: '#C6FFD1',
     borderRadius: 8,

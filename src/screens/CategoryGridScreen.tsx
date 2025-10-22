@@ -20,7 +20,11 @@ import { usePrefetchDetails } from '../hooks/usePrefetchNavigation';
 import { enhancedApiService } from '../services/EnhancedApiService';
 import { Event } from '../services/EventsService';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getGridColumns, getGridCardDimensions, useResponsiveDimensions } from '../utils/deviceAdaptation';
+import {
+  getGridColumns,
+  getGridCardDimensions,
+  useResponsiveDimensions,
+} from '../utils/deviceAdaptation';
 
 interface CategoryGridScreenProps {
   categoryKey: string;
@@ -72,7 +76,7 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
 }) => {
   const navigation = useNavigation();
   const { bottom: insetBottom } = useSafeAreaInsets();
-  
+
   // Get responsive dimensions
   const { isTablet } = useResponsiveDimensions();
   const gridColumns = getGridColumns();
@@ -220,18 +224,18 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
     ({ item }: { item: CategoryItem | Event }) => {
       // Calculate responsive card dimensions
       const gridDimensions = getGridCardDimensions(
-        isTablet ? 48 : 32, // Total horizontal padding (both sides combined)
-        isTablet ? 24 : 12, // Gap between cards
-        4/3 // aspect ratio
+        isTablet ? 32 : 32, // Match header padding: 16px each side = 32px total
+        isTablet ? 20 : 12, // Gap between cards - increased for iPad
+        4 / 3, // aspect ratio
       );
-      
+
       // Transform events to use standard CategoryCard for consistent grid layout
       if (categoryKey === 'events') {
         const event = item as Event;
         const categoryItem = transformEventToCategoryItem(event);
         return (
-          <CategoryCard 
-            item={categoryItem} 
+          <CategoryCard
+            item={categoryItem}
             categoryKey={categoryKey}
             cardWidth={gridDimensions.cardWidth}
             imageHeight={gridDimensions.imageHeight}
@@ -246,8 +250,8 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
       }
       // Use CategoryCard for all other categories
       return (
-        <CategoryCard 
-          item={item as CategoryItem} 
+        <CategoryCard
+          item={item as CategoryItem}
           categoryKey={categoryKey}
           cardWidth={gridDimensions.cardWidth}
           imageHeight={gridDimensions.imageHeight}
@@ -465,13 +469,15 @@ const styles = StyleSheet.create({
   },
   row: {
     justifyContent: 'space-between',
-    paddingHorizontal: 16, // 16px on each side = 32px total
+    paddingHorizontal: 16, // 16px on each side = 32px total - matches header padding
     marginBottom: 12, // Gap between rows
   },
   rowMultiColumn: {
     justifyContent: 'space-between',
-    paddingHorizontal: 24, // 24px on each side = 48px total for tablets
+    paddingHorizontal: 16, // 16px on each side = 32px total - matches header padding
     marginBottom: 24, // Larger gap between rows on tablets
+    // Ensure even distribution of cards across the width
+    alignItems: 'flex-start',
   },
   footerLoader: {
     flexDirection: 'row',
@@ -558,7 +564,7 @@ export const useCategoryGridRenderProps = (
   const navigation = useNavigation();
   const { categoryKey, query = '', jobMode = 'hiring' } = props;
   const { bottom: insetBottom } = useSafeAreaInsets();
-  
+
   // Get responsive dimensions
   const { isTablet } = useResponsiveDimensions();
 
@@ -628,17 +634,17 @@ export const useCategoryGridRenderProps = (
     ({ item }: { item: CategoryItem | Event }) => {
       // Calculate responsive card dimensions
       const gridDimensions = getGridCardDimensions(
-        isTablet ? 48 : 32, // Total horizontal padding (both sides combined)
-        isTablet ? 24 : 12, // Gap between cards
-        4/3 // aspect ratio
+        isTablet ? 32 : 32, // Match header padding: 16px each side = 32px total
+        isTablet ? 20 : 12, // Gap between cards - increased for iPad
+        4 / 3, // aspect ratio
       );
-      
+
       if (categoryKey === 'events') {
         const event = item as Event;
         const categoryItem = transformEventToCategoryItem(event);
         return (
-          <CategoryCard 
-            item={categoryItem} 
+          <CategoryCard
+            item={categoryItem}
             categoryKey={categoryKey}
             cardWidth={gridDimensions.cardWidth}
             imageHeight={gridDimensions.imageHeight}
@@ -651,8 +657,8 @@ export const useCategoryGridRenderProps = (
         );
       }
       return (
-        <CategoryCard 
-          item={item as CategoryItem} 
+        <CategoryCard
+          item={item as CategoryItem}
           categoryKey={categoryKey}
           cardWidth={gridDimensions.cardWidth}
           imageHeight={gridDimensions.imageHeight}

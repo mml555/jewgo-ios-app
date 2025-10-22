@@ -1,5 +1,5 @@
 import { useCallback, useEffect } from 'react';
-import * as Geolocation from 'react-native-geolocation-service';
+import Geolocation from 'react-native-geolocation-service';
 import { PermissionsAndroid, Platform } from 'react-native';
 import { debugLog, errorLog } from '../utils/logger';
 import { reverseGeocode } from '../utils/geocoding';
@@ -41,7 +41,7 @@ export const useLocation = () => {
 
   const requestLocationPermission = useCallback(async (): Promise<boolean> => {
     debugLog('🔍 Requesting location permission...');
-    
+
     if (Platform.OS === 'ios') {
       // For iOS, we need to actually get the location to trigger the permission dialog
       try {
@@ -51,7 +51,10 @@ export const useLocation = () => {
         return new Promise(resolve => {
           Geolocation.getCurrentPosition(
             async position => {
-              debugLog('🔍 iOS: Location permission granted, got position:', position);
+              debugLog(
+                '🔍 iOS: Location permission granted, got position:',
+                position,
+              );
               const locationData: LocationData = {
                 latitude: position.coords.latitude,
                 longitude: position.coords.longitude,
@@ -127,8 +130,13 @@ export const useLocation = () => {
 
   const getCurrentLocation =
     useCallback(async (): Promise<LocationData | null> => {
-      debugLog('🔍 getCurrentLocation called - permissionGranted:', permissionGranted, 'permissionRequested:', permissionRequested);
-      
+      debugLog(
+        '🔍 getCurrentLocation called - permissionGranted:',
+        permissionGranted,
+        'permissionRequested:',
+        permissionRequested,
+      );
+
       if (!permissionGranted && !permissionRequested) {
         debugLog('🔍 getCurrentLocation: No permission, requesting...');
         const granted = await requestLocationPermission();
@@ -164,7 +172,10 @@ export const useLocation = () => {
                 locationData.zipCode = addressInfo.zipCode;
                 locationData.city = addressInfo.city;
                 locationData.state = addressInfo.state;
-                debugLog('🔍 getCurrentLocation: Reverse geocoded:', addressInfo);
+                debugLog(
+                  '🔍 getCurrentLocation: Reverse geocoded:',
+                  addressInfo,
+                );
               }
             } catch (err) {
               // Silently fail - zip code is optional
@@ -183,14 +194,19 @@ export const useLocation = () => {
 
               // Only update if moved more than 50 meters
               if (distanceMeters <= 50) {
-                debugLog('🔍 getCurrentLocation: Location unchanged, returning existing location');
+                debugLog(
+                  '🔍 getCurrentLocation: Location unchanged, returning existing location',
+                );
                 setLoading(false);
                 resolve(location);
                 return;
               }
             }
 
-            debugLog('🔍 getCurrentLocation: Setting new location:', locationData);
+            debugLog(
+              '🔍 getCurrentLocation: Setting new location:',
+              locationData,
+            );
             setLocation(locationData);
             setLoading(false);
             resolve(locationData);
@@ -216,7 +232,9 @@ export const useLocation = () => {
             setPermissionState(false, true, isDenied);
             setError(errorMessage);
             setLoading(false);
-            debugLog('🔍 getCurrentLocation: Permission denied, resolving null');
+            debugLog(
+              '🔍 getCurrentLocation: Permission denied, resolving null',
+            );
             resolve(null);
           },
           {
@@ -306,7 +324,9 @@ export const useLocation = () => {
     debugLog('🔍 useLocation: Initializing permission state');
     // Start with permission not granted - let the app request it when needed
     setPermissionState(false, false, false);
-    debugLog('🔍 useLocation: Permission state initialized - granted: false, requested: false, denied: false');
+    debugLog(
+      '🔍 useLocation: Permission state initialized - granted: false, requested: false, denied: false',
+    );
   }, [setPermissionState]);
 
   return {

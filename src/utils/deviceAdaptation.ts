@@ -247,22 +247,37 @@ export const createResponsiveStyles = <T extends Record<string, any>>(
 /**
  * Get responsive grid columns based on device type
  * Mobile phones: 2 columns (consistent across all phone sizes)
- * Tablets: 3-4 columns depending on orientation
+ * Tablets: 3-4 columns depending on orientation and screen size
  */
 export const getGridColumns = (): number => {
   const deviceType = getDeviceType();
   const landscape = isLandscape();
+  const { width } = Dimensions.get('window');
 
   if (deviceType === DeviceType.TABLET) {
-    // Tablets get 3 columns in portrait, 4 in landscape
-    const columns = landscape ? 4 : 3;
+    // For tablets, use screen width to determine optimal columns
+    // iPad: 768px+ gets 3 columns in portrait, 4 in landscape
+    // iPad Pro: 1024px+ gets 4 columns in portrait, 5 in landscape
+    let columns: number;
+
+    if (width >= 1024) {
+      // iPad Pro and larger
+      columns = landscape ? 5 : 4;
+    } else if (width >= 768) {
+      // Standard iPad
+      columns = landscape ? 4 : 3;
+    } else {
+      // Smaller tablets
+      columns = landscape ? 3 : 2;
+    }
+
     if (__DEV__) {
-      console.log('🔍 getGridColumns Debug:', {
+      console.log('🔍 getGridColumns Debug (Tablet):', {
         deviceType,
         landscape,
-        screenWidth,
+        screenWidth: width,
         screenHeight,
-        aspectRatio: screenHeight / screenWidth,
+        aspectRatio: screenHeight / width,
         columns,
       });
     }
@@ -274,9 +289,9 @@ export const getGridColumns = (): number => {
     console.log('🔍 getGridColumns Debug (Phone):', {
       deviceType,
       landscape,
-      screenWidth,
+      screenWidth: width,
       screenHeight,
-      aspectRatio: screenHeight / screenWidth,
+      aspectRatio: screenHeight / width,
       columns: 2,
     });
   }
@@ -293,31 +308,46 @@ export const getGridCardDimensions = (
 ): { columns: number; gap: number; cardWidth: number; imageHeight: number } => {
   const columns = getGridColumns();
   const { width } = Dimensions.get('window');
-  
+  const deviceType = getDeviceType();
+
+  // Adjust gap for tablets to ensure better distribution, but keep padding consistent with headers
+  const adjustedHorizontalPadding = horizontalPadding; // Use the passed padding to match headers
+
+  const adjustedCardGap =
+    deviceType === DeviceType.TABLET
+      ? Math.max(cardGap, 16) // Minimum 16px gap on tablets
+      : cardGap;
+
   // Use total horizontal padding (both sides)
-  const availableWidth = width - horizontalPadding;
-  const totalGapWidth = cardGap * (columns - 1);
+  const availableWidth = width - adjustedHorizontalPadding;
+  const totalGapWidth = adjustedCardGap * (columns - 1);
   const cardWidth = (availableWidth - totalGapWidth) / columns;
   const imageHeight = cardWidth / aspectRatio;
+
+  // Ensure minimum card width for usability
+  const minCardWidth = deviceType === DeviceType.TABLET ? 200 : 150;
+  const finalCardWidth = Math.max(cardWidth, minCardWidth);
 
   if (__DEV__) {
     console.log('🔍 getGridCardDimensions Debug:', {
       screenWidth: width,
-      horizontalPadding,
-      cardGap,
+      deviceType,
+      horizontalPadding: adjustedHorizontalPadding,
+      cardGap: adjustedCardGap,
       columns,
       availableWidth,
       totalGapWidth,
       cardWidth,
-      imageHeight,
+      finalCardWidth,
+      imageHeight: finalCardWidth / aspectRatio,
     });
   }
 
   return {
     columns,
-    gap: cardGap,
-    cardWidth,
-    imageHeight,
+    gap: adjustedCardGap,
+    cardWidth: finalCardWidth,
+    imageHeight: finalCardWidth / aspectRatio,
   };
 };
 

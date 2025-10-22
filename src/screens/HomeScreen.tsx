@@ -32,7 +32,11 @@ import type { AppStackParamList } from '../types/navigation';
 import { Colors, StickyLayout } from '../styles/designSystem';
 import { debugLog, errorLog } from '../utils/logger';
 import { useLocation } from '../hooks/useLocation';
-import { getGridColumns, getGridCardDimensions, useResponsiveDimensions } from '../utils/deviceAdaptation';
+import {
+  getGridColumns,
+  getGridCardDimensions,
+  useResponsiveDimensions,
+} from '../utils/deviceAdaptation';
 
 interface HomeScreenProps {
   onSearchChange?: (query: string) => void;
@@ -45,7 +49,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
   const headerRailRef = useRef<GridListScrollHeaderRef>(null);
   const isFocused = useIsFocused();
   const isTransitioning = useRef(false);
-  
+
   // Responsive dimensions
   const { width: screenWidth, isTablet } = useResponsiveDimensions();
 
@@ -457,11 +461,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
   // Calculate responsive grid dimensions
   const gridColumns = getGridColumns();
   const gridDimensions = getGridCardDimensions(
-    isTablet ? 48 : 32, // Total horizontal padding (both sides combined)
-    isTablet ? 24 : 12, // Gap between cards
-    4/3 // aspect ratio
+    isTablet ? 32 : 32, // Match header padding: 16px each side = 32px total
+    isTablet ? 20 : 12, // Gap between cards - increased for iPad
+    4 / 3, // aspect ratio
   );
-  
+
   // Debug logging
   if (__DEV__) {
     console.log('🔍 HomeScreen Grid Debug:', {

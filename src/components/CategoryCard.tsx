@@ -35,8 +35,15 @@ import { useLocationSimple } from '../hooks/useLocationSimple';
 import { useStableCallback } from '../utils/performanceOptimization';
 import OptimizedImage from './OptimizedImage';
 import { imageCacheService } from '../services/ImageCacheService';
-import { getGridCardDimensions, useResponsiveDimensions } from '../utils/deviceAdaptation';
-import { getDietaryColor, getDietaryLabel, formatPriceRange } from '../utils/eateryHelpers';
+import {
+  getGridCardDimensions,
+  useResponsiveDimensions,
+} from '../utils/deviceAdaptation';
+import {
+  getDietaryColor,
+  getDietaryLabel,
+  formatPriceRange,
+} from '../utils/eateryHelpers';
 import { DietaryChip } from './eateries/DietaryChip';
 
 interface CategoryCardProps {
@@ -65,12 +72,12 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
   const gridDimensions = getGridCardDimensions(
     isTablet ? 48 : 32, // Total horizontal padding (both sides combined)
     isTablet ? 24 : 12, // Gap between cards
-    4/3 // aspect ratio
+    4 / 3, // aspect ratio
   );
-  
+
   const finalCardWidth = cardWidth || gridDimensions.cardWidth;
   const finalImageHeight = imageHeight || gridDimensions.imageHeight;
-  
+
   // Create dynamic styles based on props
   const styles = useMemo(
     () => createStyles(finalCardWidth, finalImageHeight, isTablet),
@@ -340,7 +347,12 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
             accessibilityLabel={`Image for ${item.title}`}
             onError={() => {
               if (__DEV__) {
-                debugLog('🖼️ Image load error for', item.title, 'URL:', item.imageUrl);
+                debugLog(
+                  '🖼️ Image load error for',
+                  item.title,
+                  'URL:',
+                  item.imageUrl,
+                );
               }
 
               // Clear any existing timeout
@@ -405,10 +417,11 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
         {/* Tag on top left - show kosher level for eateries, category for others */}
         <View style={styles.tagContainer}>
           <Text style={styles.tagText}>
-            {categoryKey === 'eatery' 
-              ? (item.kosher_level ? getDietaryLabel(item.kosher_level) : 'Kosher')
-              : String(item.category || 'Unknown')
-            }
+            {categoryKey === 'eatery'
+              ? item.kosher_level
+                ? getDietaryLabel(item.kosher_level)
+                : 'Kosher'
+              : String(item.category || 'Unknown')}
           </Text>
         </View>
 
@@ -446,7 +459,9 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
             <View style={styles.ratingContainer}>
               <Text style={styles.ratingStar}>★</Text>
               <Text style={styles.ratingText}>
-                {Number(item.rating).toFixed(1)}
+                {typeof item.rating === 'number' && !isNaN(item.rating)
+                  ? Number(item.rating).toFixed(1)
+                  : '0.0'}
               </Text>
             </View>
           )}
@@ -455,10 +470,11 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
         {/* Price and Distance - matches details page layout */}
         <View style={styles.infoRow}>
           <Text style={styles.priceText}>
-            {categoryKey === 'eatery' 
-              ? formatPriceRange(item.price_min, item.price_max) || item.price_range || '$$'
-              : String(item.price || '$$')
-            }
+            {categoryKey === 'eatery'
+              ? formatPriceRange(item.price_min, item.price_max) ||
+                item.price_range ||
+                '$$'
+              : String(item.price || '$$')}
           </Text>
           {realDistanceMeters ? (
             <DistanceDisplay
@@ -470,15 +486,21 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
               style={styles.distanceContainer}
               textStyle={[
                 styles.distanceText,
-                categoryKey === 'eatery' && { color: Colors.eateries.distanceBlue }
+                categoryKey === 'eatery' && {
+                  color: Colors.eateries.distanceBlue,
+                },
               ]}
               options={{ unit: 'imperial' }}
             />
           ) : (
-            <Text style={[
-              styles.distanceText,
-              categoryKey === 'eatery' && { color: Colors.eateries.distanceBlue }
-            ]}>
+            <Text
+              style={[
+                styles.distanceText,
+                categoryKey === 'eatery' && {
+                  color: Colors.eateries.distanceBlue,
+                },
+              ]}
+            >
               {item.zip_code ? String(item.zip_code) : 'N/A'}
             </Text>
           )}
@@ -492,12 +514,18 @@ CategoryCard.displayName = 'CategoryCard';
 
 export default memo(CategoryCard);
 
-const createStyles = (cardWidth: number, imageHeight: number, isTablet: boolean) =>
+const createStyles = (
+  cardWidth: number,
+  imageHeight: number,
+  isTablet: boolean,
+) =>
   StyleSheet.create({
     container: {
       width: cardWidth,
       borderRadius: BorderRadius.xl,
       padding: 0, // Remove padding to align with image edges
+      marginRight: isTablet ? 20 : 12, // Add right margin for spacing between cards
+      marginBottom: isTablet ? 24 : 12, // Add bottom margin for spacing between rows
       // Shadow moved to specific container types to prevent rendering warnings
     },
     containerWithBackground: {
@@ -554,14 +582,15 @@ const createStyles = (cardWidth: number, imageHeight: number, isTablet: boolean)
       left: Spacing.sm,
       backgroundColor: '#ffffff', // White background
       borderRadius: BorderRadius.full,
-      paddingHorizontal: Spacing.sm,
-      paddingVertical: Spacing.sm,
+      paddingHorizontal: Spacing.md, // Longer - increased from sm (8px) to md (16px)
+      paddingVertical: Spacing.xs, // Thinner - decreased from sm (8px) to xs (4px)
       ...Shadows.sm,
     },
     tagText: {
       ...Typography.styles.caption,
       color: '#292b2d', // Dark text color
       fontWeight: '700',
+      fontSize: 11, // Slightly larger for better readability in thinner tag
     },
     heartButton: {
       position: 'absolute',
