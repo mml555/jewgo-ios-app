@@ -33,15 +33,36 @@
 #endif
 }
 
+// RCTBridgeDelegate requirement – provide JS bundle URL
+- (NSURL *)sourceURLForBridge:(RCTBridge *)bridge
+{
+  return [self getBundleURL];
+}
+
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
   // Initialize Google Maps with API key from Info.plist
   NSString *googleMapsApiKey = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"GoogleMapsAPIKey"];
+  if (!(googleMapsApiKey && googleMapsApiKey.length > 0)) {
+    // Try environment variable from react-native-config as a fallback (no hard header dep)
+    Class RNConfig = NSClassFromString(@"ReactNativeConfig");
+    SEL envSel = NSSelectorFromString(@"envFor:");
+    if (RNConfig && [RNConfig respondsToSelector:envSel]) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Warc-performSelector-leaks"
+      NSString *envKey = [RNConfig performSelector:envSel withObject:@"GOOGLE_MAPS_API_KEY"];
+#pragma clang diagnostic pop
+      if (envKey && envKey.length > 0) {
+        googleMapsApiKey = envKey;
+        NSLog(@"✅ Google Maps API key loaded from react-native-config");
+      }
+    }
+  }
   if (googleMapsApiKey && googleMapsApiKey.length > 0) {
     [GMSServices provideAPIKey:googleMapsApiKey];
-    NSLog(@"✅ Google Maps initialized with API key from Info.plist");
+    NSLog(@"✅ Google Maps initialized");
   } else {
-    NSLog(@"⚠️ GoogleMapsAPIKey not set - maps may not work correctly");
+    NSLog(@"⚠️ Google Maps API key not set - maps may not work correctly");
   }
   
   // Configure RN module name

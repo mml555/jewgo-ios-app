@@ -4,17 +4,32 @@ import { MapPoint, GeoJSONPoint } from '../types';
 
 export function useClusterIndex(points: MapPoint[]) {
   return useMemo(() => {
-    const geoPoints: GeoJSONPoint[] = points.map((p, idx) => ({
+    // Filter out points with invalid coordinates
+    const validPoints = points.filter(p => 
+      p.latitude && p.longitude && 
+      !isNaN(p.latitude) && !isNaN(p.longitude) &&
+      p.latitude >= -90 && p.latitude <= 90 &&
+      p.longitude >= -180 && p.longitude <= 180
+    );
+
+    console.log('🔍 useClusterIndex Debug:', {
+      totalPoints: points.length,
+      validPoints: validPoints.length,
+      invalidPoints: points.length - validPoints.length,
+      sampleValidPoints: validPoints.slice(0, 3)
+    });
+
+    const geoPoints: GeoJSONPoint[] = validPoints.map((p, idx) => ({
       type: 'Feature',
       id: p.id || idx,
       properties: {
         cluster: false,
-        id: p.id,
-        rating: p.rating,
-        title: p.title,
-        description: p.description,
-        category: p.category,
-        imageUrl: p.imageUrl,
+        id: p.id || `point-${idx}`,
+        rating: p.rating || null,
+        title: p.title || 'Untitled',
+        description: p.description || 'No description',
+        category: p.category || 'unknown',
+        imageUrl: p.imageUrl || undefined,
       },
       geometry: {
         type: 'Point',
@@ -23,7 +38,7 @@ export function useClusterIndex(points: MapPoint[]) {
     }));
 
     const index = new Supercluster({
-      radius: 58,
+      radius: 80, // Increased radius for better clustering
       maxZoom: 20,
       minZoom: 0,
       minPoints: 2,

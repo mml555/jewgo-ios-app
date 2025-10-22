@@ -32,6 +32,7 @@ import type { AppStackParamList } from '../types/navigation';
 import { Colors, StickyLayout } from '../styles/designSystem';
 import { debugLog, errorLog } from '../utils/logger';
 import { useLocation } from '../hooks/useLocation';
+import { getGridColumns, getGridCardDimensions, useResponsiveDimensions } from '../utils/deviceAdaptation';
 
 interface HomeScreenProps {
   onSearchChange?: (query: string) => void;
@@ -44,6 +45,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
   const headerRailRef = useRef<GridListScrollHeaderRef>(null);
   const isFocused = useIsFocused();
   const isTransitioning = useRef(false);
+  
+  // Responsive dimensions
+  const { width: screenWidth, isTablet } = useResponsiveDimensions();
 
   // Core state
   const [activeCategory, setActiveCategory] = useState('mikvah');
@@ -450,6 +454,25 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
     [STICKY_ENTER, STICKY_EXIT, isFocused],
   );
 
+  // Calculate responsive grid dimensions
+  const gridColumns = getGridColumns();
+  const gridDimensions = getGridCardDimensions(
+    isTablet ? 48 : 32, // Total horizontal padding (both sides combined)
+    isTablet ? 24 : 12, // Gap between cards
+    4/3 // aspect ratio
+  );
+  
+  // Debug logging
+  if (__DEV__) {
+    console.log('🔍 HomeScreen Grid Debug:', {
+      screenWidth,
+      isTablet,
+      gridColumns,
+      cardWidth: gridDimensions.cardWidth,
+      imageHeight: gridDimensions.imageHeight,
+    });
+  }
+
   // Get grid render props from CategoryGridScreen hook
   const gridRenderProps = useCategoryGridRenderProps({
     categoryKey: activeCategory,
@@ -526,7 +549,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
           addButtonText={getAddButtonText(activeCategory)}
         />
         <View style={styles.container}>
-          <SkeletonGrid count={6} columns={2} />
+          <SkeletonGrid count={6} columns={gridColumns} />
         </View>
       </View>
     );
@@ -551,11 +574,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
     <View style={styles.container}>
       {/* FlatList: content padding creates space for fixed TopBar ONLY */}
       <FlatList
-        key={`home-grid-${activeCategory}`} // Force remount on category change - CRITICAL
+        key={`home-grid-${activeCategory}-${gridColumns}`} // Force remount on category or column change - CRITICAL
         data={gridRenderProps.data}
         renderItem={gridRenderProps.renderItem}
         keyExtractor={gridRenderProps.keyExtractor}
-        numColumns={2}
+        numColumns={gridColumns}
         columnWrapperStyle={gridRenderProps.columnWrapperStyle}
         contentContainerStyle={[
           gridRenderProps.contentContainerStyle,

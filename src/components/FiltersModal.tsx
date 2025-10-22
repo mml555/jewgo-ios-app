@@ -19,6 +19,7 @@ import {
   filterOptionsService,
   CategoryFilterOptions,
 } from '../services/FilterOptionsService';
+import { HECHSHER_OPTIONS, PRICE_BRACKETS, DIETARY_COLORS } from '../types/eatery';
 
 export interface FilterOptions {
   // Distance filters
@@ -35,8 +36,15 @@ export interface FilterOptions {
     | 'chalav-yisrael'
     | 'pas-yisrael'
     | 'mehadrin'
-    | 'regular';
+    | 'regular'
+    | 'meat' // NEW: dietary type for eateries
+    | 'dairy' // NEW: dietary type for eateries
+    | 'parve'; // NEW: dietary type for eateries
   priceRange: 'any' | '$' | '$$' | '$$$' | '$$$$';
+  
+  // NEW: Eateries-specific filters
+  kosherCertification?: string; // Hechsher certification (KM, ORB, etc.)
+  priceRanges?: string[]; // Multiple price bracket selections
 
   // Denomination filters (for synagogues and mikvahs)
   denomination:
@@ -591,6 +599,88 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
     );
   };
 
+  // NEW: Eatery-specific filter functions
+  const renderDietaryFilter = () => {
+    if (category !== 'eatery') return null;
+
+    return (
+      <View style={styles.filterSection}>
+        <Text style={styles.sectionTitle}>Dietary Type</Text>
+        <View style={styles.chipsRow}>
+          {['meat', 'dairy', 'parve'].map(dietaryType => (
+            <TouchableOpacity
+              key={dietaryType}
+              style={[
+                styles.dietaryChip,
+                { backgroundColor: DIETARY_COLORS[dietaryType as keyof typeof DIETARY_COLORS] },
+                filters.kosherLevel === dietaryType && styles.dietaryChipActive,
+              ]}
+              onPress={() => handleFilterChange('kosherLevel', dietaryType)}
+            >
+              <Text style={styles.dietaryChipText}>
+                {dietaryType.charAt(0).toUpperCase() + dietaryType.slice(1)}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+    );
+  };
+
+  const renderHechsherFilter = () => {
+    if (category !== 'eatery') return null;
+
+    return (
+      <View style={styles.filterSection}>
+        <Text style={styles.sectionTitle}>Hechsher</Text>
+        <View style={styles.chipsRow}>
+          {HECHSHER_OPTIONS.map(cert => (
+            <TouchableOpacity
+              key={cert}
+              style={[
+                styles.hechsherChip,
+                filters.kosherCertification === cert && styles.hechsherChipActive,
+              ]}
+              onPress={() => handleFilterChange('kosherCertification', cert)}
+            >
+              <Text style={styles.hechsherChipText}>{cert}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+    );
+  };
+
+  const renderEateryPriceFilter = () => {
+    if (category !== 'eatery') return null;
+
+    return (
+      <View style={styles.filterSection}>
+        <Text style={styles.sectionTitle}>Price Range</Text>
+        <View style={styles.priceGrid}>
+          {PRICE_BRACKETS.map(bracket => (
+            <TouchableOpacity
+              key={bracket.label}
+              style={[
+                styles.priceCheckbox,
+                filters.priceRanges?.includes(bracket.label) && styles.priceCheckboxActive,
+              ]}
+              onPress={() => {
+                const currentRanges = filters.priceRanges || [];
+                const newRanges = currentRanges.includes(bracket.label)
+                  ? currentRanges.filter(r => r !== bracket.label)
+                  : [...currentRanges, bracket.label];
+                handleFilterChange('priceRanges', newRanges);
+              }}
+            >
+              <Text style={styles.priceCheckboxText}>{bracket.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+    );
+  };
+
   return (
     <Modal
       visible={visible}
@@ -622,9 +712,12 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
           {renderDistanceSlider()}
           {renderRatingFilter()}
           {renderKosherFilter()}
+          {renderDietaryFilter()}
+          {renderHechsherFilter()}
           {renderDenominationFilter()}
           {renderStoreTypeFilter()}
           {renderPriceFilter()}
+          {renderEateryPriceFilter()}
           {renderSortOptions()}
           {renderServiceFilters()}
         </ScrollView>
@@ -989,6 +1082,65 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666666',
     fontStyle: 'italic',
+  },
+  // NEW: Eatery-specific filter styles
+  chipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  dietaryChip: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    ...Shadows.sm,
+  },
+  dietaryChipActive: {
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
+  dietaryChipText: {
+    fontSize: 12,
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  hechsherChip: {
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 16,
+    backgroundColor: '#F2F2F7',
+    ...Shadows.sm,
+  },
+  hechsherChipActive: {
+    backgroundColor: '#74e1a0',
+  },
+  hechsherChipText: {
+    fontSize: 12,
+    color: '#666666',
+    fontWeight: '500',
+  },
+  priceGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  priceCheckbox: {
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 16,
+    backgroundColor: '#F2F2F7',
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+    ...Shadows.sm,
+  },
+  priceCheckboxActive: {
+    backgroundColor: '#74e1a0',
+    borderColor: '#74e1a0',
+  },
+  priceCheckboxText: {
+    fontSize: 12,
+    color: '#666666',
+    fontWeight: '500',
   },
 });
 

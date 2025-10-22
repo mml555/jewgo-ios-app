@@ -37,9 +37,9 @@ const KosherPricingPage: React.FC<KosherPricingPageProps> = memo(
     );
 
     const handleDietaryCategorySelect = useCallback(
-      (category: 'Meat' | 'Dairy' | 'Pareve') => {
+      (category: 'meat' | 'dairy' | 'parve') => {
         hapticButtonPress();
-        handleInputChange('dietary_category', category);
+        handleInputChange('kosher_level', category);
       },
       [handleInputChange],
     );
@@ -65,9 +65,9 @@ const KosherPricingPage: React.FC<KosherPricingPageProps> = memo(
     );
 
     const dietaryCategories = [
-      { value: 'Meat', label: 'Meat', icon: '🥩' },
-      { value: 'Dairy', label: 'Dairy', icon: '🥛' },
-      { value: 'Pareve', label: 'Pareve', icon: '🥬' },
+      { value: 'meat', label: 'Meat', icon: '🥩' },
+      { value: 'dairy', label: 'Dairy', icon: '🥛' },
+      { value: 'parve', label: 'Parve', icon: '🥬' },
     ];
 
     const kosherTags = [
@@ -97,7 +97,7 @@ const KosherPricingPage: React.FC<KosherPricingPageProps> = memo(
                   key={category.value}
                   style={[
                     styles.categoryPill,
-                    formData.dietary_category === category.value &&
+                    formData.kosher_level === category.value &&
                       styles.pillActive,
                   ]}
                   onPress={() =>
@@ -108,7 +108,7 @@ const KosherPricingPage: React.FC<KosherPricingPageProps> = memo(
                   <Text
                     style={[
                       styles.pillText,
-                      formData.dietary_category === category.value &&
+                      formData.kosher_level === category.value &&
                         styles.pillTextActive,
                     ]}
                   >
@@ -202,6 +202,35 @@ const KosherPricingPage: React.FC<KosherPricingPageProps> = memo(
               ))}
             </View>
           </View>
+
+          {/* NEW: Detailed Price Range for Eateries */}
+          {formData.category === 'eatery' && (
+            <>
+              <View style={styles.fieldGroup}>
+                <Text style={styles.label}>Minimum Price ($)</Text>
+                <TextInput
+                  style={styles.input}
+                  value={formData.price_min?.toString() || ''}
+                  onChangeText={(value) => handleInputChange('price_min', parseFloat(value) || 0)}
+                  placeholder="e.g., 5"
+                  keyboardType="numeric"
+                  returnKeyType="next"
+                />
+              </View>
+
+              <View style={styles.fieldGroup}>
+                <Text style={styles.label}>Maximum Price ($)</Text>
+                <TextInput
+                  style={styles.input}
+                  value={formData.price_max?.toString() || ''}
+                  onChangeText={(value) => handleInputChange('price_max', parseFloat(value) || 0)}
+                  placeholder="e.g., 20"
+                  keyboardType="numeric"
+                  returnKeyType="done"
+                />
+              </View>
+            </>
+          )}
         </View>
       </ScrollView>
     );
@@ -315,6 +344,18 @@ const styles = StyleSheet.create({
   priceText: {
     fontSize: 14,
     color: '#292B2D',
+    fontFamily: 'Nunito',
+  },
+  // NEW: Input styles for price range
+  input: {
+    borderWidth: 1,
+    borderColor: '#C6FFD1',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
+    color: '#292B2D',
+    backgroundColor: '#FFFFFF',
     fontFamily: 'Nunito',
   },
 });

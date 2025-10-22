@@ -40,14 +40,18 @@ export const useLocation = () => {
   } = useLocationStore();
 
   const requestLocationPermission = useCallback(async (): Promise<boolean> => {
+    debugLog('🔍 Requesting location permission...');
+    
     if (Platform.OS === 'ios') {
       // For iOS, we need to actually get the location to trigger the permission dialog
       try {
         setLoading(true);
+        debugLog('🔍 iOS: Starting location request...');
 
         return new Promise(resolve => {
           Geolocation.getCurrentPosition(
             async position => {
+              debugLog('🔍 iOS: Location permission granted, got position:', position);
               const locationData: LocationData = {
                 latitude: position.coords.latitude,
                 longitude: position.coords.longitude,
@@ -74,6 +78,7 @@ export const useLocation = () => {
               setLocation(locationData);
               setPermissionState(true, true, false);
               setLoading(false);
+              debugLog('🔍 iOS: Permission granted, location set');
               resolve(true);
             },
             err => {
@@ -81,6 +86,8 @@ export const useLocation = () => {
               const isDenied = err.code === 1; // PERMISSION_DENIED
               setPermissionState(false, true, isDenied);
               setError(err.message);
+              setLoading(false);
+              debugLog('🔍 iOS: Permission denied or error:', err.message);
               resolve(false);
             },
             { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 },
@@ -89,6 +96,7 @@ export const useLocation = () => {
       } catch (err) {
         errorLog('Error requesting iOS location permission:', err);
         setError('Failed to request location permission');
+        setLoading(false);
         return false;
       }
     }
@@ -119,19 +127,26 @@ export const useLocation = () => {
 
   const getCurrentLocation =
     useCallback(async (): Promise<LocationData | null> => {
+      debugLog('🔍 getCurrentLocation called - permissionGranted:', permissionGranted, 'permissionRequested:', permissionRequested);
+      
       if (!permissionGranted && !permissionRequested) {
+        debugLog('🔍 getCurrentLocation: No permission, requesting...');
         const granted = await requestLocationPermission();
+        debugLog('🔍 getCurrentLocation: Permission request result:', granted);
         if (!granted) {
+          debugLog('🔍 getCurrentLocation: Permission denied, returning null');
           return null;
         }
       }
 
+      debugLog('🔍 getCurrentLocation: Getting location data...');
       setLoading(true);
       setError(null);
 
       return new Promise(resolve => {
         Geolocation.getCurrentPosition(
           async position => {
+            debugLog('🔍 getCurrentLocation: Got position:', position);
             const locationData: LocationData = {
               latitude: position.coords.latitude,
               longitude: position.coords.longitude,
@@ -149,6 +164,7 @@ export const useLocation = () => {
                 locationData.zipCode = addressInfo.zipCode;
                 locationData.city = addressInfo.city;
                 locationData.state = addressInfo.state;
+                debugLog('🔍 getCurrentLocation: Reverse geocoded:', addressInfo);
               }
             } catch (err) {
               // Silently fail - zip code is optional
@@ -167,18 +183,21 @@ export const useLocation = () => {
 
               // Only update if moved more than 50 meters
               if (distanceMeters <= 50) {
+                debugLog('🔍 getCurrentLocation: Location unchanged, returning existing location');
                 setLoading(false);
                 resolve(location);
                 return;
               }
             }
 
+            debugLog('🔍 getCurrentLocation: Setting new location:', locationData);
             setLocation(locationData);
             setLoading(false);
             resolve(locationData);
           },
           err => {
             errorLog('Error getting location:', err);
+            debugLog('🔍 getCurrentLocation: Error getting location:', err);
             let errorMessage = 'Failed to get location';
 
             switch (err.code) {
@@ -196,6 +215,8 @@ export const useLocation = () => {
             const isDenied = err.code === 1; // PERMISSION_DENIED
             setPermissionState(false, true, isDenied);
             setError(errorMessage);
+            setLoading(false);
+            debugLog('🔍 getCurrentLocation: Permission denied, resolving null');
             resolve(null);
           },
           {
@@ -280,29 +301,12 @@ export const useLocation = () => {
     };
   }, [permissionGranted, location, setLocation, setError]);
 
-  // Auto-request location on mount - ONLY for iOS to set permission status
-  // Actual location fetching happens lazily when needed
+  // Initialize permission state - don't check on mount to avoid issues
   useEffect(() => {
-    let isMounted = true;
-
-    const initializePermissions = async () => {
-      if (Platform.OS === 'ios') {
-        // On iOS, just set permission as granted (assuming Info.plist is configured)
-        // Don't fetch location automatically to prevent cascading updates
-        if (isMounted) {
-          setPermissionState(true, true, false);
-        }
-      }
-      // On Android, don't do anything - let user trigger permission request
-    };
-
-    // Small delay to ensure hook is fully initialized
-    const timer = setTimeout(initializePermissions, 100);
-
-    return () => {
-      isMounted = false;
-      clearTimeout(timer);
-    };
+    debugLog('🔍 useLocation: Initializing permission state');
+    // Start with permission not granted - let the app request it when needed
+    setPermissionState(false, false, false);
+    debugLog('🔍 useLocation: Permission state initialized - granted: false, requested: false, denied: false');
   }, [setPermissionState]);
 
   return {

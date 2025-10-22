@@ -35,6 +35,9 @@ import { useLocationSimple } from '../hooks/useLocationSimple';
 import { useStableCallback } from '../utils/performanceOptimization';
 import OptimizedImage from './OptimizedImage';
 import { imageCacheService } from '../services/ImageCacheService';
+import { getGridCardDimensions, useResponsiveDimensions } from '../utils/deviceAdaptation';
+import { getDietaryColor, getDietaryLabel, formatPriceRange } from '../utils/eateryHelpers';
+import { DietaryChip } from './eateries/DietaryChip';
 
 interface CategoryCardProps {
   item: CategoryItem;
@@ -46,11 +49,7 @@ interface CategoryCardProps {
   imageHeight?: number;
 }
 
-const { width: screenWidth } = Dimensions.get('window');
-const HORIZONTAL_PADDING = Spacing.md; // 16px padding on each side
-const CARD_GAP = Spacing.md; // 16px gap between cards
-const CARD_WIDTH = (screenWidth - HORIZONTAL_PADDING * 2 - CARD_GAP) / 2;
-const IMAGE_HEIGHT = (CARD_WIDTH * 3) / 4; // 4:3 aspect ratio
+// Responsive dimensions will be calculated in the component
 
 const CategoryCard: React.FC<CategoryCardProps> = ({
   item,
@@ -58,13 +57,24 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
   onFavoriteToggle,
   isInitiallyFavorited,
   onPress,
-  cardWidth = CARD_WIDTH,
-  imageHeight = IMAGE_HEIGHT,
+  cardWidth,
+  imageHeight,
 }) => {
+  // Get responsive dimensions
+  const { width: screenWidth, isTablet } = useResponsiveDimensions();
+  const gridDimensions = getGridCardDimensions(
+    isTablet ? 48 : 32, // Total horizontal padding (both sides combined)
+    isTablet ? 24 : 12, // Gap between cards
+    4/3 // aspect ratio
+  );
+  
+  const finalCardWidth = cardWidth || gridDimensions.cardWidth;
+  const finalImageHeight = imageHeight || gridDimensions.imageHeight;
+  
   // Create dynamic styles based on props
   const styles = useMemo(
-    () => createStyles(cardWidth, imageHeight),
-    [cardWidth, imageHeight],
+    () => createStyles(finalCardWidth, finalImageHeight, isTablet),
+    [finalCardWidth, finalImageHeight, isTablet],
   );
 
   // Only log in development and reduce frequency
@@ -330,7 +340,7 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
             accessibilityLabel={`Image for ${item.title}`}
             onError={() => {
               if (__DEV__) {
-                debugLog('🖼️ Image load error for', item.title);
+                debugLog('🖼️ Image load error for', item.title, 'URL:', item.imageUrl);
               }
 
               // Clear any existing timeout
@@ -392,10 +402,13 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
           </View>
         )}
 
-        {/* Tag on top left */}
+        {/* Tag on top left - show kosher level for eateries, category for others */}
         <View style={styles.tagContainer}>
           <Text style={styles.tagText}>
-            {String(item.category || 'Unknown')}
+            {categoryKey === 'eatery' 
+              ? (item.kosher_level ? getDietaryLabel(item.kosher_level) : 'Kosher')
+              : String(item.category || 'Unknown')
+            }
           </Text>
         </View>
 
@@ -441,7 +454,12 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
 
         {/* Price and Distance - matches details page layout */}
         <View style={styles.infoRow}>
-          <Text style={styles.priceText}>{String(item.price || '$$')}</Text>
+          <Text style={styles.priceText}>
+            {categoryKey === 'eatery' 
+              ? formatPriceRange(item.price_min, item.price_max) || item.price_range || '$$'
+              : String(item.price || '$$')
+            }
+          </Text>
           {realDistanceMeters ? (
             <DistanceDisplay
               distanceMeters={realDistanceMeters}
@@ -450,11 +468,17 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
                 isApproximate: false,
               }}
               style={styles.distanceContainer}
-              textStyle={styles.distanceText}
+              textStyle={[
+                styles.distanceText,
+                categoryKey === 'eatery' && { color: Colors.eateries.distanceBlue }
+              ]}
               options={{ unit: 'imperial' }}
             />
           ) : (
-            <Text style={styles.distanceText}>
+            <Text style={[
+              styles.distanceText,
+              categoryKey === 'eatery' && { color: Colors.eateries.distanceBlue }
+            ]}>
               {item.zip_code ? String(item.zip_code) : 'N/A'}
             </Text>
           )}
@@ -468,7 +492,7 @@ CategoryCard.displayName = 'CategoryCard';
 
 export default memo(CategoryCard);
 
-const createStyles = (cardWidth: number, imageHeight: number) =>
+const createStyles = (cardWidth: number, imageHeight: number, isTablet: boolean) =>
   StyleSheet.create({
     container: {
       width: cardWidth,
@@ -494,7 +518,7 @@ const createStyles = (cardWidth: number, imageHeight: number) =>
       height: imageHeight,
       borderRadius: BorderRadius.xl,
       overflow: 'hidden',
-      marginBottom: Spacing.sm, // Reduced spacing below image
+      marginBottom: isTablet ? Spacing.md : Spacing.sm, // More spacing on tablets
       backgroundColor: Colors.background.tertiary, // Add background color for when image fails to load
     },
     image: {
@@ -556,8 +580,9 @@ const createStyles = (cardWidth: number, imageHeight: number) =>
     },
     contentContainer: {
       flex: 1,
-      paddingHorizontal: Spacing.xs, // Reduced padding for tighter spacing
-      paddingBottom: Spacing.xs, // Add bottom padding
+      paddingHorizontal: isTablet ? Spacing.sm : Spacing.xs, // More padding on tablets
+      paddingBottom: isTablet ? Spacing.sm : Spacing.xs, // More bottom padding on tablets
+      overflow: 'hidden', // Prevent content from overflowing
     },
     titleSection: {
       flexDirection: 'row',
@@ -610,8 +635,17 @@ const createStyles = (cardWidth: number, imageHeight: number) =>
       ...Typography.styles.body,
       color: Colors.textSecondary,
       fontWeight: '500',
-      minWidth: 40, // Match rating container width
+      minWidth: isTablet ? 60 : 40, // More space on tablets
       textAlign: 'right', // Right align the text
+      maxWidth: isTablet ? 100 : 60, // Much more space on tablets
+      overflow: 'hidden',
+      flexShrink: 1, // Allow text to shrink if needed
+    },
+    // NEW: Eatery-specific styles
+    dietaryChipContainer: {
+      position: 'absolute',
+      bottom: 8,
+      left: 8,
     },
   });
 

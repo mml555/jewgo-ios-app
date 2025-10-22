@@ -14,6 +14,7 @@ import AddCategoryScreen from '../screens/AddCategoryScreen';
 import AddMikvahScreen from '../screens/AddMikvahScreen';
 import AddSynagogueScreen from '../screens/AddSynagogueScreen';
 import LiveMapScreen from '../screens/LiveMapScreen';
+import LiveMapAllScreen from '../screens/LiveMapAllScreen';
 // Shtetl marketplace screens
 import ShtetlScreen from '../screens/ShtetlScreen';
 import StoreDetailScreen from '../screens/StoreDetailScreen';
@@ -128,6 +129,7 @@ const AppNavigator: React.FC = () => {
       <Stack.Screen name="AddMikvah" component={AddMikvahScreen} />
       <Stack.Screen name="AddSynagogue" component={AddSynagogueScreen} />
       <Stack.Screen name="LiveMap" component={LiveMapScreen} />
+      <Stack.Screen name="LiveMapAll" component={LiveMapAllScreen} />
       {/* Shtetl Marketplace Screens */}
       <Stack.Screen name="Shtetl" component={ShtetlScreen} />
       <Stack.Screen name="StoreDetail" component={StoreDetailScreen} />

@@ -1,0 +1,5 @@
+// App.release.xcconfig - includes Pod xcconfig and secrets
+#include? "../Pods/Target Support Files/Pods-JewgoAppFinal/Pods-JewgoAppFinal.release.xcconfig"
+#include? "Secrets.release.xcconfig"
+
+

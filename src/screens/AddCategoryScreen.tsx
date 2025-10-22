@@ -14,7 +14,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../contexts/AuthContext';
 import { debugLog, errorLog } from '../utils/logger';
-import { TouchTargets, Spacing } from '../styles/designSystem';
+import { TouchTargets, Spacing, Colors } from '../styles/designSystem';
 import {
   useResponsiveDimensions,
   useKeyboardAwareLayout,
@@ -58,6 +58,12 @@ export interface ListingFormData {
   hechsher: string; // Renamed from certifying_agency
   short_description: string; // Max 70 chars
   price_range: '$5-10' | '$10-20' | '$20-30' | '$30-40' | '$40+'; // New field
+  
+  // NEW: Eateries-specific fields
+  kosher_level?: 'meat' | 'dairy' | 'parve'; // Dietary type for eateries
+  kosher_certification?: string; // Hechsher certification (KM, ORB, etc.)
+  price_min?: number; // Minimum price
+  price_max?: number; // Maximum price
 
   // Step 3: Amenities & Reviews
   amenities: string[]; // New array field for selected amenities
@@ -813,21 +819,29 @@ const AddCategoryScreen: React.FC = () => {
     crashService,
   ]);
 
+  const renderTopLine = () => (
+      <View style={styles.topLine}>
+        <TouchableOpacity
+          onPress={handleGoBack}
+          style={styles.backButton}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+          accessibilityHint="Navigate to previous step or exit form"
+        >
+          <Text style={styles.backButtonText}>←</Text>
+        </TouchableOpacity>
+        <View style={styles.topLineSpacer} />
+      </View>
+    );
+
   const renderProgressBar = () => (
     <EnhancedProgressIndicator
-      steps={formSteps}
+      currentStep={currentPage}
+      totalSteps={totalPages}
+      progress={Math.round((currentPage / totalPages) * 100)}
       onStepPress={handleStepNavigation}
-      allowStepJumping={true}
-      showCompletionPercentage={true}
-      compact={dimensions.isSmallScreen}
-      showStepNumbers={true}
-      showStepIcons={false}
-      showStepDescriptions={false}
-      orientation="horizontal"
-      containerStyle={[
-        styles.enhancedProgressContainer,
-        { paddingHorizontal: responsiveLayout.containerPadding },
-      ]}
+      onBackPress={handleGoBack}
     />
   );
 
@@ -989,46 +1003,21 @@ const AddCategoryScreen: React.FC = () => {
   }
 
   return (
-    <SafeAreaView
-      style={[
-        styles.container,
-        dimensions.landscape && styles.containerLandscape,
-      ]}
-    >
-      {renderHeader()}
-      {renderProgressBar()}
+    <View style={styles.container}>
       <KeyboardAvoidingView
-        style={[
-          styles.keyboardAvoidingView,
-          {
-            maxHeight: keyboardLayout.availableHeight,
-          },
-        ]}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={
-          Platform.OS === 'ios'
-            ? insets.top + 100 // Header height + progress bar
-            : 20
-        }
+        keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 20}
       >
         <ScrollView
-          style={styles.scrollContainer}
-          contentContainerStyle={[
-            styles.content,
-            {
-              paddingHorizontal: 0,
-              paddingBottom: 120,
-            },
-          ]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="interactive"
-          removeClippedSubviews={true}
         >
+          {renderProgressBar()}
           {renderCurrentPage()}
         </ScrollView>
+        {!keyboardLayout.isKeyboardVisible && renderFooter()}
       </KeyboardAvoidingView>
-      {!keyboardLayout.isKeyboardVisible && renderFooter()}
 
       {/* Confirmation Dialogs */}
       <ConfirmationDialog
@@ -1053,39 +1042,48 @@ const AddCategoryScreen: React.FC = () => {
           navigation.goBack();
         }}
       />
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F2F2F7',
+    backgroundColor: '#FFFFFF',
   },
-  containerLandscape: {
-    // Additional styles for landscape mode if needed
+  topLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingTop: 60, // Space below iOS dynamic island
+    paddingBottom: 8,
+    backgroundColor: '#FFFFFF',
+    minHeight: 44,
+  },
+  topLineSpacer: {
+    width: 40,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: 24,
+    paddingTop: 2,
+    paddingBottom: 12,
     backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
-    minHeight: 80,
+    minHeight: 44,
   },
   headerCompact: {
-    paddingVertical: 12,
-    minHeight: 60,
+    paddingVertical: 20,
+    minHeight: 68,
   },
   backButton: {
-    width: TouchTargets.minimum,
-    height: TouchTargets.minimum,
+    width: 40,
+    height: 40,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: TouchTargets.minimum / 2,
-    backgroundColor: '#F2F2F7',
+    borderRadius: 20,
+    backgroundColor: '#F5F5F7',
+    marginRight: 16,
   },
   backButtonText: {
     fontSize: 20,
@@ -1097,20 +1095,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000000',
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#292B2D',
+    fontFamily: 'Nunito-Bold',
   },
   headerTitleSmall: {
-    fontSize: 16,
+    fontSize: 20,
   },
   headerSubtitle: {
-    fontSize: 14,
-    color: '#8E8E93',
-    marginTop: 2,
+    fontSize: 16,
+    color: '#6B6B6B',
+    marginTop: 4,
+    fontFamily: 'Nunito',
   },
   headerSubtitleSmall: {
-    fontSize: 12,
+    fontSize: 14,
   },
   headerSpacer: {
     width: 40,
@@ -1150,17 +1150,6 @@ const styles = StyleSheet.create({
     color: '#8E8E93',
     textAlign: 'center',
     fontWeight: '500',
-  },
-  keyboardAvoidingView: {
-    flex: 1,
-  },
-  scrollContainer: {
-    flex: 1,
-  },
-  content: {
-    flexGrow: 1,
-    paddingTop: 10,
-    minHeight: '100%',
   },
   footer: {
     position: 'absolute',

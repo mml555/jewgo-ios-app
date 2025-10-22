@@ -56,6 +56,21 @@ export interface Listing {
   images?: string[];
   recent_reviews?: Review[];
   kosher_certifications?: KosherCertification[];
+  
+  // Eateries-specific fields (updated after migration)
+  // kosher_level NOW contains dietary type ('meat' | 'dairy' | 'parve')
+  kosher_level?: 'meat' | 'dairy' | 'parve';
+  
+  // kosher_certification NOW contains standardized hechsher (KM, ORB, etc.)
+  kosher_certification?: string;
+  
+  // NEW: Detailed pricing
+  price_min?: number;
+  price_max?: number;
+  
+  // KEEP: Legacy price_range for backward compatibility
+  price_range?: string;
+  
   // Engagement metrics
   view_count?: number;
   like_count?: number;
@@ -879,7 +894,13 @@ class ApiService {
 
     // Transform images from backend format to frontend format
     const images = entity.images
-      ? entity.images.map((img: any) => img.url)
+      ? entity.images.map((img: any) => {
+          // Handle both object format {url: "..."} and string format
+          if (typeof img === 'string') {
+            return img;
+          }
+          return img.url || img;
+        })
       : [];
 
     // Transform kosher certifications
@@ -927,6 +948,12 @@ class ApiService {
       images: images,
       recent_reviews: entity.recent_reviews || [],
       kosher_certifications: kosher_certifications,
+      // Eateries-specific fields (pass through from backend)
+      kosher_level: entity.kosher_level, // Dietary type: 'meat' | 'dairy' | 'parve'
+      kosher_certification: entity.kosher_certification,
+      price_min: entity.price_min,
+      price_max: entity.price_max,
+      price_range: entity.price_range,
       // Engagement metrics
       view_count: entity.view_count || 0,
       like_count: entity.like_count || 0,

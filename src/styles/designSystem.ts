@@ -104,6 +104,25 @@ export const Colors = {
   info: '#BEBBE7', // JewGo Purple for info
   infoLight: '#D4D1F0', // Light purple for backgrounds
 
+  // Eateries-specific colors from spec
+  eateries: {
+    // Dietary type colors
+    dietaryMeat: '#EB7777',
+    dietaryDairy: '#71BBFF',
+    dietaryParve: '#FFCE6D',
+    
+    // UI element colors
+    distanceBlue: '#71BBFF',
+    ctaGreen: '#C6FFD1',
+    ctaHover: '#ECFFF4',
+    boostPurple: '#F1C1FF',
+    boostPink: '#FFF6F7',
+    
+    // Status colors
+    openGreen: '#74E1A0',
+    closedRed: '#FFB3B3',
+  },
+
   // Legacy background colors for backward compatibility
   overlay: 'rgba(41, 43, 45, 0.5)',
 

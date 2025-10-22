@@ -20,6 +20,7 @@ import { usePrefetchDetails } from '../hooks/usePrefetchNavigation';
 import { enhancedApiService } from '../services/EnhancedApiService';
 import { Event } from '../services/EventsService';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { getGridColumns, getGridCardDimensions, useResponsiveDimensions } from '../utils/deviceAdaptation';
 
 interface CategoryGridScreenProps {
   categoryKey: string;
@@ -71,10 +72,17 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
 }) => {
   const navigation = useNavigation();
   const { bottom: insetBottom } = useSafeAreaInsets();
+  
+  // Get responsive dimensions
+  const { isTablet } = useResponsiveDimensions();
+  const gridColumns = getGridColumns();
 
   const listBottomPadding = useMemo(() => {
-    return Spacing.xl + Math.max(insetBottom, Spacing.md);
-  }, [insetBottom]);
+    // Add extra padding for bottom navigation bar on tablets
+    const basePadding = Spacing.xl + Math.max(insetBottom, Spacing.md);
+    const navigationBarPadding = isTablet ? 140 : 100; // Much more space for curved bottom bar on tablets
+    return basePadding + navigationBarPadding;
+  }, [insetBottom, isTablet]);
 
   const footerBottomPadding = useMemo(() => {
     return Math.max(insetBottom + Spacing.sm, Spacing.lg);
@@ -210,11 +218,25 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
 
   const renderItem = useCallback(
     ({ item }: { item: CategoryItem | Event }) => {
+      // Calculate responsive card dimensions
+      const gridDimensions = getGridCardDimensions(
+        isTablet ? 48 : 32, // Total horizontal padding (both sides combined)
+        isTablet ? 24 : 12, // Gap between cards
+        4/3 // aspect ratio
+      );
+      
       // Transform events to use standard CategoryCard for consistent grid layout
       if (categoryKey === 'events') {
         const event = item as Event;
         const categoryItem = transformEventToCategoryItem(event);
-        return <CategoryCard item={categoryItem} categoryKey={categoryKey} />;
+        return (
+          <CategoryCard 
+            item={categoryItem} 
+            categoryKey={categoryKey}
+            cardWidth={gridDimensions.cardWidth}
+            imageHeight={gridDimensions.imageHeight}
+          />
+        );
       }
       // Use JobCard for jobs category
       if (categoryKey === 'jobs') {
@@ -224,10 +246,15 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
       }
       // Use CategoryCard for all other categories
       return (
-        <CategoryCard item={item as CategoryItem} categoryKey={categoryKey} />
+        <CategoryCard 
+          item={item as CategoryItem} 
+          categoryKey={categoryKey}
+          cardWidth={gridDimensions.cardWidth}
+          imageHeight={gridDimensions.imageHeight}
+        />
       );
     },
-    [categoryKey, transformEventToCategoryItem],
+    [categoryKey, transformEventToCategoryItem, isTablet],
   );
 
   // Memoized key extractor
@@ -377,8 +404,15 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
     return enhancedApiService.prefetchListing(id);
   });
 
-  // Memoized column wrapper style for 2-column layout
-  const columnWrapperStyle = useMemo(() => styles.row, []);
+  // Memoized column wrapper style for responsive layout
+  const columnWrapperStyle = useMemo(() => {
+    if (gridColumns === 2) {
+      return styles.row;
+    } else {
+      // For 3+ columns, use space-between for better distribution
+      return [styles.row, styles.rowMultiColumn];
+    }
+  }, [gridColumns]);
 
   // Show skeleton loader on initial load
   if (isInitialLoading) {
@@ -431,8 +465,13 @@ const styles = StyleSheet.create({
   },
   row: {
     justifyContent: 'space-between',
-    paddingHorizontal: Spacing.md,
-    marginBottom: Spacing.md,
+    paddingHorizontal: 16, // 16px on each side = 32px total
+    marginBottom: 12, // Gap between rows
+  },
+  rowMultiColumn: {
+    justifyContent: 'space-between',
+    paddingHorizontal: 24, // 24px on each side = 48px total for tablets
+    marginBottom: 24, // Larger gap between rows on tablets
   },
   footerLoader: {
     flexDirection: 'row',
@@ -519,10 +558,16 @@ export const useCategoryGridRenderProps = (
   const navigation = useNavigation();
   const { categoryKey, query = '', jobMode = 'hiring' } = props;
   const { bottom: insetBottom } = useSafeAreaInsets();
+  
+  // Get responsive dimensions
+  const { isTablet } = useResponsiveDimensions();
 
   const listBottomPadding = useMemo(() => {
-    return Spacing.xl + Math.max(insetBottom, Spacing.md);
-  }, [insetBottom]);
+    // Add extra padding for bottom navigation bar on tablets
+    const basePadding = Spacing.xl + Math.max(insetBottom, Spacing.md);
+    const navigationBarPadding = isTablet ? 140 : 100; // Much more space for curved bottom bar on tablets
+    return basePadding + navigationBarPadding;
+  }, [insetBottom, isTablet]);
 
   const footerBottomPadding = useMemo(() => {
     return Math.max(insetBottom + Spacing.sm, Spacing.lg);
@@ -581,10 +626,24 @@ export const useCategoryGridRenderProps = (
 
   const renderItem = useCallback(
     ({ item }: { item: CategoryItem | Event }) => {
+      // Calculate responsive card dimensions
+      const gridDimensions = getGridCardDimensions(
+        isTablet ? 48 : 32, // Total horizontal padding (both sides combined)
+        isTablet ? 24 : 12, // Gap between cards
+        4/3 // aspect ratio
+      );
+      
       if (categoryKey === 'events') {
         const event = item as Event;
         const categoryItem = transformEventToCategoryItem(event);
-        return <CategoryCard item={categoryItem} categoryKey={categoryKey} />;
+        return (
+          <CategoryCard 
+            item={categoryItem} 
+            categoryKey={categoryKey}
+            cardWidth={gridDimensions.cardWidth}
+            imageHeight={gridDimensions.imageHeight}
+          />
+        );
       }
       if (categoryKey === 'jobs') {
         return (
@@ -592,10 +651,15 @@ export const useCategoryGridRenderProps = (
         );
       }
       return (
-        <CategoryCard item={item as CategoryItem} categoryKey={categoryKey} />
+        <CategoryCard 
+          item={item as CategoryItem} 
+          categoryKey={categoryKey}
+          cardWidth={gridDimensions.cardWidth}
+          imageHeight={gridDimensions.imageHeight}
+        />
       );
     },
-    [categoryKey, transformEventToCategoryItem],
+    [categoryKey, transformEventToCategoryItem, isTablet],
   );
 
   const keyExtractor = useCallback((item: CategoryItem) => item.id, []);
@@ -736,7 +800,21 @@ export const useCategoryGridRenderProps = (
     return enhancedApiService.prefetchListing(id);
   });
 
-  const columnWrapperStyle = useMemo(() => styles.row, []);
+  const columnWrapperStyle = useMemo(() => {
+    const gridColumns = getGridColumns();
+    if (__DEV__) {
+      console.log('🔍 CategoryGridScreen columnWrapperStyle Debug:', {
+        gridColumns,
+        isTablet,
+      });
+    }
+    if (gridColumns === 2) {
+      return styles.row;
+    } else {
+      // For 3+ columns, use space-between for better distribution
+      return [styles.row, styles.rowMultiColumn];
+    }
+  }, []);
 
   return {
     data: filteredData,

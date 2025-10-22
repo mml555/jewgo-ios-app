@@ -25,14 +25,32 @@ import {
 } from 'react-native';
 import { CurvedBottomBar } from 'react-native-curved-bottom-bar';
 import Icon from 'react-native-vector-icons/Feather';
+import { useNavigation } from '@react-navigation/native';
 import { TabParamList } from '../types/navigation';
 
 // SCREENS
 import HomeScreen from '../screens/HomeScreen';
 import FavoritesScreen from '../screens/FavoritesScreen';
 import SpecialsScreen from '../screens/SpecialsScreen';
-import LiveMapAllScreen from '../screens/LiveMapAllScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+
+// Custom LiveMap component that navigates to full-screen version with all entries
+const LiveMapTabComponent: React.FC = () => {
+  const navigation = useNavigation();
+  
+  React.useEffect(() => {
+    console.log('🔍 LiveMapTabComponent: Navigating to LiveMapAll');
+    // Navigate to the full-screen LiveMapAll (shows all entries) immediately
+    (navigation as any).navigate('LiveMapAll');
+  }, [navigation]);
+  
+  // Return a minimal view to prevent blank screen
+  return (
+    <View style={{ flex: 1, backgroundColor: '#F2F2F7' }}>
+      {/* This will be immediately replaced by navigation */}
+    </View>
+  );
+};
 
 // Brand tokens (from spec)
 const NAV_BG = '#FFFFFF';
@@ -43,6 +61,7 @@ const SPECIALS_SELECTED = '#FFF1BA';
 
 const BAR_HEIGHT = 60; // Reduced height for better positioning
 const CIRCLE_SIZE = 60; // Reduced to match proportion
+const BOTTOM_PADDING = 30; // Space between bar and bottom of screen
 
 const labelMap: Record<keyof TabParamList, string> = {
   Explore: 'Explore',
@@ -149,7 +168,7 @@ export default function RootTabs() {
           <CurvedBottomBar.Screen
             name="LiveMap"
             position="RIGHT"
-            component={LiveMapAllScreen}
+            component={LiveMapTabComponent}
           />
           <CurvedBottomBar.Screen
             name="Profile"
@@ -169,7 +188,7 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     flex: 1,
-    marginBottom: 30, // Add 30px space between bar and bottom of screen
+    marginBottom: BOTTOM_PADDING, // Add space between bar and bottom of screen
   },
   tabItem: {
     alignItems: 'center',

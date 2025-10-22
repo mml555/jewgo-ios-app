@@ -27,6 +27,7 @@ import FacebookIcon from '../components/FacebookIcon';
 import InstagramIcon from '../components/InstagramIcon';
 import TikTokIcon from '../components/TikTokIcon';
 import WhatsAppIcon from '../components/WhatsAppIcon';
+import { getDietaryColor, getDietaryLabel } from '../utils/eateryHelpers';
 import ReviewsModal from '../components/ReviewsModal';
 import WriteReviewModal from '../components/WriteReviewModal';
 import ImageCarousel from '../components/ImageCarousel';
@@ -812,17 +813,33 @@ const ListingDetailScreen: React.FC = () => {
               <Text style={styles.orderButtonText}>Order Now</Text>
             </TouchableOpacity>
 
-            {/* Feature Tags */}
+            {/* Kosher Information Tags */}
             <View style={styles.featureTagsContainer}>
-              <View style={[styles.featureTag, styles.featureTagPrimary]}>
-                <Text style={styles.featureTagText}>Popular</Text>
-              </View>
-              <View style={[styles.featureTag, styles.featureTagSecondary]}>
-                <Text style={styles.featureTagText}>Trending</Text>
-              </View>
-              <View style={[styles.featureTag, styles.featureTagAccent]}>
-                <Text style={styles.featureTagText}>New</Text>
-              </View>
+              {/* Kosher Level Tag */}
+              {item.kosher_level && (
+                <View style={[styles.featureTag, { backgroundColor: getDietaryColor(item.kosher_level) }]}>
+                  <Text style={[styles.featureTagText, { color: '#FFFFFF' }]}>
+                    {getDietaryLabel(item.kosher_level)}
+                  </Text>
+                </View>
+              )}
+              
+              {/* Kosher Agency Tag */}
+              {item.kosher_certification && (
+                <View style={[styles.featureTag, styles.featureTagSecondary]}>
+                  <Text style={styles.featureTagText}>{item.kosher_certification}</Text>
+                </View>
+              )}
+              
+              {/* Additional Kosher Details */}
+              {item.kosher_tags && item.kosher_tags.length > 0 && (
+                <View style={[styles.featureTag, styles.featureTagAccent]}>
+                  <Text style={styles.featureTagText}>
+                    {item.kosher_tags.slice(0, 2).join(', ')}
+                    {item.kosher_tags.length > 2 && ' +'}
+                  </Text>
+                </View>
+              )}
             </View>
 
             {/* Description */}

@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { FilterOptions } from '../components/FiltersModal';
 import { debugLog } from '../utils/logger';
+import { convertPriceRangesToMinMax } from '../utils/eateryHelpers';
 
 const defaultFilters: FilterOptions = {
   maxDistance: 100,
@@ -134,6 +135,11 @@ export const useFilters = (initialFilters?: Partial<FilterOptions>) => {
     return getActiveFiltersCount() > 0;
   }, [getActiveFiltersCount]);
 
+  // Helper to convert price ranges to API params
+  const convertPriceRangesToAPI = useCallback((priceRanges?: string[]) => {
+    return convertPriceRangesToMinMax(priceRanges);
+  }, []);
+
   return {
     filters,
     showFiltersModal,
@@ -143,5 +149,6 @@ export const useFilters = (initialFilters?: Partial<FilterOptions>) => {
     resetFilters,
     getActiveFiltersCount,
     hasActiveFilters,
+    convertPriceRangesToAPI,
   };
 };

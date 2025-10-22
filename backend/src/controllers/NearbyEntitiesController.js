@@ -233,7 +233,7 @@ class NearbyEntitiesController {
                  ST_MakePoint(longitude, latitude),
                  ST_MakePoint($2, $1)
                )) as avg_distance
-        FROM entities_normalized 
+        FROM entities 
         WHERE is_active = true 
           AND latitude IS NOT NULL 
           AND longitude IS NOT NULL

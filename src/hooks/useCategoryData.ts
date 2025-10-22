@@ -6,15 +6,20 @@ import { useAuth } from '../contexts/AuthContext';
 // Helper function to get the correct image URL from database or fallback to placeholder
 const getImageUrl = (listing: Listing): string => {
   if (listing.images && listing.images.length > 0) {
-    // Find the primary image first, then fallback to first image
-    const primaryImage = listing.images.find((img: any) => img.is_primary);
-    return primaryImage
-      ? (primaryImage as any).url
-      : (listing.images[0] as any).url;
-  } else {
-    // Fallback to placeholder only if no images exist in database
-    return `https://picsum.photos/300/225?random=${listing.id || ''}`;
+    // Images are already transformed to string URLs in api.ts
+    const imageUrl = listing.images[0];
+    
+    // Validate URL
+    if (imageUrl && typeof imageUrl === 'string' && imageUrl.trim().length > 0) {
+      // Check if it's a valid URL
+      if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+        return imageUrl;
+      }
+    }
   }
+  
+  // Fallback to placeholder only if no valid images exist
+  return `https://picsum.photos/300/225?random=${listing.id || ''}`;
 };
 
 export interface CategoryItem {
@@ -48,6 +53,12 @@ export interface CategoryItem {
   state?: string;
   review_count?: number;
   image_url?: string;
+  // Eateries-specific fields (snake_case from API)
+  kosher_level?: 'meat' | 'dairy' | 'parve'; // Dietary type for eateries
+  kosher_certification?: string; // Hechsher certification
+  price_min?: number;
+  price_max?: number;
+  price_range?: string;
 }
 
 interface UseCategoryDataOptions {
@@ -307,6 +318,19 @@ export const useCategoryData = ({
       hasWifi: false,
       hasAccessibility: false,
       hasDelivery: false,
+      // Pass through eatery-specific fields from API
+      kosher_level: listing.kosher_level, // Dietary type: 'meat' | 'dairy' | 'parve'
+      kosher_certification: listing.kosher_certification,
+      price_min: listing.price_min,
+      price_max: listing.price_max,
+      price_range: listing.price_range,
+      // Pass through additional API fields
+      entity_type: listing.category_id,
+      address: listing.address,
+      city: listing.city,
+      state: listing.state,
+      review_count: listing.review_count,
+      image_url: listing.images?.[0],
     };
 
     // Add coordinate only if valid

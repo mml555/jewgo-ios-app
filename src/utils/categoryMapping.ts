@@ -101,42 +101,33 @@ export function getCategoriesWithCounts(
     }
   });
 
-  // Define all available categories in the app (in preferred order)
-  const allCategories = [
-    'synagogue', // Shuls
-    'mikvah', // Mikvahs
-    'restaurant', // Eateries
-    'jobs', // Jobs
-    'events', // Events
-    'store', // Stores
-    'specials', // Specials
-    'eatery-plus', // Eatery+ Coming Soon (always last)
-  ];
+  // Debug: Log the counts to see what's happening
+  if (__DEV__) {
+    console.log('🔍 Category counts:', Object.fromEntries(categoryCounts));
+    console.log('🔍 Total favorites:', favorites.length);
+  }
 
-  // Convert to array with category info - show ALL categories
+  // Convert to array with category info - show only categories with favorites
   const categories: Array<CategoryInfo & { count: number }> = [];
 
-  // Add all available categories (even with 0 counts)
-  allCategories.forEach(key => {
-    const categoryInfo = getCategoryInfo(key);
-    const count = categoryCounts.get(key) || 0;
-    const listingImageUrl = categoryFirstImages.get(key);
+  // Only process categories that actually have favorites
+  categoryCounts.forEach((count, key) => {
+    if (count > 0) {
+      const categoryInfo = getCategoryInfo(key);
+      const listingImageUrl = categoryFirstImages.get(key);
 
-    // Force override the backgroundImage to use our placeholder
-    const placeholderImage =
-      'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=400&h=300&fit=crop&crop=center';
-
-    categories.push({
-      ...categoryInfo,
-      listingImageUrl,
-      count,
-      // Always use placeholder image as background for consistency - no more rainbow gradients
-      backgroundImage: placeholderImage,
-    });
+      categories.push({
+        ...categoryInfo,
+        listingImageUrl,
+        count,
+        // Use category-specific background image, fallback to placeholder
+        backgroundImage: categoryInfo.backgroundImage,
+      });
+    }
   });
 
   // Sort by count (descending) then by display name, but always keep 'eatery-plus' last
-  return categories.sort((a, b) => {
+  const sortedCategories = categories.sort((a, b) => {
     // Always put 'eatery-plus' at the end
     if (a.key === 'eatery-plus') {
       return 1;
@@ -151,4 +142,11 @@ export function getCategoriesWithCounts(
     }
     return a.displayName.localeCompare(b.displayName);
   });
+
+  // Debug: Log the final categories being returned
+  if (__DEV__) {
+    console.log('🔍 Final categories:', sortedCategories.map(c => `${c.key}: ${c.count}`));
+  }
+
+  return sortedCategories;
 }

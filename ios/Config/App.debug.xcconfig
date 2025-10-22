@@ -1,0 +1,5 @@
+// App.debug.xcconfig - includes Pod xcconfig and secrets
+#include? "../Pods/Target Support Files/Pods-JewgoAppFinal/Pods-JewgoAppFinal.debug.xcconfig"
+#include? "Secrets.debug.xcconfig"
+
+

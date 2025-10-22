@@ -12,190 +12,142 @@ prepare_react_native_project!
 
 project 'JewgoAppFinal.xcodeproj'
 
-use_frameworks! :linkage => :static
-
 target 'JewgoAppFinal' do
+  # Remove static frameworks to allow proper module resolution
   config = use_native_modules!
+
+  # Toggle Fabric/new-arch via environment:
+  #   FABRIC_ENABLED=1 (or RCT_NEW_ARCH_ENABLED=1) to enable Fabric
+  #   default: classic mode (Fabric disabled)
+  fabric_enabled_env = (ENV['FABRIC_ENABLED'] == '1') || (ENV['RCT_NEW_ARCH_ENABLED'] == '1')
 
   use_react_native!(
     :path => config[:reactNativePath],
     :hermes_enabled => true,
-    :fabric_enabled => false,
+    :fabric_enabled => fabric_enabled_env,
     :app_path => "#{Pod::Config.instance.installation_root}/.."
   )
 
-  # Configure react-native-maps to use Google Maps instead of Apple Maps
-  # Must come after use_native_modules! to override auto-linking
+  # Configure react-native-maps to use Google Maps provider
   pod 'react-native-google-maps', :path => '../node_modules/react-native-maps'
-  pod 'GoogleMaps', '~> 8.4.0'
-  pod 'Google-Maps-iOS-Utils', '~> 5.0.0'
+  # Pin compatible Google Maps pods to ensure Swift symbols (e.g., GMUWeightedLatLng) are available
+  pod 'GoogleMaps', '7.4.0', :modular_headers => true
+  pod 'Google-Maps-iOS-Utils', '4.2.2', :modular_headers => true
 
 end
 
 post_install do |installer|
-  # Let RN configure first, then override
   react_native_post_install(installer)
 
-  # Include Secrets.xcconfig in Pods configuration
-  installer.pods_project.targets.each do |target|
-    if target.name == 'Pods-JewgoAppFinal'
-      target.build_configurations.each do |config|
-        config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'gnu++20'
-        config.build_settings['OTHER_CPLUSPLUSFLAGS'] = '$(inherited) -std=gnu++20'
-        secrets_file = File.join(File.dirname(__FILE__), 'Config', "Secrets.#{config.name.downcase}.xcconfig")
-        next unless File.exist?(secrets_file)
-
-        xcconfig_path = config.base_configuration_reference.real_path.to_s
-        relative = Pathname.new(secrets_file).relative_path_from(Pathname.new(xcconfig_path).dirname)
-
-        contents = File.read(xcconfig_path)
-        include_line = "#include \"#{relative}\""
-        next if contents.include?(include_line)
-
-        File.open(xcconfig_path, 'a') do |file|
-          file.puts "\n// Include secrets configuration"
-          file.puts include_line
-        end
-      end
-    end
-  end
-
-  installer.pods_project.build_configurations.each do |config|
-    config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'gnu++20'
-    config.build_settings['OTHER_CPLUSPLUSFLAGS'] = '$(inherited) -std=gnu++20'
-  end
-
-  %w[Public Private].each do |visibility|
-    headers_root = Pathname.new(Pod::Config.instance.installation_root).join('Pods', 'Headers', visibility)
-    callinvoker_headers = headers_root.join('React-callinvoker', 'ReactCommon')
-    reactcommon_link = headers_root.join('ReactCommon')
-    next unless callinvoker_headers.exist?
-
-    FileUtils.mkdir_p(headers_root)
-    target_relative = callinvoker_headers.relative_path_from(headers_root)
-
-    if reactcommon_link.exist? && !reactcommon_link.symlink?
-      FileUtils.rm_rf(reactcommon_link)
-    end
-
-    FileUtils.ln_sf(target_relative, reactcommon_link)
-  end
-
-  # Single iOS deployment target for all pods
   min_ios = '15.1'
+
+  installer.generated_projects.each do |project|
+    project.build_configurations.each do |config|
+      config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'gnu++20'
+      config.build_settings['OTHER_CPLUSPLUSFLAGS'] = '$(inherited) -std=gnu++20'
+      # Allow CocoaPods embed scripts (rsync) under Xcode 15/16 sandboxing
+      config.build_settings['ENABLE_USER_SCRIPT_SANDBOXING'] = 'NO'
+    end
+  end
 
   installer.pods_project.targets.each do |t|
     t.build_configurations.each do |cfg|
       s = cfg.build_settings
-
-      # iOS version floor
       s['IPHONEOS_DEPLOYMENT_TARGET'] = min_ios
-
-      # Make Folly/JSI/Yoga compile as GNU++20 (matches RN defaults with GNU extensions)
-      s['CLANG_CXX_LIBRARY']           = 'libc++'
       s['CLANG_CXX_LANGUAGE_STANDARD'] = 'gnu++20'
-
-      # Sanitize flags as plain strings to avoid array-string artifacts in response files
+      s['CLANG_CXX_LIBRARY'] = 'libc++'
       s['OTHER_CPLUSPLUSFLAGS'] = '$(inherited) -std=gnu++20'
-      s['OTHER_CFLAGS'] = '$(inherited) -DHAVE_PTHREAD=1 -Wno-documentation -Wno-deprecated-declarations'
-      s['GCC_PREPROCESSOR_DEFINITIONS'] = '$(inherited) FOLLY_NO_CONFIG=1 HAVE_PTHREAD=1'
+      # Don't exclude arm64 for simulator - M1+ Macs need it
+      # s['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'arm64'
+      s['ENABLE_BITCODE'] = 'NO'
+      s['CODE_SIGNING_ALLOWED'] = 'NO'
+      # Prefer modular headers; avoid global non-modular flag.
 
-      # Keep header lookup sane and quiet doc warnings
-      s['CLANG_WARN_DOCUMENTATION_COMMENTS'] = 'NO'
-      s['ALWAYS_SEARCH_USER_PATHS'] = 'NO'
-      s['USE_HEADERMAP'] = 'YES'
+      # Do not force a global prefix header; rely on platform SDK includes to avoid libc++ header ordering issues
 
-      # --- Stabilize mixed ObjC++/C++ pods (RN 0.76 on Xcode 16) ---
-      s['CLANG_ENABLE_MODULES'] = 'NO'
-      s['DEFINES_MODULE'] = 'NO'
-      s['ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
+      # Expose React framework headers for static linkage & Swift import
+      if ['React', 'React-Core', 'React-CoreModules', 'React-RCTAppDelegate', 'ReactCommon'].include?(t.name)
+        s['DEFINES_MODULE'] = 'YES'
+        s['BUILD_LIBRARY_FOR_DISTRIBUTION'] = 'YES'
+      end
+      
+      # Ensure Google Maps pods build as modules so Swift can see ObjC symbols
+      if ['GoogleMaps', 'Google-Maps-iOS-Utils', 'GoogleSignIn', 'AppAuth', 'GTMAppAuth'].include?(t.name)
+        s['DEFINES_MODULE'] = 'YES'
+      end
 
-      # Feed Core* and float limits into every TU (incl. .cpp files).
-      # IMPORTANT: Pods project PROJECT_DIR == ios/Pods; climb out to ios/Config
-      s['GCC_PREFIX_HEADER'] = '$(PROJECT_DIR)/../Config/GlobalPrefix.pch'
-      s['GCC_PRECOMPILE_PREFIX_HEADER'] = 'YES'
+      # Ensure RN Maps headers (AirMaps) are visible to Google Maps variant
+      if t.name == 'react-native-google-maps'
+        s['HEADER_SEARCH_PATHS'] = [
+          '$(inherited)',
+          '$(PODS_ROOT)/Headers/Public/React-Core',
+          '$(PODS_ROOT)/Headers/Public/React',
+          '$(PODS_ROOT)/Headers/Public/react-native-google-maps',
+          '${PODS_ROOT}/../../node_modules/react-native-maps/ios/AirMaps',
+          '${PODS_ROOT}/../../node_modules/react-native-maps/ios/AirMaps/Callout',
+          '${PODS_ROOT}/../../node_modules/react-native-maps/ios/AirGoogleMaps'
+        ].join(' ')
+      end
+
+      # Rely on CocoaPods header maps for React renderer pods
+
+      # Ensure React module is visible to Swift in geolocation-service
+      if t.name == 'react-native-geolocation-service'
+        s['DEFINES_MODULE'] = 'YES'
+        s['CLANG_ENABLE_MODULES'] = 'YES'
+        s['SWIFT_ENABLE_EXPLICIT_MODULES'] = 'NO'
+        s['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'x86_64'
+        s['HEADER_SEARCH_PATHS'] = [
+          '$(inherited)',
+          '$(PODS_ROOT)/Headers/Public/React-Core',
+          '$(PODS_ROOT)/Headers/Public/React',
+          '"$(PODS_ROOT)/Target Support Files/React-Core"'
+        ].join(' ')
+        s['SWIFT_INCLUDE_PATHS'] = [
+          '$(inherited)',
+          '$(PODS_ROOT)/Headers/Public/React-Core',
+          '$(PODS_ROOT)/Headers/Public/React',
+          '"$(PODS_ROOT)/Target Support Files/React-Core"'
+        ].join(' ')
+        s['OTHER_SWIFT_FLAGS'] = [
+          s['OTHER_SWIFT_FLAGS'],
+          '-Xcc',
+          '"-fmodule-map-file=$(PODS_ROOT)/Target Support Files/React-Core/React-Core.modulemap"'
+        ].compact.join(' ')
+      end
     end
+    # Ensure CocoaPods script phases declare stable outputs for Xcode 15+ dependency analysis
+    script_phase_markers = {
+      '[CP-User] [RN]Check rncore' => '$(DERIVED_FILE_DIR)/rncore_check_$(TARGET_NAME).marker',
+      '[CP-User] [Hermes] Replace Hermes for the right configuration, if needed' => '$(DERIVED_FILE_DIR)/hermes_configured_$(TARGET_NAME).marker'
+    }
+    if t.respond_to?(:shell_script_build_phases)
+      t.shell_script_build_phases.each do |phase|
+        marker = script_phase_markers[phase.name]
+        next unless marker
+        existing = Array(phase.output_paths)
+        phase.output_paths = existing + [marker] if existing.empty?
+      end
+    end
+    
+    # Do not patch pod xcconfig files directly; rely on podspecs
   end
 
-  # Narrow extra warning suppression specifically to glog
-  glog = installer.pods_project.targets.find { |t| t.name == 'glog' }
-  if glog
-    glog.build_configurations.each do |cfg|
-      s = cfg.build_settings
-      # Ensure glog's own config.h is preferred over Yoga's Config.h on case-insensitive FS
-      header_paths = (s['HEADER_SEARCH_PATHS'] || '$(inherited)').to_s.split(' ')
-      header_paths = (["\"$(PODS_TARGET_SRCROOT)/src\""] | header_paths).uniq
-      s['HEADER_SEARCH_PATHS'] = header_paths.join(' ')
-      s['USE_HEADERMAP'] = 'NO'
-      c = (s['OTHER_CFLAGS'] || '$(inherited)').to_s.split(' ')
-      c |= %w[-Wno-deprecated-declarations]
-      s['OTHER_CFLAGS'] = c.join(' ')
-    end
-  end
-  # Disable headermaps only for RCT-Folly to avoid libc++ header collisions on Xcode 16
-  rct_folly_targets = installer.pods_project.targets.select { |t| t.name == 'RCT-Folly' || t.name.start_with?('RCT-Folly/') }
-  rct_folly_targets.each do |t|
-    t.build_configurations.each do |cfg|
-      s = cfg.build_settings
-      s['USE_HEADERMAP'] = 'NO'
+  # Disable user script sandboxing on the user app project to allow Embed Pods Frameworks rsync
+  installer.aggregate_targets.each do |agg|
+    user_project = agg.user_project
+    if user_project
+      user_project.targets.each do |target|
+        target.build_configurations.each do |cfg|
+          cfg.build_settings['ENABLE_USER_SCRIPT_SANDBOXING'] = 'NO'
+        end
+      end
+      user_project.build_configurations.each do |cfg|
+        cfg.build_settings['ENABLE_USER_SCRIPT_SANDBOXING'] = 'NO'
+      end
+      user_project.save
     end
   end
   
-  # Extra belt-and-suspenders for the most fragile RN pods
-  %w[React-graphics ReactCommon React-jserrorhandler React-performancetimeline].each do |name|
-    if (t = installer.pods_project.targets.find { |x| x.name == name })
-      t.build_configurations.each do |cfg|
-        s = cfg.build_settings
-        s['CLANG_ENABLE_MODULES'] = 'NO'
-        s['DEFINES_MODULE'] = 'NO'
-      end
-    end
-  end
-
-  # Set alwaysOutOfDate on all script phases to disable "Based on dependency analysis"
-  # This ensures scripts run on every build and prevents build warnings
-  installer.pods_project.targets.each do |target|
-    target.shell_script_build_phases.each do |phase|
-      phase.always_out_of_date = '1'
-    end
-  end
-
-  # === FIX: Patch ReactCodegen script to use absolute paths (Xcode 26 compatibility) ===
-  # The relative path resolution breaks in Xcode 26 beta, causing script execution failures
-  reactcodegen = installer.pods_project.targets.find { |target| target.name == 'ReactCodegen' }
-  if reactcodegen
-    reactcodegen.shell_script_build_phases.each do |phase|
-      # Find the "Generate Specs" phase
-      if phase.name&.include?('Generate Specs')
-        # Get absolute paths - ios_folder is where Podfile lives
-        ios_folder = File.dirname(__FILE__)
-        app_root = File.expand_path('..', ios_folder)  # Go up from ios/ to project root
-        rn_dir = File.join(app_root, 'node_modules', 'react-native')
-        
-        # Rewrite script with absolute paths
-        phase.shell_script = <<~SCRIPT
-          # Patched to use absolute paths for Xcode 26 compatibility
-          export RCT_SCRIPT_POD_INSTALLATION_ROOT="#{ios_folder}"
-          export RCT_SCRIPT_RN_DIR="#{rn_dir}"
-          export RCT_SCRIPT_APP_PATH="#{app_root}"
-          export RCT_SCRIPT_OUTPUT_DIR="#{ios_folder}"
-          export RCT_SCRIPT_TYPE=withCodegenDiscovery
-
-          SCRIPT_PHASES_SCRIPT="$RCT_SCRIPT_RN_DIR/scripts/react_native_pods_utils/script_phases.sh"
-          WITH_ENVIRONMENT="$RCT_SCRIPT_RN_DIR/scripts/xcode/with-environment.sh"
-          
-          if [ ! -f "$WITH_ENVIRONMENT" ]; then
-            echo "error: Cannot find with-environment.sh at: $WITH_ENVIRONMENT"
-            exit 1
-          fi
-          
-          /bin/sh -c "$WITH_ENVIRONMENT $SCRIPT_PHASES_SCRIPT"
-        SCRIPT
-        
-        puts "[Podfile] ✅ Patched ReactCodegen 'Generate Specs' script to use absolute paths"
-        puts "[Podfile]    - RN_DIR: #{rn_dir}"
-        puts "[Podfile]    - APP_ROOT: #{app_root}"
-      end
-    end
-  end
+  # Do not rewrite Pods Target Support Files xcconfigs
 end

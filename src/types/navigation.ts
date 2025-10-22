@@ -29,8 +29,9 @@ export type AppStackParamList = {
   AddCategory: undefined;
   AddMikvah: undefined;
   AddSynagogue: undefined;
-  // Map screen
+  // Map screens
   LiveMap: undefined;
+  LiveMapAll: undefined;
   // Shtetl marketplace screens
   Shtetl: undefined;
   StoreDetail: {

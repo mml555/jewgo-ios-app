@@ -15,6 +15,10 @@ class EntityControllerNormalized {
         state,
         minRating,
         isVerified,
+        kosherLevel, // NEW: dietary type filter
+        kosherCertification, // NEW: hechsher filter
+        priceMin, // NEW: minimum price filter
+        priceMax, // NEW: maximum price filter
         limit = 50,
         offset = 0,
         sortBy = 'created_at',
@@ -41,11 +45,16 @@ class EntityControllerNormalized {
           e.review_count,
           e.is_verified,
           e.is_active,
+          e.kosher_level,
+          e.kosher_certification,
+          r.price_min,
+          r.price_max,
           e.created_at,
           e.updated_at,
           u.first_name as owner_first_name,
           u.last_name as owner_last_name
-        FROM entities_normalized e
+        FROM entities e
+        LEFT JOIN restaurants_normalized r ON e.id = r.entity_id
         LEFT JOIN users u ON e.owner_id = u.id
         WHERE e.is_active = true
       `;
@@ -84,6 +93,33 @@ class EntityControllerNormalized {
         params.push(isVerified === 'true');
       }
 
+      // NEW: Dietary type filter (kosher_level now contains meat/dairy/parve)
+      if (kosherLevel) {
+        paramCount++;
+        query += ` AND e.kosher_level = $${paramCount}`;
+        params.push(kosherLevel);
+      }
+
+      // NEW: Hechsher certification filter
+      if (kosherCertification) {
+        paramCount++;
+        query += ` AND e.kosher_certification = $${paramCount}`;
+        params.push(kosherCertification);
+      }
+
+      // NEW: Price range filters
+      if (priceMin !== undefined) {
+        paramCount++;
+        query += ` AND r.price_min >= $${paramCount}`;
+        params.push(parseFloat(priceMin));
+      }
+
+      if (priceMax !== undefined) {
+        paramCount++;
+        query += ` AND r.price_max <= $${paramCount}`;
+        params.push(parseFloat(priceMax));
+      }
+
       // Add sorting and pagination
       query += ` ORDER BY e.${sortBy} ${sortOrder}`;
       paramCount++;
@@ -97,7 +133,7 @@ class EntityControllerNormalized {
 
       // Get total count for pagination
       let countQuery =
-        'SELECT COUNT(*) FROM entities_normalized WHERE is_active = true';
+        'SELECT COUNT(*) FROM entities WHERE is_active = true';
       const countParams = [];
       let countParamCount = 0;
 
@@ -378,7 +414,7 @@ class EntityControllerNormalized {
           e.review_count,
           e.is_verified,
           e.is_active
-        FROM entities_normalized e
+        FROM entities e
         WHERE e.is_active = true 
         AND (
           e.name ILIKE $1 
@@ -482,7 +518,7 @@ class EntityControllerNormalized {
             cos(radians(e.longitude) - radians($2)) + 
             sin(radians($1)) * sin(radians(e.latitude))
           )) as distance_miles
-        FROM entities_normalized e
+        FROM entities e
         WHERE e.is_active = true 
         AND e.latitude IS NOT NULL 
         AND e.longitude IS NOT NULL
@@ -586,7 +622,7 @@ class EntityControllerNormalized {
       }
 
       const query = `
-        INSERT INTO entities_normalized (
+        INSERT INTO entities (
           entity_type, name, description, address, city, state, zip_code,
           latitude, longitude, phone, email, website
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
@@ -653,7 +689,7 @@ class EntityControllerNormalized {
 
       values.push(id);
       const query = `
-        UPDATE entities_normalized 
+        UPDATE entities 
         SET ${updateFields.join(', ')}, updated_at = CURRENT_TIMESTAMP
         WHERE id = $${paramCount} AND is_active = true
         RETURNING *
@@ -688,7 +724,7 @@ class EntityControllerNormalized {
       const { id } = req.params;
 
       const query = `
-        UPDATE entities_normalized 
+        UPDATE entities 
         SET is_active = false, updated_at = CURRENT_TIMESTAMP
         WHERE id = $1 AND is_active = true
         RETURNING *

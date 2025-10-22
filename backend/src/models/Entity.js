@@ -6,12 +6,15 @@ class Entity {
       entityType,
       city,
       state,
-      kosherLevel,
+      kosherLevel, // NOW dietary type: 'meat', 'dairy', 'parve'
+      kosherCertification, // NOW standardized hechsher: 'KM', 'ORB', etc.
       denomination,
       storeType,
       isVerified,
       minRating,
       hasKosherCertification,
+      priceMin, // NEW: Minimum price filter
+      priceMax, // NEW: Maximum price filter
       limit = 50,
       offset = 0,
       sortBy = 'created_at',
@@ -46,6 +49,12 @@ class Entity {
       queryParams.push(kosherLevel);
     }
 
+    if (kosherCertification) {
+      paramCount++;
+      whereConditions.push(`e.kosher_certification = $${paramCount}`);
+      queryParams.push(kosherCertification);
+    }
+
     if (denomination) {
       paramCount++;
       whereConditions.push(`e.denomination = $${paramCount}`);
@@ -72,6 +81,19 @@ class Entity {
 
     if (hasKosherCertification) {
       whereConditions.push('e.kosher_certification IS NOT NULL');
+    }
+
+    // NEW: Price range filtering
+    if (priceMin !== undefined) {
+      paramCount++;
+      whereConditions.push(`r.price_min >= $${paramCount}`);
+      queryParams.push(priceMin);
+    }
+
+    if (priceMax !== undefined) {
+      paramCount++;
+      whereConditions.push(`r.price_max <= $${paramCount}`);
+      queryParams.push(priceMax);
     }
 
     // Add pagination parameters
@@ -110,6 +132,8 @@ class Entity {
         e.kosher_level,
         e.kosher_certification,
         e.kosher_certificate_number,
+        COALESCE(r.price_min, 0) as price_min,
+        COALESCE(r.price_max, 0) as price_max,
         e.kosher_expires_at,
         e.denomination,
         e.store_type,
@@ -119,6 +143,7 @@ class Entity {
         u.first_name as owner_first_name,
         u.last_name as owner_last_name
       FROM entities e
+      LEFT JOIN restaurants_normalized r ON e.id = r.entity_id
       LEFT JOIN users u ON e.owner_id = u.id
       WHERE ${whereConditions.join(' AND ')}
       ORDER BY e.${sortBy} ${sortOrder}

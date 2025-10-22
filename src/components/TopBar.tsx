@@ -18,6 +18,7 @@ interface TopBarProps {
   placeholder?: string;
   onAddEntity?: () => void;
   addButtonText?: string;
+  categoryKey?: string; // NEW: For dynamic placeholder
 }
 
 const TopBar: React.FC<TopBarProps> = ({
@@ -26,6 +27,7 @@ const TopBar: React.FC<TopBarProps> = ({
   placeholder,
   onAddEntity,
   addButtonText = 'Add Entity',
+  categoryKey,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
@@ -103,7 +105,7 @@ const TopBar: React.FC<TopBarProps> = ({
 
             <TextInput
               style={styles.searchInput}
-              placeholder={placeholder || 'Find your Eatery'}
+              placeholder={placeholder || (categoryKey === 'eatery' ? 'Search for an Eatery...' : 'Find your Eatery')}
               placeholderTextColor={Colors.textSecondary}
               value={searchQuery}
               onChangeText={handleSearchChange}

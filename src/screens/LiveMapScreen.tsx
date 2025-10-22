@@ -26,8 +26,9 @@ import { Spacing, Shadows } from '../styles/designSystem';
 import { useLocation, calculateDistance } from '../hooks/useLocation';
 import { useCategoryData } from '../hooks/useCategoryData';
 import { debugLog } from '../utils/logger';
-import { NativeMapView } from '../features/map/NativeMapView';
+import { NativeMapView, NativeMapViewRef } from '../features/map/NativeMapView';
 import { MapPoint } from '../features/map/types';
+import { getResponsiveSpacing } from '../utils/deviceAdaptation';
 
 // This implementation uses native react-native-maps with Google Maps provider
 // for high-performance map experience on iOS
@@ -54,6 +55,8 @@ interface MapListing {
 }
 
 const LiveMapScreen: React.FC = () => {
+  debugLog('🔍 LiveMapScreen: Component mounting');
+  
   const navigation = useNavigation();
   const route = useRoute();
   const insets = useSafeAreaInsets();
@@ -68,6 +71,7 @@ const LiveMapScreen: React.FC = () => {
   const {
     location,
     getCurrentLocation,
+    requestLocationPermission,
     permissionGranted,
     loading: locationLoading,
   } = useLocation();
@@ -83,6 +87,7 @@ const LiveMapScreen: React.FC = () => {
   );
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const mapViewRef = useRef<NativeMapViewRef>(null);
 
   // Categories configuration - matching the keys from ActionBar
   const categories = [
@@ -376,28 +381,75 @@ const LiveMapScreen: React.FC = () => {
     return cat?.color || '#74e1a0';
   };
 
+  // Map control handlers
+  const handleZoomIn = useCallback(() => {
+    debugLog('🗺️ Zoom in requested');
+    mapViewRef.current?.zoomIn();
+  }, []);
+
+  const handleZoomOut = useCallback(() => {
+    debugLog('🗺️ Zoom out requested');
+    mapViewRef.current?.zoomOut();
+  }, []);
+
+  const handleCenterOnLocation = useCallback(async () => {
+    try {
+      if (permissionGranted && location) {
+        debugLog('🗺️ Centering on user location:', location);
+        mapViewRef.current?.centerOnLocation();
+      } else {
+        await getCurrentLocation();
+        // After getting location, center on it
+        if (location) {
+          mapViewRef.current?.centerOnLocation();
+        }
+      }
+    } catch (error) {
+      debugLog('🗺️ Error centering on location:', error);
+      Alert.alert(
+        'Location Error',
+        'Unable to get your current location. Please check your location settings.',
+        [{ text: 'OK' }]
+      );
+    }
+  }, [permissionGranted, location, getCurrentLocation]);
+
+  // Auto-request location permission on mount to trigger native iOS popup
+  useEffect(() => {
+    debugLog('🔍 LiveMapScreen: useEffect triggered - permissionGranted:', permissionGranted, 'locationLoading:', locationLoading);
+    
+    const requestPermission = async () => {
+      debugLog('🔍 LiveMapScreen: requestPermission called');
+      if (!permissionGranted && !locationLoading) {
+        debugLog('🔍 LiveMapScreen: Requesting location permission...');
+        try {
+          const result = await requestLocationPermission();
+          debugLog('🔍 LiveMapScreen: Permission request result:', result);
+        } catch (error) {
+          debugLog('🔍 LiveMapScreen: Error requesting location permission:', error);
+        }
+      } else {
+        debugLog('🔍 LiveMapScreen: Skipping permission request - permissionGranted:', permissionGranted, 'locationLoading:', locationLoading);
+      }
+    };
+    
+    // Small delay to ensure component is fully mounted
+    const timer = setTimeout(requestPermission, 500);
+    return () => {
+      debugLog('🔍 LiveMapScreen: Cleaning up timer');
+      clearTimeout(timer);
+    };
+  }, [permissionGranted, locationLoading, requestLocationPermission]);
+
+  // Cleanup effect
+  useEffect(() => {
+    return () => {
+      debugLog('🔍 LiveMapScreen: Component unmounting');
+    };
+  }, []);
+
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={handleBackPress}>
-          <Text style={styles.backIcon}>←</Text>
-        </TouchableOpacity>
-
-        <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>
-            {selectedCategory === 'all'
-              ? 'Live Map'
-              : `${
-                  categories.find(c => c.key === selectedCategory)?.label
-                } Map`}
-          </Text>
-          <Text style={styles.headerSubtitle}>
-            {filteredListings.length} places found
-          </Text>
-        </View>
-      </View>
-
       {/* Search Bar */}
       <View style={styles.searchContainer}>
         <View
@@ -450,9 +502,30 @@ const LiveMapScreen: React.FC = () => {
         </View>
       </View>
 
+      {/* Header - Back button and banner below search bar */}
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.backButton} onPress={handleBackPress}>
+          <Text style={styles.backIcon}>←</Text>
+        </TouchableOpacity>
+
+        <View style={styles.headerContent}>
+          <Text style={styles.headerTitle}>
+            {selectedCategory === 'all'
+              ? 'Live Map'
+              : `${
+                  categories.find(c => c.key === selectedCategory)?.label
+                } Map`}
+          </Text>
+          <Text style={styles.headerSubtitle}>
+            {filteredListings.length} places found
+          </Text>
+        </View>
+      </View>
+
       {/* Map */}
       <View style={styles.mapContainer}>
         <NativeMapView
+          ref={mapViewRef}
           points={mapPoints}
           initialRegion={initialRegion}
           userLocation={location}
@@ -460,8 +533,51 @@ const LiveMapScreen: React.FC = () => {
           onMarkerPress={handleMarkerPress}
         />
 
+        {/* Map Controls - Positioned to avoid header and search bar */}
+        <View style={[styles.mapControls, { top: insets.top + getResponsiveSpacing(120) }]}>
+          {/* Zoom Controls */}
+          <View style={styles.zoomControls}>
+            <TouchableOpacity
+              style={styles.controlButton}
+              onPress={handleZoomIn}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="Zoom in"
+              accessibilityHint="Double tap to zoom in on the map"
+            >
+              <Text style={styles.controlButtonText}>+</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.controlButton}
+              onPress={handleZoomOut}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="Zoom out"
+              accessibilityHint="Double tap to zoom out on the map"
+            >
+              <Text style={styles.controlButtonText}>−</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Location Control */}
+          <TouchableOpacity
+            style={styles.locationButton}
+            onPress={handleCenterOnLocation}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Center on my location"
+            accessibilityHint="Tap to center the map on your current location"
+          >
+            <Icon 
+              name="navigation" 
+              size={20} 
+              color={permissionGranted ? "#007AFF" : "#8E8E93"} 
+            />
+          </TouchableOpacity>
+        </View>
+
         {/* Map Legend */}
-        <View style={styles.mapLegend}>
+        <View style={[styles.mapLegend, { top: insets.top + getResponsiveSpacing(120) }]}>
           <Text style={styles.legendTitle}>Legend</Text>
           <View style={styles.legendItem}>
             <View
@@ -892,7 +1008,6 @@ const styles = StyleSheet.create({
   },
   mapLegend: {
     position: 'absolute',
-    top: 16,
     left: 16,
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
     borderRadius: 12,
@@ -931,6 +1046,61 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666666',
     fontWeight: '500',
+  },
+  // Map Controls Styles
+  mapControls: {
+    position: 'absolute',
+    right: 16,
+    flexDirection: 'column',
+    alignItems: 'flex-end',
+    zIndex: 1000,
+  },
+  zoomControls: {
+    flexDirection: 'column',
+    marginBottom: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.1)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  controlButton: {
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
+    minHeight: 44, // WCAG compliance
+    minWidth: 44, // WCAG compliance
+  },
+  controlButtonText: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#007AFF',
+    lineHeight: 20,
+  },
+  locationButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.1)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 4,
+    minHeight: 44, // WCAG compliance
+    minWidth: 44, // WCAG compliance
   },
 });
 

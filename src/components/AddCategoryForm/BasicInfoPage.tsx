@@ -21,6 +21,7 @@ import {
   getResponsiveLayout,
 } from '../../utils/deviceAdaptation';
 import { hapticButtonPress } from '../../utils/hapticFeedback';
+import AddressAutocomplete from '../AddressAutocomplete';
 
 interface BasicInfoPageProps {
   formData: ListingFormData;
@@ -71,195 +72,192 @@ const BasicInfoPage: React.FC<BasicInfoPageProps> = memo(
     ];
 
     return (
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={styles.contentContainer}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.formContent}>
-          {/* Photos Upload */}
-          <View style={styles.fieldGroup}>
-            <Text style={styles.label}>Business Photos *</Text>
-            <Text style={styles.hint}>
-              Add 2-5 photos (well-lit food and storefront photos)
-            </Text>
+      <View style={styles.contentContainer}>
+        {/* Photos Upload */}
+        <View style={styles.fieldGroup}>
+          <Text style={styles.label}>Business Photos *</Text>
+          <Text style={styles.hint}>
+            Add 2-5 photos (well-lit food and storefront photos)
+          </Text>
 
-            <View style={styles.photoGrid}>
-              {formData.business_images.map((image, index) => (
-                <View key={index} style={styles.photoItem}>
-                  <Image source={{ uri: image }} style={styles.photoImage} />
-                  <TouchableOpacity
-                    style={styles.photoRemove}
-                    onPress={() => handleImageRemove(index)}
-                  >
-                    <Text style={styles.photoRemoveText}>×</Text>
-                  </TouchableOpacity>
+          <View style={styles.photoGrid}>
+            {formData.business_images.map((image, index) => (
+              <View key={index} style={styles.photoItem}>
+                <Image source={{ uri: image }} style={styles.photoImage} />
+                <TouchableOpacity
+                  style={styles.photoRemove}
+                  onPress={() => handleImageRemove(index)}
+                >
+                  <Text style={styles.photoRemoveText}>×</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+
+            {formData.business_images.length < 5 && (
+              <TouchableOpacity
+                style={styles.photoUpload}
+                onPress={handleImageUpload}
+              >
+                <View style={styles.cameraIconContainer}>
+                  <Text style={styles.cameraIcon}>📷</Text>
                 </View>
-              ))}
-
-              {formData.business_images.length < 5 && (
-                <TouchableOpacity
-                  style={styles.photoUpload}
-                  onPress={handleImageUpload}
-                >
-                  <Text style={styles.photoUploadIcon}>📷</Text>
-                  <Text style={styles.photoUploadText}>Add Photo</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-
-            <Text style={styles.photoCount}>
-              {formData.business_images.length}/5 photos
-            </Text>
+                <Text style={styles.photoUploadText}>Add Photo</Text>
+              </TouchableOpacity>
+            )}
           </View>
 
-          {/* Restaurant Name */}
-          <View style={styles.fieldGroup}>
-            <Text style={styles.label}>Restaurant Name *</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.name}
-              onChangeText={value => handleInputChange('name', value)}
-              placeholder="Enter restaurant name"
-              placeholderTextColor="#999999"
-            />
-          </View>
+          <Text style={styles.photoCount}>
+            {formData.business_images.length}/5 photos
+          </Text>
+        </View>
 
-          {/* Address */}
-          <View style={styles.fieldGroup}>
-            <Text style={styles.label}>Address *</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.address}
-              onChangeText={value => handleInputChange('address', value)}
-              placeholder="Street, City, State, Zip"
-              placeholderTextColor="#999999"
-            />
-          </View>
+        {/* Restaurant Name */}
+        <View style={styles.fieldGroup}>
+          <Text style={styles.label}>Restaurant Name *</Text>
+          <TextInput
+            style={styles.input}
+            value={formData.name}
+            onChangeText={value => handleInputChange('name', value)}
+            placeholder="Enter restaurant name"
+            placeholderTextColor="#999999"
+          />
+        </View>
 
-          {/* Hours of Operation */}
-          <View style={styles.fieldGroup}>
-            <Text style={styles.label}>Hours of Operation *</Text>
-            <View style={styles.hoursContainer}>
-              {hoursOptions.map((hours, index) => (
-                <TouchableOpacity
-                  key={index}
+        {/* Address */}
+        <View style={styles.addressFieldGroup}>
+          <Text style={styles.label}>Address *</Text>
+          <AddressAutocomplete
+            value={formData.address}
+            onChangeText={value => handleInputChange('address', value)}
+            placeholder="Street, City, State, Zip"
+            style={styles.input}
+          />
+        </View>
+
+        {/* Hours of Operation */}
+        <View style={styles.hoursFieldGroup}>
+          <Text style={styles.label}>Hours of Operation *</Text>
+          <View style={styles.hoursContainer}>
+            {hoursOptions.map((hours, index) => (
+              <TouchableOpacity
+                key={index}
+                style={[
+                  styles.hoursPill,
+                  formData.hours_of_operation === hours &&
+                    styles.hoursPillActive,
+                ]}
+                onPress={() => {
+                  hapticButtonPress();
+                  handleInputChange('hours_of_operation', hours);
+                }}
+              >
+                <Text
                   style={[
-                    styles.hoursPill,
+                    styles.hoursPillText,
                     formData.hours_of_operation === hours &&
-                      styles.hoursPillActive,
+                      styles.hoursPillTextActive,
                   ]}
-                  onPress={() => {
-                    hapticButtonPress();
-                    handleInputChange('hours_of_operation', hours);
-                  }}
                 >
-                  <Text
-                    style={[
-                      styles.hoursPillText,
-                      formData.hours_of_operation === hours &&
-                        styles.hoursPillTextActive,
-                    ]}
-                  >
-                    {hours}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          {/* Phone */}
-          <View style={styles.fieldGroup}>
-            <Text style={styles.label}>Phone *</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.phone}
-              onChangeText={value => handleInputChange('phone', value)}
-              placeholder="(555) 123-4567"
-              placeholderTextColor="#999999"
-              keyboardType="phone-pad"
-            />
-          </View>
-
-          {/* Website */}
-          <View style={styles.fieldGroup}>
-            <Text style={styles.label}>Website</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.website}
-              onChangeText={value => handleInputChange('website', value)}
-              placeholder="https://www.example.com"
-              placeholderTextColor="#999999"
-              keyboardType="url"
-              autoCapitalize="none"
-            />
-          </View>
-
-          {/* Email */}
-          <View style={styles.fieldGroup}>
-            <Text style={styles.label}>Email</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.business_email}
-              onChangeText={value => handleInputChange('business_email', value)}
-              placeholder="contact@example.com"
-              placeholderTextColor="#999999"
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
+                  {hours}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
         </View>
-      </ScrollView>
+
+        {/* Phone */}
+        <View style={styles.fieldGroup}>
+          <Text style={styles.label}>Phone *</Text>
+          <TextInput
+            style={styles.input}
+            value={formData.phone}
+            onChangeText={value => handleInputChange('phone', value)}
+            placeholder="(555) 123-4567"
+            placeholderTextColor="#999999"
+            keyboardType="phone-pad"
+          />
+        </View>
+
+        {/* Website */}
+        <View style={styles.fieldGroup}>
+          <Text style={styles.label}>Website</Text>
+          <TextInput
+            style={styles.input}
+            value={formData.website}
+            onChangeText={value => handleInputChange('website', value)}
+            placeholder="https://www.example.com"
+            placeholderTextColor="#999999"
+            keyboardType="url"
+            autoCapitalize="none"
+          />
+        </View>
+
+        {/* Email */}
+        <View style={styles.fieldGroup}>
+          <Text style={styles.label}>Email</Text>
+          <TextInput
+            style={styles.input}
+            value={formData.business_email}
+            onChangeText={value => handleInputChange('business_email', value)}
+            placeholder="contact@example.com"
+            placeholderTextColor="#999999"
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+        </View>
+      </View>
     );
   },
 );
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F5F7',
-  },
   contentContainer: {
     paddingHorizontal: 24,
-    paddingVertical: 20,
-  },
-  formContent: {
-    maxWidth: 600,
-    alignSelf: 'center',
-    width: '100%',
+    paddingTop: 2,
+    paddingBottom: 32,
   },
   fieldGroup: {
-    marginBottom: 20,
+    marginBottom: 24,
+  },
+  addressFieldGroup: {
+    marginBottom: 24,
+    zIndex: 99997, // High z-index but lower than autocomplete
+  },
+  hoursFieldGroup: {
+    marginBottom: 24,
+    zIndex: 1, // Lower z-index so autocomplete can overlay it
   },
   label: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '600',
     color: Colors.jetBlack,
     marginBottom: 8,
     fontFamily: 'Nunito-SemiBold',
   },
   hint: {
-    fontSize: 13,
+    fontSize: 14,
     color: Colors.softGray,
-    marginBottom: 12,
+    marginBottom: 16,
     fontFamily: 'Nunito',
+    lineHeight: 20,
   },
   input: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 16,
-    fontSize: 15,
+    fontSize: 16,
     color: '#292B2D',
     fontFamily: 'Nunito',
     borderWidth: 2,
     borderColor: '#C6FFD1',
+    minHeight: 56,
   },
   photoGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
-    marginBottom: 8,
+    gap: 16,
+    marginBottom: 16,
   },
   photoItem: {
     position: 'relative',
@@ -300,40 +298,50 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  photoUploadIcon: {
+  cameraIconContainer: {
+    marginBottom: 8,
+  },
+  cameraIcon: {
     fontSize: 32,
-    marginBottom: 4,
+    color: '#6B6B6B',
   },
   photoUploadText: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#292B2D',
     fontFamily: 'Nunito-SemiBold',
+    textAlign: 'center',
   },
   photoCount: {
-    fontSize: 12,
+    fontSize: 14,
     color: Colors.softGray,
     fontFamily: 'Nunito',
+    textAlign: 'center',
+    marginTop: 8,
   },
   hoursContainer: {
-    gap: 8,
+    gap: 16,
+    zIndex: 1, // Low z-index so autocomplete can overlay it
   },
   hoursPill: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    borderRadius: 24,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
     borderWidth: 2,
     borderColor: '#C6FFD1',
+    minHeight: 52,
+    justifyContent: 'center',
   },
   hoursPillActive: {
     backgroundColor: '#C6FFD1',
     borderColor: '#C6FFD1',
   },
   hoursPillText: {
-    fontSize: 14,
+    fontSize: 15,
     color: '#292B2D',
     textAlign: 'center',
     fontFamily: 'Nunito',
+    lineHeight: 20,
   },
   hoursPillTextActive: {
     fontWeight: '600',

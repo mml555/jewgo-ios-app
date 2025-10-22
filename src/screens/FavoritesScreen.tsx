@@ -54,7 +54,12 @@ const FavoritesScreen: React.FC = () => {
 
   // Get categories with counts for the grid
   const categoriesWithCounts = useMemo(() => {
-    return getCategoriesWithCounts(favorites);
+    const result = getCategoriesWithCounts(favorites);
+    if (__DEV__) {
+      console.log('🔍 FavoritesScreen - favorites:', favorites.length);
+      console.log('🔍 FavoritesScreen - categories:', result.map(c => `${c.key}: ${c.count}`));
+    }
+    return result;
   }, [favorites]);
 
   // Track favorites view

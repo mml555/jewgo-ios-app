@@ -1,13 +1,21 @@
-// Precompiled header for all Pods (wired via GCC_PREFIX_HEADER)
-// This ensures CoreFoundation/CoreGraphics/UIKit are visible where needed.
+// Global prefix header for Pods – makes Core* and float limits
+// visible even inside .cpp / ObjC++ translation units.
 
-#ifdef __OBJC__
+// Ensure FLT_* macros available for both C and C++ consumers (UIKit expects them)
+#ifdef __cplusplus
+  #include <cfloat>
+  extern "C" {
+    #include <float.h>
+  }
+#else
+  #include <float.h>
+#endif
+
+#include <CoreFoundation/CoreFoundation.h> // CFByteOrder, etc.
+#include <CoreGraphics/CGBase.h>           // CGFloat
+
+// Only import UIKit/Foundation for pure Objective-C files (not C++ or Obj-C++)
+#if defined(__OBJC__) && !defined(__cplusplus)
   #import <Foundation/Foundation.h>
   #import <UIKit/UIKit.h>
 #endif
-
-#ifdef __cplusplus
-  #import <CoreFoundation/CoreFoundation.h>
-  #import <CoreGraphics/CoreGraphics.h>
-#endif
-

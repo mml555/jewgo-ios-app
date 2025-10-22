@@ -251,13 +251,35 @@ export const createResponsiveStyles = <T extends Record<string, any>>(
  */
 export const getGridColumns = (): number => {
   const deviceType = getDeviceType();
+  const landscape = isLandscape();
 
   if (deviceType === DeviceType.TABLET) {
     // Tablets get 3 columns in portrait, 4 in landscape
-    return isLandscape() ? 4 : 3;
+    const columns = landscape ? 4 : 3;
+    if (__DEV__) {
+      console.log('🔍 getGridColumns Debug:', {
+        deviceType,
+        landscape,
+        screenWidth,
+        screenHeight,
+        aspectRatio: screenHeight / screenWidth,
+        columns,
+      });
+    }
+    return columns;
   }
 
   // All mobile phones get 2 columns
+  if (__DEV__) {
+    console.log('🔍 getGridColumns Debug (Phone):', {
+      deviceType,
+      landscape,
+      screenWidth,
+      screenHeight,
+      aspectRatio: screenHeight / screenWidth,
+      columns: 2,
+    });
+  }
   return 2;
 };
 
@@ -271,10 +293,25 @@ export const getGridCardDimensions = (
 ): { columns: number; gap: number; cardWidth: number; imageHeight: number } => {
   const columns = getGridColumns();
   const { width } = Dimensions.get('window');
-  const availableWidth = width - horizontalPadding * 2;
+  
+  // Use total horizontal padding (both sides)
+  const availableWidth = width - horizontalPadding;
   const totalGapWidth = cardGap * (columns - 1);
   const cardWidth = (availableWidth - totalGapWidth) / columns;
   const imageHeight = cardWidth / aspectRatio;
+
+  if (__DEV__) {
+    console.log('🔍 getGridCardDimensions Debug:', {
+      screenWidth: width,
+      horizontalPadding,
+      cardGap,
+      columns,
+      availableWidth,
+      totalGapWidth,
+      cardWidth,
+      imageHeight,
+    });
+  }
 
   return {
     columns,

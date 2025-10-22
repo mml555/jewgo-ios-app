@@ -145,6 +145,46 @@ This script will automatically:
 - **Run on iOS**: `npx react-native run-ios --simulator="iPhone 16"`
 - **Clean build**: `npx react-native run-ios --simulator="iPhone 16" --reset-cache`
 
+#### Fast Pods/Xcode Validation
+
+Before a full clean rebuild, run the quick validator to catch common configuration issues and optionally build specific pods:
+
+```bash
+# Basic checks (xcconfig scan, headers, Podfile.lock vs Pods/)
+npm run ios:pods:validate
+
+# Include quick builds for Google Maps-related pods
+npm run ios:pods:validate:maps
+```
+
+You can also target individual schemes:
+
+```bash
+bash scripts/ios-validate-pods.sh --build-scheme 'Google-Maps-iOS-Utils' --build-scheme 'react-native-google-maps'
+```
+
+What it checks:
+- Pod workspace usage and presence of `Pods/` and `Podfile.lock`
+- Suspicious flags in `.xcconfig` (e.g., `-fmodule-map-file`)
+- Header symlink structure
+- `Podfile.lock` vs. resolved pods in `Pods/`
+- Optional quick-build of selected pod schemes using a generic iOS Simulator destination
+
+When to run:
+- After adding/updating a native pod or changing `Podfile`
+- After switching branches that modify iOS native configs or pods
+- When Xcode shows header/module map errors or link errors
+
+#### Environment & Schemes Helpers
+
+```bash
+# Environment diagnostics + native config + top-level package health
+npm run env:check
+
+# List all workspace schemes (JSON)
+npm run ios:schemes:list
+```
+
 For detailed setup instructions, see [Development Setup Guide](docs/developer/DEVELOPMENT_SETUP.md).
 
 ## 📁 Project Structure

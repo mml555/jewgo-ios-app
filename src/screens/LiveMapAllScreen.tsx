@@ -22,12 +22,14 @@ import { Region } from 'react-native-maps';
 import { useFilters } from '../hooks/useFilters';
 import FiltersModal from '../components/FiltersModal';
 import Icon from '../components/Icon';
+import TopBar from '../components/TopBar';
 import { Spacing, Shadows } from '../styles/designSystem';
 import { useLocation, calculateDistance } from '../hooks/useLocation';
 import { useCategoryData } from '../hooks/useCategoryData';
 import { debugLog } from '../utils/logger';
-import { NativeMapView } from '../features/map/NativeMapView';
+import { NativeMapView, NativeMapViewRef } from '../features/map/NativeMapView';
 import { MapPoint } from '../features/map/types';
+import { getResponsiveSpacing } from '../utils/deviceAdaptation';
 
 // This implementation uses native react-native-maps with Google Maps provider
 // for high-performance map experience on iOS
@@ -52,6 +54,9 @@ interface MapListing {
 }
 
 const LiveMapAllScreen: React.FC = () => {
+  debugLog('🔍 LiveMapAllScreen: Component mounting');
+  debugLog('🔍 LiveMapAllScreen: Component mounting - this should appear in logs');
+  
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
 
@@ -66,6 +71,7 @@ const LiveMapAllScreen: React.FC = () => {
   const {
     location,
     getCurrentLocation,
+    requestLocationPermission,
     permissionGranted,
     loading: locationLoading,
   } = useLocation();
@@ -76,6 +82,7 @@ const LiveMapAllScreen: React.FC = () => {
   );
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const mapViewRef = useRef<NativeMapViewRef>(null);
 
   // Categories configuration - matching the keys from ActionBar
   const categories = [
@@ -224,14 +231,14 @@ const LiveMapAllScreen: React.FC = () => {
 
     const converted = allListings.map((item, index) => ({
       id: item.id || `fallback-${index}`,
-      title: item.title,
-      description: item.description,
-      category: item.category,
-      rating: item.rating,
+      title: item.title || 'Untitled',
+      description: item.description || 'No description available',
+      category: item.category || 'unknown',
+      rating: item.rating || null,
       distance: '0.5 mi',
       latitude: item.latitude || 40.7128 + (Math.random() - 0.5) * 0.15,
       longitude: item.longitude || -74.006 + (Math.random() - 0.5) * 0.15,
-      imageUrl: item.imageUrl,
+      imageUrl: item.imageUrl || undefined,
     }));
 
     debugLog('🗺️ Converted mapListings:', converted.length);
@@ -362,7 +369,8 @@ const LiveMapAllScreen: React.FC = () => {
   );
 
   const handleBackPress = useCallback(() => {
-    navigation.goBack();
+    // Navigate back to the main tabs instead of going back to LiveMapTabComponent
+    (navigation as any).navigate('MainTabs');
   }, [navigation]);
 
   const handleMarkerPress = useCallback(
@@ -411,34 +419,133 @@ const LiveMapAllScreen: React.FC = () => {
     setSearchQuery('');
   }, []);
 
+  // Map control handlers
+  const handleZoomIn = useCallback(() => {
+    mapViewRef.current?.zoomIn();
+  }, []);
+
+  const handleZoomOut = useCallback(() => {
+    mapViewRef.current?.zoomOut();
+  }, []);
+
+  const handleCenterOnLocation = useCallback(() => {
+    mapViewRef.current?.centerOnLocation();
+  }, []);
+
+  // Auto-request location permission on mount to trigger native iOS popup
+  useEffect(() => {
+    console.log('🔍 LiveMapAllScreen: useEffect triggered - permissionGranted:', permissionGranted, 'locationLoading:', locationLoading);
+    debugLog('🔍 LiveMapAllScreen: useEffect triggered - permissionGranted:', permissionGranted, 'locationLoading:', locationLoading);
+    
+    const requestPermission = async () => {
+      console.log('🔍 LiveMapAllScreen: requestPermission called');
+      debugLog('🔍 LiveMapAllScreen: requestPermission called');
+      if (!permissionGranted && !locationLoading) {
+        console.log('🔍 LiveMapAllScreen: Requesting location permission...');
+        debugLog('🔍 LiveMapAllScreen: Requesting location permission...');
+        try {
+          const result = await requestLocationPermission();
+          console.log('🔍 LiveMapAllScreen: Permission request result:', result);
+          debugLog('🔍 LiveMapAllScreen: Permission request result:', result);
+        } catch (error) {
+          console.log('🔍 LiveMapAllScreen: Error requesting location permission:', error);
+          debugLog('🔍 LiveMapAllScreen: Error requesting location permission:', error);
+        }
+      } else {
+        console.log('🔍 LiveMapAllScreen: Skipping permission request - permissionGranted:', permissionGranted, 'locationLoading:', locationLoading);
+        debugLog('🔍 LiveMapAllScreen: Skipping permission request - permissionGranted:', permissionGranted, 'locationLoading:', locationLoading);
+      }
+    };
+    
+    // Small delay to ensure component is fully mounted
+    const timer = setTimeout(requestPermission, 500);
+    return () => {
+      debugLog('🔍 LiveMapAllScreen: Cleaning up timer');
+      clearTimeout(timer);
+    };
+  }, [permissionGranted, locationLoading, requestLocationPermission]);
+
+  // Cleanup effect
+  useEffect(() => {
+    return () => {
+      debugLog('🔍 LiveMapAllScreen: Component unmounting');
+    };
+  }, []);
+
   return (
     <View style={styles.container}>
+      {/* TopBar with search - Standard app header */}
+      <TopBar
+        onQueryChange={setSearchQuery}
+        placeholder="Search locations..."
+      />
+
       {/* Map */}
       <View style={styles.mapContainer}>
-        {mapPoints && mapPoints.length >= 0 ? (
+        {mapPoints && mapPoints.length > 0 ? (
           <NativeMapView
+            ref={mapViewRef}
             points={mapPoints}
             initialRegion={initialRegion}
             userLocation={location}
             selectedId={selectedListing?.id}
             onMarkerPress={handleMarkerPress}
+            onZoomIn={handleZoomIn}
+            onZoomOut={handleZoomOut}
+            onCenterLocation={handleCenterOnLocation}
           />
         ) : (
           <View style={styles.loadingContainer}>
             <Text style={styles.loadingText}>Loading map...</Text>
           </View>
         )}
+
+        {/* Map Controls - Positioned to avoid TopBar */}
+        <View style={[styles.mapControls, { top: getResponsiveSpacing(20) }]}>
+          {/* Zoom Controls */}
+          <View style={styles.zoomControls}>
+            <TouchableOpacity
+              style={styles.controlButton}
+              onPress={handleZoomIn}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="Zoom in"
+              accessibilityHint="Double tap to zoom in on the map"
+            >
+              <Text style={styles.controlButtonText}>+</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.controlButton}
+              onPress={handleZoomOut}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="Zoom out"
+              accessibilityHint="Double tap to zoom out on the map"
+            >
+              <Text style={styles.controlButtonText}>−</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Location Control */}
+          <TouchableOpacity
+            style={styles.locationButton}
+            onPress={handleCenterOnLocation}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Center on my location"
+            accessibilityHint="Tap to center the map on your current location"
+          >
+            <Icon
+              name="navigation"
+              size={20}
+              color={permissionGranted ? "#007AFF" : "#8E8E93"}
+            />
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {/* Header with back button */}
-      <View
-        style={[
-          styles.header,
-          {
-            paddingTop: insets.top + Spacing.sm,
-          },
-        ]}
-      >
+      {/* Header with back button and filter */}
+      <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={handleBackPress}
@@ -458,35 +565,6 @@ const LiveMapAllScreen: React.FC = () => {
         >
           <Icon name="filter" size={24} color="#1A1A1A" />
         </TouchableOpacity>
-      </View>
-
-      {/* Search bar */}
-      <View style={styles.searchContainer}>
-        <View style={styles.searchBar}>
-          <Icon
-            name="search"
-            size={20}
-            color="#666"
-            style={styles.searchIcon}
-          />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search locations..."
-            placeholderTextColor="#999"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            onFocus={handleSearchFocus}
-            onBlur={handleSearchBlur}
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity
-              onPress={handleClearSearch}
-              style={styles.clearButton}
-            >
-              <Icon name="x" size={18} color="#666" />
-            </TouchableOpacity>
-          )}
-        </View>
       </View>
 
       {/* Category filter rail */}
@@ -654,36 +732,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     ...Shadows.sm,
   },
-  searchContainer: {
-    position: 'absolute',
-    top: 100,
-    left: Spacing.md,
-    right: Spacing.md,
-  },
-  searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    ...Shadows.md,
-  },
-  searchIcon: {
-    marginRight: Spacing.sm,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    color: '#1A1A1A',
-    fontFamily: 'Nunito-Regular',
-  },
-  clearButton: {
-    padding: 4,
-  },
   categoryRail: {
     position: 'absolute',
-    top: 160,
+    top: 100,
     left: 0,
     right: 0,
   },
@@ -803,6 +854,45 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#FFFFFF',
     fontFamily: 'Nunito-SemiBold',
+  },
+  // Map Controls
+  mapControls: {
+    position: 'absolute',
+    right: Spacing.md,
+    zIndex: 1000,
+  },
+  zoomControls: {
+    flexDirection: 'column',
+    gap: Spacing.xs,
+    marginBottom: Spacing.sm,
+  },
+  controlButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...Shadows.md,
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+  },
+  controlButtonText: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#1A1A1A',
+    fontFamily: 'Nunito-SemiBold',
+  },
+  locationButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...Shadows.md,
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
   },
 });
 

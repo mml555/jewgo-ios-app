@@ -24,25 +24,39 @@ interface LocationState {
   reset: () => void;
 }
 
-export const useLocationStore = create<LocationState>((set) => ({
+export const useLocationStore = create<LocationState>((set, get) => ({
   location: null,
   loading: false,
   error: null,
   permissionGranted: false,
   permissionRequested: false,
   permissionDenied: false,
-  setLocation: (location) => set({ location, error: null }),
-  setLoading: (loading) => set({ loading }),
-  setError: (error) => set({ error, loading: false }),
-  setPermissionState: (granted, requested, denied) =>
-    set({ permissionGranted: granted, permissionRequested: requested, permissionDenied: denied }),
-  reset: () => set({
-    location: null,
-    loading: false,
-    error: null,
-    permissionGranted: false,
-    permissionRequested: false,
-    permissionDenied: false,
-  }),
+  setLocation: (location) => {
+    console.log('🔍 LocationStore: setLocation called with:', location);
+    set({ location, error: null });
+  },
+  setLoading: (loading) => {
+    console.log('🔍 LocationStore: setLoading called with:', loading);
+    set({ loading });
+  },
+  setError: (error) => {
+    console.log('🔍 LocationStore: setError called with:', error);
+    set({ error, loading: false });
+  },
+  setPermissionState: (granted, requested, denied) => {
+    console.log('🔍 LocationStore: setPermissionState called with:', { granted, requested, denied });
+    set({ permissionGranted: granted, permissionRequested: requested, permissionDenied: denied });
+  },
+  reset: () => {
+    console.log('🔍 LocationStore: reset called');
+    set({
+      location: null,
+      loading: false,
+      error: null,
+      permissionGranted: false,
+      permissionRequested: false,
+      permissionDenied: false,
+    });
+  },
 }));
 
