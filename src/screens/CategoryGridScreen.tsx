@@ -224,8 +224,8 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
     ({ item }: { item: CategoryItem | Event }) => {
       // Calculate responsive card dimensions
       const gridDimensions = getGridCardDimensions(
-        isTablet ? 32 : 32, // Match header padding: 16px each side = 32px total
-        isTablet ? 20 : 12, // Gap between cards - increased for iPad
+        isTablet ? 32 : 32, // iPad: 16px each side for breathing room, Phone: 16px each side = 32px total
+        isTablet ? 16 : 12, // Gap between cards - increased for iPad with 4 larger cards
         4 / 3, // aspect ratio
       );
 
@@ -410,13 +410,11 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
 
   // Memoized column wrapper style for responsive layout
   const columnWrapperStyle = useMemo(() => {
-    if (gridColumns === 2) {
-      return styles.row;
-    } else {
-      // For 3+ columns, use space-between for better distribution
-      return [styles.row, styles.rowMultiColumn];
-    }
-  }, [gridColumns]);
+    const baseStyle =
+      gridColumns === 2 ? styles.row : [styles.row, styles.rowMultiColumn];
+    // No horizontal padding on row - let the gap handle spacing
+    return baseStyle;
+  }, [gridColumns, isTablet]);
 
   // Show skeleton loader on initial load
   if (isInitialLoading) {
@@ -445,7 +443,11 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
     columnWrapperStyle,
     contentContainerStyle: [
       styles.listContent,
-      { paddingBottom: listBottomPadding },
+      {
+        paddingBottom: listBottomPadding,
+        paddingTop: isTablet ? 16 : 8, // Add spacing between action bar and grid
+        paddingHorizontal: isTablet ? 16 : 16, // Add edge padding for breathing room
+      },
     ],
     isInitialLoading,
     hasError: !!error && data.length === 0,
@@ -464,17 +466,15 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: 0,
-    paddingTop: 0,
+    paddingTop: 0, // Base padding, overridden dynamically
     paddingBottom: Spacing.xl,
   },
   row: {
-    justifyContent: 'space-between',
-    paddingHorizontal: 16, // 16px on each side = 32px total - matches header padding
+    gap: 12, // Gap between cards in row
     marginBottom: 12, // Gap between rows
   },
   rowMultiColumn: {
-    justifyContent: 'space-between',
-    paddingHorizontal: 16, // 16px on each side = 32px total - matches header padding
+    gap: 16, // Increased gap between cards on tablets for 4 larger cards
     marginBottom: 24, // Larger gap between rows on tablets
     // Ensure even distribution of cards across the width
     alignItems: 'flex-start',
@@ -634,8 +634,8 @@ export const useCategoryGridRenderProps = (
     ({ item }: { item: CategoryItem | Event }) => {
       // Calculate responsive card dimensions
       const gridDimensions = getGridCardDimensions(
-        isTablet ? 32 : 32, // Match header padding: 16px each side = 32px total
-        isTablet ? 20 : 12, // Gap between cards - increased for iPad
+        isTablet ? 32 : 32, // iPad: 16px each side for breathing room, Phone: 16px each side = 32px total
+        isTablet ? 16 : 12, // Gap between cards - increased for iPad with 4 larger cards
         4 / 3, // aspect ratio
       );
 
@@ -814,13 +814,11 @@ export const useCategoryGridRenderProps = (
         isTablet,
       });
     }
-    if (gridColumns === 2) {
-      return styles.row;
-    } else {
-      // For 3+ columns, use space-between for better distribution
-      return [styles.row, styles.rowMultiColumn];
-    }
-  }, []);
+    const baseStyle =
+      gridColumns === 2 ? styles.row : [styles.row, styles.rowMultiColumn];
+    // No horizontal padding on row - let the gap handle spacing
+    return baseStyle;
+  }, [isTablet]);
 
   return {
     data: filteredData,
@@ -834,7 +832,11 @@ export const useCategoryGridRenderProps = (
     columnWrapperStyle,
     contentContainerStyle: [
       styles.listContent,
-      { paddingBottom: listBottomPadding },
+      {
+        paddingBottom: listBottomPadding,
+        paddingTop: isTablet ? 16 : 8, // Add spacing between action bar and grid
+        paddingHorizontal: isTablet ? 16 : 16, // Add edge padding for breathing room
+      },
     ],
     isInitialLoading,
     hasError: !!error && data.length === 0,

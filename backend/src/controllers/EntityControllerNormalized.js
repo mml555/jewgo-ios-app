@@ -45,15 +45,16 @@ class EntityControllerNormalized {
           e.review_count,
           e.is_verified,
           e.is_active,
-          e.kosher_level,
-          e.kosher_certification,
+          r.kosher_level,
+          r.kosher_certification,
           r.price_min,
           r.price_max,
+          r.price_range,
           e.created_at,
           e.updated_at,
           u.first_name as owner_first_name,
           u.last_name as owner_last_name
-        FROM entities e
+        FROM entities_normalized e
         LEFT JOIN restaurants_normalized r ON e.id = r.entity_id
         LEFT JOIN users u ON e.owner_id = u.id
         WHERE e.is_active = true
@@ -132,8 +133,7 @@ class EntityControllerNormalized {
       const result = await pool.query(query, params);
 
       // Get total count for pagination
-      let countQuery =
-        'SELECT COUNT(*) FROM entities WHERE is_active = true';
+      let countQuery = 'SELECT COUNT(*) FROM entities WHERE is_active = true';
       const countParams = [];
       let countParamCount = 0;
 

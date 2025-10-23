@@ -86,6 +86,12 @@ export const useLocation = () => {
             },
             err => {
               errorLog('🔥 iOS location permission error:', err);
+              debugLog(
+                '🔥 iOS error details - code:',
+                err.code,
+                'message:',
+                err.message,
+              );
               const isDenied = err.code === 1; // PERMISSION_DENIED
               setPermissionState(false, true, isDenied);
               setError(err.message);

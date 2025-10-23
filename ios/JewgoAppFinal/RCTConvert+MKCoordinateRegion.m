@@ -9,8 +9,11 @@
   CLLocationDegrees lng = [self double:dict[@"longitude"]];
   CLLocationDegrees latDelta = [self double:dict[@"latitudeDelta"]];
   CLLocationDegrees lngDelta = [self double:dict[@"longitudeDelta"]];
+  
+  CLLocationCoordinate2D center = CLLocationCoordinate2DMake(lat, lng);
   MKCoordinateSpan span = MKCoordinateSpanMake(latDelta, lngDelta);
-  MKCoordinateRegion region = MKCoordinateRegionMake(CLLocationCoordinate2DMake(lat, lng), span);
+  MKCoordinateRegion region = MKCoordinateRegionMake(center, span);
+  
   return region;
 }
 

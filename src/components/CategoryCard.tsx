@@ -70,8 +70,8 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
   // Get responsive dimensions
   const { width: screenWidth, isTablet } = useResponsiveDimensions();
   const gridDimensions = getGridCardDimensions(
-    isTablet ? 48 : 32, // Total horizontal padding (both sides combined)
-    isTablet ? 24 : 12, // Gap between cards
+    isTablet ? 32 : 32, // iPad: 16px each side for breathing room, Phone: 16px each side = 32px total
+    isTablet ? 16 : 12, // Gap between cards - increased for iPad with 4 larger cards
     4 / 3, // aspect ratio
   );
 
@@ -470,11 +470,26 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
         {/* Price and Distance - matches details page layout */}
         <View style={styles.infoRow}>
           <Text style={styles.priceText}>
-            {categoryKey === 'eatery'
-              ? formatPriceRange(item.price_min, item.price_max) ||
-                item.price_range ||
-                '$$'
-              : String(item.price || '$$')}
+            {(() => {
+              if (categoryKey === 'eatery') {
+                const formatted = formatPriceRange(
+                  item.price_min,
+                  item.price_max,
+                );
+                if (__DEV__ && Math.random() < 0.1) {
+                  console.log(
+                    '💰 Price debug:',
+                    `title: ${item.title}`,
+                    `price_min: ${item.price_min}`,
+                    `price_max: ${item.price_max}`,
+                    `price_range: ${item.price_range}`,
+                    `formatted: ${formatted}`,
+                  );
+                }
+                return formatted || item.price_range || '';
+              }
+              return String(item.price || '');
+            })()}
           </Text>
           {realDistanceMeters ? (
             <DistanceDisplay
@@ -524,8 +539,7 @@ const createStyles = (
       width: cardWidth,
       borderRadius: BorderRadius.xl,
       padding: 0, // Remove padding to align with image edges
-      marginRight: isTablet ? 20 : 12, // Add right margin for spacing between cards
-      marginBottom: isTablet ? 24 : 12, // Add bottom margin for spacing between rows
+      // No margins needed - using gap property in row styles
       // Shadow moved to specific container types to prevent rendering warnings
     },
     containerWithBackground: {

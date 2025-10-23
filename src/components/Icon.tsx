@@ -68,7 +68,8 @@ export type IconName =
   | 'check' // Checkmark
   | 'lock' // Privacy/Security
   | 'help-circle' // Help & Support
-  | 'gift'; // Gift/Specials icon
+  | 'gift' // Gift/Specials icon
+  | 'navigation'; // Navigation/Compass icon
 
 type IconMeta = { lib: IconLibrary; name: string };
 
@@ -114,6 +115,7 @@ const ICONS: Record<IconName, IconMeta> = {
   lock: { lib: 'Feather', name: 'lock' },
   'help-circle': { lib: 'Feather', name: 'help-circle' },
   gift: { lib: 'Feather', name: 'gift' },
+  navigation: { lib: 'Feather', name: 'navigation' },
 
   // MaterialCommunityIcons (MDI)
   tag: { lib: 'MaterialCommunityIcons', name: 'tag' },

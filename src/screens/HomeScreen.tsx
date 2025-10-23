@@ -53,6 +53,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
   // Responsive dimensions
   const { width: screenWidth, isTablet } = useResponsiveDimensions();
 
+  // Responsive category rail height for iPad
+  const responsiveCategoryRailHeight = isTablet
+    ? 116
+    : StickyLayout.categoryRailHeightDefault;
+
   // Core state
   const [activeCategory, setActiveCategory] = useState('mikvah');
   const [searchQuery, setSearchQuery] = useState('');
@@ -135,7 +140,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
   const headerPreActionHeight =
     scrollHeaderH > 0
       ? Math.max(0, scrollHeaderH - measuredActionBarHeight)
-      : StickyLayout.categoryRailHeightDefault + StickyLayout.railActionGap;
+      : responsiveCategoryRailHeight + StickyLayout.railActionGap;
 
   // Threshold where sticky state begins (TopBar height + gap + category rail)
   const THRESHOLD_BASE = topBarHeight + headerPreActionHeight;
@@ -228,7 +233,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
     const timer = setTimeout(() => {
       if (restHeaderHRef.current === 0 && showActionBarInHeader) {
         const estimatedHeight =
-          StickyLayout.categoryRailHeightDefault +
+          responsiveCategoryRailHeight +
           StickyLayout.actionBarHeight + // Always include ActionBar in rest height
           StickyLayout.railActionGap; // Include the gap that scrolls with header
         console.log(
@@ -247,7 +252,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
   useEffect(() => {
     if (restHeaderHRef.current === 0) {
       const estimatedHeight =
-        StickyLayout.categoryRailHeightDefault +
+        responsiveCategoryRailHeight +
         StickyLayout.actionBarHeight + // Always include ActionBar in rest height
         StickyLayout.railActionGap; // Gap spacer matching header layout
       console.log(
@@ -264,7 +269,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
     const timer = setTimeout(() => {
       if (restHeaderHRef.current === 0) {
         const estimatedHeight =
-          StickyLayout.categoryRailHeightDefault +
+          responsiveCategoryRailHeight +
           StickyLayout.actionBarHeight +
           StickyLayout.railActionGap; // Gap spacer
         console.log(
@@ -461,8 +466,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
   // Calculate responsive grid dimensions
   const gridColumns = getGridColumns();
   const gridDimensions = getGridCardDimensions(
-    isTablet ? 32 : 32, // Match header padding: 16px each side = 32px total
-    isTablet ? 20 : 12, // Gap between cards - increased for iPad
+    isTablet ? 32 : 32, // iPad: 16px each side for breathing room, Phone: 16px each side = 32px total
+    isTablet ? 16 : 12, // Gap between cards - increased for iPad with 4 larger cards
     4 / 3, // aspect ratio
   );
 
@@ -721,6 +726,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
           zIndex: 999, // Below TopBar (1000) but above FlatList
           backgroundColor: '#f8f8f8', // Solid background required for efficient shadow rendering
           opacity: showSticky && isFocused && !isTransitioning.current ? 1 : 0, // Hide when not sticky, not focused, or transitioning
+          paddingHorizontal: 12, // Add horizontal padding for better spacing from edges
           ...Platform.select({
             android: { elevation: 16 }, // stronger elevation ensures tap priority
             ios: {
@@ -757,7 +763,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
             SAFE_TOP={SAFE_TOP}
             SEARCH_H={topBarHeight}
             LANE_GAP={GAP}
-            railHeight={StickyLayout.categoryRailHeightDefault}
+            railHeight={responsiveCategoryRailHeight}
             ACTION_H={measuredActionBarHeight}
             LANE_B_H={measuredActionBarHeight}
             STICKY_H={stickyH}

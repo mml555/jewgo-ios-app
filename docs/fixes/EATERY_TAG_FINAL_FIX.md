@@ -3,6 +3,7 @@
 ## Update: Removed Duplicate Dietary Chip
 
 After the initial fix, eatery cards were showing two elements with dietary type:
+
 1. Top-left white tag with dietary type (Meat/Dairy/Parve)
 2. Bottom-left color-coded dietary chip
 
@@ -13,9 +14,11 @@ After the initial fix, eatery cards were showing two elements with dietary type:
 # Original Fix Documentation
 
 ## Problem
+
 Eatery cards were still showing "Kosher" instead of the actual dietary type (Meat, Dairy, or Parve) even after adding the field to interfaces.
 
 ## Root Cause
+
 The `transformListing` function in `useCategoryData.ts` was not passing through the `kosher_level` field from the API response to the CategoryItem. The data was being lost during transformation.
 
 ## Complete Data Flow (Before Fix)
@@ -66,21 +69,23 @@ const safeItem: CategoryItem = {
 Added conditional debug logging to help troubleshoot data issues:
 
 ```typescript
-{(() => {
-  if (categoryKey === 'eatery') {
-    // Debug logging for eatery cards
-    if (__DEV__ && Math.random() < 0.1) {
-      debugLog('🍽️ Eatery card data:', {
-        title: item.title,
-        kosher_level: item.kosher_level,
-        hasKosherLevel: !!item.kosher_level,
-        itemKeys: Object.keys(item),
-      });
+{
+  (() => {
+    if (categoryKey === 'eatery') {
+      // Debug logging for eatery cards
+      if (__DEV__ && Math.random() < 0.1) {
+        debugLog('🍽️ Eatery card data:', {
+          title: item.title,
+          kosher_level: item.kosher_level,
+          hasKosherLevel: !!item.kosher_level,
+          itemKeys: Object.keys(item),
+        });
+      }
+      return item.kosher_level ? getDietaryLabel(item.kosher_level) : 'Kosher';
     }
-    return item.kosher_level ? getDietaryLabel(item.kosher_level) : 'Kosher';
-  }
-  return String(item.category || 'Unknown');
-})()}
+    return String(item.category || 'Unknown');
+  })();
+}
 ```
 
 ## Complete Data Flow (After Fix)
@@ -104,6 +109,7 @@ User sees: "Meat" ✅ CORRECT!
 ## Files Modified
 
 1. **src/hooks/useCategoryData.ts**
+
    - Updated `transformListing` to pass through `kosher_level` and other eatery fields
    - Added all missing API fields to the transformation
 
@@ -116,11 +122,13 @@ User sees: "Meat" ✅ CORRECT!
 To verify the fix works:
 
 1. **Check Debug Logs**
+
    ```
    Look for: 🍽️ Eatery card data: { kosher_level: 'meat', ... }
    ```
 
 2. **Visual Verification**
+
    - Meat restaurants should show "Meat" tag
    - Dairy restaurants should show "Dairy" tag
    - Parve restaurants should show "Parve" tag
@@ -139,6 +147,7 @@ The `transformListing` function was creating a "safe" CategoryItem with default 
 ## Prevention
 
 When adding new fields to the API response:
+
 1. Add to `Listing` interface in `api.ts` ✅
 2. Pass through in `transformEntityToLegacyListing` ✅
 3. Add to `CategoryItem` interface ✅
@@ -148,6 +157,7 @@ When adding new fields to the API response:
 ## Related Changes
 
 This fix also passes through other useful fields that were being lost:
+
 - `entity_type` - Entity type from backend
 - `address`, `city`, `state` - Full address details
 - `review_count` - Number of reviews

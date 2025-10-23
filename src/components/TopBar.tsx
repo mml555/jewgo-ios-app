@@ -11,6 +11,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Feather from 'react-native-vector-icons/Feather';
 import { Colors, Typography, Spacing, Shadows } from '../styles/designSystem';
+import { useResponsiveDimensions } from '../utils/deviceAdaptation';
 
 interface TopBarProps {
   onQueryChange: (query: string) => void;
@@ -33,6 +34,7 @@ const TopBar: React.FC<TopBarProps> = ({
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const insets = useSafeAreaInsets();
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const { isTablet } = useResponsiveDimensions();
 
   // Debounced search function
   const debouncedSearch = useCallback(
@@ -77,7 +79,7 @@ const TopBar: React.FC<TopBarProps> = ({
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <View style={styles.content}>
+      <View style={[styles.content, { paddingHorizontal: isTablet ? 16 : 16 }]}>
         {/* Combined Logo and Search Container */}
         <View style={styles.searchWrapper}>
           {/* Search Icon Logo */}
@@ -105,7 +107,12 @@ const TopBar: React.FC<TopBarProps> = ({
 
             <TextInput
               style={styles.searchInput}
-              placeholder={placeholder || (categoryKey === 'eatery' ? 'Search for an Eatery...' : 'Find your Eatery')}
+              placeholder={
+                placeholder ||
+                (categoryKey === 'eatery'
+                  ? 'Search for an Eatery...'
+                  : 'Find your Eatery')
+              }
               placeholderTextColor={Colors.textSecondary}
               value={searchQuery}
               onChangeText={handleSearchChange}
@@ -161,15 +168,13 @@ const styles = StyleSheet.create({
   content: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: Spacing.md,
+    justifyContent: 'flex-start',
     paddingTop: 8, // Minimal top padding
     paddingBottom: 0,
   },
   searchWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    maxWidth: 600, // Limit width on larger screens
     flex: 1,
   },
   logoContainer: {

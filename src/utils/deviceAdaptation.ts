@@ -256,19 +256,19 @@ export const getGridColumns = (): number => {
 
   if (deviceType === DeviceType.TABLET) {
     // For tablets, use screen width to determine optimal columns
-    // iPad: 768px+ gets 3 columns in portrait, 4 in landscape
-    // iPad Pro: 1024px+ gets 4 columns in portrait, 5 in landscape
+    // iPad: 768px+ gets 4 columns in portrait, 5 in landscape
+    // iPad Pro: 1024px+ gets 5 columns in portrait, 6 in landscape
     let columns: number;
 
-    if (width >= 1024) {
-      // iPad Pro and larger
-      columns = landscape ? 5 : 4;
+    if (width >= 1200) {
+      // Large iPad Pro and larger - maximize screen usage
+      columns = landscape ? 6 : 5; // More columns for better space utilization
     } else if (width >= 768) {
-      // Standard iPad
-      columns = landscape ? 4 : 3;
+      // Standard iPad and smaller iPad Pro - 4 columns in portrait, 5 in landscape
+      columns = landscape ? 5 : 4; // 4 columns portrait, 5 landscape
     } else {
       // Smaller tablets
-      columns = landscape ? 3 : 2;
+      columns = landscape ? 4 : 3; // Increased from 3/2 to 4/3
     }
 
     if (__DEV__) {
@@ -315,7 +315,7 @@ export const getGridCardDimensions = (
 
   const adjustedCardGap =
     deviceType === DeviceType.TABLET
-      ? Math.max(cardGap, 16) // Minimum 16px gap on tablets
+      ? Math.max(cardGap, 16) // Increased gap for better spacing with 4 larger cards
       : cardGap;
 
   // Use total horizontal padding (both sides)
@@ -325,7 +325,8 @@ export const getGridCardDimensions = (
   const imageHeight = cardWidth / aspectRatio;
 
   // Ensure minimum card width for usability
-  const minCardWidth = deviceType === DeviceType.TABLET ? 200 : 150;
+  // Increased minimum for iPad to make 4 cards larger and fill space better
+  const minCardWidth = deviceType === DeviceType.TABLET ? 180 : 150;
   const finalCardWidth = Math.max(cardWidth, minCardWidth);
 
   if (__DEV__) {

@@ -16,15 +16,19 @@ import {
   TextInput,
   Image,
 } from 'react-native';
+import {
+  GestureHandlerRootView,
+  PanGestureHandler,
+  State,
+} from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Region } from 'react-native-maps';
 import { useFilters } from '../hooks/useFilters';
 import FiltersModal from '../components/FiltersModal';
 import Icon from '../components/Icon';
-import TopBar from '../components/TopBar';
-import { Spacing, Shadows } from '../styles/designSystem';
-import { useLocation, calculateDistance } from '../hooks/useLocation';
+import { Spacing, Shadows, BorderRadius } from '../styles/designSystem';
+import { useLocation } from '../hooks/useLocation';
 import { useCategoryData } from '../hooks/useCategoryData';
 import { debugLog } from '../utils/logger';
 import { NativeMapView, NativeMapViewRef } from '../features/map/NativeMapView';
@@ -55,8 +59,10 @@ interface MapListing {
 
 const LiveMapAllScreen: React.FC = () => {
   debugLog('🔍 LiveMapAllScreen: Component mounting');
-  debugLog('🔍 LiveMapAllScreen: Component mounting - this should appear in logs');
-  
+  debugLog(
+    '🔍 LiveMapAllScreen: Component mounting - this should appear in logs',
+  );
+
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
 
@@ -80,9 +86,35 @@ const LiveMapAllScreen: React.FC = () => {
   const [selectedListing, setSelectedListing] = useState<MapListing | null>(
     null,
   );
+  const [currentEntityIndex, setCurrentEntityIndex] = useState<number>(0);
+
+  // Debug logging for selectedListing state changes
+  useEffect(() => {
+    console.log('🔍 selectedListing state changed:', selectedListing);
+  }, [selectedListing]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const mapViewRef = useRef<NativeMapViewRef>(null);
+
+  // Helper function to calculate distance between two coordinates
+  const calculateDistance = (
+    lat1: number,
+    lon1: number,
+    lat2: number,
+    lon2: number,
+  ): number => {
+    const R = 3959; // Earth's radius in miles
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
 
   // Categories configuration - matching the keys from ActionBar
   const categories = [
@@ -190,6 +222,60 @@ const LiveMapAllScreen: React.FC = () => {
       ...(eventsData.data || []),
       ...(jobsData.data || []),
     ];
+
+    // Debug logging for each category
+    console.log('🔍 Category data status:');
+    console.log('  eateryData:', {
+      length: eateryData.data?.length || 0,
+      loading: eateryData.loading,
+      error: eateryData.error,
+    });
+    console.log('  shulData:', {
+      length: shulData.data?.length || 0,
+      loading: shulData.loading,
+      error: shulData.error,
+    });
+    console.log('  mikvahData:', {
+      length: mikvahData.data?.length || 0,
+      loading: mikvahData.loading,
+      error: mikvahData.error,
+    });
+    console.log('  schoolsData:', {
+      length: schoolsData.data?.length || 0,
+      loading: schoolsData.loading,
+      error: schoolsData.error,
+    });
+    console.log('  storesData:', {
+      length: storesData.data?.length || 0,
+      loading: storesData.loading,
+      error: storesData.error,
+    });
+    console.log('  servicesData:', {
+      length: servicesData.data?.length || 0,
+      loading: servicesData.loading,
+      error: servicesData.error,
+    });
+    console.log('  housingData:', {
+      length: housingData.data?.length || 0,
+      loading: housingData.loading,
+      error: housingData.error,
+    });
+    console.log('  shtetlData:', {
+      length: shtetlData.data?.length || 0,
+      loading: shtetlData.loading,
+      error: shtetlData.error,
+    });
+    console.log('  eventsData:', {
+      length: eventsData.data?.length || 0,
+      loading: eventsData.loading,
+      error: eventsData.error,
+    });
+    console.log('  jobsData:', {
+      length: jobsData.data?.length || 0,
+      loading: jobsData.loading,
+      error: jobsData.error,
+    });
+
     debugLog('🗺️ LiveMapAllScreen - combined listings:', combined.length);
     return combined;
   }, [
@@ -224,23 +310,38 @@ const LiveMapAllScreen: React.FC = () => {
 
   // Convert listings to map format with coordinates
   const mapListings: MapListing[] = useMemo(() => {
+    console.log(
+      '🔍 Converting allListings to mapListings - allListings.length:',
+      allListings.length,
+    );
     debugLog(
       '🗺️ Converting all listings to map format - count:',
       allListings.length,
     );
 
-    const converted = allListings.map((item, index) => ({
-      id: item.id || `fallback-${index}`,
-      title: item.title || 'Untitled',
-      description: item.description || 'No description available',
-      category: item.category || 'unknown',
-      rating: item.rating || null,
-      distance: '0.5 mi',
-      latitude: item.latitude || 40.7128 + (Math.random() - 0.5) * 0.15,
-      longitude: item.longitude || -74.006 + (Math.random() - 0.5) * 0.15,
-      imageUrl: item.imageUrl || undefined,
-    }));
+    const converted = allListings.map((item, index) => {
+      console.log(`🔍 Converting item ${index}:`, {
+        id: item.id,
+        title: item.title,
+        latitude: item.latitude,
+        longitude: item.longitude,
+        hasCoordinates: !!(item.latitude && item.longitude),
+      });
 
+      return {
+        id: item.id || `fallback-${index}`,
+        title: item.title || 'Untitled',
+        description: item.description || 'No description available',
+        category: item.category || 'unknown',
+        rating: item.rating || null,
+        distance: '0.5 mi',
+        latitude: item.latitude || 40.7128 + (Math.random() - 0.5) * 0.15,
+        longitude: item.longitude || -74.006 + (Math.random() - 0.5) * 0.15,
+        imageUrl: item.imageUrl || undefined,
+      };
+    });
+
+    console.log('🔍 Converted mapListings:', converted.length);
     debugLog('🗺️ Converted mapListings:', converted.length);
     return converted;
   }, [allListings]);
@@ -341,7 +442,12 @@ const LiveMapAllScreen: React.FC = () => {
 
   // Convert listings to MapPoint format for native map
   const mapPoints: MapPoint[] = useMemo(() => {
-    return filteredListings.map(listing => ({
+    console.log(
+      '🔍 Converting filteredListings to mapPoints - filteredListings.length:',
+      filteredListings.length,
+    );
+
+    const points = filteredListings.map(listing => ({
       id: listing.id,
       latitude: listing.latitude,
       longitude: listing.longitude,
@@ -355,6 +461,9 @@ const LiveMapAllScreen: React.FC = () => {
       state: listing.state,
       zip_code: listing.zip_code,
     }));
+
+    console.log('🔍 Final mapPoints:', points.length);
+    return points;
   }, [filteredListings]);
 
   // Initial region setup
@@ -375,12 +484,31 @@ const LiveMapAllScreen: React.FC = () => {
 
   const handleMarkerPress = useCallback(
     (point: MapPoint) => {
+      console.log('🔍 handleMarkerPress called with point:', point);
+
       const listing = filteredListings.find(l => l.id === point.id);
       if (listing) {
+        console.log('🔍 Found listing in filteredListings:', listing);
         setSelectedListing(listing);
+      } else {
+        console.log('🔍 No listing found for marker press, skipping');
       }
+
+      // After setting the selected listing, find its index in nearby entities
+      // This will be used for swipe navigation
+      setTimeout(() => {
+        const nearbyPoints = getNearbyEntities();
+        const pointIndex = nearbyPoints.findIndex(p => p.id === point.id);
+        console.log(
+          '🔍 Found point index:',
+          pointIndex,
+          'in nearby points:',
+          nearbyPoints.length,
+        );
+        setCurrentEntityIndex(pointIndex >= 0 ? pointIndex : 0);
+      }, 0);
     },
-    [filteredListings],
+    [filteredListings, getNearbyEntities],
   );
 
   const handleClosePopup = useCallback(() => {
@@ -389,6 +517,11 @@ const LiveMapAllScreen: React.FC = () => {
 
   const handleViewDetails = useCallback(
     (listing: MapListing) => {
+      console.log('🔍 Navigating to ListingDetail with:', {
+        itemId: listing.id,
+        categoryKey: listing.category,
+        title: listing.title,
+      });
       (navigation as any).navigate('ListingDetail', {
         itemId: listing.id,
         categoryKey: listing.category,
@@ -396,6 +529,145 @@ const LiveMapAllScreen: React.FC = () => {
       setSelectedListing(null);
     },
     [navigation],
+  );
+
+  // Get nearby entities within 15 miles of the current selection
+  const getNearbyEntities = useCallback(() => {
+    if (!selectedListing) {
+      return [];
+    }
+
+    const currentLat = selectedListing.latitude;
+    const currentLon = selectedListing.longitude;
+    const maxDistance = 15; // 15 miles
+
+    // Use real mapPoints data only
+    const allPoints = mapPoints || [];
+
+    const nearbyPoints = allPoints.filter(point => {
+      const distance = calculateDistance(
+        currentLat,
+        currentLon,
+        point.latitude,
+        point.longitude,
+      );
+      console.log(
+        `🔍 Distance from ${selectedListing.title} to ${
+          point.title
+        }: ${distance.toFixed(2)} miles`,
+      );
+      return distance <= maxDistance;
+    });
+
+    console.log(
+      `🔍 Found ${nearbyPoints.length} entities within ${maxDistance} miles of ${selectedListing.title}`,
+    );
+    return nearbyPoints;
+  }, [selectedListing, mapPoints]);
+
+  // Swipe navigation functions
+  const navigateToNextEntity = useCallback(() => {
+    console.log(
+      '🔍 navigateToNextEntity called - currentIndex:',
+      currentEntityIndex,
+    );
+
+    const nearbyPoints = getNearbyEntities();
+
+    if (nearbyPoints.length === 0) {
+      console.log('🔍 No nearby points available for navigation');
+      return;
+    }
+
+    const nextIndex = (currentEntityIndex + 1) % nearbyPoints.length;
+    console.log(
+      '🔍 Next index:',
+      nextIndex,
+      'out of',
+      nearbyPoints.length,
+      'nearby points',
+    );
+    setCurrentEntityIndex(nextIndex);
+
+    const nextPoint = nearbyPoints[nextIndex];
+    console.log('🔍 Next point:', nextPoint);
+    const nextListing = filteredListings.find(l => l.id === nextPoint.id);
+
+    if (nextListing) {
+      console.log('🔍 Found next listing:', nextListing);
+      setSelectedListing(nextListing);
+    } else {
+      console.log('🔍 No listing found for next entity, skipping');
+    }
+  }, [currentEntityIndex, getNearbyEntities, filteredListings]);
+
+  const navigateToPreviousEntity = useCallback(() => {
+    console.log(
+      '🔍 navigateToPreviousEntity called - currentIndex:',
+      currentEntityIndex,
+    );
+
+    const nearbyPoints = getNearbyEntities();
+
+    if (nearbyPoints.length === 0) {
+      console.log('🔍 No nearby points available for navigation');
+      return;
+    }
+
+    const prevIndex =
+      currentEntityIndex === 0
+        ? nearbyPoints.length - 1
+        : currentEntityIndex - 1;
+    console.log(
+      '🔍 Previous index:',
+      prevIndex,
+      'out of',
+      nearbyPoints.length,
+      'nearby points',
+    );
+    setCurrentEntityIndex(prevIndex);
+
+    const prevPoint = nearbyPoints[prevIndex];
+    console.log('🔍 Previous point:', prevPoint);
+    const prevListing = filteredListings.find(l => l.id === prevPoint.id);
+
+    if (prevListing) {
+      console.log('🔍 Found previous listing:', prevListing);
+      setSelectedListing(prevListing);
+    } else {
+      console.log('🔍 No listing found for previous entity, skipping');
+    }
+  }, [currentEntityIndex, getNearbyEntities, filteredListings]);
+
+  // Handle swipe gesture
+  const handleSwipeGesture = useCallback(
+    (event: any) => {
+      console.log('🔍 Gesture event received:', event.nativeEvent);
+      const { translationX, state } = event.nativeEvent;
+
+      console.log('🔍 Swipe gesture detected:', { translationX, state });
+
+      if (state === State.END) {
+        const swipeThreshold = 50; // Minimum swipe distance
+        console.log('🔍 Gesture ended, checking threshold:', {
+          translationX,
+          swipeThreshold,
+        });
+
+        if (translationX > swipeThreshold) {
+          // Swipe right - go to previous entity
+          console.log('🔍 Swipe right detected, going to previous entity');
+          navigateToPreviousEntity();
+        } else if (translationX < -swipeThreshold) {
+          // Swipe left - go to next entity
+          console.log('🔍 Swipe left detected, going to next entity');
+          navigateToNextEntity();
+        } else {
+          console.log('🔍 Swipe distance too small:', translationX);
+        }
+      }
+    },
+    [navigateToNextEntity, navigateToPreviousEntity],
   );
 
   const getCategoryColor = (category: string) => {
@@ -429,14 +701,44 @@ const LiveMapAllScreen: React.FC = () => {
   }, []);
 
   const handleCenterOnLocation = useCallback(() => {
-    mapViewRef.current?.centerOnLocation();
-  }, []);
+    console.log(
+      '🔍 handleCenterOnLocation called - mapViewRef:',
+      !!mapViewRef.current,
+      'location:',
+      location,
+    );
+    debugLog(
+      '🔍 handleCenterOnLocation called - mapViewRef:',
+      !!mapViewRef.current,
+      'location:',
+      location,
+    );
+
+    if (mapViewRef.current) {
+      console.log('🔍 Centering map on location');
+      debugLog('🔍 Centering map on location');
+      mapViewRef.current.centerOnLocation();
+    } else {
+      console.log('🔍 Cannot center - mapViewRef not available');
+      debugLog('🔍 Cannot center - mapViewRef not available');
+    }
+  }, [location]);
 
   // Auto-request location permission on mount to trigger native iOS popup
   useEffect(() => {
-    console.log('🔍 LiveMapAllScreen: useEffect triggered - permissionGranted:', permissionGranted, 'locationLoading:', locationLoading);
-    debugLog('🔍 LiveMapAllScreen: useEffect triggered - permissionGranted:', permissionGranted, 'locationLoading:', locationLoading);
-    
+    console.log(
+      '🔍 LiveMapAllScreen: useEffect triggered - permissionGranted:',
+      permissionGranted,
+      'locationLoading:',
+      locationLoading,
+    );
+    debugLog(
+      '🔍 LiveMapAllScreen: useEffect triggered - permissionGranted:',
+      permissionGranted,
+      'locationLoading:',
+      locationLoading,
+    );
+
     const requestPermission = async () => {
       console.log('🔍 LiveMapAllScreen: requestPermission called');
       debugLog('🔍 LiveMapAllScreen: requestPermission called');
@@ -445,18 +747,37 @@ const LiveMapAllScreen: React.FC = () => {
         debugLog('🔍 LiveMapAllScreen: Requesting location permission...');
         try {
           const result = await requestLocationPermission();
-          console.log('🔍 LiveMapAllScreen: Permission request result:', result);
+          console.log(
+            '🔍 LiveMapAllScreen: Permission request result:',
+            result,
+          );
           debugLog('🔍 LiveMapAllScreen: Permission request result:', result);
         } catch (error) {
-          console.log('🔍 LiveMapAllScreen: Error requesting location permission:', error);
-          debugLog('🔍 LiveMapAllScreen: Error requesting location permission:', error);
+          console.log(
+            '🔍 LiveMapAllScreen: Error requesting location permission:',
+            error,
+          );
+          debugLog(
+            '🔍 LiveMapAllScreen: Error requesting location permission:',
+            error,
+          );
         }
       } else {
-        console.log('🔍 LiveMapAllScreen: Skipping permission request - permissionGranted:', permissionGranted, 'locationLoading:', locationLoading);
-        debugLog('🔍 LiveMapAllScreen: Skipping permission request - permissionGranted:', permissionGranted, 'locationLoading:', locationLoading);
+        console.log(
+          '🔍 LiveMapAllScreen: Skipping permission request - permissionGranted:',
+          permissionGranted,
+          'locationLoading:',
+          locationLoading,
+        );
+        debugLog(
+          '🔍 LiveMapAllScreen: Skipping permission request - permissionGranted:',
+          permissionGranted,
+          'locationLoading:',
+          locationLoading,
+        );
       }
     };
-    
+
     // Small delay to ensure component is fully mounted
     const timer = setTimeout(requestPermission, 500);
     return () => {
@@ -472,102 +793,83 @@ const LiveMapAllScreen: React.FC = () => {
     };
   }, []);
 
+  console.log(
+    '🔍 LiveMapAllScreen: Rendering - mapPoints:',
+    mapPoints?.length,
+    'permissionGranted:',
+    permissionGranted,
+  );
+  debugLog(
+    '🔍 LiveMapAllScreen: Rendering - mapPoints:',
+    mapPoints?.length,
+    'permissionGranted:',
+    permissionGranted,
+  );
+
   return (
-    <View style={styles.container}>
-      {/* TopBar with search - Standard app header */}
-      <TopBar
-        onQueryChange={setSearchQuery}
-        placeholder="Search locations..."
-      />
+    <GestureHandlerRootView style={styles.container}>
+      {/* Safe area spacer for dynamic island */}
+      <View style={{ height: insets.top }} />
 
-      {/* Map */}
-      <View style={styles.mapContainer}>
-        {mapPoints && mapPoints.length > 0 ? (
-          <NativeMapView
-            ref={mapViewRef}
-            points={mapPoints}
-            initialRegion={initialRegion}
-            userLocation={location}
-            selectedId={selectedListing?.id}
-            onMarkerPress={handleMarkerPress}
-            onZoomIn={handleZoomIn}
-            onZoomOut={handleZoomOut}
-            onCenterLocation={handleCenterOnLocation}
-          />
-        ) : (
-          <View style={styles.loadingContainer}>
-            <Text style={styles.loadingText}>Loading map...</Text>
-          </View>
-        )}
-
-        {/* Map Controls - Positioned to avoid TopBar */}
-        <View style={[styles.mapControls, { top: getResponsiveSpacing(20) }]}>
-          {/* Zoom Controls */}
-          <View style={styles.zoomControls}>
-            <TouchableOpacity
-              style={styles.controlButton}
-              onPress={handleZoomIn}
-              accessible={true}
-              accessibilityRole="button"
-              accessibilityLabel="Zoom in"
-              accessibilityHint="Double tap to zoom in on the map"
-            >
-              <Text style={styles.controlButtonText}>+</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.controlButton}
-              onPress={handleZoomOut}
-              accessible={true}
-              accessibilityRole="button"
-              accessibilityLabel="Zoom out"
-              accessibilityHint="Double tap to zoom out on the map"
-            >
-              <Text style={styles.controlButtonText}>−</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Location Control */}
-          <TouchableOpacity
-            style={styles.locationButton}
-            onPress={handleCenterOnLocation}
-            accessible={true}
-            accessibilityRole="button"
-            accessibilityLabel="Center on my location"
-            accessibilityHint="Tap to center the map on your current location"
-          >
-            <Icon
-              name="navigation"
-              size={20}
-              color={permissionGranted ? "#007AFF" : "#8E8E93"}
-            />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Header with back button and filter */}
-      <View style={styles.header}>
+      {/* Back button, filter button, and map controls below dynamic island */}
+      <View style={styles.backButtonContainer}>
         <TouchableOpacity
-          style={styles.backButton}
+          style={styles.backButtonBelow}
           onPress={handleBackPress}
           accessible={true}
           accessibilityRole="button"
           accessibilityLabel="Go back"
         >
-          <Icon name="chevron-left" size={24} color="#1A1A1A" />
+          <Icon name="chevron-left" size={20} color="#1A1A1A" />
+          <Text style={styles.backButtonText}>Back</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Live Map - All Locations</Text>
+
+        {/* Location Button */}
         <TouchableOpacity
-          style={styles.filterButton}
+          style={[
+            styles.locationButtonCenter,
+            {
+              backgroundColor: permissionGranted ? '#007AFF' : '#F5F5F5',
+              borderWidth: 0,
+            },
+          ]}
+          onPress={handleCenterOnLocation}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel="Center on my location"
+          accessibilityHint="Tap to center the map on your current location"
+        >
+          <Icon
+            name="navigation"
+            size={20}
+            color={permissionGranted ? '#FFFFFF' : '#8E8E93'}
+          />
+          <Text
+            style={[
+              styles.locationButtonText,
+              {
+                color: permissionGranted ? '#FFFFFF' : '#8E8E93',
+              },
+            ]}
+          >
+            My Location
+          </Text>
+        </TouchableOpacity>
+
+        {/* Filter Button */}
+        <TouchableOpacity
+          style={styles.filterButtonRight}
           onPress={openFiltersModal}
           accessible={true}
           accessibilityRole="button"
           accessibilityLabel="Open filters"
         >
-          <Icon name="filter" size={24} color="#1A1A1A" />
+          <Text style={styles.filterButtonText}>Filters</Text>
+          <Icon name="filter" size={20} color="#1A1A1A" />
         </TouchableOpacity>
       </View>
 
-      {/* Category filter rail */}
+      {/* Category filter rail - Now below control bar */}
       <View style={styles.categoryRail}>
         <ScrollView
           horizontal
@@ -604,59 +906,120 @@ const LiveMapAllScreen: React.FC = () => {
         </ScrollView>
       </View>
 
+      {/* Map */}
+      <View style={styles.mapContainer}>
+        <NativeMapView
+          ref={mapViewRef}
+          points={mapPoints || []}
+          initialRegion={initialRegion}
+          userLocation={location}
+          selectedId={selectedListing?.id}
+          onMarkerPress={handleMarkerPress}
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
+          onCenterLocation={handleCenterOnLocation}
+        />
+      </View>
+
       {/* Selected listing popup */}
-      {selectedListing && (
-        <View style={styles.popupContainer}>
-          <View style={styles.popup}>
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={handleClosePopup}
-            >
-              <Icon name="x" size={20} color="#666" />
-            </TouchableOpacity>
+      {selectedListing &&
+        (() => {
+          console.log(
+            '🔍 Rendering popup for selectedListing:',
+            selectedListing,
+          );
+          return (
+            <View style={styles.popupContainer}>
+              <View style={styles.popup}>
+                <TouchableOpacity
+                  style={styles.closeButton}
+                  onPress={handleClosePopup}
+                >
+                  <Icon name="x" size={20} color="#666" />
+                </TouchableOpacity>
 
-            {selectedListing.imageUrl && (
-              <Image
-                source={{ uri: selectedListing.imageUrl }}
-                style={styles.popupImage}
-              />
-            )}
+                <PanGestureHandler
+                  onGestureEvent={handleSwipeGesture}
+                  onHandlerStateChange={handleSwipeGesture}
+                  minDist={10}
+                  shouldCancelWhenOutside={false}
+                >
+                  <View style={styles.popupImageContainer}>
+                    <Image
+                      source={{
+                        uri:
+                          selectedListing.imageUrl ||
+                          `https://picsum.photos/300/225?random=${selectedListing.id}`,
+                      }}
+                      style={styles.popupImage}
+                      onLoad={() =>
+                        console.log(
+                          '🔍 Image loaded successfully for:',
+                          selectedListing.title,
+                        )
+                      }
+                      onError={() =>
+                        console.log(
+                          '🔍 Image failed to load:',
+                          selectedListing.imageUrl,
+                        )
+                      }
+                    />
 
-            <View style={styles.popupContent}>
-              <Text style={styles.popupTitle}>{selectedListing.title}</Text>
-              <Text style={styles.popupDescription} numberOfLines={2}>
-                {selectedListing.description}
-              </Text>
-
-              <View style={styles.popupFooter}>
-                <View style={styles.popupInfo}>
-                  {selectedListing.rating && (
-                    <View style={styles.ratingContainer}>
-                      <Icon name="star" size={16} color="#FFB800" filled />
-                      <Text style={styles.ratingText}>
-                        {selectedListing.rating.toFixed(1)}
+                    {/* Tag on top left - matches CategoryCard */}
+                    <View style={styles.popupTagContainer}>
+                      <Text style={styles.popupTagText}>
+                        {selectedListing.kosherLevel ||
+                          selectedListing.category ||
+                          'Kosher'}
                       </Text>
                     </View>
-                  )}
-                  {selectedListing.distance && (
-                    <Text style={styles.distanceText}>
-                      {selectedListing.distance}
-                    </Text>
-                  )}
-                </View>
+
+                    {/* Swipe indicator */}
+                    <View style={styles.swipeIndicator}>
+                      <Text style={styles.swipeIndicatorText}>← Swipe →</Text>
+                    </View>
+                  </View>
+                </PanGestureHandler>
 
                 <TouchableOpacity
-                  style={styles.viewDetailsButton}
+                  style={styles.popupContent}
                   onPress={() => handleViewDetails(selectedListing)}
+                  activeOpacity={0.7}
                 >
-                  <Text style={styles.viewDetailsText}>View Details</Text>
-                  <Icon name="chevron-right" size={16} color="#FFFFFF" />
+                  {/* Title and Rating - matches CategoryCard layout */}
+                  <View style={styles.popupTitleSection}>
+                    <Text style={styles.popupTitle} numberOfLines={1}>
+                      {selectedListing.title}
+                    </Text>
+                    {selectedListing.rating !== undefined &&
+                      selectedListing.rating > 0 && (
+                        <View style={styles.popupRatingContainer}>
+                          <Text style={styles.popupRatingStar}>★</Text>
+                          <Text style={styles.popupRatingText}>
+                            {typeof selectedListing.rating === 'number' &&
+                            !isNaN(selectedListing.rating)
+                              ? Number(selectedListing.rating).toFixed(1)
+                              : '0.0'}
+                          </Text>
+                        </View>
+                      )}
+                  </View>
+
+                  {/* Price and Distance - matches CategoryCard layout */}
+                  <View style={styles.popupInfoRow}>
+                    <Text style={styles.popupPriceText}>
+                      {selectedListing.priceRange || '$$'}
+                    </Text>
+                    <Text style={styles.popupDistanceText}>
+                      {selectedListing.address || 'Location N/A'}
+                    </Text>
+                  </View>
                 </TouchableOpacity>
               </View>
             </View>
-          </View>
-        </View>
-      )}
+          );
+        })()}
 
       {/* Filters modal */}
       <FiltersModal
@@ -665,7 +1028,7 @@ const LiveMapAllScreen: React.FC = () => {
         onApplyFilters={applyFilters}
         currentFilters={filters}
       />
-    </View>
+    </GestureHandlerRootView>
   );
 };
 
@@ -733,10 +1096,10 @@ const styles = StyleSheet.create({
     ...Shadows.sm,
   },
   categoryRail: {
-    position: 'absolute',
-    top: 100,
-    left: 0,
-    right: 0,
+    backgroundColor: '#FFFFFF',
+    paddingVertical: Spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5E5',
   },
   categoryScrollContent: {
     paddingHorizontal: Spacing.md,
@@ -769,17 +1132,112 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontFamily: 'Nunito-SemiBold',
   },
+  backButtonContainer: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  backButtonBelow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: 20,
+    backgroundColor: '#F5F5F5',
+    ...Shadows.sm,
+  },
+  backButtonText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#1A1A1A',
+    marginLeft: 6,
+    fontFamily: 'Nunito-Medium',
+  },
+  filterButtonCenter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: 20,
+    backgroundColor: '#F5F5F5',
+    ...Shadows.sm,
+  },
+  filterButtonRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: 20,
+    backgroundColor: '#F5F5F5',
+    marginLeft: 'auto', // Push to right side
+    ...Shadows.sm,
+  },
+  filterButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#1A1A1A',
+    marginRight: 6, // Changed from marginLeft to marginRight since icon is now after text
+    fontFamily: 'Nunito-Medium',
+  },
+  locationButtonCenter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: 20,
+    ...Shadows.sm,
+  },
+  locationButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginLeft: 6,
+    fontFamily: 'Nunito-Medium',
+  },
+  mapControlsInline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  zoomControlsInline: {
+    flexDirection: 'row',
+    gap: Spacing.xs,
+  },
+  controlButtonInline: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F5F5F5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...Shadows.sm,
+  },
+  locationButtonInline: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F5F5F5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...Shadows.sm,
+  },
   popupContainer: {
     position: 'absolute',
-    bottom: 20,
-    left: Spacing.md,
-    right: Spacing.md,
+    bottom: 60, // Moved higher up on the page
+    left: Spacing.lg, // More padding from edges
+    right: Spacing.lg, // More padding from edges
   },
   popup: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderRadius: BorderRadius.xl,
     overflow: 'hidden',
     ...Shadows.lg,
+    width: '100%',
+    maxWidth: 360, // Adjusted for 4:3 aspect ratio
+    // Removed aspectRatio - let content determine height
   },
   closeButton: {
     position: 'absolute',
@@ -793,26 +1251,58 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 10,
   },
-  popupImage: {
-    width: '100%',
-    height: 150,
+  popupImageContainer: {
+    position: 'relative',
+    aspectRatio: 3.5 / 2, // 3.5:2 aspect ratio for image (taller than 4/2)
     backgroundColor: '#F5F5F5',
   },
-  popupContent: {
-    padding: Spacing.md,
+  popupImage: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#F5F5F5',
   },
-  popupTitle: {
-    fontSize: 18,
+  popupTagContainer: {
+    position: 'absolute',
+    top: Spacing.sm,
+    left: Spacing.sm, // Moved to left corner
+    backgroundColor: '#FFFFFF', // White background
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.full, // Pill shape
+  },
+  popupTagText: {
+    fontSize: 12,
     fontWeight: '600',
-    color: '#1A1A1A',
-    marginBottom: Spacing.xs,
+    color: '#000000', // Black text
     fontFamily: 'Nunito-SemiBold',
   },
-  popupDescription: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: Spacing.md,
-    fontFamily: 'Nunito-Regular',
+  swipeIndicator: {
+    position: 'absolute',
+    bottom: Spacing.sm,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  swipeIndicatorText: {
+    fontSize: 12,
+    color: '#FFFFFF',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.sm,
+    fontFamily: 'Nunito-Medium',
+  },
+  popupContent: {
+    padding: Spacing.sm,
+    paddingBottom: Spacing.sm, // Tight fit to content
+  },
+  popupTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1A1A1A',
+    flex: 1,
+    marginRight: Spacing.sm,
+    fontFamily: 'Nunito-SemiBold',
   },
   popupFooter: {
     flexDirection: 'row',
@@ -854,6 +1344,43 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#FFFFFF',
     fontFamily: 'Nunito-SemiBold',
+  },
+  // Popup styles matching CategoryCard exactly
+  popupTitleSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: Spacing.xs,
+  },
+  popupRatingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  popupRatingStar: {
+    fontSize: 14,
+    color: '#FFB800',
+  },
+  popupRatingText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1A1A1A',
+    fontFamily: 'Nunito-SemiBold',
+  },
+  popupInfoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  popupPriceText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1A1A1A',
+    fontFamily: 'Nunito-SemiBold',
+  },
+  popupDistanceText: {
+    fontSize: 14,
+    color: '#666',
+    fontFamily: 'Nunito-Regular',
   },
   // Map Controls
   mapControls: {

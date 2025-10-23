@@ -12,6 +12,7 @@ import {
   StickyLayout,
   Spacing,
 } from '../styles/designSystem';
+import { useResponsiveDimensions } from '../utils/deviceAdaptation';
 
 interface ActionBarProps {
   onActionPress?: (action: string) => void;
@@ -28,7 +29,16 @@ const ActionBar: React.FC<ActionBarProps> = ({
   jobMode,
   jobFiltersCount,
 }) => {
+  const { isTablet } = useResponsiveDimensions();
   const navigation = useNavigation();
+
+  // Responsive spacing for ActionBar - increased for better visual separation
+  const responsiveMarginTop = isTablet ? 24 : StickyLayout.laneGap;
+
+  // Responsive sizing to match grid - make ActionBar thinner
+  const responsiveHeight = isTablet ? 36 : HEIGHT; // Reduced from 40 to 36 for thinner buttons
+  const responsivePadding = isTablet ? 10 : ResponsiveSpacing.get(18); // Reduced from 12 to 10 for thinner buttons
+  const responsiveGap = isTablet ? 16 : ResponsiveSpacing.xs;
   const {
     filters,
     showFiltersModal,
@@ -94,12 +104,38 @@ const ActionBar: React.FC<ActionBarProps> = ({
 
     return (
       <>
-        <View style={[styles.row, styles.jobRow]}>
+        <View
+          style={[
+            styles.row,
+            styles.jobRow,
+            {
+              // No marginHorizontal - let parent container handle padding
+              marginTop: responsiveMarginTop,
+              gap: responsiveGap,
+              minHeight: responsiveHeight,
+            },
+          ]}
+          onLayout={event => {
+            const { width, height, x, y } = event.nativeEvent.layout;
+            console.log('🔍 ActionBar Job Mode Layout:', {
+              width,
+              height,
+              x,
+              y,
+              isTablet,
+            });
+          }}
+        >
           <TouchableOpacity
             style={[
               styles.boostButton,
               styles.jobPill,
               mode === 'hiring' && styles.jobPillActive,
+              {
+                height: responsiveHeight,
+                paddingHorizontal: responsivePadding,
+                borderRadius: responsiveHeight / 2,
+              },
             ]}
             onPress={() => onActionPress?.('jobFeed')}
             accessible
@@ -124,6 +160,11 @@ const ActionBar: React.FC<ActionBarProps> = ({
               styles.boostButton,
               styles.jobPill,
               mode === 'seeking' && styles.jobPillActive,
+              {
+                height: responsiveHeight,
+                paddingHorizontal: responsivePadding,
+                borderRadius: responsiveHeight / 2,
+              },
             ]}
             onPress={() => onActionPress?.('resumeFeed')}
             accessible
@@ -144,7 +185,17 @@ const ActionBar: React.FC<ActionBarProps> = ({
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.square, filtersCount > 0 && styles.squareActive]}
+            style={[
+              styles.square,
+              filtersCount > 0 && styles.squareActive,
+              {
+                width: isTablet
+                  ? responsiveHeight * 1.8
+                  : ResponsiveSpacing.get(42), // Made longer on iPad
+                height: responsiveHeight,
+                borderRadius: responsiveHeight / 2,
+              },
+            ]}
             onPress={() => onActionPress?.('toggleJobFilters')}
             accessible
             accessibilityRole="button"
@@ -152,13 +203,28 @@ const ActionBar: React.FC<ActionBarProps> = ({
             accessibilityHint="Show or hide filter options"
             hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
           >
-            <Icon
-              name="filter"
-              size={16}
-              color={
-                filtersCount > 0 ? Colors.primary.main : Colors.textSecondary
-              }
-            />
+            {isTablet ? (
+              <>
+                <Icon
+                  name="filter"
+                  size={14}
+                  color={
+                    filtersCount > 0
+                      ? Colors.primary.main
+                      : Colors.textSecondary
+                  }
+                />
+                <Text style={styles.pillText}>Filter</Text>
+              </>
+            ) : (
+              <Icon
+                name="filter"
+                size={16}
+                color={
+                  filtersCount > 0 ? Colors.primary.main : Colors.textSecondary
+                }
+              />
+            )}
             {filtersCount > 0 && (
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>{filtersCount}</Text>
@@ -172,9 +238,36 @@ const ActionBar: React.FC<ActionBarProps> = ({
 
   return (
     <>
-      <View style={styles.row}>
+      <View
+        style={[
+          styles.row,
+          {
+            // No marginHorizontal - let parent container handle padding
+            gap: responsiveGap,
+            minHeight: responsiveHeight,
+          },
+        ]}
+        onLayout={event => {
+          const { width, height, x, y } = event.nativeEvent.layout;
+          console.log('🔍 ActionBar Regular Mode Layout:', {
+            width,
+            height,
+            x,
+            y,
+            isTablet,
+          });
+        }}
+      >
         <TouchableOpacity
-          style={styles.liveMapButton}
+          style={[
+            styles.liveMapButton,
+            {
+              height: responsiveHeight,
+              paddingHorizontal: responsivePadding,
+              borderRadius: responsiveHeight / 2,
+              flex: isTablet ? 1.2 : 1, // Make Live Map button longer on iPad
+            },
+          ]}
           onPress={() => handleActionPress('liveMap')}
           accessible
           accessibilityRole="button"
@@ -194,7 +287,15 @@ const ActionBar: React.FC<ActionBarProps> = ({
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.boostButton}
+          style={[
+            styles.boostButton,
+            {
+              height: responsiveHeight,
+              paddingHorizontal: responsivePadding,
+              borderRadius: responsiveHeight / 2,
+              flex: isTablet ? 1.5 : 1, // Boost button gets more space on iPad
+            },
+          ]}
           onPress={() => handleActionPress('boost')}
           accessible
           accessibilityRole="button"
@@ -221,6 +322,13 @@ const ActionBar: React.FC<ActionBarProps> = ({
           style={[
             styles.square,
             getActiveFiltersCount() > 0 && styles.squareActive,
+            {
+              width: isTablet
+                ? responsiveHeight * 1.8
+                : ResponsiveSpacing.get(42), // Made longer on iPad
+              height: responsiveHeight,
+              borderRadius: responsiveHeight / 2,
+            },
           ]}
           onPress={() => handleActionPress('filters')}
           accessible
@@ -229,15 +337,30 @@ const ActionBar: React.FC<ActionBarProps> = ({
           accessibilityHint="Tap to open filter options"
           hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
         >
-          <Icon
-            name="filter"
-            size={16}
-            color={
-              getActiveFiltersCount() > 0
-                ? Colors.primary.main
-                : Colors.textSecondary
-            }
-          />
+          {isTablet ? (
+            <>
+              <Text style={styles.pillText}>Filter</Text>
+              <Icon
+                name="filter"
+                size={14}
+                color={
+                  getActiveFiltersCount() > 0
+                    ? Colors.primary.main
+                    : Colors.textSecondary
+                }
+              />
+            </>
+          ) : (
+            <Icon
+              name="filter"
+              size={16}
+              color={
+                getActiveFiltersCount() > 0
+                  ? Colors.primary.main
+                  : Colors.textSecondary
+              }
+            />
+          )}
           {getActiveFiltersCount() > 0 && (
             <View style={styles.badge}>
               <Text style={styles.badgeText}>{getActiveFiltersCount()}</Text>
@@ -276,8 +399,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginHorizontal: ResponsiveSpacing.md,
-    marginTop: StickyLayout.laneGap, // 8px top
+    marginTop: StickyLayout.laneGap, // Base margin, overridden dynamically
     marginBottom: StickyLayout.laneGap, // 8px bottom
     paddingBottom: 0,
     backgroundColor: 'transparent',
@@ -285,7 +407,7 @@ const styles = StyleSheet.create({
     minHeight: HEIGHT,
   },
   jobRow: {
-    marginTop: StickyLayout.laneGap, // 8px top (same as default)
+    marginTop: StickyLayout.laneGap, // Base margin, overridden dynamically (same as default)
     marginBottom: StickyLayout.laneGap, // 8px bottom (same as default)
   },
   jobPill: {
@@ -295,10 +417,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    height: HEIGHT,
-    paddingHorizontal: ResponsiveSpacing.get(18),
     backgroundColor: Colors.white,
-    borderRadius: HEIGHT / 2,
     gap: ResponsiveSpacing.get(4),
     ...Shadows.sm,
   },
@@ -307,10 +426,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    height: HEIGHT,
-    paddingHorizontal: ResponsiveSpacing.get(18),
     backgroundColor: Colors.white,
-    borderRadius: HEIGHT / 2,
     gap: ResponsiveSpacing.get(4),
     ...Shadows.sm,
   },
@@ -334,14 +450,13 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary.main,
   },
   square: {
-    width: ResponsiveSpacing.get(42),
-    height: HEIGHT,
-    borderRadius: HEIGHT / 2,
     backgroundColor: Colors.gray200,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
     alignSelf: 'center',
+    gap: ResponsiveSpacing.get(4),
     ...Shadows.sm,
   },
   squareActive: {

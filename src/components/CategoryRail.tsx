@@ -13,9 +13,11 @@ import {
   StyleSheet,
   I18nManager,
   PixelRatio,
+  Dimensions,
 } from 'react-native';
 import Icon, { IconName } from './Icon';
 import { StickyLayout } from '../styles/designSystem';
+import { useResponsiveDimensions } from '../utils/deviceAdaptation';
 
 interface CategoryRailProps {
   activeCategory: string;
@@ -41,7 +43,7 @@ const CATEGORIES: Category[] = [
   { id: 'jobs', name: 'Jobs', iconName: 'briefcase' },
 ];
 
-// Layout constants
+// Layout constants - will be made responsive in component
 const CHIP_WIDTH = 72; // Narrower chips for sleeker look
 const CHIP_SPACING = 12;
 const CONTAINER_PADDING = 16;
@@ -54,12 +56,15 @@ const CategoryChip = React.memo<{
   isActive: boolean;
   compact: boolean;
   onPress: (id: string) => void;
-}>(({ item, isActive, compact, onPress }) => (
+  chipWidth: number;
+  chipHeight: number;
+}>(({ item, isActive, compact, onPress, chipWidth, chipHeight }) => (
   <TouchableOpacity
     style={[
       styles.chip,
       compact && styles.chipCompact,
       isActive && styles.chipActive,
+      { width: chipWidth, minHeight: chipHeight },
     ]}
     onPress={() => onPress(item.id)}
     accessible={true}
@@ -113,7 +118,40 @@ const CategoryRail: React.FC<CategoryRailProps> = ({
   compact = false,
   variant = 'default',
 }) => {
+  // Get responsive dimensions
+  const { isTablet } = useResponsiveDimensions();
   const listRef = useRef<FlatList<Category>>(null);
+
+  // Responsive layout constants
+  // Calculate available width for buttons to fill screen
+  const { width: screenWidth } = Dimensions.get('window');
+  const availableWidth = screenWidth - CONTAINER_PADDING * 2; // Subtract padding from both sides
+  const totalSpacing = (CATEGORIES.length - 1) * (isTablet ? 16 : CHIP_SPACING); // Total spacing between buttons
+  const responsiveChipWidth = Math.max(
+    isTablet ? 96 : CHIP_WIDTH, // Minimum width
+    Math.floor((availableWidth - totalSpacing) / CATEGORIES.length), // Fill available space
+  );
+
+  // Debug logging for responsive chip width calculation
+  if (__DEV__) {
+    console.log('🔍 CategoryRail Responsive Debug:', {
+      screenWidth,
+      availableWidth,
+      totalSpacing,
+      calculatedWidth: Math.floor(
+        (availableWidth - totalSpacing) / CATEGORIES.length,
+      ),
+      responsiveChipWidth,
+      isTablet,
+      categoriesCount: CATEGORIES.length,
+    });
+  }
+  const responsiveChipSpacing = isTablet ? 16 : CHIP_SPACING; // More spacing on iPad
+  const responsiveChipHeight = isTablet ? 100 : 80; // Taller buttons on iPad
+  const responsiveTopMargin = isTablet ? 16 : StickyLayout.laneGap; // More space on iPad
+  const responsiveContainerHeight = isTablet ? 116 : 96; // Taller container for iPad
+  const responsiveScrollHeight = isTablet ? 112 : 92; // Taller scroll view for iPad
+  const responsiveContainerPadding = isTablet ? 16 : 16; // 16px padding on both iPad and phone
 
   // Calculate active index for indicator positioning
   const activeIndex = useMemo(
@@ -134,14 +172,15 @@ const CategoryRail: React.FC<CategoryRailProps> = ({
 
   // Calculate indicator X position (adjusts for scroll)
   const indicatorX = useMemo(() => {
-    const stride = CHIP_WIDTH + CHIP_SPACING;
-    const centerOffset = (CHIP_WIDTH - INDICATOR_WIDTH) / 2;
-    const ltrX = CONTAINER_PADDING + activeIndex * stride + centerOffset;
+    const stride = responsiveChipWidth + responsiveChipSpacing;
+    const centerOffset = (responsiveChipWidth - INDICATOR_WIDTH) / 2;
+    const ltrX =
+      responsiveContainerPadding + activeIndex * stride + centerOffset;
 
     const totalContent =
-      CONTAINER_PADDING * 2 +
-      CATEGORIES.length * CHIP_WIDTH +
-      (CATEGORIES.length - 1) * CHIP_SPACING;
+      responsiveContainerPadding * 2 +
+      CATEGORIES.length * responsiveChipWidth +
+      (CATEGORIES.length - 1) * responsiveChipSpacing;
     const x = I18nManager.isRTL ? totalContent - ltrX - INDICATOR_WIDTH : ltrX;
 
     // Adjust for scroll offset
@@ -151,7 +190,13 @@ const CategoryRail: React.FC<CategoryRailProps> = ({
     );
 
     return finalX;
-  }, [activeIndex, INDICATOR_WIDTH, scrollOffset]);
+  }, [
+    activeIndex,
+    INDICATOR_WIDTH,
+    scrollOffset,
+    responsiveChipWidth,
+    responsiveChipSpacing,
+  ]);
 
   // Handle scroll to track offset
   const handleScroll = useCallback((event: any) => {
@@ -171,7 +216,7 @@ const CategoryRail: React.FC<CategoryRailProps> = ({
         listRef.current?.scrollToIndex({
           index: activeIndex,
           animated: true,
-          viewOffset: CONTAINER_PADDING,
+          viewOffset: responsiveContainerPadding,
           viewPosition: 0.5, // Center the item
         });
 
@@ -190,9 +235,11 @@ const CategoryRail: React.FC<CategoryRailProps> = ({
     () =>
       Array.from(
         { length: CATEGORIES.length },
-        (_, i) => CONTAINER_PADDING + i * (CHIP_WIDTH + CHIP_SPACING),
+        (_, i) =>
+          responsiveContainerPadding +
+          i * (responsiveChipWidth + responsiveChipSpacing),
       ),
-    [],
+    [responsiveChipWidth, responsiveChipSpacing, responsiveContainerPadding],
   );
 
   // Render individual chip
@@ -209,26 +256,34 @@ const CategoryRail: React.FC<CategoryRailProps> = ({
           isActive={isActive}
           compact={compact}
           onPress={onCategoryChange}
+          chipWidth={responsiveChipWidth}
+          chipHeight={responsiveChipHeight}
         />
       );
     },
-    [activeCategory, compact, onCategoryChange],
+    [
+      activeCategory,
+      compact,
+      onCategoryChange,
+      responsiveChipWidth,
+      responsiveChipHeight,
+    ],
   );
 
   // Item separator for spacing
   const ItemSeparator = useCallback(
-    () => <View style={styles.separator} />,
-    [],
+    () => <View style={[styles.separator, { width: responsiveChipSpacing }]} />,
+    [responsiveChipSpacing],
   );
 
   // Item layout for performance
   const getItemLayout = useCallback(
     (data: ArrayLike<Category> | null | undefined, index: number) => ({
-      length: CHIP_WIDTH + CHIP_SPACING,
-      offset: (CHIP_WIDTH + CHIP_SPACING) * index,
+      length: responsiveChipWidth + responsiveChipSpacing,
+      offset: (responsiveChipWidth + responsiveChipSpacing) * index,
       index,
     }),
-    [],
+    [responsiveChipWidth, responsiveChipSpacing, responsiveContainerPadding],
   );
 
   // Handle scroll-to-index failures gracefully
@@ -239,7 +294,7 @@ const CategoryRail: React.FC<CategoryRailProps> = ({
         listRef.current?.scrollToIndex({
           index: info.index,
           animated: true,
-          viewOffset: CONTAINER_PADDING,
+          viewOffset: responsiveContainerPadding,
           viewPosition: 0.5,
         });
       }, 100);
@@ -255,6 +310,11 @@ const CategoryRail: React.FC<CategoryRailProps> = ({
           styles.container,
           styles.containerSticky,
           compact && styles.containerCompact,
+          {
+            marginTop: responsiveTopMargin,
+            height: responsiveContainerHeight,
+            paddingHorizontal: responsiveContainerPadding,
+          },
         ]}
       >
         <FlatList
@@ -273,6 +333,7 @@ const CategoryRail: React.FC<CategoryRailProps> = ({
           style={[
             styles.scrollViewStyle,
             compact && styles.scrollViewStyleCompact,
+            { height: responsiveScrollHeight },
           ]}
           decelerationRate="fast"
           snapToOffsets={snapToOffsets}
@@ -289,8 +350,8 @@ const CategoryRail: React.FC<CategoryRailProps> = ({
           pointerEvents="none"
           style={{
             position: 'absolute',
-            left: CONTAINER_PADDING,
-            right: CONTAINER_PADDING,
+            left: responsiveContainerPadding,
+            right: responsiveContainerPadding,
             bottom: -6,
             height: 2,
             backgroundColor: '#FFFFFF',
@@ -324,7 +385,17 @@ const CategoryRail: React.FC<CategoryRailProps> = ({
 
   // Default variant with horizontal scroll
   return (
-    <View style={[styles.container, compact && styles.containerCompact]}>
+    <View
+      style={[
+        styles.container,
+        compact && styles.containerCompact,
+        {
+          marginTop: responsiveTopMargin,
+          height: responsiveContainerHeight,
+          paddingHorizontal: responsiveContainerPadding,
+        },
+      ]}
+    >
       <FlatList
         ref={listRef}
         horizontal
@@ -341,6 +412,7 @@ const CategoryRail: React.FC<CategoryRailProps> = ({
         style={[
           styles.scrollViewStyle,
           compact && styles.scrollViewStyleCompact,
+          { height: responsiveScrollHeight },
         ]}
         decelerationRate="fast"
         snapToOffsets={snapToOffsets}
@@ -394,28 +466,22 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: '#f8f8f8',
     borderBottomWidth: 0,
-    height: 96, // Restored original height
     position: 'relative',
-    marginTop: StickyLayout.laneGap, // 8px top
     marginBottom: 14, // 8px (desired gap from line) + 6px (line offset below container) = 14px
   },
   containerSticky: {
-    marginTop: 0, // No margin for sticky variant
     marginBottom: 0, // No margin for sticky variant
-    height: 96, // Match the default container height exactly
   },
   containerCompact: {
     height: 50, // Reduced height for compact mode
   },
   scrollViewStyle: {
     flexGrow: 0, // Prevent ScrollView from expanding unnecessarily
-    height: 92, // Taller scrollView for taller buttons
   },
   scrollViewStyleCompact: {
     height: 42, // Reduced height for compact mode
   },
   scrollContent: {
-    paddingHorizontal: CONTAINER_PADDING,
     paddingVertical: 4,
     alignItems: 'center', // Center content vertically within the fixed height
     flexDirection: 'row', // Ensure horizontal layout for ScrollView
@@ -424,13 +490,11 @@ const styles = StyleSheet.create({
     paddingVertical: 6, // Reduced vertical padding for compact mode
   },
   chip: {
-    width: CHIP_WIDTH,
     alignItems: 'center',
     paddingVertical: 10,
     paddingHorizontal: 4,
     borderRadius: 20, // Spec: radius 20-24
     backgroundColor: '#FFFFFF',
-    minHeight: 80, // Taller buttons for better visual presence
     justifyContent: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },

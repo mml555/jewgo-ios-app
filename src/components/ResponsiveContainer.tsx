@@ -28,8 +28,9 @@ const ResponsiveContainer: React.FC<ResponsiveContainerProps> = ({
           style={[
             styles.content,
             {
-              maxWidth: layout.maxContentWidth,
-              paddingHorizontal: layout.containerPadding,
+              // Remove maxWidth and paddingHorizontal for full-bleed layout on tablets
+              // maxWidth: layout.maxContentWidth,
+              // paddingHorizontal: layout.containerPadding,
             },
             contentStyle,
           ]}

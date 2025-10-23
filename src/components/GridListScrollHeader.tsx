@@ -54,6 +54,7 @@ const GridListScrollHeader = forwardRef<
       <View
         style={styles.container}
         onLayout={e => {
+          const { width, height, x, y } = e.nativeEvent.layout;
           console.log('🔍 GridListScrollHeader onLayout called:', {
             hasEvent: !!e,
             hasNativeEvent: !!(e && e.nativeEvent),
@@ -61,10 +62,13 @@ const GridListScrollHeader = forwardRef<
             hasOnMeasured: !!onMeasured,
             activeCategory,
             showActionBarInHeader,
+            width,
+            height,
+            x,
+            y,
           });
 
           if (e && e.nativeEvent && e.nativeEvent.layout && onMeasured) {
-            const height = e.nativeEvent.layout.height;
             console.log('📏 GridListScrollHeader measured:', {
               height,
               activeCategory,
@@ -86,7 +90,18 @@ const GridListScrollHeader = forwardRef<
 
         {/* ActionBar - only when not sticky */}
         {showActionBarInHeader && (
-          <View style={styles.actionBarWrapper}>
+          <View
+            style={styles.actionBarWrapper}
+            onLayout={event => {
+              const { width, height, x, y } = event.nativeEvent.layout;
+              console.log('🔍 ActionBar Wrapper Layout:', {
+                width,
+                height,
+                x,
+                y,
+              });
+            }}
+          >
             <ActionBar
               onActionPress={onActionPress}
               currentCategory={activeCategory}
@@ -118,6 +133,10 @@ const styles = StyleSheet.create({
     paddingBottom: StickyLayout.laneGap, // 8px bottom to create 16px gap with ActionBar's 8px bottom margin
   },
   actionBarWrapper: {
+    // Ensure ActionBar gets full width like grid cards
+    width: '100%',
+    // Add horizontal padding to match grid cards (12px each side)
+    paddingHorizontal: 12,
     // No margin - ActionBar handles its own spacing (8px top + 8px bottom)
   },
   actionBarPlaceholder: {

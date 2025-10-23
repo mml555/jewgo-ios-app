@@ -936,6 +936,7 @@ const JobListingsScreen: React.FC = () => {
           zIndex: 999,
           backgroundColor: '#f8f8f8', // Solid background required for efficient shadow rendering
           opacity: showSticky && isFocused && !isTransitioning.current ? 1 : 0,
+          paddingHorizontal: 12, // Add horizontal padding for better spacing from edges
           ...Platform.select({
             android: { elevation: 16 },
             ios: {
