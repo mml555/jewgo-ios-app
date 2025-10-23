@@ -137,7 +137,8 @@ const styles = StyleSheet.create({
     width: '100%',
     // Add horizontal padding to match grid cards (12px each side)
     paddingHorizontal: 12,
-    // No margin - ActionBar handles its own spacing (8px top + 8px bottom)
+    // Add top margin to create spacing from CategoryRail
+    marginTop: 14, // Space between CategoryRail and ActionBar
   },
   actionBarPlaceholder: {
     marginTop: StickyLayout.laneGap, // 8px top

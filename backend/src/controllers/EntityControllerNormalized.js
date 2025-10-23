@@ -47,15 +47,16 @@ class EntityControllerNormalized {
           e.is_active,
           r.kosher_level,
           r.kosher_certification,
-          r.price_min,
-          r.price_max,
-          r.price_range,
+          ef.price_min,
+          ef.price_max,
+          ef.price_range,
           e.created_at,
           e.updated_at,
           u.first_name as owner_first_name,
           u.last_name as owner_last_name
         FROM entities_normalized e
         LEFT JOIN restaurants_normalized r ON e.id = r.entity_id
+        LEFT JOIN eatery_fields ef ON e.id = ef.entity_id
         LEFT JOIN users u ON e.owner_id = u.id
         WHERE e.is_active = true
       `;
@@ -111,13 +112,13 @@ class EntityControllerNormalized {
       // NEW: Price range filters
       if (priceMin !== undefined) {
         paramCount++;
-        query += ` AND r.price_min >= $${paramCount}`;
+        query += ` AND ef.price_min >= $${paramCount}`;
         params.push(parseFloat(priceMin));
       }
 
       if (priceMax !== undefined) {
         paramCount++;
-        query += ` AND r.price_max <= $${paramCount}`;
+        query += ` AND ef.price_max <= $${paramCount}`;
         params.push(parseFloat(priceMax));
       }
 
@@ -305,8 +306,21 @@ class EntityControllerNormalized {
             'SELECT * FROM synagogues_normalized WHERE entity_id = $1';
           break;
         case 'restaurant':
-          specializedQuery =
-            'SELECT * FROM restaurants_normalized WHERE entity_id = $1';
+          specializedQuery = `
+            SELECT 
+              r.*,
+              ef.price_min,
+              ef.price_max,
+              ef.price_range,
+              ef.kosher_type,
+              ef.hechsher,
+              ef.kosher_tags,
+              ef.short_description,
+              ef.amenities
+            FROM restaurants_normalized r
+            LEFT JOIN eatery_fields ef ON r.entity_id = ef.entity_id
+            WHERE r.entity_id = $1
+          `;
           break;
         case 'store':
           specializedQuery =

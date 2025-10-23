@@ -69,6 +69,18 @@ const PhoneInput: React.FC<PhoneInputProps> = ({
     setSelectedCountry(country);
     setShowCountryPicker(false);
     onChangeCountry?.(country);
+
+    // Reformat the current value with the new country
+    if (value) {
+      const formatter = new AsYouType(country.code);
+      const formatted = formatter.input(value);
+      setFormattedValue(formatted);
+
+      if (onChangeFormattedText) {
+        const fullNumber = `${country.dialCode}${value}`;
+        onChangeFormattedText(fullNumber);
+      }
+    }
   };
 
   const handleTextChange = (text: string) => {
@@ -77,14 +89,24 @@ const PhoneInput: React.FC<PhoneInputProps> = ({
     onChangeText(digitsOnly);
 
     // Format as the user types
-    const formatter = new AsYouType(selectedCountry.code);
-    const formatted = formatter.input(text);
-    setFormattedValue(formatted);
+    try {
+      const formatter = new AsYouType(selectedCountry.code);
+      const formatted = formatter.input(digitsOnly);
+      setFormattedValue(formatted);
 
-    // Send the formatted text if callback is provided
-    if (onChangeFormattedText) {
-      const fullNumber = `${selectedCountry.dialCode}${digitsOnly}`;
-      onChangeFormattedText(fullNumber);
+      // Send the formatted text if callback is provided
+      if (onChangeFormattedText) {
+        // Build full international number
+        const fullNumber = `${selectedCountry.dialCode}${digitsOnly}`;
+        onChangeFormattedText(fullNumber);
+      }
+    } catch (error) {
+      // If formatting fails, just use the digits
+      setFormattedValue(digitsOnly);
+      if (onChangeFormattedText) {
+        const fullNumber = `${selectedCountry.dialCode}${digitsOnly}`;
+        onChangeFormattedText(fullNumber);
+      }
     }
   };
 

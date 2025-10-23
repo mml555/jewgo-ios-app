@@ -37,13 +37,13 @@ import ProfileScreen from '../screens/ProfileScreen';
 // Custom LiveMap component that navigates to full-screen version with all entries
 const LiveMapTabComponent: React.FC = () => {
   const navigation = useNavigation();
-  
+
   React.useEffect(() => {
     console.log('🔍 LiveMapTabComponent: Navigating to LiveMapAll');
     // Navigate to the full-screen LiveMapAll (shows all entries) immediately
     (navigation as any).navigate('LiveMapAll');
   }, [navigation]);
-  
+
   // Return a minimal view to prevent blank screen
   return (
     <View style={{ flex: 1, backgroundColor: '#F2F2F7' }}>
@@ -54,14 +54,15 @@ const LiveMapTabComponent: React.FC = () => {
 
 // Brand tokens (from spec)
 const NAV_BG = '#FFFFFF';
+const PAGE_BG = '#F4F4F4';
 const UNSELECTED = '#B8B8B8';
 const SELECTED = '#292B2D';
 const SPECIALS_UNSELECTED = '#FFFAE4';
 const SPECIALS_SELECTED = '#FFF1BA';
 
-const BAR_HEIGHT = 60; // Reduced height for better positioning
-const CIRCLE_SIZE = 60; // Reduced to match proportion
-const BOTTOM_PADDING = 30; // Space between bar and bottom of screen
+const BAR_HEIGHT = 70; // Reduced height while keeping icons in current position
+const CIRCLE_SIZE = 60; // Keep circle size the same for good proportions
+const BOTTOM_PADDING = 0; // No space between bar and bottom of screen
 
 const labelMap: Record<keyof TabParamList, string> = {
   Explore: 'Explore',
@@ -128,10 +129,19 @@ export default function RootTabs() {
               return null;
             } // handled by center circle
 
+            // Apply different padding for end tabs to move them inward
+            const isEndTab = routeName === 'Explore' || routeName === 'Profile';
+            const isFavorites = routeName === 'Favorites';
+            const tabStyle = isEndTab
+              ? styles.tabItemEnd
+              : isFavorites
+              ? styles.tabItemFavorites
+              : styles.tabItem;
+
             return (
               <TouchableOpacity
                 onPress={() => navigate(routeName)}
-                style={styles.tabItem}
+                style={tabStyle}
                 activeOpacity={0.9}
                 accessibilityRole="button"
                 accessibilityLabel={`${
@@ -184,17 +194,39 @@ export default function RootTabs() {
 const styles = StyleSheet.create({
   outerContainer: {
     flex: 1,
-    backgroundColor: NAV_BG, // Fill bottom space with navigation bar color
+    backgroundColor: NAV_BG, // Navigation bar background color to prevent yellow showing below
+    // Enhanced shadow for navigation bar
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: -4 },
+    elevation: 15,
+    // Rounded corners for the navigation bar
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    overflow: 'hidden',
   },
   contentContainer: {
     flex: 1,
-    marginBottom: BOTTOM_PADDING, // Add space between bar and bottom of screen
+    marginBottom: 14, // Move entire bar up by 14px
   },
   tabItem: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: 6,
+    paddingTop: 8, // Increased to move icons down from top edge
     paddingHorizontal: 10,
+  },
+  tabItemEnd: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 8, // Increased to move icons down from top edge
+    paddingHorizontal: 20, // Reduced horizontal padding to prevent container overlap
+  },
+  tabItemFavorites: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 8, // Increased to move icons down from top edge
+    paddingHorizontal: 6, // Reduced horizontal padding to make Favorites container smaller
   },
   label: {
     marginTop: 2,

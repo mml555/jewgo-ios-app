@@ -56,7 +56,7 @@ interface MapListing {
 
 const LiveMapScreen: React.FC = () => {
   debugLog('🔍 LiveMapScreen: Component mounting');
-  
+
   const navigation = useNavigation();
   const route = useRoute();
   const insets = useSafeAreaInsets();
@@ -145,18 +145,42 @@ const LiveMapScreen: React.FC = () => {
       '🗺️ Converting listings to map format - allListings:',
       allListings,
     );
-    // Only use real data from the API for the specific category
-    const converted = allListings.map((item, index) => ({
-      id: item.id || `fallback-${index}`,
-      title: item.title,
-      description: item.description,
-      category: item.category,
-      rating: item.rating,
-      distance: '0.5 mi', // Default distance since CategoryItem doesn't have distance
-      latitude: item.latitude || 40.7128 + (Math.random() - 0.5) * 0.15, // NYC area with more spread
-      longitude: item.longitude || -74.006 + (Math.random() - 0.5) * 0.15,
-      imageUrl: item.imageUrl, // Use imageUrl from CategoryItem
-    }));
+    // Only use real data from the API for the specific category - filter out items without valid coordinates
+    const converted = allListings
+      .filter(item => {
+        // Only include items with valid coordinates
+        const hasValidCoordinates =
+          item.latitude &&
+          item.longitude &&
+          !isNaN(Number(item.latitude)) &&
+          !isNaN(Number(item.longitude)) &&
+          Number(item.latitude) >= -90 &&
+          Number(item.latitude) <= 90 &&
+          Number(item.longitude) >= -180 &&
+          Number(item.longitude) <= 180;
+
+        if (!hasValidCoordinates) {
+          debugLog('🔍 Filtering out item without valid coordinates:', {
+            id: item.id,
+            title: item.title,
+            latitude: item.latitude,
+            longitude: item.longitude,
+          });
+        }
+
+        return hasValidCoordinates;
+      })
+      .map((item, index) => ({
+        id: item.id || `valid-${index}`,
+        title: item.title,
+        description: item.description,
+        category: item.category,
+        rating: item.rating,
+        distance: '0.5 mi', // Default distance since CategoryItem doesn't have distance
+        latitude: Number(item.latitude),
+        longitude: Number(item.longitude),
+        imageUrl: item.imageUrl, // Use imageUrl from CategoryItem
+      }));
     debugLog('🗺️ Converted mapListings:', converted);
     return converted;
   }, [allListings]);
@@ -409,15 +433,20 @@ const LiveMapScreen: React.FC = () => {
       Alert.alert(
         'Location Error',
         'Unable to get your current location. Please check your location settings.',
-        [{ text: 'OK' }]
+        [{ text: 'OK' }],
       );
     }
   }, [permissionGranted, location, getCurrentLocation]);
 
   // Auto-request location permission on mount to trigger native iOS popup
   useEffect(() => {
-    debugLog('🔍 LiveMapScreen: useEffect triggered - permissionGranted:', permissionGranted, 'locationLoading:', locationLoading);
-    
+    debugLog(
+      '🔍 LiveMapScreen: useEffect triggered - permissionGranted:',
+      permissionGranted,
+      'locationLoading:',
+      locationLoading,
+    );
+
     const requestPermission = async () => {
       debugLog('🔍 LiveMapScreen: requestPermission called');
       if (!permissionGranted && !locationLoading) {
@@ -426,13 +455,21 @@ const LiveMapScreen: React.FC = () => {
           const result = await requestLocationPermission();
           debugLog('🔍 LiveMapScreen: Permission request result:', result);
         } catch (error) {
-          debugLog('🔍 LiveMapScreen: Error requesting location permission:', error);
+          debugLog(
+            '🔍 LiveMapScreen: Error requesting location permission:',
+            error,
+          );
         }
       } else {
-        debugLog('🔍 LiveMapScreen: Skipping permission request - permissionGranted:', permissionGranted, 'locationLoading:', locationLoading);
+        debugLog(
+          '🔍 LiveMapScreen: Skipping permission request - permissionGranted:',
+          permissionGranted,
+          'locationLoading:',
+          locationLoading,
+        );
       }
     };
-    
+
     // Small delay to ensure component is fully mounted
     const timer = setTimeout(requestPermission, 500);
     return () => {
@@ -534,7 +571,12 @@ const LiveMapScreen: React.FC = () => {
         />
 
         {/* Map Controls - Positioned to avoid header and search bar */}
-        <View style={[styles.mapControls, { top: insets.top + getResponsiveSpacing(120) }]}>
+        <View
+          style={[
+            styles.mapControls,
+            { top: insets.top + getResponsiveSpacing(120) },
+          ]}
+        >
           {/* Zoom Controls */}
           <View style={styles.zoomControls}>
             <TouchableOpacity
@@ -568,16 +610,21 @@ const LiveMapScreen: React.FC = () => {
             accessibilityLabel="Center on my location"
             accessibilityHint="Tap to center the map on your current location"
           >
-            <Icon 
-              name="navigation" 
-              size={20} 
-              color={permissionGranted ? "#007AFF" : "#8E8E93"} 
+            <Icon
+              name="navigation"
+              size={20}
+              color={permissionGranted ? '#007AFF' : '#8E8E93'}
             />
           </TouchableOpacity>
         </View>
 
         {/* Map Legend */}
-        <View style={[styles.mapLegend, { top: insets.top + getResponsiveSpacing(120) }]}>
+        <View
+          style={[
+            styles.mapLegend,
+            { top: insets.top + getResponsiveSpacing(120) },
+          ]}
+        >
           <Text style={styles.legendTitle}>Legend</Text>
           <View style={styles.legendItem}>
             <View

@@ -6,6 +6,10 @@ import authService from './AuthService';
 import guestService from './GuestService';
 import { debugLog, errorLog, warnLog } from '../utils/logger';
 
+// Request cache to prevent duplicate API calls
+const requestCache = new Map<string, { data: any; timestamp: number }>();
+const CACHE_DURATION = 30000; // 30 seconds cache
+
 export interface ApiResponse<T> {
   success: boolean;
   data?: T;
@@ -56,21 +60,21 @@ export interface Listing {
   images?: string[];
   recent_reviews?: Review[];
   kosher_certifications?: KosherCertification[];
-  
+
   // Eateries-specific fields (updated after migration)
   // kosher_level NOW contains dietary type ('meat' | 'dairy' | 'parve')
   kosher_level?: 'meat' | 'dairy' | 'parve';
-  
+
   // kosher_certification NOW contains standardized hechsher (KM, ORB, etc.)
   kosher_certification?: string;
-  
+
   // NEW: Detailed pricing
   price_min?: number;
   price_max?: number;
-  
+
   // KEEP: Legacy price_range for backward compatibility
   price_range?: string;
-  
+
   // Engagement metrics
   view_count?: number;
   like_count?: number;
@@ -218,8 +222,22 @@ class ApiService {
   ): Promise<ApiResponse<T>> {
     try {
       const url = `${this.baseUrl}${endpoint}`;
-      // Log all API requests temporarily for jobs debugging
-      if (__DEV__) {
+
+      // Check cache for GET requests only
+      if (options.method === 'GET' || !options.method) {
+        const cacheKey = `${url}_${JSON.stringify(options.headers || {})}`;
+        const cached = requestCache.get(cacheKey);
+
+        if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+          if (__DEV__) {
+            debugLog('🌐 API Cache Hit:', url);
+          }
+          return cached.data;
+        }
+      }
+
+      // Log API requests only occasionally to reduce noise
+      if (__DEV__ && Math.random() < 0.1) {
         debugLog('🌐 API Request:', url);
       }
 
@@ -251,31 +269,25 @@ class ApiService {
         }
       }
 
-      // TEMP DEBUG: Log request headers
       const finalHeaders = {
         'Content-Type': 'application/json',
         ...authHeaders,
         ...options.headers,
       };
-      console.log('🔐 API Request Headers:', {
-        url,
-        hasAuthorization: !!(finalHeaders as any).Authorization,
-        authHeaderValue: (finalHeaders as any).Authorization
-          ? (finalHeaders as any).Authorization.substring(0, 30) + '...'
-          : 'NONE',
-      });
 
       const response = await fetch(url, {
         headers: finalHeaders,
         ...options,
       });
 
-      // TEMP DEBUG: Log response status
-      console.log('📡 API Response:', {
-        url,
-        status: response.status,
-        ok: response.ok,
-      });
+      // Reduced logging for performance - only log errors
+      if (!response.ok && __DEV__) {
+        console.log('📡 API Error Response:', {
+          url,
+          status: response.status,
+          ok: response.ok,
+        });
+      }
 
       // Handle rate limiting specifically
       if (response.status === 429) {
@@ -312,6 +324,15 @@ class ApiService {
         };
       }
 
+      // Cache successful GET requests
+      if (options.method === 'GET' || !options.method) {
+        const cacheKey = `${url}_${JSON.stringify(options.headers || {})}`;
+        requestCache.set(cacheKey, {
+          data,
+          timestamp: Date.now(),
+        });
+      }
+
       return data;
     } catch (error) {
       errorLog('API request failed:', error);
@@ -320,6 +341,11 @@ class ApiService {
         error: error instanceof Error ? error.message : 'Network error',
       };
     }
+  }
+
+  // Clear request cache
+  clearCache(): void {
+    requestCache.clear();
   }
 
   // Health check

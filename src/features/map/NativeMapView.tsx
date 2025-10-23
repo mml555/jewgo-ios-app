@@ -17,7 +17,12 @@ import { ListingMarker } from './markers/ListingMarker';
 import { ClusterMarker } from './markers/ClusterMarker';
 import { MapPoint, ClusterNode } from './types';
 import { debugLog } from '../../utils/logger';
-import { deltasFromZoom } from './utils/zoomUtils';
+import {
+  deltasFromZoom,
+  isSameRegion,
+  clampRegionDeltas,
+} from './utils/zoomUtils';
+import { CLUSTER_CONFIG } from './constants/clusterConfig';
 
 interface NativeMapViewProps {
   points?: MapPoint[];
@@ -68,17 +73,17 @@ export const NativeMapView = forwardRef<NativeMapViewRef, NativeMapViewProps>(
     const renderables = useClusteredData(
       clusterIndex,
       region,
-      dimensions.width,
+      dimensions.widthPx,
     );
 
     // Telemetry logging
     const { logExpansion } = useTelemetry(
       region,
-      dimensions.width,
-      dimensions.height,
+      dimensions.widthPx,
+      dimensions.heightPx,
       renderables,
-      80, // supercluster radius
-      256, // tile size
+      60, // supercluster radius (updated to match config)
+      256, // tile size for zoom math
     );
 
     // Safety check
@@ -86,30 +91,22 @@ export const NativeMapView = forwardRef<NativeMapViewRef, NativeMapViewProps>(
       debugLog('⚠️ NativeMapView: No initialRegion provided, using default');
     }
 
-    // Debug logging
+    // Reduced debug logging for performance
     React.useEffect(() => {
-      debugLog('🗺️ NativeMapView Debug:', {
-        pointsCount: points.length,
-        realPointsCount: realPoints.length,
-        renderablesCount: renderables.length,
-        region,
-        hasClusterIndex: !!clusterIndex,
-        samplePoints: realPoints.slice(0, 3),
-      });
-    }, [
-      points.length,
-      realPoints.length,
-      renderables.length,
-      region,
-      clusterIndex,
-      realPoints,
-    ]);
+      if (__DEV__ && renderables.length > 0) {
+        debugLog('🗺️ NativeMapView:', {
+          pointsCount: points.length,
+          renderablesCount: renderables.length,
+        });
+      }
+    }, [points.length, renderables.length]);
 
-    // Cleanup debounce timeout on unmount
+    // Cleanup debounce timeout on unmount to prevent state updates after unmount
     React.useEffect(() => {
       return () => {
         if (debouncedUpdate.current) {
           clearTimeout(debouncedUpdate.current);
+          debouncedUpdate.current = null;
         }
       };
     }, []);
@@ -119,10 +116,18 @@ export const NativeMapView = forwardRef<NativeMapViewRef, NativeMapViewProps>(
 
     const handleRegionChangeComplete = useStableCallback(
       (newRegion: Region) => {
+        // Camera loop breaker: prevent feedback loops
+        if (isSameRegion(region, newRegion)) {
+          return;
+        }
+
         if (debouncedUpdate.current) {
           clearTimeout(debouncedUpdate.current);
         }
-        debouncedUpdate.current = setTimeout(() => setRegion(newRegion), 120);
+        debouncedUpdate.current = setTimeout(
+          () => setRegion(newRegion),
+          CLUSTER_CONFIG.debounceMs,
+        );
       },
     );
 
@@ -152,7 +157,13 @@ export const NativeMapView = forwardRef<NativeMapViewRef, NativeMapViewProps>(
           const maxZ = clusterIndex.options.maxZoom ?? 20;
 
           // Nudge in slightly to ensure child reveal even with rounding
-          const targetZoom = Math.min(expansionZoom + 0.75, maxZ);
+          // For small clusters, add extra zoom for comfortable hit areas
+          const pointCount = node.properties.point_count || 0;
+          const nudgeAmount =
+            pointCount <= CLUSTER_CONFIG.smallClusterThreshold
+              ? CLUSTER_CONFIG.smallClusterNudge
+              : CLUSTER_CONFIG.largeClusterNudge;
+          const targetZoom = Math.min(expansionZoom + nudgeAmount, maxZ);
 
           // Log expansion telemetry
           const childrenCount = node.properties.point_count || 0;
@@ -173,17 +184,23 @@ export const NativeMapView = forwardRef<NativeMapViewRef, NativeMapViewProps>(
           const { latitudeDelta, longitudeDelta } = deltasFromZoom(
             targetZoom,
             lat, // Use cluster latitude, not current region latitude
-            dimensions.width,
-            dimensions.height,
+            dimensions.widthPx,
+            dimensions.heightPx,
             256,
           );
 
-          const newRegion = {
+          const newRegion = clampRegionDeltas({
             latitude: lat,
             longitude: lng,
             latitudeDelta,
             longitudeDelta,
-          };
+          });
+
+          // Camera loop breaker: prevent no-op updates
+          if (isSameRegion(region, newRegion)) {
+            console.log('🔍 Cluster press: No-op region update prevented');
+            return;
+          }
 
           console.log('🔍 Updated region for cluster expansion:', {
             oldRegion: region,
@@ -196,12 +213,18 @@ export const NativeMapView = forwardRef<NativeMapViewRef, NativeMapViewProps>(
           setRegion(newRegion);
 
           // Animate to the new region
-          mapRef.current.animateToRegion(newRegion, 300);
+          mapRef.current.animateToRegion(newRegion, CLUSTER_CONFIG.animationMs);
         } catch (error) {
           debugLog('Error expanding cluster:', error);
         }
       },
-      [clusterIndex, region, dimensions, hasDimensions],
+      [
+        clusterIndex,
+        region,
+        dimensions.widthPx,
+        dimensions.heightPx,
+        hasDimensions,
+      ],
     );
 
     const handleListingPress = useCallback(
@@ -294,22 +317,26 @@ export const NativeMapView = forwardRef<NativeMapViewRef, NativeMapViewProps>(
 
     const markers = useMemo(
       () =>
-        renderables.map(node =>
-          node.properties.cluster ? (
+        renderables.map(node => {
+          const key = node.properties.cluster
+            ? `cluster-${node.id || 'unknown'}`
+            : `listing-${node.properties.id || 'unknown'}`;
+
+          return node.properties.cluster ? (
             <ClusterMarker
-              key={`cluster-${node.id || 'unknown'}`}
+              key={key}
               node={node}
               onPress={() => handleClusterPress(node)}
             />
           ) : (
             <ListingMarker
-              key={`listing-${node.properties.id || 'unknown'}`}
+              key={key}
               node={node}
               selected={node.properties.id === selectedId}
               onPress={() => handleListingPress(node)}
             />
-          ),
-        ),
+          );
+        }),
       [renderables, selectedId, handleClusterPress, handleListingPress],
     );
 

@@ -4,14 +4,22 @@ import { ClusterNode } from '../types';
 
 interface TelemetryData {
   currentTileZoom: number;
-  mapWidth: number;
-  mapHeight: number;
+  tileZoomRounded: number;
+  mapWidthPx: number;
+  mapHeightPx: number;
   superclusterRadius: number;
   tileSize: number;
   clustersCount: number;
-  averageMarkersPerCluster: number;
+  clusterCountInView: number;
+  avgPointsPerCluster: number;
+  expansionZoomOnPress?: number;
   lastExpansionZoom?: number;
   lastChildrenCount?: number;
+  crossedAntimeridian?: boolean;
+  regionLatitude: number;
+  regionLongitude: number;
+  regionLatitudeDelta: number;
+  regionLongitudeDelta: number;
 }
 
 export function useTelemetry(
@@ -38,13 +46,14 @@ export function useTelemetry(
     lastLogTime.current = now;
 
     // Calculate current tile zoom
-    const currentTileZoom = Math.round(
-      Math.log2((360 * (mapWidth / tileSize)) / region.longitudeDelta),
+    const currentTileZoom = Math.log2(
+      (360 * (mapWidth / tileSize)) / region.longitudeDelta,
     );
+    const tileZoomRounded = Math.round(currentTileZoom);
 
     // Calculate average markers per cluster
     const clusterNodes = clusters.filter(c => c.properties.cluster);
-    const averageMarkersPerCluster =
+    const avgPointsPerCluster =
       clusterNodes.length > 0
         ? clusterNodes.reduce(
             (sum, c) => sum + (c.properties.point_count || 0),
@@ -52,16 +61,29 @@ export function useTelemetry(
           ) / clusterNodes.length
         : 0;
 
+    // Check for antimeridian crossing
+    const west = region.longitude - region.longitudeDelta / 2;
+    const east = region.longitude + region.longitudeDelta / 2;
+    const crossedAntimeridian = west > east;
+
     const telemetry: TelemetryData = {
       currentTileZoom,
-      mapWidth,
-      mapHeight,
+      tileZoomRounded,
+      mapWidthPx: mapWidth,
+      mapHeightPx: mapHeight,
       superclusterRadius,
       tileSize,
       clustersCount: clusters.length,
-      averageMarkersPerCluster,
+      clusterCountInView: clusterNodes.length,
+      avgPointsPerCluster,
+      expansionZoomOnPress: lastExpansionData.current?.zoom,
       lastExpansionZoom: lastExpansionData.current?.zoom,
       lastChildrenCount: lastExpansionData.current?.children,
+      crossedAntimeridian,
+      regionLatitude: region.latitude,
+      regionLongitude: region.longitude,
+      regionLatitudeDelta: region.latitudeDelta,
+      regionLongitudeDelta: region.longitudeDelta,
     };
 
     console.log('📊 Map Telemetry:', telemetry);

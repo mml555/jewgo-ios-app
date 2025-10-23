@@ -83,13 +83,13 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
 
   const listBottomPadding = useMemo(() => {
     // Add extra padding for bottom navigation bar on tablets
-    const basePadding = Spacing.xl + Math.max(insetBottom, Spacing.md);
-    const navigationBarPadding = isTablet ? 140 : 100; // Much more space for curved bottom bar on tablets
+    const basePadding = Spacing.md + Math.max(insetBottom, Spacing.sm);
+    const navigationBarPadding = isTablet ? 20 : 16; // Minimal space for curved bottom bar
     return basePadding + navigationBarPadding;
   }, [insetBottom, isTablet]);
 
   const footerBottomPadding = useMemo(() => {
-    return Math.max(insetBottom + Spacing.sm, Spacing.lg);
+    return Math.max(insetBottom + Spacing.xs, Spacing.sm);
   }, [insetBottom]);
 
   // Redirect to ShtetlScreen for shtetl category
@@ -570,13 +570,13 @@ export const useCategoryGridRenderProps = (
 
   const listBottomPadding = useMemo(() => {
     // Add extra padding for bottom navigation bar on tablets
-    const basePadding = Spacing.xl + Math.max(insetBottom, Spacing.md);
-    const navigationBarPadding = isTablet ? 140 : 100; // Much more space for curved bottom bar on tablets
+    const basePadding = Spacing.md + Math.max(insetBottom, Spacing.sm);
+    const navigationBarPadding = isTablet ? 20 : 16; // Minimal space for curved bottom bar
     return basePadding + navigationBarPadding;
   }, [insetBottom, isTablet]);
 
   const footerBottomPadding = useMemo(() => {
-    return Math.max(insetBottom + Spacing.sm, Spacing.lg);
+    return Math.max(insetBottom + Spacing.xs, Spacing.sm);
   }, [insetBottom]);
 
   // Use the grid data hook

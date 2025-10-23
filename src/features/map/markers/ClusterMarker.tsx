@@ -42,12 +42,7 @@ const styles = StyleSheet.create({
     borderColor: '#74e1a0', // Green border for clusters
     justifyContent: 'center',
     alignItems: 'center',
-    // Enhanced shadow to match reference design
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 8,
+    // Shadow removed as requested
   },
   count: {
     fontSize: 14,

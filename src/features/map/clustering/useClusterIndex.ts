@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import Supercluster from 'supercluster';
 import { MapPoint, GeoJSONPoint } from '../types';
+import { CLUSTER_CONFIG } from '../constants/clusterConfig';
 
 export function useClusterIndex(points: MapPoint[]) {
   return useMemo(() => {
@@ -43,11 +44,12 @@ export function useClusterIndex(points: MapPoint[]) {
     }));
 
     const index = new Supercluster({
-      radius: 80, // Screen pixels for clustering
-      maxZoom: 20,
-      minZoom: 0,
-      minPoints: 2,
-      tileSize: 256, // Consistent tile size for zoom calculations
+      radius: CLUSTER_CONFIG.radius,
+      maxZoom: CLUSTER_CONFIG.maxZoom,
+      minZoom: CLUSTER_CONFIG.minZoom,
+      minPoints: CLUSTER_CONFIG.minPoints,
+      extent: CLUSTER_CONFIG.extent,
+      nodeSize: CLUSTER_CONFIG.nodeSize,
     });
 
     index.load(geoPoints);

@@ -1,28 +1,26 @@
 import { Region } from 'react-native-maps';
+import { CLUSTER_CONFIG } from '../constants/clusterConfig';
+
+// Constants for bounds clamping
+const EPS = 1e-6; // Epsilon for region comparison
 
 /**
- * Convert a map region to tile zoom level using actual map dimensions
- * @param region - The map region
- * @param mapWidthPx - Actual map width in pixels
- * @param tileSize - Tile size (256 or 512, must match Supercluster config)
+ * Convert a map region to Web Mercator tile zoom level
+ * Uses actual map width in pixels for accurate calculation
  */
 export function zoomFromRegion(
   region: Region,
   mapWidthPx: number,
   tileSize = 256,
 ): number {
-  // Longitude span across the viewport
+  // longitude span across the viewport
   const worldTiles = mapWidthPx / tileSize;
   return Math.log2((360 * worldTiles) / region.longitudeDelta);
 }
 
 /**
- * Convert tile zoom level to region deltas with proper aspect ratio and latitude handling
- * @param zoom - Tile zoom level
- * @param latitude - Center latitude for aspect correction
- * @param mapWidthPx - Map width in pixels
- * @param mapHeightPx - Map height in pixels
- * @param tileSize - Tile size (must match Supercluster config)
+ * Convert tile zoom level to region deltas
+ * Respects aspect ratio and latitude for proper map display
  */
 export function deltasFromZoom(
   zoom: number,
@@ -32,21 +30,17 @@ export function deltasFromZoom(
   tileSize = 256,
 ): { latitudeDelta: number; longitudeDelta: number } {
   const worldTiles = mapWidthPx / tileSize;
-  const longitudeDelta = (360 * worldTiles) / Math.pow(2, zoom);
+  const lonDelta = (360 * worldTiles) / Math.pow(2, zoom);
 
   // Scale latitude delta by aspect ratio
   const aspect = mapHeightPx / mapWidthPx;
-  const latitudeDelta = longitudeDelta * aspect;
+  const latDelta = lonDelta * aspect;
 
-  return { latitudeDelta, longitudeDelta };
+  return { latitudeDelta: latDelta, longitudeDelta: lonDelta };
 }
 
 /**
- * Normalize bounds to handle antimeridian crossing
- * @param west - Western longitude
- * @param east - Eastern longitude
- * @param south - Southern latitude
- * @param north - Northern latitude
+ * Normalize longitude bounds to handle antimeridian crossing
  */
 export function normalizeBounds(
   west: number,
@@ -56,24 +50,17 @@ export function normalizeBounds(
 ): [number, number, number, number] {
   // Handle antimeridian crossing
   if (east < west) {
-    // Split into two bboxes and return the larger one
-    // For now, just clamp to valid range
-    return [
-      Math.max(-180, west),
-      Math.min(180, east),
-      Math.max(-90, south),
-      Math.min(90, north),
-    ];
+    // Split into two bboxes and merge results
+    const bbox1: [number, number, number, number] = [west, south, 180, north];
+    const bbox2: [number, number, number, number] = [-180, south, east, north];
+    return bbox1; // Return first bbox, caller should handle merging
   }
 
   return [west, south, east, north];
 }
 
 /**
- * Get clusters safely across antimeridian
- * @param index - Supercluster index
- * @param bounds - [west, south, east, north] bounds
- * @param zoom - Zoom level
+ * Get clusters safely, handling antimeridian crossing
  */
 export function getClustersSafe(
   index: any,
@@ -82,18 +69,60 @@ export function getClustersSafe(
 ): any[] {
   const [west, south, east, north] = bounds;
 
-  if (east >= west) {
-    // Normal case - no antimeridian crossing
-    return index.getClusters([west, south, east, north], zoom);
+  if (east < west) {
+    // Handle antimeridian crossing by splitting into two queries
+    const bbox1: [number, number, number, number] = [west, south, 180, north];
+    const bbox2: [number, number, number, number] = [-180, south, east, north];
+
+    const clusters1 = index.getClusters(bbox1, zoom) || [];
+    const clusters2 = index.getClusters(bbox2, zoom) || [];
+
+    // Merge and deduplicate results
+    const allClusters = [...clusters1, ...clusters2];
+    const seen = new Set();
+    return allClusters.filter(cluster => {
+      const key = `${cluster.geometry.coordinates[0]},${cluster.geometry.coordinates[1]}`;
+      if (seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    });
   }
 
-  // Crossed the date line: split and merge
-  const left = index.getClusters([west, south, 180, north], zoom);
-  const right = index.getClusters([-180, south, east, north], zoom);
+  return index.getClusters(bounds, zoom) || [];
+}
 
-  // Dedup by id
-  const seen = new Set();
-  return [...left, ...right].filter((c: any) =>
-    seen.has(c.id) ? false : (seen.add(c.id), true),
+/**
+ * Compare two regions with epsilon tolerance to prevent feedback loops
+ */
+export function isSameRegion(a: Region, b: Region): boolean {
+  return (
+    Math.abs(a.latitude - b.latitude) < EPS &&
+    Math.abs(a.longitude - b.longitude) < EPS &&
+    Math.abs(a.latitudeDelta - b.latitudeDelta) < EPS &&
+    Math.abs(a.longitudeDelta - b.longitudeDelta) < EPS
   );
+}
+
+/**
+ * Clamp latitude to Mercator projection bounds
+ */
+export function clampLatitude(lat: number): number {
+  return Math.max(
+    -CLUSTER_CONFIG.maxLatitude,
+    Math.min(CLUSTER_CONFIG.maxLatitude, lat),
+  );
+}
+
+/**
+ * Clamp region deltas to prevent infinite zoom and ensure minimum hit areas
+ */
+export function clampRegionDeltas(region: Region): Region {
+  return {
+    ...region,
+    latitude: clampLatitude(region.latitude),
+    latitudeDelta: Math.max(region.latitudeDelta, CLUSTER_CONFIG.minDelta),
+    longitudeDelta: Math.max(region.longitudeDelta, CLUSTER_CONFIG.minDelta),
+  };
 }

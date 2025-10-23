@@ -312,7 +312,7 @@ const CategoryRail: React.FC<CategoryRailProps> = ({
           compact && styles.containerCompact,
           {
             marginTop: responsiveTopMargin,
-            height: responsiveContainerHeight,
+            height: responsiveScrollHeight, // Match FlatList height exactly - no extra space
             paddingHorizontal: responsiveContainerPadding,
           },
         ]}
@@ -391,7 +391,7 @@ const CategoryRail: React.FC<CategoryRailProps> = ({
         compact && styles.containerCompact,
         {
           marginTop: responsiveTopMargin,
-          height: responsiveContainerHeight,
+          height: responsiveScrollHeight, // Match FlatList height exactly - no extra space
           paddingHorizontal: responsiveContainerPadding,
         },
       ]}
@@ -467,7 +467,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8f8f8',
     borderBottomWidth: 0,
     position: 'relative',
-    marginBottom: 14, // 8px (desired gap from line) + 6px (line offset below container) = 14px
+    marginBottom: 0, // No margin - spacing handled by parent GridListScrollHeader
   },
   containerSticky: {
     marginBottom: 0, // No margin for sticky variant

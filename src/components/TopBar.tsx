@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Feather from 'react-native-vector-icons/Feather';
+import { BlurView } from '@react-native-community/blur';
 import { Colors, Typography, Spacing, Shadows } from '../styles/designSystem';
 import { useResponsiveDimensions } from '../utils/deviceAdaptation';
 
@@ -97,6 +98,13 @@ const TopBar: React.FC<TopBarProps> = ({
               isSearchFocused && styles.searchContainerFocused,
             ]}
           >
+            {/* White background for search field */}
+            <View
+              style={{
+                ...StyleSheet.absoluteFillObject,
+                backgroundColor: '#FFFFFF', // White background for search field
+              }}
+            />
             {/* Search Icon */}
             <Feather
               name="search"
@@ -162,7 +170,7 @@ const TopBar: React.FC<TopBarProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: Colors.background.primary,
+    backgroundColor: 'transparent', // Explicitly transparent to show background blur
     borderBottomWidth: 0,
   },
   content: {
@@ -194,12 +202,12 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.white,
     borderRadius: 28,
     paddingLeft: 36, // Padding to account for logo overlap
     paddingRight: Spacing.sm, // Reduced padding to make room for button
     paddingVertical: 12,
     height: 56,
+    overflow: 'hidden', // Ensure blur effect stays within border radius
     ...Shadows.sm,
   },
   searchContainerFocused: {
@@ -227,7 +235,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginLeft: Spacing.xs,
     borderRadius: 12,
-    backgroundColor: Colors.gray400,
+    backgroundColor: 'transparent', // Transparent to show background blur
   },
   clearButtonText: {
     fontSize: 14,
@@ -236,7 +244,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   addEntityButton: {
-    backgroundColor: Colors.jewgoGreen,
+    backgroundColor: '#C6FFD1', // Light green background for add eatery button
     borderRadius: 20, // Oval shape - height/2
     paddingHorizontal: Spacing.sm,
     paddingVertical: 6,
@@ -248,7 +256,7 @@ const styles = StyleSheet.create({
   },
   addEntityButtonText: {
     fontSize: 12,
-    color: Colors.white,
+    color: '#FFFFFF', // White text for add eatery button
     fontWeight: '600',
     fontFamily: Typography.fontFamilySemiBold,
   },

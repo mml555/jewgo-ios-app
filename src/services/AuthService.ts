@@ -432,7 +432,7 @@ class AuthService {
     endpoint: string,
     options: RequestInit = {},
   ): Promise<ApiResponse<T>> {
-    const url = `${this.baseUrl}/api/v5${endpoint}`;
+    const url = `${this.baseUrl}${endpoint}`;
 
     const defaultHeaders = {
       'Content-Type': 'application/json',

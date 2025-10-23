@@ -8,16 +8,20 @@ const getImageUrl = (listing: Listing): string => {
   if (listing.images && listing.images.length > 0) {
     // Images are already transformed to string URLs in api.ts
     const imageUrl = listing.images[0];
-    
+
     // Validate URL
-    if (imageUrl && typeof imageUrl === 'string' && imageUrl.trim().length > 0) {
+    if (
+      imageUrl &&
+      typeof imageUrl === 'string' &&
+      imageUrl.trim().length > 0
+    ) {
       // Check if it's a valid URL
       if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
         return imageUrl;
       }
     }
   }
-  
+
   // Fallback to placeholder only if no valid images exist
   return `https://picsum.photos/300/225?random=${listing.id || ''}`;
 };
@@ -241,6 +245,10 @@ const categoryDataCache = new Map<
   }
 >();
 
+// Request throttling to prevent excessive concurrent calls
+const activeRequests = new Map<string, Promise<any>>();
+const REQUEST_THROTTLE_MS = 1000; // 1 second between requests per category
+
 // Global in-flight request tracker to prevent duplicate fetches
 const inFlightRequests = new Map<string, Promise<any>>();
 
@@ -306,9 +314,19 @@ export const useCategoryData = ({
       category: String(listing.category_name || 'unknown'),
       rating: Number(parseFloat(listing.rating) || 0),
       zip_code: String(listing.zip_code || '00000'),
-      // Add coordinates directly to the item
-      latitude: listing.latitude ? Number(listing.latitude) : undefined,
-      longitude: listing.longitude ? Number(listing.longitude) : undefined,
+      // Add coordinates only if they are valid
+      latitude: (() => {
+        const lat = Number(listing.latitude);
+        return listing.latitude && !isNaN(lat) && lat >= -90 && lat <= 90
+          ? lat
+          : undefined;
+      })(),
+      longitude: (() => {
+        const lng = Number(listing.longitude);
+        return listing.longitude && !isNaN(lng) && lng >= -180 && lng <= 180
+          ? lng
+          : undefined;
+      })(),
       // Provide all optional fields with safe defaults
       price: '$$',
       isOpen: true,
@@ -334,10 +352,21 @@ export const useCategoryData = ({
     };
 
     // Add coordinate only if valid
-    if (listing.latitude && listing.longitude) {
+    const lat = Number(listing.latitude);
+    const lng = Number(listing.longitude);
+    if (
+      listing.latitude &&
+      listing.longitude &&
+      !isNaN(lat) &&
+      !isNaN(lng) &&
+      lat >= -90 &&
+      lat <= 90 &&
+      lng >= -180 &&
+      lng <= 180
+    ) {
       safeItem.coordinate = {
-        latitude: Number(listing.latitude),
-        longitude: Number(listing.longitude),
+        latitude: lat,
+        longitude: lng,
       };
     }
 
@@ -359,6 +388,15 @@ export const useCategoryData = ({
       return inFlightRequests.get(requestKey);
     }
 
+    // Check for active requests in the same category to prevent rate limiting
+    const categoryRequestKey = `${categoryKey}-active`;
+    if (activeRequests.has(categoryRequestKey)) {
+      debugLog(
+        `🚫 Throttling request for ${categoryKey} - previous request still active`,
+      );
+      return activeRequests.get(categoryRequestKey);
+    }
+
     loadingRef.current = true;
     setLoading(true);
     setError(null);
@@ -373,6 +411,10 @@ export const useCategoryData = ({
 
       // Store the in-flight request
       inFlightRequests.set(requestKey, requestPromise);
+
+      // Track active request for this category
+      const categoryRequestKey = `${categoryKey}-active`;
+      activeRequests.set(categoryRequestKey, requestPromise);
 
       const response = await requestPromise;
 
@@ -492,6 +534,10 @@ export const useCategoryData = ({
       const offset = (currentPageRef.current - 1) * pageSize;
       const requestKey = `${categoryKey}-${offset}-${pageSize}`;
       inFlightRequests.delete(requestKey);
+
+      // Clean up active request tracking
+      const categoryRequestKey = `${categoryKey}-active`;
+      activeRequests.delete(categoryRequestKey);
     }
   }, [categoryKey, pageSize, transformListing]); // Use refs for currentPage and hasMore to avoid recreating
 

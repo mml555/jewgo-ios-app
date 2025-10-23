@@ -30,7 +30,6 @@ import { SkeletonGrid } from '../components/SkeletonLoader';
 import JobListingsScreen from './jobs/JobListingsScreen';
 import type { AppStackParamList } from '../types/navigation';
 import { Colors, StickyLayout } from '../styles/designSystem';
-import { debugLog, errorLog } from '../utils/logger';
 import { useLocation } from '../hooks/useLocation';
 import {
   getGridColumns,
@@ -88,7 +87,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
   useEffect(() => {
     const params = route.params as { category?: string } | undefined;
     if (params?.category) {
-      debugLog('🔍 HomeScreen received category param:', params.category);
       setActiveCategory(params.category);
       // Clear the param after handling it
       navigation.setParams({ category: undefined } as any);
@@ -103,12 +101,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
 
       // Use InteractionManager to clear transition flag after animation
       const task = InteractionManager.runAfterInteractions(() => {
-        debugLog('🧭 HomeScreen focused');
         isTransitioning.current = false;
       });
 
       return () => {
-        debugLog('👋 HomeScreen blurred');
         isTransitioning.current = true;
         task.cancel();
       };
@@ -119,14 +115,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
   const SAFE_TOP = insets.top;
   const [searchHeight, setSearchHeight] = useState(0);
   const [actionBarHeight, setActionBarHeight] = useState(0);
-  const GAP = StickyLayout.laneGap; // Shared gap between TopBar and the next lane
+  const GAP = 4; // Small gap for visual breathing room
 
-  // The TopBar already reports its height including safe area padding, so do
-  // not double count SAFE_TOP. Fallback to design tokens until we measure.
-  const topBarHeight =
-    searchHeight > 0 ? searchHeight : SAFE_TOP + StickyLayout.searchBarHeight;
-  const measuredActionBarHeight =
-    actionBarHeight > 0 ? actionBarHeight : StickyLayout.actionBarHeight;
+  // Use stable fallback values to prevent layout loops
+  const topBarHeight = searchHeight > 0 ? searchHeight : 126; // Stable fallback
+  const measuredActionBarHeight = actionBarHeight > 0 ? actionBarHeight : 60; // Stable fallback
   const stickyLaneOffset = topBarHeight + GAP;
   // Single source of truth for sticky height (TopBar + gap + ActionBar)
   const stickyH = stickyLaneOffset + measuredActionBarHeight;
@@ -153,46 +146,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
   const STICKY_ENTER = THRESHOLD + StickyLayout.stickyHysteresis;
   const STICKY_EXIT = THRESHOLD - StickyLayout.stickyHysteresis;
 
-  // Debug: Log current state
-  if (__DEV__ && false) {
-    console.log('🔍 Sticky State:', {
-      restHeaderHRef: restHeaderHRef.current,
-      scrollHeaderH,
-      actionBarHeight,
-      THRESHOLD,
-      showActionBarInHeader,
-      showSticky,
-      STICKY_ENTER,
-      STICKY_EXIT,
-    });
-  }
-
   // No padding calculation needed - header is in normal flow above the list
-
-  // Debug: Log measurements on mount and when they change
-  useEffect(() => {
-    if (__DEV__) {
-      debugLog('📐 Sticky', {
-        SAFE_TOP,
-        searchHeight,
-        GAP,
-        actionBarHeight,
-        stickyH,
-        scrollHeaderH,
-        THRESHOLD,
-        showSticky,
-      });
-    }
-  }, [
-    SAFE_TOP,
-    searchHeight,
-    GAP,
-    actionBarHeight,
-    stickyH,
-    scrollHeaderH,
-    THRESHOLD,
-    showSticky,
-  ]);
 
   // Orientation change listener - force re-measure on dimension changes
   useEffect(() => {
@@ -236,10 +190,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
           responsiveCategoryRailHeight +
           StickyLayout.actionBarHeight + // Always include ActionBar in rest height
           StickyLayout.railActionGap; // Include the gap that scrolls with header
-        console.log(
-          '🔍 Timeout fallback - LOCKING estimated height:',
-          estimatedHeight,
-        );
         restHeaderHRef.current = estimatedHeight; // LOCK it
         setScrollHeaderH(estimatedHeight); // For debug
       }
@@ -255,10 +205,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
         responsiveCategoryRailHeight +
         StickyLayout.actionBarHeight + // Always include ActionBar in rest height
         StickyLayout.railActionGap; // Gap spacer matching header layout
-      console.log(
-        '🔍 Immediate fallback - LOCKING estimated height:',
-        estimatedHeight,
-      );
       restHeaderHRef.current = estimatedHeight; // LOCK it
       setScrollHeaderH(estimatedHeight); // For debug
     }
@@ -272,10 +218,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
           responsiveCategoryRailHeight +
           StickyLayout.actionBarHeight +
           StickyLayout.railActionGap; // Gap spacer
-        console.log(
-          '🔍 Delayed fallback - LOCKING estimated height:',
-          estimatedHeight,
-        );
         restHeaderHRef.current = estimatedHeight; // LOCK it
         setScrollHeaderH(estimatedHeight); // For debug
       }
@@ -284,41 +226,40 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
     return () => clearTimeout(timer);
   }, []);
 
+  // Cleanup scroll timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+    };
+  }, []);
+
   // Measure scroll-away section height (Rail + ActionBar + Banner) - NOT including TopBar
   // CRITICAL: Only lock the measurement when ActionBar is in the header (rest state)
   // Measure TopBar height
-  const handleTopBarLayout = useCallback((event: any) => {
-    console.log(
-      '🔍 TopBar onLayout called:',
-      !!event,
-      event?.nativeEvent?.layout,
-    );
-    const h = event?.nativeEvent?.layout?.height ?? 0;
-    console.log('📏 TopBar measured height:', h);
-    if (h > 0) {
-      setSearchHeight(h);
-      console.log('✅ TopBar height set to:', h);
-    } else {
-      console.log('⚠️ TopBar height is 0, ignoring');
-    }
-  }, []);
+  const handleTopBarLayout = useCallback(
+    (event: any) => {
+      const h = event?.nativeEvent?.layout?.height ?? 0;
+      // Only update if height is reasonable and different from current
+      if (h > 0 && h < 1000 && h !== searchHeight) {
+        setSearchHeight(h);
+      }
+    },
+    [searchHeight],
+  );
 
   // Measure ActionBar height
-  const handleActionBarLayout = useCallback((event: any) => {
-    console.log(
-      '🔍 ActionBar onLayout called:',
-      !!event,
-      event?.nativeEvent?.layout,
-    );
-    const h = event?.nativeEvent?.layout?.height ?? 0;
-    console.log('📏 ActionBar measured height:', h);
-    if (h > 0) {
-      setActionBarHeight(h);
-      console.log('✅ ActionBar height set to:', h);
-    } else {
-      console.log('⚠️ ActionBar height is 0, ignoring');
-    }
-  }, []);
+  const handleActionBarLayout = useCallback(
+    (event: any) => {
+      const h = event?.nativeEvent?.layout?.height ?? 0;
+      // Only update if height is reasonable and different from current
+      if (h > 0 && h < 1000 && h !== actionBarHeight) {
+        setActionBarHeight(h);
+      }
+    },
+    [actionBarHeight],
+  );
 
   const handleSearchChange = useCallback(
     (query: string) => {
@@ -330,8 +271,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
 
   const handleCategoryChange = useCallback(
     (category: string) => {
-      console.log('🔄 Category changing from', activeCategory, 'to', category);
-
       // Use InteractionManager to defer state updates
       InteractionManager.runAfterInteractions(() => {
         setActiveCategory(category);
@@ -339,7 +278,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
         // Reset measurement on category change to allow re-locking
         restHeaderHRef.current = 0;
         setScrollHeaderH(0);
-        console.log('🔓 Unlocked header measurement for new category');
 
         // Auto-center the real header Rail on next frame
         if (headerRailRef.current) {
@@ -374,8 +312,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
   };
 
   const handleAddEntity = useCallback(() => {
-    debugLog('Navigate to Add Entity for category:', activeCategory);
-
     if (activeCategory === 'mikvah') {
       navigation.navigate('AddMikvah');
     } else if (activeCategory === 'shul') {
@@ -408,7 +344,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
         );
       }
     } catch (error) {
-      errorLog('Error requesting location permission:', error);
       Alert.alert(
         'Error',
         'Failed to request location permission. Please check your device settings.',
@@ -420,17 +355,14 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
   // Handle manual location refresh
   const handleLocationRefresh = useCallback(async () => {
     try {
-      debugLog('🔥 Manual location refresh requested');
       const location = await getCurrentLocation();
       if (location) {
-        debugLog('🔥 Manual location refresh successful:', location);
         Alert.alert(
           'Location Updated!',
           'Your location has been updated. You can now see distances to nearby businesses.',
           [{ text: 'Great!' }],
         );
       } else {
-        debugLog('🔥 Manual location refresh failed - no location returned');
         Alert.alert(
           'Location Update Failed',
           'Unable to get your current location. Please check your device settings and try again.',
@@ -438,7 +370,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
         );
       }
     } catch (error) {
-      errorLog('Error refreshing location:', error);
       Alert.alert(
         'Error',
         'Failed to refresh location. Please check your device settings.',
@@ -449,7 +380,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
 
   // Swap logic with hysteresis
   // Scroll handler with proper threshold logic
-  // Scroll handler with hysteresis - only update when focused
+  // Smart scroll handler - only snap when user stops scrolling
+  const scrollViewRef = useRef<FlatList>(null);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isUserScrollingRef = useRef(false);
+
   const handleScroll = useCallback(
     (event: any) => {
       if (!isFocused || isTransitioning.current) {
@@ -458,9 +393,36 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
 
       const y = event.nativeEvent.contentOffset.y;
       setScrollY(y);
-      setShowSticky(prev => (prev ? y >= STICKY_EXIT : y >= STICKY_ENTER));
+
+      // Mark that user is actively scrolling
+      isUserScrollingRef.current = true;
+
+      // Clear any existing timeout
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+
+      // Set a timeout to detect when user stops scrolling
+      scrollTimeoutRef.current = setTimeout(() => {
+        isUserScrollingRef.current = false;
+
+        // Only snap if user has stopped scrolling and we're near the threshold
+        const snapZone = 30; // Larger zone for better UX
+        const isInSnapZone = Math.abs(y - THRESHOLD) < snapZone;
+
+        if (isInSnapZone) {
+          // Smooth snap to threshold
+          scrollViewRef.current?.scrollToOffset({
+            offset: THRESHOLD,
+            animated: true,
+          });
+        }
+      }, 150); // Wait 150ms after user stops scrolling
+
+      // Update sticky state based on threshold
+      setShowSticky(y >= THRESHOLD);
     },
-    [STICKY_ENTER, STICKY_EXIT, isFocused],
+    [THRESHOLD, isFocused],
   );
 
   // Calculate responsive grid dimensions
@@ -470,17 +432,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
     isTablet ? 16 : 12, // Gap between cards - increased for iPad with 4 larger cards
     4 / 3, // aspect ratio
   );
-
-  // Debug logging
-  if (__DEV__) {
-    console.log('🔍 HomeScreen Grid Debug:', {
-      screenWidth,
-      isTablet,
-      gridColumns,
-      cardWidth: gridDimensions.cardWidth,
-      imageHeight: gridDimensions.imageHeight,
-    });
-  }
 
   // Get grid render props from CategoryGridScreen hook
   const gridRenderProps = useCategoryGridRenderProps({
@@ -506,15 +457,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
 
   // ALL HOOKS MUST BE CALLED BEFORE CONDITIONAL RETURNS
   const renderListHeader = useCallback(() => {
-    console.log('🔍 HomeScreen renderListHeader called:', {
-      activeCategory,
-      showSticky,
-      showActionBarInHeader,
-      scrollY,
-      scrollHeaderH,
-      restHeaderH: restHeaderHRef.current,
-    });
-
     return (
       <GridListScrollHeader
         ref={headerRailRef}
@@ -583,6 +525,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
     <View style={styles.container}>
       {/* FlatList: content padding creates space for fixed TopBar ONLY */}
       <FlatList
+        ref={scrollViewRef}
         key={`home-grid-${activeCategory}-${gridColumns}`} // Force remount on category or column change - CRITICAL
         data={gridRenderProps.data}
         renderItem={gridRenderProps.renderItem}
@@ -617,6 +560,36 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
         accessibilityLabel={`${activeCategory} category items`}
       />
 
+      {/* Layer 0.5: Extended background blur layer - blends with grid content */}
+      {showSticky && isFocused && !isTransitioning.current && (
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: topBarHeight + GAP + 60, // Only cover sticky header, not category rail
+            zIndex: 995, // Behind TopBar and ActionBar but above content
+            overflow: 'hidden',
+          }}
+        >
+          <BlurView
+            style={StyleSheet.absoluteFillObject}
+            blurType="light"
+            blurAmount={20}
+            reducedTransparencyFallbackColor={Colors.background.primary}
+          />
+          {/* Gradient overlay for seamless blend with grid */}
+          <View
+            style={{
+              ...StyleSheet.absoluteFillObject,
+              backgroundColor: 'rgba(255,255,255,0.15)', // Slightly stronger at top
+            }}
+          />
+        </View>
+      )}
+
       {/* Layer 1: Fixed TopBar (absolutely positioned) */}
       <View
         style={{
@@ -625,8 +598,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
           left: 0,
           right: 0,
           zIndex: 1000, // Always on top
-          // NO backgroundColor - let TopBar handle its own background
-          // NO paddingTop - TopBar handles its own safe area insets
+          backgroundColor: 'transparent', // Transparent to show background blur
         }}
         onLayout={handleTopBarLayout}
       >
@@ -638,106 +610,22 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
         />
       </View>
 
-      {/* Layer 1.5: Background fill between TopBar and sticky ActionBar */}
-      {showSticky && isFocused && !isTransitioning.current && (
-        <>
-          <View
-            pointerEvents="none"
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              height: topBarHeight,
-              overflow: 'hidden',
-              zIndex: 998,
-            }}
-          >
-            <BlurView
-              style={StyleSheet.absoluteFillObject}
-              blurType="light"
-              blurAmount={16}
-              reducedTransparencyFallbackColor={Colors.background.primary}
-            />
-            <View
-              style={{
-                ...StyleSheet.absoluteFillObject,
-                backgroundColor: 'rgba(255,255,255,0.35)',
-              }}
-            />
-          </View>
-          {GAP > 0 && (
-            <View
-              pointerEvents="none"
-              style={{
-                position: 'absolute',
-                top: topBarHeight,
-                left: 0,
-                right: 0,
-                height: GAP,
-                backgroundColor: Colors.background.primary,
-                zIndex: 998,
-              }}
-            />
-          )}
-
-          <View
-            pointerEvents="none"
-            style={{
-              position: 'absolute',
-              top: stickyLaneOffset,
-              left: 0,
-              right: 0,
-              height:
-                measuredActionBarHeight > 0
-                  ? measuredActionBarHeight
-                  : StickyLayout.actionBarHeight,
-              overflow: 'hidden',
-              zIndex: 998,
-            }}
-          >
-            <BlurView
-              style={StyleSheet.absoluteFillObject}
-              blurType="light"
-              blurAmount={12}
-              reducedTransparencyFallbackColor={Colors.background.primary}
-            />
-            <View
-              style={{
-                ...StyleSheet.absoluteFillObject,
-                backgroundColor: 'rgba(255,255,255,0.4)',
-              }}
-            />
-          </View>
-        </>
-      )}
-
-      {/* Layer 2: Sticky ActionBar overlay - always render for measurement, show when sticky */}
+      {/* Layer 2: Sticky ActionBar - positioned with gap under TopBar */}
       <View
-        pointerEvents={showSticky && isFocused ? 'box-none' : 'none'} // Disable touch when not sticky or not focused
-        accessible={showSticky && isFocused}
-        importantForAccessibility={showSticky && isFocused ? 'yes' : 'no'}
-        accessibilityElementsHidden={!showSticky || !isFocused}
         style={{
           position: 'absolute',
-          top: stickyLaneOffset, // Align ActionBar directly under TopBar
+          top: topBarHeight + GAP, // Start with 4px gap under TopBar
           left: 0,
           right: 0,
-          zIndex: 999, // Below TopBar (1000) but above FlatList
-          backgroundColor: '#f8f8f8', // Solid background required for efficient shadow rendering
-          opacity: showSticky && isFocused && !isTransitioning.current ? 1 : 0, // Hide when not sticky, not focused, or transitioning
-          paddingHorizontal: 12, // Add horizontal padding for better spacing from edges
-          ...Platform.select({
-            android: { elevation: 16 }, // stronger elevation ensures tap priority
-            ios: {
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.1,
-              shadowRadius: 4,
-            },
-          }),
+          height: 60, // Fixed ActionBar height
+          zIndex: 999, // Below TopBar but above content
+          paddingHorizontal: 12,
+          backgroundColor: 'transparent', // Transparent to show background blur
+          opacity: showSticky && isFocused && !isTransitioning.current ? 1 : 0, // Hide when not sticky
         }}
-        onLayout={handleActionBarLayout}
+        pointerEvents={
+          showSticky && isFocused && !isTransitioning.current ? 'auto' : 'none'
+        } // Disable touch when hidden
       >
         <ActionBar
           onActionPress={handleActionPress}
@@ -745,6 +633,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
           jobMode={activeCategory === 'jobs' ? jobMode : undefined}
         />
       </View>
+
+      {/* Old background fill layers removed - single blur layer handles everything */}
+
+      {/* Old separate ActionBar container removed - now integrated into unified container */}
 
       {/* Debug overlay - positioned at bottom for full visibility */}
       {false && __DEV__ && (

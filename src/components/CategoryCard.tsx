@@ -501,20 +501,22 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
               style={styles.distanceContainer}
               textStyle={[
                 styles.distanceText,
-                categoryKey === 'eatery' && {
-                  color: Colors.eateries.distanceBlue,
+                {
+                  color: Colors.eateries.distanceBlue, // Always use blue color
                 },
               ]}
+              numberOfLines={1}
               options={{ unit: 'imperial' }}
             />
           ) : (
             <Text
               style={[
                 styles.distanceText,
-                categoryKey === 'eatery' && {
-                  color: Colors.eateries.distanceBlue,
+                {
+                  color: Colors.eateries.distanceBlue, // Always use blue color
                 },
               ]}
+              numberOfLines={1}
             >
               {item.zip_code ? String(item.zip_code) : 'N/A'}
             </Text>
@@ -676,11 +678,11 @@ const createStyles = (
     },
     distanceText: {
       ...Typography.styles.body,
-      color: Colors.textSecondary,
+      color: Colors.eateries.distanceBlue, // Use consistent blue color #71BBFF
       fontWeight: '500',
       minWidth: isTablet ? 60 : 40, // More space on tablets
       textAlign: 'right', // Right align the text
-      maxWidth: isTablet ? 100 : 60, // Much more space on tablets
+      maxWidth: isTablet ? 120 : 80, // Increased width to prevent wrapping
       overflow: 'hidden',
       flexShrink: 1, // Allow text to shrink if needed
     },

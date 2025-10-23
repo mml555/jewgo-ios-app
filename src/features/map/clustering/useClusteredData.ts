@@ -29,7 +29,7 @@ export function useClusteredData(
 
     const bounds = normalizeBounds(west, east, south, north);
 
-    // Calculate proper tile zoom using actual map dimensions
+    // Calculate proper tile zoom using actual map dimensions and consistent tileSize
     const rawZoom = zoomFromRegion(region, mapWidthPx, 256);
     const maxZ = index.options.maxZoom ?? 20;
     const clampedZoom = Math.max(0, Math.min(maxZ, Math.round(rawZoom)));
@@ -41,24 +41,15 @@ export function useClusteredData(
       clampedZoom,
     ) as ClusterNode[];
 
-    console.log('🔍 useClusteredData Debug:', {
-      bounds,
-      rawZoom,
-      clampedZoom,
-      mapWidthPx,
-      clustersCount: clusters.length,
-      region: {
-        latitude: region.latitude,
-        longitude: region.longitude,
-        latitudeDelta: region.latitudeDelta,
-        longitudeDelta: region.longitudeDelta,
-      },
-      clusterTypes: clusters.map(c => ({
-        isCluster: c.properties.cluster,
-        pointCount: c.properties.point_count,
-        id: c.properties.id,
-      })),
-    });
+    // Reduced logging for performance
+    if (__DEV__ && clusters.length > 0) {
+      console.log('🔍 useClusteredData:', {
+        clustersCount: clusters.length,
+        zoom: clampedZoom,
+        rawZoom,
+        mapWidthPx,
+      });
+    }
 
     return clusters;
   }, [index, region, mapWidthPx]);

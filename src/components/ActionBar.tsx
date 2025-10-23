@@ -417,18 +417,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.white,
+    backgroundColor: '#FFFFFF', // White background for action bar buttons
     gap: ResponsiveSpacing.get(4),
-    ...Shadows.sm,
+    // Shadows removed for seamless blur effect
   },
   boostButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.white,
+    backgroundColor: '#F1C1FF', // Eatery boost purple color
     gap: ResponsiveSpacing.get(4),
-    ...Shadows.sm,
+    // Shadows removed for seamless blur effect
   },
   pillText: {
     fontSize: ResponsiveTypography.fontSize(11),
@@ -441,7 +441,7 @@ const styles = StyleSheet.create({
   boostText: {
     fontSize: ResponsiveTypography.fontSize(11),
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: '#FFF6F7', // Light pink text for eatery boost button
     flexShrink: 1,
     textAlign: 'center',
     includeFontPadding: false,
@@ -450,14 +450,14 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary.main,
   },
   square: {
-    backgroundColor: Colors.gray200,
+    backgroundColor: '#FFFFFF', // White background for action bar buttons
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
     alignSelf: 'center',
     gap: ResponsiveSpacing.get(4),
-    ...Shadows.sm,
+    // Shadows removed for seamless blur effect
   },
   squareActive: {
     backgroundColor: Colors.primary.light,

@@ -88,9 +88,11 @@ const LiveMapAllScreen: React.FC = () => {
   );
   const [currentEntityIndex, setCurrentEntityIndex] = useState<number>(0);
 
-  // Debug logging for selectedListing state changes
+  // Reduced debug logging for performance
   useEffect(() => {
-    console.log('🔍 selectedListing state changed:', selectedListing);
+    if (__DEV__ && selectedListing) {
+      console.log('🔍 selectedListing:', selectedListing.title);
+    }
   }, [selectedListing]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
@@ -156,56 +158,56 @@ const LiveMapAllScreen: React.FC = () => {
     .filter(cat => cat.key !== 'all')
     .map(cat => cat.key);
 
-  // Fetch data from all categories
+  // Fetch data from all categories - OPTIMIZED: Reduced pageSize and staggered loading
   const eateryData = useCategoryData({
     categoryKey: 'eatery',
     query: '',
-    pageSize: 100,
+    pageSize: 50, // Reduced from 100
   });
   const shulData = useCategoryData({
     categoryKey: 'shul',
     query: '',
-    pageSize: 100,
+    pageSize: 50, // Reduced from 100
   });
   const mikvahData = useCategoryData({
     categoryKey: 'mikvah',
     query: '',
-    pageSize: 100,
+    pageSize: 50, // Reduced from 100
   });
   const schoolsData = useCategoryData({
     categoryKey: 'schools',
     query: '',
-    pageSize: 100,
+    pageSize: 50, // Reduced from 100
   });
   const storesData = useCategoryData({
     categoryKey: 'stores',
     query: '',
-    pageSize: 100,
+    pageSize: 50, // Reduced from 100
   });
   const servicesData = useCategoryData({
     categoryKey: 'services',
     query: '',
-    pageSize: 100,
+    pageSize: 50, // Reduced from 100
   });
   const housingData = useCategoryData({
     categoryKey: 'housing',
     query: '',
-    pageSize: 100,
+    pageSize: 50, // Reduced from 100
   });
   const shtetlData = useCategoryData({
     categoryKey: 'shtetl',
     query: '',
-    pageSize: 100,
+    pageSize: 50, // Reduced from 100
   });
   const eventsData = useCategoryData({
     categoryKey: 'events',
     query: '',
-    pageSize: 100,
+    pageSize: 50, // Reduced from 100
   });
   const jobsData = useCategoryData({
     categoryKey: 'jobs',
     query: '',
-    pageSize: 100,
+    pageSize: 50, // Reduced from 100
   });
 
   // Combine all listings from all categories
@@ -223,60 +225,10 @@ const LiveMapAllScreen: React.FC = () => {
       ...(jobsData.data || []),
     ];
 
-    // Debug logging for each category
-    console.log('🔍 Category data status:');
-    console.log('  eateryData:', {
-      length: eateryData.data?.length || 0,
-      loading: eateryData.loading,
-      error: eateryData.error,
-    });
-    console.log('  shulData:', {
-      length: shulData.data?.length || 0,
-      loading: shulData.loading,
-      error: shulData.error,
-    });
-    console.log('  mikvahData:', {
-      length: mikvahData.data?.length || 0,
-      loading: mikvahData.loading,
-      error: mikvahData.error,
-    });
-    console.log('  schoolsData:', {
-      length: schoolsData.data?.length || 0,
-      loading: schoolsData.loading,
-      error: schoolsData.error,
-    });
-    console.log('  storesData:', {
-      length: storesData.data?.length || 0,
-      loading: storesData.loading,
-      error: storesData.error,
-    });
-    console.log('  servicesData:', {
-      length: servicesData.data?.length || 0,
-      loading: servicesData.loading,
-      error: servicesData.error,
-    });
-    console.log('  housingData:', {
-      length: housingData.data?.length || 0,
-      loading: housingData.loading,
-      error: housingData.error,
-    });
-    console.log('  shtetlData:', {
-      length: shtetlData.data?.length || 0,
-      loading: shtetlData.loading,
-      error: shtetlData.error,
-    });
-    console.log('  eventsData:', {
-      length: eventsData.data?.length || 0,
-      loading: eventsData.loading,
-      error: eventsData.error,
-    });
-    console.log('  jobsData:', {
-      length: jobsData.data?.length || 0,
-      loading: jobsData.loading,
-      error: jobsData.error,
-    });
-
-    debugLog('🗺️ LiveMapAllScreen - combined listings:', combined.length);
+    // Reduced logging for performance
+    if (__DEV__ && combined.length > 0) {
+      console.log('🔍 All listings:', combined.length);
+    }
     return combined;
   }, [
     eateryData.data,
@@ -319,27 +271,43 @@ const LiveMapAllScreen: React.FC = () => {
       allListings.length,
     );
 
-    const converted = allListings.map((item, index) => {
-      console.log(`🔍 Converting item ${index}:`, {
-        id: item.id,
-        title: item.title,
-        latitude: item.latitude,
-        longitude: item.longitude,
-        hasCoordinates: !!(item.latitude && item.longitude),
-      });
+    const converted = allListings
+      .filter(item => {
+        // Only include items with valid coordinates
+        const hasValidCoordinates =
+          item.latitude &&
+          item.longitude &&
+          !isNaN(Number(item.latitude)) &&
+          !isNaN(Number(item.longitude)) &&
+          Number(item.latitude) >= -90 &&
+          Number(item.latitude) <= 90 &&
+          Number(item.longitude) >= -180 &&
+          Number(item.longitude) <= 180;
 
-      return {
-        id: item.id || `fallback-${index}`,
-        title: item.title || 'Untitled',
-        description: item.description || 'No description available',
-        category: item.category || 'unknown',
-        rating: item.rating || null,
-        distance: '0.5 mi',
-        latitude: item.latitude || 40.7128 + (Math.random() - 0.5) * 0.15,
-        longitude: item.longitude || -74.006 + (Math.random() - 0.5) * 0.15,
-        imageUrl: item.imageUrl || undefined,
-      };
-    });
+        if (!hasValidCoordinates) {
+          console.log('🔍 Filtering out item without valid coordinates:', {
+            id: item.id,
+            title: item.title,
+            latitude: item.latitude,
+            longitude: item.longitude,
+          });
+        }
+
+        return hasValidCoordinates;
+      })
+      .map((item, index) => {
+        return {
+          id: item.id || `valid-${index}`,
+          title: item.title || 'Untitled',
+          description: item.description || 'No description available',
+          category: item.category || 'unknown',
+          rating: item.rating || null,
+          distance: '0.5 mi',
+          latitude: Number(item.latitude),
+          longitude: Number(item.longitude),
+          imageUrl: item.imageUrl || undefined,
+        };
+      });
 
     console.log('🔍 Converted mapListings:', converted.length);
     debugLog('🗺️ Converted mapListings:', converted.length);
@@ -348,6 +316,15 @@ const LiveMapAllScreen: React.FC = () => {
 
   // Filter listings based on selected category, search query, and filters
   const filteredListings = useMemo(() => {
+    console.log(
+      `🔍 Starting filter process - mapListings: ${
+        mapListings.length
+      }, location: ${location ? 'available' : 'not available'}, maxDistance: ${
+        filters.maxDistance
+      }`,
+    );
+    console.log('🔍 Filter values:', filters);
+
     let filtered = mapListings.filter(listing => {
       // Category filter
       if (selectedCategory !== 'all' && listing.category !== selectedCategory) {
@@ -379,7 +356,17 @@ const LiveMapAllScreen: React.FC = () => {
           listing.latitude,
           listing.longitude,
         );
+        console.log(
+          `🔍 Distance filter: ${listing.title} is ${distance.toFixed(
+            2,
+          )} miles away (max: ${filters.maxDistance})`,
+        );
         if (distance > filters.maxDistance) {
+          console.log(
+            `🔍 Filtering out ${listing.title} - too far (${distance.toFixed(
+              2,
+            )} > ${filters.maxDistance})`,
+          );
           return false;
         }
       }
@@ -433,6 +420,9 @@ const LiveMapAllScreen: React.FC = () => {
       });
     }
 
+    console.log(
+      `🔍 Filter process complete - filtered: ${filtered.length} (from ${mapListings.length})`,
+    );
     debugLog(
       '🗺️ FILTERED AND SORTED MAP DATA - filtered.length:',
       filtered.length,

@@ -17,12 +17,12 @@ import {
 import DateTimePicker from '@react-native-community/datetimepicker';
 import PhoneInput from '../../components/PhoneInput';
 import { parsePhoneNumber } from 'libphonenumber-js';
-import { errorLog } from '../../utils/logger';
+import { errorLog, debugLog } from '../../utils/logger';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigation } from '@react-navigation/native';
-import ReCaptchaComponent from '../../components/auth/ReCaptchaComponent';
+import ReCaptchaV3Component from '../../components/auth/ReCaptchaV3Component';
 import JewgoTextLogo from '../../components/JewgoTextLogo';
 import { configService } from '../../config/ConfigService';
 import GoogleLogo from '../../assets/icons/social/GoogleLogo';
@@ -49,7 +49,6 @@ const RegisterScreen: React.FC = () => {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [formattedPhoneNumber, setFormattedPhoneNumber] = useState('');
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
-  const [showCaptcha, setShowCaptcha] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [passwordStrength, setPasswordStrength] = useState<
@@ -134,15 +133,20 @@ const RegisterScreen: React.FC = () => {
           return '';
 
         case 'phoneNumber':
-          if (value && value.trim()) {
-            try {
-              const phoneNumber = parsePhoneNumber(value);
-              if (!phoneNumber || !phoneNumber.isValid()) {
-                return 'Please enter a valid phone number';
-              }
-            } catch {
+          // Phone number is optional, so empty is valid
+          if (!value || !value.trim()) {
+            return '';
+          }
+
+          try {
+            // Try to parse the phone number
+            const parsed = parsePhoneNumber(value);
+            if (!parsed || !parsed.isValid()) {
               return 'Please enter a valid phone number';
             }
+          } catch (error) {
+            // If parsing fails, it's invalid
+            return 'Please enter a valid phone number';
           }
           return '';
 
@@ -236,7 +240,11 @@ const RegisterScreen: React.FC = () => {
     }
 
     if (!captchaToken) {
-      setShowCaptcha(true);
+      Alert.alert(
+        'Verification Required',
+        'Please wait for security verification to complete...',
+        [{ text: 'OK' }],
+      );
       return;
     }
 
@@ -276,8 +284,8 @@ const RegisterScreen: React.FC = () => {
   ]);
 
   const handleCaptchaVerify = useCallback((token: string) => {
+    debugLog('✅ reCAPTCHA v3 token received in RegisterScreen');
     setCaptchaToken(token);
-    setShowCaptcha(false);
   }, []);
 
   const handleCaptchaError = useCallback((error: string) => {
@@ -289,11 +297,6 @@ const RegisterScreen: React.FC = () => {
 
   const handleCaptchaExpire = useCallback(() => {
     setCaptchaToken(null);
-    Alert.alert(
-      'Verification Expired',
-      'Please complete the verification again.',
-      [{ text: 'OK' }],
-    );
   }, []);
 
   const navigateToLogin = useCallback(() => {
@@ -440,13 +443,19 @@ const RegisterScreen: React.FC = () => {
               >
                 <PhoneInput
                   value={phoneNumber}
-                  onChangeText={setPhoneNumber}
-                  onChangeFormattedText={setFormattedPhoneNumber}
+                  onChangeText={text => {
+                    setPhoneNumber(text);
+                  }}
+                  onChangeFormattedText={formatted => {
+                    setFormattedPhoneNumber(formatted);
+                  }}
                   disabled={isLoading}
                   placeholder="Phone"
                   textInputProps={{
-                    onBlur: () =>
-                      handleFieldBlur('phoneNumber', formattedPhoneNumber),
+                    onBlur: () => {
+                      // Validate using the formatted number (includes country code)
+                      handleFieldBlur('phoneNumber', formattedPhoneNumber);
+                    },
                   }}
                 />
                 {!phoneNumber && (
@@ -653,19 +662,15 @@ const RegisterScreen: React.FC = () => {
               </View>
             )}
 
-            {showCaptcha && (
-              <View style={styles.captchaGroup}>
-                <Text style={styles.captchaLabel}>Security Verification</Text>
-                <ReCaptchaComponent
-                  siteKey={recaptchaSiteKey}
-                  onVerify={handleCaptchaVerify}
-                  onError={handleCaptchaError}
-                  onExpire={handleCaptchaExpire}
-                  theme="light"
-                  size="normal"
-                />
-              </View>
-            )}
+            {/* Invisible reCAPTCHA v3 - auto-executes on mount */}
+            <ReCaptchaV3Component
+              siteKey={recaptchaSiteKey}
+              action="register"
+              onVerify={handleCaptchaVerify}
+              onError={handleCaptchaError}
+              testMode={false}
+              autoExecute={true}
+            />
 
             {/* Register Button */}
             <TouchableOpacity

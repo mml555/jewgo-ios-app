@@ -4,7 +4,7 @@ import { debugLog } from '../utils/logger';
 import { convertPriceRangesToMinMax } from '../utils/eateryHelpers';
 
 const defaultFilters: FilterOptions = {
-  maxDistance: 100,
+  maxDistance: 10000, // 10,000 miles - effectively no distance limit
   showOpenNow: false,
   minRating: 0,
   kosherLevel: 'any',
@@ -59,8 +59,8 @@ export const useFilters = (initialFilters?: Partial<FilterOptions>) => {
   const getActiveFiltersCount = useCallback(() => {
     let count = 0;
 
-    // Check distance (if not default 100)
-    if (filters.maxDistance !== 100) {
+    // Check distance (if not default 10000)
+    if (filters.maxDistance !== 10000) {
       count++;
     }
 

@@ -35,14 +35,14 @@ export const Colors = {
 
   // Background Colors
   background: {
-    primary: '#f8f8f8', // Main background
+    primary: '#F4F4F4', // Main background
     secondary: '#FFFFFF', // Card/surface background
-    tertiary: '#F8F9FA', // Subtle background
+    tertiary: '#F4F4F4', // Subtle background
   },
 
   // Text Colors (WCAG AA compliant)
   text: {
-    primary: '#292B2D', // JewGo Black - high contrast with white backgrounds
+    primary: '#292B2D', // Primary text/headings - updated to match specification
     secondary: '#666666', // 5.7:1 contrast with white (AA compliant)
     tertiary: '#8E8E93', // 3.8:1 contrast with white (large text only)
     disabled: '#B0B0B0', // Disabled text
@@ -110,14 +110,14 @@ export const Colors = {
     dietaryMeat: '#EB7777',
     dietaryDairy: '#71BBFF',
     dietaryParve: '#FFCE6D',
-    
+
     // UI element colors
     distanceBlue: '#71BBFF',
     ctaGreen: '#C6FFD1',
     ctaHover: '#ECFFF4',
     boostPurple: '#F1C1FF',
     boostPink: '#FFF6F7',
-    
+
     // Status colors
     openGreen: '#74E1A0',
     closedRed: '#FFB3B3',
@@ -785,16 +785,16 @@ export const ResponsiveTypography = {
 // Contract: These are the single source of truth for sticky measurements
 export const StickyLayout = {
   searchBarHeight: 56, // TopBar/SearchBar fixed height (visual, without safe area)
-  laneGap: 8, // Vertical gap between search bar and the next lane
+  laneGap: 4, // 10px gap between search bar and ActionBar
   railActionGap: 12, // Gap between category rail and action bar when in rest state
   actionBarHeight: 48, // ActionBar height when shown in Lane B
   scrollBuffer: 6, // Hysteresis buffer to prevent threshold flicker
-  stickyHysteresis: 8, // pixels - hysteresis for sticky state transitions
+  stickyHysteresis: 0, // pixels - no hysteresis for instant, smooth transitions
   categoryRailHeightDefault: 50, // Further reduced to account for Boost/Filter lane (8+50+12+48=118px)
   locationBannerHeightDefault: 80, // Conservative fallback for LocationBanner
   overlayGridInset: 4, // Extra grid offset when ActionBar is sticky to avoid overlap
   overlayFadeHeight: 6, // Height of the gradient fade between ActionBar and grid
-  stickyRevealOffset: 40, // pixels - show sticky bar this much earlier than full header height
+  stickyRevealOffset: 60, // pixels - show sticky bar earlier for better UX
 };
 
 // Initialize accessibility validation in development
