@@ -446,7 +446,7 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
       {
         paddingBottom: listBottomPadding,
         paddingTop: isTablet ? 16 : 8, // Add spacing between action bar and grid
-        paddingHorizontal: isTablet ? 16 : 16, // Add edge padding for breathing room
+        paddingHorizontal: isTablet ? 6 : 6, // Add edge padding for breathing room
       },
     ],
     isInitialLoading,
@@ -835,7 +835,7 @@ export const useCategoryGridRenderProps = (
       {
         paddingBottom: listBottomPadding,
         paddingTop: isTablet ? 16 : 8, // Add spacing between action bar and grid
-        paddingHorizontal: isTablet ? 16 : 16, // Add edge padding for breathing room
+        paddingHorizontal: isTablet ? 6 : 6, // Add edge padding for breathing room
       },
     ],
     isInitialLoading,

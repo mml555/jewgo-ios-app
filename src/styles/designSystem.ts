@@ -787,7 +787,7 @@ export const StickyLayout = {
   searchBarHeight: 56, // TopBar/SearchBar fixed height (visual, without safe area)
   laneGap: 4, // 10px gap between search bar and ActionBar
   railActionGap: 12, // Gap between category rail and action bar when in rest state
-  actionBarHeight: 48, // ActionBar height when shown in Lane B
+  actionBarHeight: 32, // ActionBar height when shown in Lane B
   scrollBuffer: 6, // Hysteresis buffer to prevent threshold flicker
   stickyHysteresis: 0, // pixels - no hysteresis for instant, smooth transitions
   categoryRailHeightDefault: 50, // Further reduced to account for Boost/Filter lane (8+50+12+48=118px)

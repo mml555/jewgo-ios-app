@@ -65,6 +65,28 @@ const PhoneInput: React.FC<PhoneInputProps> = ({
   const [showCountryPicker, setShowCountryPicker] = useState(false);
   const [formattedValue, setFormattedValue] = useState('');
 
+  // Sync formattedValue when value prop changes from parent
+  React.useEffect(() => {
+    if (value && value !== formattedValue.replace(/\D/g, '')) {
+      // Simple formatting
+      let formatted = value;
+      if (selectedCountry.code === 'US' || selectedCountry.code === 'CA') {
+        if (value.length > 6) {
+          formatted = `${value.slice(0, 3)} ${value.slice(3, 6)} ${value.slice(
+            6,
+          )}`;
+        } else if (value.length > 3) {
+          formatted = `${value.slice(0, 3)} ${value.slice(3)}`;
+        }
+      } else {
+        formatted = value.replace(/(\d{3,4})(?=\d)/g, '$1 ').trim();
+      }
+      setFormattedValue(formatted);
+    } else if (!value) {
+      setFormattedValue('');
+    }
+  }, [value, selectedCountry.code, formattedValue]);
+
   const handleCountrySelect = (country: Country) => {
     setSelectedCountry(country);
     setShowCountryPicker(false);
@@ -86,27 +108,46 @@ const PhoneInput: React.FC<PhoneInputProps> = ({
   const handleTextChange = (text: string) => {
     // Remove any non-digit characters for the raw value
     const digitsOnly = text.replace(/\D/g, '');
+
+    // Update parent with raw digits
     onChangeText(digitsOnly);
 
-    // Format as the user types
-    try {
-      const formatter = new AsYouType(selectedCountry.code);
-      const formatted = formatter.input(digitsOnly);
-      setFormattedValue(formatted);
+    // If empty, clear everything
+    if (!digitsOnly) {
+      setFormattedValue('');
+      if (onChangeFormattedText) {
+        onChangeFormattedText('');
+      }
+      return;
+    }
 
-      // Send the formatted text if callback is provided
-      if (onChangeFormattedText) {
-        // Build full international number
-        const fullNumber = `${selectedCountry.dialCode}${digitsOnly}`;
-        onChangeFormattedText(fullNumber);
+    // Simple formatting without aggressive parentheses
+    // Just add spaces for readability
+    let formatted = digitsOnly;
+
+    // Format based on country (simple space-based formatting)
+    if (selectedCountry.code === 'US' || selectedCountry.code === 'CA') {
+      // US/Canada: XXX XXX XXXX
+      if (digitsOnly.length > 6) {
+        formatted = `${digitsOnly.slice(0, 3)} ${digitsOnly.slice(
+          3,
+          6,
+        )} ${digitsOnly.slice(6)}`;
+      } else if (digitsOnly.length > 3) {
+        formatted = `${digitsOnly.slice(0, 3)} ${digitsOnly.slice(3)}`;
       }
-    } catch (error) {
-      // If formatting fails, just use the digits
-      setFormattedValue(digitsOnly);
-      if (onChangeFormattedText) {
-        const fullNumber = `${selectedCountry.dialCode}${digitsOnly}`;
-        onChangeFormattedText(fullNumber);
-      }
+    } else {
+      // Other countries: simple space every 3-4 digits
+      formatted = digitsOnly.replace(/(\d{3,4})(?=\d)/g, '$1 ').trim();
+    }
+
+    setFormattedValue(formatted);
+
+    // Send the formatted text if callback is provided
+    if (onChangeFormattedText) {
+      // Build full international number
+      const fullNumber = `${selectedCountry.dialCode}${digitsOnly}`;
+      onChangeFormattedText(fullNumber);
     }
   };
 
@@ -138,7 +179,7 @@ const PhoneInput: React.FC<PhoneInputProps> = ({
 
         <TextInput
           style={styles.input}
-          value={formattedValue || value}
+          value={formattedValue}
           onChangeText={handleTextChange}
           placeholder={placeholder}
           placeholderTextColor={Colors.gray500}

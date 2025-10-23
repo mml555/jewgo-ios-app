@@ -30,6 +30,7 @@ export interface RegisterData {
   password: string;
   firstName?: string;
   lastName?: string;
+  phoneNumber?: string;
   captchaToken?: string;
   deviceInfo?: DeviceInfo;
 }

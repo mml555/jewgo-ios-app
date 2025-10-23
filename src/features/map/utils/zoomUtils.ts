@@ -32,9 +32,10 @@ export function deltasFromZoom(
   const worldTiles = mapWidthPx / tileSize;
   const lonDelta = (360 * worldTiles) / Math.pow(2, zoom);
 
-  // Scale latitude delta by aspect ratio
+  // Scale latitude delta by aspect ratio and account for Mercator projection distortion
   const aspect = mapHeightPx / mapWidthPx;
-  const latDelta = lonDelta * aspect;
+  // Account for Mercator projection distortion at different latitudes
+  const latDelta = (lonDelta * aspect) / Math.cos((latitude * Math.PI) / 180);
 
   return { latitudeDelta: latDelta, longitudeDelta: lonDelta };
 }

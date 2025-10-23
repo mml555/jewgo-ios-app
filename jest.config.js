@@ -6,7 +6,7 @@ module.exports = {
 
   // Transform ignore patterns to handle React Navigation and other modules
   transformIgnorePatterns: [
-    'node_modules/(?!(react-native|@react-native|@react-navigation|react-native-.*|@react-native-async-storage|react-native-gesture-handler|react-native-safe-area-context|react-native-screens|react-native-svg)/)',
+    'node_modules/(?!(react-native|@react-native|@react-navigation|react-native-.*|@react-native-async-storage|react-native-gesture-handler|react-native-safe-area-context|react-native-screens|react-native-svg|supercluster|kdbush)/)',
   ],
 
   // Module name mapping (correct property name)

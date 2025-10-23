@@ -135,8 +135,8 @@ const styles = StyleSheet.create({
   actionBarWrapper: {
     // Ensure ActionBar gets full width like grid cards
     width: '100%',
-    // Add horizontal padding to match grid cards (12px each side)
-    paddingHorizontal: 12,
+    // Add horizontal padding to match grid cards (6px each side)
+    paddingHorizontal: 6,
     // Add top margin to create spacing from CategoryRail
     marginTop: 14, // Space between CategoryRail and ActionBar
   },

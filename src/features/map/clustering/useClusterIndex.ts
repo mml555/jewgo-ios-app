@@ -53,6 +53,36 @@ export function useClusterIndex(points: MapPoint[]) {
     });
 
     index.load(geoPoints);
+
+    // Debug cluster index
+    if (__DEV__) {
+      console.log('🔍 Cluster index loaded:', {
+        pointsCount: geoPoints.length,
+        indexOptions: {
+          radius: index.options.radius,
+          maxZoom: index.options.maxZoom,
+          minZoom: index.options.minZoom,
+          minPoints: index.options.minPoints,
+          extent: index.options.extent,
+          nodeSize: index.options.nodeSize,
+        },
+        samplePoints: geoPoints.slice(0, 3),
+        configComparison: {
+          expectedRadius: CLUSTER_CONFIG.radius,
+          expectedMaxZoom: CLUSTER_CONFIG.maxZoom,
+          expectedMinPoints: CLUSTER_CONFIG.minPoints,
+          actualRadius: index.options.radius,
+          actualMaxZoom: index.options.maxZoom,
+          actualMinPoints: index.options.minPoints,
+        },
+        configMatch: {
+          radiusMatch: index.options.radius === CLUSTER_CONFIG.radius,
+          maxZoomMatch: index.options.maxZoom === CLUSTER_CONFIG.maxZoom,
+          minPointsMatch: index.options.minPoints === CLUSTER_CONFIG.minPoints,
+        },
+      });
+    }
+
     return index;
   }, [points]);
 }

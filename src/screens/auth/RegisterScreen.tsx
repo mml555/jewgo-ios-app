@@ -65,6 +65,14 @@ const RegisterScreen: React.FC = () => {
   const config = configService.getConfig();
   const recaptchaSiteKey = config.recaptchaSiteKey;
 
+  // Debug: Log captcha token changes
+  React.useEffect(() => {
+    console.log(
+      '🔐 Captcha token state changed:',
+      captchaToken ? 'Token received' : 'No token',
+    );
+  }, [captchaToken]);
+
   const calculatePasswordStrength = useCallback((pwd: string) => {
     if (pwd.length >= 8 && /[A-Z]/.test(pwd) && /[0-9]/.test(pwd)) {
       return 'strong';
@@ -139,14 +147,32 @@ const RegisterScreen: React.FC = () => {
           }
 
           try {
-            // Try to parse the phone number
-            const parsed = parsePhoneNumber(value);
-            if (!parsed || !parsed.isValid()) {
-              return 'Please enter a valid phone number';
+            // Clean the phone number - remove spaces, parentheses, dashes
+            // Keep only digits and the leading + sign
+            const cleanedValue = value.replace(/[^\d+]/g, '');
+
+            // If it's too short, don't show error yet (user might still be typing)
+            // Only validate if they've entered a reasonable amount
+            if (cleanedValue.length < 8) {
+              // Don't show error for partial numbers
+              return '';
+            }
+
+            // Only validate complete-looking numbers
+            if (cleanedValue.length >= 10) {
+              // Try to parse the cleaned phone number
+              const parsed = parsePhoneNumber(cleanedValue);
+              if (!parsed || !parsed.isValid()) {
+                return 'Please enter a valid phone number';
+              }
             }
           } catch (error) {
-            // If parsing fails, it's invalid
-            return 'Please enter a valid phone number';
+            // If parsing fails, only show error for complete numbers
+            const cleanedValue = value.replace(/[^\d+]/g, '');
+            if (cleanedValue.length >= 10) {
+              debugLog('Phone validation error:', error);
+              return 'Please enter a valid phone number';
+            }
           }
           return '';
 
@@ -199,7 +225,8 @@ const RegisterScreen: React.FC = () => {
     newErrors.firstName = validateField('firstName', firstName);
     newErrors.lastName = validateField('lastName', lastName);
     newErrors.email = validateField('email', email);
-    newErrors.phoneNumber = validateField('phoneNumber', phoneNumber);
+    // Use formattedPhoneNumber for validation (includes country code)
+    newErrors.phoneNumber = validateField('phoneNumber', formattedPhoneNumber);
     newErrors.password = validateField('password', password);
     newErrors.confirmPassword = validateField(
       'confirmPassword',
@@ -228,7 +255,7 @@ const RegisterScreen: React.FC = () => {
     firstName,
     lastName,
     email,
-    phoneNumber,
+    formattedPhoneNumber,
     password,
     confirmPassword,
     validateField,
@@ -249,13 +276,23 @@ const RegisterScreen: React.FC = () => {
     }
 
     try {
-      await register({
+      // Prepare registration data
+      const registrationData: any = {
         email: email.trim().toLowerCase(),
         password,
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         captchaToken,
-      });
+      };
+
+      // Add phone number if provided (it's optional)
+      if (formattedPhoneNumber && formattedPhoneNumber.trim()) {
+        // Clean the phone number - remove formatting characters
+        const cleanedPhone = formattedPhoneNumber.replace(/[^\d+]/g, '');
+        registrationData.phoneNumber = cleanedPhone;
+      }
+
+      await register(registrationData);
 
       Alert.alert(
         'Registration Successful',
@@ -284,11 +321,13 @@ const RegisterScreen: React.FC = () => {
   ]);
 
   const handleCaptchaVerify = useCallback((token: string) => {
+    console.log('✅ reCAPTCHA v3 token received in RegisterScreen:', token);
     debugLog('✅ reCAPTCHA v3 token received in RegisterScreen');
     setCaptchaToken(token);
   }, []);
 
   const handleCaptchaError = useCallback((error: string) => {
+    console.log('❌ reCAPTCHA error:', error);
     errorLog('CAPTCHA error:', error);
     Alert.alert('Verification Failed', 'Please try the verification again.', [
       { text: 'OK' },
@@ -445,6 +484,10 @@ const RegisterScreen: React.FC = () => {
                   value={phoneNumber}
                   onChangeText={text => {
                     setPhoneNumber(text);
+                    // Clear error while typing
+                    if (errors.phoneNumber) {
+                      setErrors(prev => ({ ...prev, phoneNumber: '' }));
+                    }
                   }}
                   onChangeFormattedText={formatted => {
                     setFormattedPhoneNumber(formatted);
@@ -453,8 +496,10 @@ const RegisterScreen: React.FC = () => {
                   placeholder="Phone"
                   textInputProps={{
                     onBlur: () => {
-                      // Validate using the formatted number (includes country code)
-                      handleFieldBlur('phoneNumber', formattedPhoneNumber);
+                      // Use a small delay to ensure formattedPhoneNumber state is updated
+                      setTimeout(() => {
+                        handleFieldBlur('phoneNumber', formattedPhoneNumber);
+                      }, 100);
                     },
                   }}
                 />
@@ -668,7 +713,7 @@ const RegisterScreen: React.FC = () => {
               action="register"
               onVerify={handleCaptchaVerify}
               onError={handleCaptchaError}
-              testMode={false}
+              testMode={true}
               autoExecute={true}
             />
 

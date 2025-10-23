@@ -23,6 +23,10 @@ import {
   clampRegionDeltas,
 } from './utils/zoomUtils';
 import { CLUSTER_CONFIG } from './constants/clusterConfig';
+import {
+  CameraMoveReason,
+  type CameraMoveReason as CameraMoveReasonType,
+} from './types/cameraMoveReason';
 
 interface NativeMapViewProps {
   points?: MapPoint[];
@@ -65,6 +69,8 @@ export const NativeMapView = forwardRef<NativeMapViewRef, NativeMapViewProps>(
         longitudeDelta: 0.1,
       },
     );
+    const [cameraMoveReason, setCameraMoveReason] =
+      useState<CameraMoveReasonType>(CameraMoveReason.UserGesture);
 
     // Use real points only
     const realPoints = points;
@@ -75,6 +81,36 @@ export const NativeMapView = forwardRef<NativeMapViewRef, NativeMapViewProps>(
       region,
       dimensions.widthPx,
     );
+
+    // Debug renderables changes
+    React.useEffect(() => {
+      if (__DEV__) {
+        console.log('🔍 Renderables updated:', {
+          count: renderables.length,
+          clusters: renderables.filter(r => r.properties.cluster).length,
+          individual: renderables.filter(r => !r.properties.cluster).length,
+          region: {
+            lat: region.latitude,
+            lng: region.longitude,
+            latDelta: region.latitudeDelta,
+            lngDelta: region.longitudeDelta,
+          },
+        });
+      }
+    }, [renderables.length, region]);
+
+    // Debug region changes
+    React.useEffect(() => {
+      if (__DEV__) {
+        console.log('🔍 Region changed:', {
+          lat: region.latitude,
+          lng: region.longitude,
+          latDelta: region.latitudeDelta,
+          lngDelta: region.longitudeDelta,
+          renderablesCount: renderables.length,
+        });
+      }
+    }, [region, renderables.length]);
 
     // Telemetry logging
     const { logExpansion } = useTelemetry(
@@ -121,6 +157,22 @@ export const NativeMapView = forwardRef<NativeMapViewRef, NativeMapViewProps>(
           return;
         }
 
+        // For cluster presses, bypass region floors and update immediately
+        if (cameraMoveReason === CameraMoveReason.ClusterPress) {
+          console.log('🔍 Cluster press region change - bypassing floors:', {
+            oldRegion: region,
+            newRegion,
+            cameraMoveReason,
+          });
+          setRegion(newRegion);
+          // Reset camera move reason after a short delay
+          setTimeout(
+            () => setCameraMoveReason(CameraMoveReason.UserGesture),
+            500,
+          );
+          return;
+        }
+
         if (debouncedUpdate.current) {
           clearTimeout(debouncedUpdate.current);
         }
@@ -133,6 +185,16 @@ export const NativeMapView = forwardRef<NativeMapViewRef, NativeMapViewProps>(
 
     const handleClusterPress = useCallback(
       (node: ClusterNode) => {
+        console.log('🔍 CLUSTER PRESSED!', {
+          nodeId: node.id,
+          clusterId: node.properties.cluster_id,
+          pointCount: node.properties.point_count,
+          coordinates: node.geometry.coordinates,
+        });
+
+        // Set camera move reason to bypass region floors
+        setCameraMoveReason(CameraMoveReason.ClusterPress);
+
         if (!clusterIndex || !mapRef.current || !hasDimensions) {
           console.log('🔍 Cluster press: Missing requirements', {
             hasClusterIndex: !!clusterIndex,
@@ -154,16 +216,105 @@ export const NativeMapView = forwardRef<NativeMapViewRef, NativeMapViewProps>(
 
           // Get the cluster expansion zoom from supercluster
           const expansionZoom = clusterIndex.getClusterExpansionZoom(clusterId);
-          const maxZ = clusterIndex.options.maxZoom ?? 20;
+          const maxZ = clusterIndex.options.maxZoom ?? CLUSTER_CONFIG.maxZoom;
 
-          // Nudge in slightly to ensure child reveal even with rounding
-          // For small clusters, add extra zoom for comfortable hit areas
+          console.log('🔍 Supercluster expansion zoom:', {
+            clusterId,
+            expansionZoom,
+            maxZ,
+            pointCount: node.properties.point_count,
+          });
+
+          // Handle case where expansionZoom exceeds maxZ - use leaves fallback
+          if (expansionZoom > maxZ) {
+            console.log(
+              '🔍 Expansion zoom exceeds maxZ, using leaves fallback:',
+              {
+                expansionZoom,
+                maxZ,
+                clusterId,
+              },
+            );
+
+            try {
+              const leaves = clusterIndex.getLeaves(clusterId, 50);
+              const coords = leaves.map(l => ({
+                latitude: l.geometry.coordinates[1],
+                longitude: l.geometry.coordinates[0],
+              }));
+
+              // Calculate bounding box for the leaves
+              const lats = coords.map(c => c.latitude);
+              const lngs = coords.map(c => c.longitude);
+              const minLat = Math.min(...lats);
+              const maxLat = Math.max(...lats);
+              const minLng = Math.min(...lngs);
+              const maxLng = Math.max(...lngs);
+
+              // Calculate center and deltas with padding
+              const centerLat = (minLat + maxLat) / 2;
+              const centerLng = (minLng + maxLng) / 2;
+              const latDelta = (maxLat - minLat) * 1.2; // 20% padding
+              const lngDelta = (maxLng - minLng) * 1.2; // 20% padding
+
+              const boundingRegion = {
+                latitude: centerLat,
+                longitude: centerLng,
+                latitudeDelta: latDelta, // No floor for cluster expansion
+                longitudeDelta: lngDelta, // No floor for cluster expansion
+              };
+
+              console.log('🔍 Using bounding region for cluster expansion:', {
+                leavesCount: leaves.length,
+                center: { lat: centerLat, lng: centerLng },
+                deltas: { latDelta, lngDelta },
+                region: boundingRegion,
+              });
+
+              setRegion(boundingRegion);
+              mapRef.current.animateToRegion(
+                boundingRegion,
+                CLUSTER_CONFIG.animationMs,
+              );
+              return;
+            } catch (error) {
+              console.log(
+                '🔍 Error getting leaves, falling back to zoom strategy:',
+                error,
+              );
+            }
+          }
+
+          // More aggressive zoom strategy to ensure individual points are shown
           const pointCount = node.properties.point_count || 0;
-          const nudgeAmount =
-            pointCount <= CLUSTER_CONFIG.smallClusterThreshold
-              ? CLUSTER_CONFIG.smallClusterNudge
-              : CLUSTER_CONFIG.largeClusterNudge;
-          const targetZoom = Math.min(expansionZoom + nudgeAmount, maxZ);
+
+          // For clusters with few points, use a very high zoom to ensure individual pins are visible
+          let targetZoom;
+          if (pointCount <= 2) {
+            // Very small clusters (2 points) - use maximum zoom
+            targetZoom = Math.min(maxZ, 25);
+          } else if (pointCount <= 4) {
+            // Small clusters (3-4 points) - use very high zoom
+            targetZoom = Math.min(maxZ, 24);
+          } else if (pointCount <= 8) {
+            // Medium clusters (5-8 points) - use high zoom
+            targetZoom = Math.min(maxZ, 23);
+          } else {
+            // Larger clusters - use expansion zoom with nudge
+            const nudgeAmount = CLUSTER_CONFIG.largeClusterNudge;
+            targetZoom = Math.min(expansionZoom + nudgeAmount, maxZ);
+          }
+
+          // Ensure minimum zoom level for individual point visibility
+          const finalZoom = Math.max(targetZoom, 25);
+
+          console.log('🔍 Target zoom calculation:', {
+            expansionZoom,
+            targetZoom,
+            finalZoom,
+            pointCount,
+            maxZ,
+          });
 
           // Log expansion telemetry
           const childrenCount = node.properties.point_count || 0;
@@ -172,29 +323,49 @@ export const NativeMapView = forwardRef<NativeMapViewRef, NativeMapViewProps>(
           console.log('🔍 Cluster expansion debug:', {
             expansionZoom,
             targetZoom,
+            finalZoom,
             clusterId,
             clusterCenter: { lat, lng },
             mapDimensions: dimensions,
             maxZ,
             childrenCount,
+            currentRegion: region,
+            pointCount,
+            clusterConfig: {
+              radius: CLUSTER_CONFIG.radius,
+              maxZoom: CLUSTER_CONFIG.maxZoom,
+              minPoints: CLUSTER_CONFIG.minPoints,
+            },
           });
 
           // Convert tile zoom to region deltas with proper aspect ratio
           // Use target cluster latitude for proper distortion handling
           const { latitudeDelta, longitudeDelta } = deltasFromZoom(
-            targetZoom,
+            finalZoom,
             lat, // Use cluster latitude, not current region latitude
             dimensions.widthPx,
             dimensions.heightPx,
             256,
           );
 
-          const newRegion = clampRegionDeltas({
-            latitude: lat,
-            longitude: lng,
+          console.log('🔍 Calculated deltas:', {
+            finalZoom,
             latitudeDelta,
             longitudeDelta,
+            clusterLat: lat,
+            mapDimensions: {
+              width: dimensions.widthPx,
+              height: dimensions.heightPx,
+            },
           });
+
+          // Use the precise deltas calculated for the target zoom - no floor for cluster presses
+          const newRegion = {
+            latitude: lat,
+            longitude: lng,
+            latitudeDelta: latitudeDelta,
+            longitudeDelta: longitudeDelta,
+          };
 
           // Camera loop breaker: prevent no-op updates
           if (isSameRegion(region, newRegion)) {
@@ -207,6 +378,13 @@ export const NativeMapView = forwardRef<NativeMapViewRef, NativeMapViewProps>(
             newRegion,
             targetZoom,
             expansionZoom,
+            finalZoom,
+            forceSmallRegion,
+            clusterConfig: {
+              radius: CLUSTER_CONFIG.radius,
+              maxZoom: CLUSTER_CONFIG.maxZoom,
+              minPoints: CLUSTER_CONFIG.minPoints,
+            },
           });
 
           // Update the region state immediately so useClusteredData uses the new zoom level
@@ -214,6 +392,47 @@ export const NativeMapView = forwardRef<NativeMapViewRef, NativeMapViewProps>(
 
           // Animate to the new region
           mapRef.current.animateToRegion(newRegion, CLUSTER_CONFIG.animationMs);
+
+          // Debug: Check what happens after a short delay
+          setTimeout(() => {
+            console.log('🔍 Post-expansion debug:', {
+              currentRegion: region,
+              targetRegion: newRegion,
+              finalZoom,
+              clusterId,
+              pointCount,
+              clusterConfig: {
+                radius: CLUSTER_CONFIG.radius,
+                maxZoom: CLUSTER_CONFIG.maxZoom,
+                minPoints: CLUSTER_CONFIG.minPoints,
+              },
+            });
+
+            // Debug: Check cluster breakdown at different zoom levels
+            if (clusterIndex) {
+              const testZooms = [20, 21, 22, 23];
+              testZooms.forEach(testZoom => {
+                const testClusters = clusterIndex.getClusters(
+                  [-180, -85, 180, 85],
+                  testZoom,
+                );
+                const clusterNodes = testClusters.filter(
+                  c => c.properties.cluster,
+                );
+                const individualNodes = testClusters.filter(
+                  c => !c.properties.cluster,
+                );
+                console.log(`🔍 Zoom ${testZoom} breakdown:`, {
+                  totalClusters: testClusters.length,
+                  clusterNodes: clusterNodes.length,
+                  individualNodes: individualNodes.length,
+                  targetCluster: clusterNodes.find(
+                    c => c.properties.cluster_id === clusterId,
+                  ),
+                });
+              });
+            }
+          }, 500);
         } catch (error) {
           debugLog('Error expanding cluster:', error);
         }

@@ -5,8 +5,8 @@
 
 export const CLUSTER_CONFIG = {
   // Supercluster options
-  radius: 60, // Screen pixels for clustering (tweaked for better visual feel)
-  maxZoom: 20, // Standard max zoom
+  radius: 10, // Very small radius for better cluster breakdown
+  maxZoom: 25, // Increased max zoom for better cluster breakdown
   minZoom: 0, // Minimum zoom level
   minPoints: 2, // Minimum points to form a cluster
   extent: 512, // Default extent (leave as default)

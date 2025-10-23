@@ -119,7 +119,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
 
   // Use stable fallback values to prevent layout loops
   const topBarHeight = searchHeight > 0 ? searchHeight : 126; // Stable fallback
-  const measuredActionBarHeight = actionBarHeight > 0 ? actionBarHeight : 60; // Stable fallback
+  const measuredActionBarHeight =
+    actionBarHeight > 0 ? actionBarHeight : StickyLayout.actionBarHeight; // Stable fallback
   const stickyLaneOffset = topBarHeight + GAP;
   // Single source of truth for sticky height (TopBar + gap + ActionBar)
   const stickyH = stickyLaneOffset + measuredActionBarHeight;
@@ -569,7 +570,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
             top: 0,
             left: 0,
             right: 0,
-            height: topBarHeight + GAP + 60, // Only cover sticky header, not category rail
+            height:
+              topBarHeight +
+              GAP +
+              measuredActionBarHeight +
+              StickyLayout.overlayFadeHeight, // Cover sticky header plus fade below ActionBar
             zIndex: 995, // Behind TopBar and ActionBar but above content
             overflow: 'hidden',
           }}
@@ -585,6 +590,18 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
             style={{
               ...StyleSheet.absoluteFillObject,
               backgroundColor: 'rgba(255,255,255,0.15)', // Slightly stronger at top
+            }}
+          />
+          {/* Progressive fade below ActionBar */}
+          <View
+            style={{
+              position: 'absolute',
+              top: topBarHeight + GAP + measuredActionBarHeight,
+              left: 0,
+              right: 0,
+              height: StickyLayout.overlayFadeHeight,
+              backgroundColor: 'rgba(255,255,255,0.1)',
+              opacity: 0.8,
             }}
           />
         </View>
@@ -617,9 +634,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
           top: topBarHeight + GAP, // Start with 4px gap under TopBar
           left: 0,
           right: 0,
-          height: 60, // Fixed ActionBar height
           zIndex: 999, // Below TopBar but above content
-          paddingHorizontal: 12,
+          paddingHorizontal: 6,
           backgroundColor: 'transparent', // Transparent to show background blur
           opacity: showSticky && isFocused && !isTransitioning.current ? 1 : 0, // Hide when not sticky
         }}

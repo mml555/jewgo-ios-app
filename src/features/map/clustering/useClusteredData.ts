@@ -41,13 +41,56 @@ export function useClusteredData(
       clampedZoom,
     ) as ClusterNode[];
 
-    // Reduced logging for performance
-    if (__DEV__ && clusters.length > 0) {
+    // Debug cluster fetching
+    if (__DEV__) {
+      const clusterNodes = clusters.filter(c => c.properties.cluster);
+      const individualNodes = clusters.filter(c => !c.properties.cluster);
+      console.log('🔍 Cluster breakdown:', {
+        totalClusters: clusters.length,
+        clusterNodes: clusterNodes.length,
+        individualNodes: individualNodes.length,
+        zoom: clampedZoom,
+        bounds: bounds,
+      });
+    }
+
+    // Enhanced debugging for cluster expansion
+    if (__DEV__) {
+      const clusterNodes = clusters.filter(c => c.properties.cluster);
+      const individualNodes = clusters.filter(c => !c.properties.cluster);
+
       console.log('🔍 useClusteredData:', {
         clustersCount: clusters.length,
+        clusterNodes: clusterNodes.length,
+        individualNodes: individualNodes.length,
         zoom: clampedZoom,
         rawZoom,
         mapWidthPx,
+        region: {
+          lat: region.latitude,
+          lng: region.longitude,
+          latDelta: region.latitudeDelta,
+          lngDelta: region.longitudeDelta,
+        },
+        bounds: bounds,
+        sampleClusters: clusters.slice(0, 3).map(c => ({
+          id: c.properties.cluster_id,
+          isCluster: c.properties.cluster,
+          pointCount: c.properties.point_count,
+          coordinates: c.geometry.coordinates,
+        })),
+        clusterBreakdown: {
+          total: clusters.length,
+          clusters: clusterNodes.length,
+          individual: individualNodes.length,
+          avgPointsPerCluster:
+            clusterNodes.length > 0
+              ? clusterNodes.reduce(
+                  (sum, c) => sum + (c.properties.point_count || 0),
+                  0,
+                ) / clusterNodes.length
+              : 0,
+        },
       });
     }
 

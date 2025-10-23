@@ -21,7 +21,7 @@ interface ActionBarProps {
   jobFiltersCount?: number;
 }
 
-const HEIGHT = ResponsiveSpacing.get(36);
+const HEIGHT = StickyLayout.actionBarHeight; // Use design system height (32px)
 
 const ActionBar: React.FC<ActionBarProps> = ({
   onActionPress,
@@ -35,8 +35,8 @@ const ActionBar: React.FC<ActionBarProps> = ({
   // Responsive spacing for ActionBar - increased for better visual separation
   const responsiveMarginTop = isTablet ? 24 : StickyLayout.laneGap;
 
-  // Responsive sizing to match grid - make ActionBar thinner
-  const responsiveHeight = isTablet ? 36 : HEIGHT; // Reduced from 40 to 36 for thinner buttons
+  // Responsive sizing to match grid - use consistent height
+  const responsiveHeight = HEIGHT; // Use design system height consistently
   const responsivePadding = isTablet ? 10 : ResponsiveSpacing.get(18); // Reduced from 12 to 10 for thinner buttons
   const responsiveGap = isTablet ? 16 : ResponsiveSpacing.xs;
   const {

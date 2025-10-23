@@ -46,7 +46,7 @@ const CATEGORIES: Category[] = [
 // Layout constants - will be made responsive in component
 const CHIP_WIDTH = 72; // Narrower chips for sleeker look
 const CHIP_SPACING = 12;
-const CONTAINER_PADDING = 16;
+const CONTAINER_PADDING = 12;
 
 /**
  * Reusable CategoryChip component
@@ -151,7 +151,7 @@ const CategoryRail: React.FC<CategoryRailProps> = ({
   const responsiveTopMargin = isTablet ? 16 : StickyLayout.laneGap; // More space on iPad
   const responsiveContainerHeight = isTablet ? 116 : 96; // Taller container for iPad
   const responsiveScrollHeight = isTablet ? 112 : 92; // Taller scroll view for iPad
-  const responsiveContainerPadding = isTablet ? 16 : 16; // 16px padding on both iPad and phone
+  const responsiveContainerPadding = isTablet ? 12 : 12; // 12px padding on both iPad and phone
 
   // Calculate active index for indicator positioning
   const activeIndex = useMemo(

@@ -252,6 +252,33 @@ const REQUEST_THROTTLE_MS = 1000; // 1 second between requests per category
 // Global in-flight request tracker to prevent duplicate fetches
 const inFlightRequests = new Map<string, Promise<any>>();
 
+// Cleanup stale requests after a timeout
+const cleanupStaleRequests = () => {
+  const now = Date.now();
+  const STALE_TIMEOUT = 30000; // 30 seconds
+
+  for (const [key, promise] of inFlightRequests.entries()) {
+    // If a request has been in flight for more than 30 seconds, clean it up
+    // This is a safety mechanism to prevent requests from being stuck forever
+    const requestAge = now - (promise as any).timestamp;
+    if (requestAge > STALE_TIMEOUT) {
+      debugLog(`🧹 Cleaning up stale request: ${key}`);
+      inFlightRequests.delete(key);
+    }
+  }
+
+  for (const [key, promise] of activeRequests.entries()) {
+    const requestAge = now - (promise as any).timestamp;
+    if (requestAge > STALE_TIMEOUT) {
+      debugLog(`🧹 Cleaning up stale active request: ${key}`);
+      activeRequests.delete(key);
+    }
+  }
+};
+
+// Run cleanup every 10 seconds
+setInterval(cleanupStaleRequests, 10000);
+
 export const useCategoryData = ({
   categoryKey,
   query = '',
@@ -300,6 +327,18 @@ export const useCategoryData = ({
       setError(null);
       queryRef.current = query;
       initialLoadRef.current = false; // Reset initial load flag
+
+      // Clean up any stale requests for this category when switching
+      for (const key of inFlightRequests.keys()) {
+        if (key.startsWith(`${categoryKey}-`)) {
+          inFlightRequests.delete(key);
+        }
+      }
+      for (const key of activeRequests.keys()) {
+        if (key.startsWith(`${categoryKey}-`)) {
+          activeRequests.delete(key);
+        }
+      }
     }
   }, [categoryKey, query]);
 
@@ -385,7 +424,17 @@ export const useCategoryData = ({
     // Check if this exact request is already in flight
     if (inFlightRequests.has(requestKey)) {
       debugLog(`🚫 Skipping duplicate fetch for ${requestKey}`);
-      return inFlightRequests.get(requestKey);
+      try {
+        // Wait for the existing request to complete and return its result
+        return await inFlightRequests.get(requestKey);
+      } catch (error) {
+        // If the existing request failed, clean it up and continue with new request
+        debugLog(
+          `🔄 Previous request failed, cleaning up and retrying: ${requestKey}`,
+        );
+        inFlightRequests.delete(requestKey);
+        activeRequests.delete(`${categoryKey}-active`);
+      }
     }
 
     // Check for active requests in the same category to prevent rate limiting
@@ -394,7 +443,22 @@ export const useCategoryData = ({
       debugLog(
         `🚫 Throttling request for ${categoryKey} - previous request still active`,
       );
-      return activeRequests.get(categoryRequestKey);
+      try {
+        // Wait for the existing request to complete and return its result
+        return await activeRequests.get(categoryRequestKey);
+      } catch (error) {
+        // If the existing request failed, clean it up and continue with new request
+        debugLog(
+          `🔄 Previous category request failed, cleaning up and retrying: ${categoryKey}`,
+        );
+        activeRequests.delete(categoryRequestKey);
+        // Also clean up any stale in-flight requests for this category
+        for (const key of inFlightRequests.keys()) {
+          if (key.startsWith(`${categoryKey}-`)) {
+            inFlightRequests.delete(key);
+          }
+        }
+      }
     }
 
     loadingRef.current = true;
@@ -408,6 +472,9 @@ export const useCategoryData = ({
         pageSize,
         offset,
       );
+
+      // Add timestamp to the promise for cleanup tracking
+      (requestPromise as any).timestamp = Date.now();
 
       // Store the in-flight request
       inFlightRequests.set(requestKey, requestPromise);
@@ -540,6 +607,32 @@ export const useCategoryData = ({
       activeRequests.delete(categoryRequestKey);
     }
   }, [categoryKey, pageSize, transformListing]); // Use refs for currentPage and hasMore to avoid recreating
+
+  // Cleanup in-flight requests when component unmounts or category changes
+  useEffect(() => {
+    return () => {
+      // Clean up any in-flight requests for this category when component unmounts
+      const currentOffset = (currentPageRef.current - 1) * pageSize;
+      const currentRequestKey = `${categoryKey}-${currentOffset}-${pageSize}`;
+      const categoryRequestKey = `${categoryKey}-active`;
+
+      inFlightRequests.delete(currentRequestKey);
+      activeRequests.delete(categoryRequestKey);
+
+      // Also clean up any stale requests for this category (with different offsets)
+      for (const key of inFlightRequests.keys()) {
+        if (key.startsWith(`${categoryKey}-`)) {
+          inFlightRequests.delete(key);
+        }
+      }
+
+      for (const key of activeRequests.keys()) {
+        if (key.startsWith(`${categoryKey}-`)) {
+          activeRequests.delete(key);
+        }
+      }
+    };
+  }, [categoryKey, pageSize]);
 
   // Load initial data - use ref to track if we need to load
   useEffect(() => {

@@ -1,7 +1,8 @@
-import React, { memo } from 'react';
+import React, { memo, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Marker } from 'react-native-maps';
 import { ClusterNode } from '../types';
+import { ClusterPulse } from './ClusterPulse';
 
 interface ClusterMarkerProps {
   node: ClusterNode;
@@ -14,6 +15,21 @@ export const ClusterMarker = memo(function ClusterMarker({
 }: ClusterMarkerProps) {
   const [lng, lat] = node.geometry.coordinates;
   const count = node.properties.point_count || 0;
+  const [showPulse, setShowPulse] = useState(false);
+
+  const handlePress = () => {
+    console.log('🔍 ClusterMarker pressed!', {
+      nodeId: node.id,
+      clusterId: node.properties.cluster_id,
+      pointCount: node.properties.point_count,
+    });
+    setShowPulse(true);
+    onPress?.();
+  };
+
+  const handlePulseComplete = () => {
+    setShowPulse(false);
+  };
 
   return (
     <Marker
@@ -21,18 +37,24 @@ export const ClusterMarker = memo(function ClusterMarker({
       anchor={{ x: 0.5, y: 0.5 }}
       onPress={e => {
         e?.stopPropagation?.();
-        onPress?.();
+        handlePress();
       }}
       tracksViewChanges={false}
     >
-      <View style={styles.cluster}>
-        <Text style={styles.count}>{count}</Text>
+      <View style={styles.container}>
+        <View style={styles.cluster}>
+          <Text style={styles.count}>{count}</Text>
+        </View>
+        <ClusterPulse visible={showPulse} onComplete={handlePulseComplete} />
       </View>
     </Marker>
   );
 });
 
 const styles = StyleSheet.create({
+  container: {
+    position: 'relative',
+  },
   cluster: {
     width: 40,
     height: 40,
