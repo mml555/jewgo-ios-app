@@ -32,7 +32,7 @@ export default function EateryBoostScreen() {
       ctaLabel="⚡ $99.99/mo Click to pay"
       cardHeightPct={0.52}
       onClose={() => nav.goBack()}
-      onCTAPress={() => nav.navigate('Checkout', { type: 'eatery' })}
+      onCTAPress={() => nav.navigate('PaymentInfo')}
     />
   );
 }

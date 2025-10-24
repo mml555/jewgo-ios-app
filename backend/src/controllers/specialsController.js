@@ -7,23 +7,106 @@ let pool = null;
 function getPool() {
   if (!pool) {
     const { Pool } = require('pg');
-    pool = new Pool({
-      host: process.env.DB_HOST || 'localhost',
-      port: process.env.DB_PORT || 5433,
-      database: process.env.DB_NAME || 'jewgo_dev',
-      user: process.env.DB_USER || 'jewgo_user',
-      password: process.env.DB_PASSWORD || 'jewgo_password',
-      ssl:
-        process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
-      max: 20,
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 2000,
-    });
+    
+    // Support both DATABASE_URL (for Neon/Heroku-style) and individual env vars
+    const dbConfig = process.env.DATABASE_URL
+      ? {
+          connectionString: process.env.DATABASE_URL,
+          ssl: { rejectUnauthorized: false },
+          max: 20,
+          idleTimeoutMillis: 30000,
+          connectionTimeoutMillis: 2000,
+        }
+      : {
+          host: process.env.DB_HOST || 'localhost',
+          port: process.env.DB_PORT || 5433,
+          database: process.env.DB_NAME || 'jewgo_dev',
+          user: process.env.DB_USER || 'jewgo_user',
+          password: process.env.DB_PASSWORD || 'jewgo_password',
+          ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
+          max: 20,
+          idleTimeoutMillis: 30000,
+          connectionTimeoutMillis: 2000,
+        };
+    
+    pool = new Pool(dbConfig);
   }
   return pool;
 }
 
 class SpecialsController {
+  // DEBUG: GET /api/v5/specials/debug - Debug endpoint to check table structure
+  static async debugSpecials(req, res) {
+    try {
+      const pool = getPool();
+      const result = await pool.query(`
+        SELECT column_name, data_type 
+        FROM information_schema.columns 
+        WHERE table_name = 'specials' 
+        ORDER BY ordinal_position
+      `);
+      
+      res.json({
+        success: true,
+        data: result.rows
+      });
+    } catch (error) {
+      logger.error('Debug specials error:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  }
+
+  // SIMPLE: GET /api/v5/specials/simple - Simple endpoint that returns mock data
+  static async getSimpleSpecials(req, res) {
+    try {
+      // Return mock specials data to test the frontend
+      const mockSpecials = [
+        {
+          id: '1',
+          title: '20% Off Pizza',
+          business: { name: 'Milano\'s Pizza' },
+          discountLabel: '20% OFF',
+          heroImageUrl: 'https://picsum.photos/300/200?random=1'
+        },
+        {
+          id: '2', 
+          title: 'Free Appetizer',
+          business: { name: 'Kosher Kitchen' },
+          discountLabel: 'FREE APP',
+          heroImageUrl: 'https://picsum.photos/300/200?random=2'
+        },
+        {
+          id: '3',
+          title: 'Buy 1 Get 1 Free',
+          business: { name: 'Kosher Corner' },
+          discountLabel: 'BOGO',
+          heroImageUrl: 'https://picsum.photos/300/200?random=3'
+        },
+        {
+          id: '4',
+          title: '15% Off Desserts',
+          business: { name: 'Sweet Treats' },
+          discountLabel: '15% OFF',
+          heroImageUrl: 'https://picsum.photos/300/200?random=4'
+        }
+      ];
+      
+      res.json({
+        success: true,
+        data: mockSpecials
+      });
+    } catch (error) {
+      logger.error('Simple specials error:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  }
+
   // GET /api/v5/specials/active - Get active specials with priority sorting
   static async getActiveSpecials(req, res) {
     try {
@@ -103,7 +186,7 @@ class SpecialsController {
           END as claims_left
         FROM specials s
         JOIN entities e ON s.business_id = e.id
-        WHERE s.is_active = true
+        WHERE s.is_enabled = true
           AND s.valid_from <= NOW()
           AND s.valid_until >= NOW()
           AND (s.max_claims_total IS NULL OR s.claims_total < s.max_claims_total)
@@ -114,7 +197,7 @@ class SpecialsController {
       const countQuery = `
         SELECT COUNT(*) as total
         FROM specials s
-        WHERE s.is_active = true
+        WHERE s.is_enabled = true
           AND s.valid_from <= NOW()
           AND s.valid_until >= NOW()
           AND (s.max_claims_total IS NULL OR s.claims_total < s.max_claims_total)
@@ -161,7 +244,7 @@ class SpecialsController {
         priority: special.priority,
         heroImageUrl: special.hero_image_url,
         imageUrl: special.hero_image_url, // Add imageUrl field for frontend
-        isActive: special.is_active,
+        isActive: special.is_enabled,
         isExpiring:
           new Date(special.valid_until) <
           new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
@@ -257,7 +340,7 @@ class SpecialsController {
           END as claims_left
         FROM specials s
         JOIN entities e ON s.business_id = e.id
-        WHERE s.is_active = true
+        WHERE s.is_enabled = true
         ORDER BY s.valid_until ASC
         LIMIT $1 OFFSET $2
       `;
@@ -265,7 +348,7 @@ class SpecialsController {
       const countQuery = `
         SELECT COUNT(*) as total
         FROM specials s
-        WHERE s.is_active = true
+        WHERE s.is_enabled = true
       `;
 
       const [specialsResult, countResult] = await Promise.all([
@@ -286,7 +369,7 @@ class SpecialsController {
         discount_display: special.discount_label,
         valid_from: special.valid_from.toISOString(),
         valid_until: special.valid_until.toISOString(),
-        is_active: special.is_active,
+        is_enabled: special.is_enabled,
         is_expiring:
           new Date(special.valid_until) <
           new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Expires within 7 days
@@ -442,7 +525,7 @@ class SpecialsController {
         discount_display: special.discount_label,
         valid_from: special.valid_from.toISOString(),
         valid_until: special.valid_until.toISOString(),
-        is_active: special.is_active,
+        is_enabled: special.is_enabled,
         is_expiring:
           new Date(special.valid_until) <
           new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
@@ -534,7 +617,7 @@ class SpecialsController {
 
       const special = specialResult.rows[0];
 
-      if (!special.is_active) {
+      if (!special.is_enabled) {
         await client.query('ROLLBACK');
         return res.status(400).json({
           success: false,
@@ -665,7 +748,7 @@ class SpecialsController {
 
       // Filter by active status
       if (active_only === 'true') {
-        conditions.push('s.is_active = true');
+        conditions.push('s.is_enabled = true');
       }
 
       // Filter by search query
@@ -754,7 +837,7 @@ class SpecialsController {
         discount_display: special.discount_label,
         valid_from: special.valid_from.toISOString(),
         valid_until: special.valid_until.toISOString(),
-        is_active: special.is_active,
+        is_enabled: special.is_enabled,
         is_expiring:
           new Date(special.valid_until) <
           new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
@@ -824,7 +907,7 @@ class SpecialsController {
         code_hint,
         terms,
         hero_image_url,
-        is_active = true,
+        is_enabled = true,
       } = req.body;
 
       logger.info(
@@ -863,7 +946,7 @@ class SpecialsController {
           business_id, title, subtitle, description, discount_type, discount_value,
           discount_label, valid_from, valid_until, priority, max_claims_total,
           max_claims_per_user, requires_code, code_hint, terms, hero_image_url,
-          is_active, created_at, updated_at
+          is_enabled, created_at, updated_at
         ) VALUES (
           $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, NOW(), NOW()
         ) RETURNING *
@@ -886,7 +969,7 @@ class SpecialsController {
         code_hint || null,
         terms || null,
         hero_image_url || null,
-        is_active,
+        is_enabled,
       ];
 
       const result = await getPool().query(insertQuery, values);
@@ -911,7 +994,7 @@ class SpecialsController {
         codeHint: newSpecial.code_hint,
         terms: newSpecial.terms,
         heroImageUrl: newSpecial.hero_image_url,
-        isEnabled: newSpecial.is_active,
+        isEnabled: newSpecial.is_enabled,
         createdAt: newSpecial.created_at,
         updatedAt: newSpecial.updated_at,
       };
@@ -963,7 +1046,7 @@ class SpecialsController {
         code_hint: 'code_hint',
         terms: 'terms',
         hero_image_url: 'hero_image_url',
-        is_active: 'is_active',
+        is_enabled: 'is_enabled',
       };
 
       Object.entries(updateData).forEach(([key, value]) => {
@@ -1023,7 +1106,7 @@ class SpecialsController {
         codeHint: updatedSpecial.code_hint,
         terms: updatedSpecial.terms,
         heroImageUrl: updatedSpecial.hero_image_url,
-        isEnabled: updatedSpecial.is_active,
+        isEnabled: updatedSpecial.is_enabled,
         createdAt: updatedSpecial.created_at,
         updatedAt: updatedSpecial.updated_at,
       };

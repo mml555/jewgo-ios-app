@@ -29,6 +29,32 @@ import TikTokIcon from '../components/TikTokIcon';
 import WhatsAppIcon from '../components/WhatsAppIcon';
 import { getDietaryColor, getDietaryLabel } from '../utils/eateryHelpers';
 import ReviewsModal from '../components/ReviewsModal';
+
+// Map old kosher level format to new dietary format
+const mapKosherLevelToDietary = (kosherLevel?: string, category?: string): 'meat' | 'dairy' | 'parve' | undefined => {
+  // Only process eatery/restaurant categories
+  if (category?.toLowerCase().includes('eatery') || category?.toLowerCase().includes('restaurant')) {
+    if (kosherLevel) {
+      // Map specific kosher levels to dietary types
+      const lowerKosherLevel = kosherLevel.toLowerCase();
+      if (lowerKosherLevel.includes('meat') || lowerKosherLevel === 'glatt') {
+        return 'meat';
+      }
+      if (lowerKosherLevel.includes('dairy') || lowerKosherLevel.includes('chalav')) {
+        return 'dairy';
+      }
+      if (lowerKosherLevel.includes('parve') || lowerKosherLevel.includes('pas')) {
+        return 'parve';
+      }
+    }
+    
+    // Default to parve for eateries without specific kosher level
+    return 'parve';
+  }
+  
+  // For non-eateries, default to parve
+  return 'parve';
+};
 import WriteReviewModal from '../components/WriteReviewModal';
 import ImageCarousel from '../components/ImageCarousel';
 import DetailHeaderBar from '../components/DetailHeaderBar';
@@ -109,19 +135,9 @@ const ListingDetailScreen: React.FC = () => {
 
   // Calculate real distance if user location is available - MUST be before conditional return
   const realDistance = useMemo(() => {
-    infoLog(
-      '📍 DEBUG: realDistance calculation - item:',
-      item ? 'loaded' : 'null',
-      'location:',
-      location ? 'available' : 'null',
-    );
+    // Removed info logging for performance
     if (item) {
-      infoLog(
-        '📍 DEBUG: item coordinates - lat:',
-        item.latitude,
-        'lng:',
-        item.longitude,
-      );
+      // Removed info logging for performance
     }
 
     if (location && item?.latitude && item?.longitude) {
@@ -142,8 +158,8 @@ const ListingDetailScreen: React.FC = () => {
             1,
           )} miles)`,
         );
-        infoLog('📍 Location coords:', location.latitude, location.longitude);
-        infoLog('📍 Item coords:', item.latitude, item.longitude);
+        // Removed info logging for performance
+        // Removed info logging for performance
       }
 
       // For testing: allow larger distances since iOS simulator gives SF location
@@ -151,7 +167,7 @@ const ListingDetailScreen: React.FC = () => {
       if (distanceMeters > 16093400) {
         // 10,000 miles in meters - more reasonable threshold
         if (__DEV__) {
-          infoLog('📍 Distance too large, likely incorrect coordinates');
+          // Removed info logging for performance
         }
         return null;
       }
@@ -159,10 +175,7 @@ const ListingDetailScreen: React.FC = () => {
       return distanceMeters;
     }
     if (__DEV__) {
-      infoLog(
-        '📍 No location or coordinates available:',
-        `hasLocation: ${!!location}, hasItemLat: ${!!item?.latitude}, hasItemLng: ${!!item?.longitude}`,
-      );
+      // Removed info logging for performance
     }
     return null;
   }, [location, item]);
@@ -172,18 +185,13 @@ const ListingDetailScreen: React.FC = () => {
     try {
       setLoading(true);
       if (__DEV__) {
-        infoLog(
-          '🔍 DEBUG: Fetching item details for ID:',
-          itemId,
-          'Category:',
-          categoryKey,
-        );
+        // Removed info logging for performance
       }
       const response = await apiService.getListing(itemId);
 
       if (response.success && response.data) {
         if (__DEV__) {
-          infoLog('🔍 DEBUG: Setting item data:', response.data.listing);
+          // Removed info logging for performance
         }
         setItem(response.data.listing);
         // Load reviews separately to avoid circular dependency
@@ -263,14 +271,7 @@ const ListingDetailScreen: React.FC = () => {
     // ScrollView width is now screen width minus margins
     const imageWidth = screenWidth - Spacing.md * 2; // Image width
     const index = Math.round(contentOffset.x / imageWidth);
-    infoLog(
-      '🖼️ Image swipe - contentOffset.x:',
-      contentOffset.x,
-      'imageWidth:',
-      imageWidth,
-      'index:',
-      index,
-    );
+    // Removed info logging for performance
     setActiveImageIndex(index);
   };
 
@@ -627,7 +628,7 @@ const ListingDetailScreen: React.FC = () => {
           onReportPress={handleReportListing}
           onSharePress={() => {
             // TODO: Implement share functionality
-            infoLog('Share business:', itemId);
+            // Removed info logging for performance
           }}
           onFavoritePress={handleFavoriteToggle}
           centerContent={{
@@ -684,7 +685,7 @@ const ListingDetailScreen: React.FC = () => {
             {/* Price and Distance */}
             <View style={styles.infoRow}>
               <Text style={styles.priceText}>
-                {(item as any).price_range || '$$'}
+                {(item as any).price_range || ''}
               </Text>
               {realDistance ? (
                 <DistanceDisplay
@@ -816,13 +817,19 @@ const ListingDetailScreen: React.FC = () => {
             {/* Kosher Information Tags */}
             <View style={styles.featureTagsContainer}>
               {/* Kosher Level Tag */}
-              {item.kosher_level && (
-                <View style={[styles.featureTag, { backgroundColor: getDietaryColor(item.kosher_level) }]}>
-                  <Text style={[styles.featureTagText, { color: '#FFFFFF' }]}>
-                    {getDietaryLabel(item.kosher_level)}
-                  </Text>
-                </View>
-              )}
+              {(() => {
+                // Use kosher_level if available, otherwise map from kosherLevel
+                const dietaryType = item.kosher_level || 
+                                  mapKosherLevelToDietary(item.kosherLevel, item.category_id);
+                
+                return dietaryType && (
+                  <View style={[styles.featureTag, { backgroundColor: getDietaryColor(dietaryType) }]}>
+                    <Text style={[styles.featureTagText, { color: '#FFFFFF' }]}>
+                      {getDietaryLabel(dietaryType)}
+                    </Text>
+                  </View>
+                );
+              })()}
               
               {/* Kosher Agency Tag */}
               {item.kosher_certification && (

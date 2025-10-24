@@ -1,9 +1,9 @@
 /**
  * Simplified Location Service
- * Uses react-native-geolocation-service for better performance and reliability
+ * Uses @react-native-community/geolocation for React Native 0.76+ compatibility
  */
 
-import * as Geolocation from 'react-native-geolocation-service';
+import Geolocation from '@react-native-community/geolocation';
 import { Platform } from 'react-native';
 import { safeAsyncStorage } from './SafeAsyncStorage';
 import { debugLog, warnLog } from '../utils/logger';

@@ -6,15 +6,15 @@ class Entity {
       entityType,
       city,
       state,
-      kosherLevel, // NOW dietary type: 'meat', 'dairy', 'parve'
-      kosherCertification, // NOW standardized hechsher: 'KM', 'ORB', etc.
+      kosherLevel, // NOW dietary type: 'meat', 'dairy', 'parve' (from eatery_fields)
+      kosherCertification, // NOW standardized hechsher: 'KM', 'ORB', etc. (from eatery_fields)
       denomination,
       storeType,
       isVerified,
       minRating,
       hasKosherCertification,
-      priceMin, // NEW: Minimum price filter
-      priceMax, // NEW: Maximum price filter
+      priceMin, // NEW: Minimum price filter (from eatery_fields)
+      priceMax, // NEW: Maximum price filter (from eatery_fields)
       limit = 50,
       offset = 0,
       sortBy = 'created_at',
@@ -45,13 +45,13 @@ class Entity {
 
     if (kosherLevel) {
       paramCount++;
-      whereConditions.push(`e.kosher_level = $${paramCount}`);
+      whereConditions.push(`ef.kosher_type = $${paramCount}`);
       queryParams.push(kosherLevel);
     }
 
     if (kosherCertification) {
       paramCount++;
-      whereConditions.push(`e.kosher_certification = $${paramCount}`);
+      whereConditions.push(`ef.hechsher = $${paramCount}`);
       queryParams.push(kosherCertification);
     }
 
@@ -80,19 +80,19 @@ class Entity {
     }
 
     if (hasKosherCertification) {
-      whereConditions.push('e.kosher_certification IS NOT NULL');
+      whereConditions.push('ef.hechsher IS NOT NULL');
     }
 
     // NEW: Price range filtering
     if (priceMin !== undefined) {
       paramCount++;
-      whereConditions.push(`r.price_min >= $${paramCount}`);
+      whereConditions.push(`ef.price_min >= $${paramCount}`);
       queryParams.push(priceMin);
     }
 
     if (priceMax !== undefined) {
       paramCount++;
-      whereConditions.push(`r.price_max <= $${paramCount}`);
+      whereConditions.push(`ef.price_max <= $${paramCount}`);
       queryParams.push(priceMax);
     }
 
@@ -129,12 +129,11 @@ class Entity {
         e.rating,
         e.review_count,
         e.is_verified,
-        e.kosher_level,
-        e.kosher_certification,
-        e.kosher_certificate_number,
-        COALESCE(r.price_min, 0) as price_min,
-        COALESCE(r.price_max, 0) as price_max,
-        e.kosher_expires_at,
+        ef.kosher_type,
+        ef.hechsher,
+        ef.price_min,
+        ef.price_max,
+        ef.price_range,
         e.denomination,
         e.store_type,
         e.services,
@@ -143,7 +142,7 @@ class Entity {
         u.first_name as owner_first_name,
         u.last_name as owner_last_name
       FROM entities e
-      LEFT JOIN restaurants_normalized r ON e.id = r.entity_id
+      LEFT JOIN eatery_fields ef ON e.id = ef.entity_id
       LEFT JOIN users u ON e.owner_id = u.id
       WHERE ${whereConditions.join(' AND ')}
       ORDER BY e.${sortBy} ${sortOrder}
@@ -158,9 +157,13 @@ class Entity {
       SELECT 
         e.*,
         u.first_name as owner_first_name,
-        u.last_name as owner_last_name
+        u.last_name as owner_last_name,
+        ef.price_min,
+        ef.price_max,
+        ef.price_range
       FROM entities e
       LEFT JOIN users u ON e.owner_id = u.id
+      LEFT JOIN eatery_fields ef ON e.id = ef.entity_id
       WHERE e.id = $1 AND e.is_active = true
     `;
 
@@ -227,8 +230,6 @@ class Entity {
         e.rating,
         e.review_count,
         e.is_verified,
-        e.kosher_level,
-        e.kosher_certification,
         e.denomination,
         e.store_type,
         e.created_at
@@ -268,10 +269,6 @@ class Entity {
       linkedinUrl,
       latitude,
       longitude,
-      kosherLevel,
-      kosherCertification,
-      kosherCertificateNumber,
-      kosherExpiresAt,
       denomination,
       storeType,
       services,
@@ -283,13 +280,12 @@ class Entity {
         address, city, state, zip_code, phone, email, website,
         facebook_url, instagram_url, twitter_url, whatsapp_url,
         tiktok_url, youtube_url, snapchat_url, linkedin_url,
-        latitude, longitude, kosher_level, kosher_certification,
-        kosher_certificate_number, kosher_expires_at, denomination,
+        latitude, longitude, denomination,
         store_type, services
       ) VALUES (
         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,
         $13, $14, $15, $16, $17, $18, $19, $20, $21, $22,
-        $23, $24, $25, $26, $27, $28, $29
+        $23, $24, $25
       ) RETURNING *
     `;
 
@@ -316,10 +312,6 @@ class Entity {
       linkedinUrl,
       latitude,
       longitude,
-      kosherLevel,
-      kosherCertification,
-      kosherCertificateNumber,
-      kosherExpiresAt,
       denomination,
       storeType,
       services,

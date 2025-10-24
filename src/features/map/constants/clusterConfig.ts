@@ -1,49 +1,40 @@
 /**
- * Supercluster configuration constants
- * Lock these values to prevent ad-hoc overrides and ensure consistent behavior
+ * Cluster configuration constants for map features
+ * Defines bounds and limits for clustering operations
  */
 
 export const CLUSTER_CONFIG = {
-  // Supercluster options
-  radius: 10, // Very small radius for better cluster breakdown
-  maxZoom: 25, // Increased max zoom for better cluster breakdown
-  minZoom: 0, // Minimum zoom level
-  minPoints: 2, // Minimum points to form a cluster
-  extent: 512, // Default extent (leave as default)
-  nodeSize: 64, // Performance optimization
-
-  // Zoom math constants
-  tileSize: 256, // Slippy-tile convention for zoom calculations
-
-  // Delta bounds
-  minDelta: 0.0005, // Minimum delta to prevent infinite zoom
-  maxLatitude: 85, // Practical Mercator projection limit
-
-  // UX constants
-  debounceMs: 120, // Region change debounce
-  animationMs: 300, // Camera animation duration
-  smallClusterThreshold: 8, // Threshold for small cluster zoom nudge
-  smallClusterNudge: 0.5, // Extra zoom for small clusters
-  largeClusterNudge: 0.75, // Standard zoom nudge
+  // Maximum latitude for Mercator projection bounds
+  // Mercator projection becomes increasingly distorted beyond ~85 degrees
+  maxLatitude: 85.05112878,
+  
+  // Minimum delta values to prevent infinite zoom and ensure minimum hit areas
+  // This prevents the map from zooming in too far and losing usability
+  minDelta: 0.0001,
+  
+  // Default cluster radius in pixels
+  radius: 40,
+  
+  // Maximum zoom level for clustering
+  maxZoom: 20,
+  
+  // Minimum zoom level for clustering
+  minZoom: 1,
+  
+  // Minimum points to form a cluster
+  minPoints: 2,
+  
+  // Tile size for map calculations
+  tileSize: 256,
+  
+  // Extent for Supercluster (bounding box for clustering)
+  extent: 512,
+  
+  // Node size for Supercluster tree
+  nodeSize: 64,
+  
+  // Nudge amount for large cluster expansion
+  largeClusterNudge: 2,
 } as const;
 
-/**
- * Validate cluster configuration to prevent runtime errors
- */
-export function validateClusterConfig() {
-  if (CLUSTER_CONFIG.radius <= 0) {
-    throw new Error('Cluster radius must be positive');
-  }
-  if (CLUSTER_CONFIG.maxZoom < CLUSTER_CONFIG.minZoom) {
-    throw new Error('maxZoom must be >= minZoom');
-  }
-  if (CLUSTER_CONFIG.minPoints < 2) {
-    throw new Error('minPoints must be >= 2');
-  }
-  if (CLUSTER_CONFIG.extent <= 0) {
-    throw new Error('extent must be positive');
-  }
-  if (CLUSTER_CONFIG.tileSize <= 0) {
-    throw new Error('tileSize must be positive');
-  }
-}
+export type ClusterConfig = typeof CLUSTER_CONFIG;

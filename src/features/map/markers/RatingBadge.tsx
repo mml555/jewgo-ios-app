@@ -14,6 +14,22 @@ export const RatingBadge = memo(function RatingBadge({
   selected = false,
   onPress,
 }: RatingBadgeProps) {
+  // Debug logging
+  if (__DEV__) {
+    console.log('🔍 RatingBadge render:', {
+      rating,
+      color,
+      selected,
+      backgroundColor: selected ? color : '#FFFFFF',
+      finalBackgroundColor: selected ? color : '#FFFFFF'
+    });
+  }
+
+  // Create explicit style for selected state
+  const pillStyle = selected 
+    ? [styles.pill, { backgroundColor: color }]
+    : [styles.pill, { backgroundColor: '#FFFFFF' }];
+  
   return (
     <Pressable
       onPress={onPress}
@@ -30,27 +46,31 @@ export const RatingBadge = memo(function RatingBadge({
 
       {/* Main pill container */}
       <View
+        key={selected ? 'selected' : 'unselected'}
         style={[
-          styles.pill,
+          pillStyle,
           selected && {
-            borderWidth: 2,
+            borderWidth: 3,
             borderColor: color,
             shadowColor: color,
             shadowOffset: { width: 0, height: 0 },
-            shadowOpacity: 0.3,
-            shadowRadius: 4,
-            elevation: 8,
+            shadowOpacity: 0.5,
+            shadowRadius: 6,
+            elevation: 12,
           },
         ]}
       >
-        <Text style={[styles.star, { color }]}>★</Text>
-        <Text style={[styles.rating, { color }]}>
+        <Text style={[styles.star, { color: selected ? '#FFFFFF' : color }]}>★</Text>
+        <Text style={[styles.rating, { color: selected ? '#FFFFFF' : color }]}>
           {rating == null ? '—' : rating.toFixed(1)}
         </Text>
       </View>
 
       {/* Tail pointing down */}
-      <View style={styles.tail} />
+      <View style={[
+        styles.tail,
+        { backgroundColor: selected ? color : '#FFFFFF' }
+      ]} />
     </Pressable>
   );
 });
@@ -70,7 +90,6 @@ const styles = StyleSheet.create({
     zIndex: -1,
   },
   pill: {
-    backgroundColor: '#FFFFFF',
     paddingHorizontal: 12, // H12 padding
     paddingVertical: 8, // V8 padding
     borderRadius: 18, // 18dp radius
@@ -99,7 +118,6 @@ const styles = StyleSheet.create({
   tail: {
     width: 16, // 16×16dp
     height: 16,
-    backgroundColor: '#FFFFFF',
     transform: [{ rotate: '45deg' }],
     marginTop: -8, // Overlap pill by 8dp
     borderRadius: 3, // 3dp radius

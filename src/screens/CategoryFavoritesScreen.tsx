@@ -101,9 +101,10 @@ const CategoryFavoritesScreen: React.FC = () => {
   const handleFavoriteToggle = useCallback(
     async (entityId: string) => {
       // Remove 'local_' prefix from favorite ID to get the real entity ID
-      const realEntityId = entityId.startsWith('local_')
-        ? entityId.replace('local_', '')
-        : entityId;
+      const realEntityId =
+        typeof entityId === 'string' && entityId.startsWith('local_')
+          ? entityId.replace('local_', '')
+          : entityId;
 
       const success = await toggleFavorite(realEntityId);
       if (success) {
@@ -121,9 +122,10 @@ const CategoryFavoritesScreen: React.FC = () => {
   const handleItemPress = useCallback(
     (item: any) => {
       // Remove 'local_' prefix from favorite ID to get the real entity ID
-      const realEntityId = item.id.startsWith('local_')
-        ? item.id.replace('local_', '')
-        : item.id;
+      const realEntityId =
+        typeof item.id === 'string' && item.id.startsWith('local_')
+          ? item.id.replace('local_', '')
+          : item.id;
 
       navigation.navigate('ListingDetail', {
         itemId: realEntityId,

@@ -32,7 +32,7 @@ export default function JobBoostScreen() {
       ctaLabel="⚡ $49.99/mo Click to pay"
       cardHeightPct={0.52}
       onClose={() => nav.goBack()}
-      onCTAPress={() => nav.navigate('Checkout', { type: 'jobs' })}
+      onCTAPress={() => nav.navigate('PaymentInfo')}
     />
   );
 }

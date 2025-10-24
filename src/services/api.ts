@@ -230,7 +230,7 @@ class ApiService {
 
         if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
           if (__DEV__) {
-            debugLog('🌐 API Cache Hit:', url);
+            // Removed debug logging for performance
           }
           return cached.data;
         }
@@ -238,7 +238,7 @@ class ApiService {
 
       // Log API requests only occasionally to reduce noise
       if (__DEV__ && Math.random() < 0.1) {
-        debugLog('🌐 API Request:', url);
+        // Removed debug logging for performance
       }
 
       // Get authentication headers
@@ -247,24 +247,20 @@ class ApiService {
       if (authService.isAuthenticated()) {
         // User is authenticated - use user token
         authHeaders = await authService.getAuthHeaders();
-        // Removed excessive logging to prevent memory issues
+        // Removed debug logging for performance
       } else if (guestService.isGuestAuthenticated()) {
         // Guest is authenticated - use guest token
         authHeaders = await guestService.getAuthHeadersAsync();
-        // Removed excessive logging to prevent memory issues
+        // Removed debug logging for performance
       } else {
         // No authentication - try to create guest session automatically
-        // Only log very occasionally to reduce console noise
-        if (__DEV__ && Math.random() < 0.01) {
-          debugLog(
-            '🔐 No authentication found, attempting to create guest session...',
-          );
-        }
+        // Removed debug logging for performance
         try {
           await guestService.createGuestSession();
           authHeaders = await guestService.getAuthHeadersAsync();
+          // Removed debug logging for performance
         } catch (error) {
-          // Removed excessive logging to prevent memory issues
+          // Removed debug logging for performance
           // Continue without auth headers - some endpoints might work without auth
         }
       }
@@ -274,6 +270,8 @@ class ApiService {
         ...authHeaders,
         ...options.headers,
       };
+      
+      if (__DEV__ && Math.random() < 0.1) debugLog('🔐 Final request headers:', Object.keys(finalHeaders));
 
       const response = await fetch(url, {
         headers: finalHeaders,
@@ -282,11 +280,7 @@ class ApiService {
 
       // Reduced logging for performance - only log errors
       if (!response.ok && __DEV__) {
-        console.log('📡 API Error Response:', {
-          url,
-          status: response.status,
-          ok: response.ok,
-        });
+        // Removed debug logging for performance
       }
 
       // Handle rate limiting specifically
@@ -499,7 +493,7 @@ class ApiService {
           data: { listings },
         };
       } catch (error) {
-        debugLog('V5 API not available, falling back to local data');
+        // Removed debug logging for performance
         // Fall back to local mock data
         return this.getListings(limit, offset);
       }
@@ -526,8 +520,7 @@ class ApiService {
     } = {},
   ): Promise<ApiResponse<{ job_seekers: JobSeeker[]; pagination: any }>> {
     try {
-      debugLog('🔍 Fetching job seekers with params:', params);
-
+      // Removed debug logging for performance
       const queryParams = new URLSearchParams();
       Object.entries(params).forEach(([key, value]) => {
         if (value !== undefined && value !== '') {
@@ -541,7 +534,7 @@ class ApiService {
       }>(`/api/v5/jobs/seekers?${queryParams.toString()}`);
 
       if (response.success) {
-        debugLog('✅ Job seekers fetched successfully:', response.data);
+        // Removed debug logging for performance
         return response;
       } else {
         warnLog('⚠️ Failed to fetch job seekers:', response.error);
@@ -559,14 +552,13 @@ class ApiService {
   // Get a specific job seeker by ID
   async getJobSeeker(id: string): Promise<ApiResponse<JobSeeker>> {
     try {
-      debugLog('🔍 Fetching job seeker:', id);
-
+      // Removed debug logging for performance
       const response = await this.request<JobSeeker>(
         `/api/v5/jobs/seekers/${id}`,
       );
 
       if (response.success) {
-        debugLog('✅ Job seeker fetched successfully:', response.data);
+        // Removed debug logging for performance
         return response;
       } else {
         warnLog('⚠️ Failed to fetch job seeker:', response.error);
@@ -586,15 +578,14 @@ class ApiService {
     jobSeekerData: Partial<JobSeeker>,
   ): Promise<ApiResponse<JobSeeker>> {
     try {
-      debugLog('📝 Creating job seeker profile:', jobSeekerData);
-
+      // Removed debug logging for performance
       const response = await this.request<JobSeeker>('/api/v5/jobs/seekers', {
         method: 'POST',
         body: JSON.stringify(jobSeekerData),
       });
 
       if (response.success) {
-        debugLog('✅ Job seeker profile created successfully:', response.data);
+        // Removed debug logging for performance
         return response;
       } else {
         warnLog('⚠️ Failed to create job seeker profile:', response.error);
@@ -615,8 +606,7 @@ class ApiService {
     jobSeekerData: Partial<JobSeeker>,
   ): Promise<ApiResponse<JobSeeker>> {
     try {
-      debugLog('📝 Updating job seeker profile:', id, jobSeekerData);
-
+      // Removed debug logging for performance
       const response = await this.request<JobSeeker>(
         `/api/v5/jobs/seekers/${id}`,
         {
@@ -626,7 +616,7 @@ class ApiService {
       );
 
       if (response.success) {
-        debugLog('✅ Job seeker profile updated successfully:', response.data);
+        // Removed debug logging for performance
         return response;
       } else {
         warnLog('⚠️ Failed to update job seeker profile:', response.error);
@@ -647,9 +637,13 @@ class ApiService {
     limit: number = 100,
     offset: number = 0,
   ): Promise<ApiResponse<{ listings: Listing[] }>> {
+    // DEBUG: Log when API is called
+    // Removed debug logging for performance
+    // Removed debug logging for performance
+    // Removed debug logging for performance
     // Special handling for specials category - redirect to Specials tab instead of fetching data
     if (categoryKey === 'specials') {
-      debugLog('🎁 Specials category selected - redirecting to Specials tab');
+      // Removed debug logging for performance
       return {
         success: true,
         data: { listings: [] }, // Return empty array since we're redirecting
@@ -659,21 +653,21 @@ class ApiService {
 
     // Special handling for jobs category - use dedicated jobs endpoint
     if (categoryKey === 'jobs') {
-      debugLog('🔍 Fetching jobs from dedicated endpoint');
+      // Removed debug logging for performance
       try {
         const response = await this.request(
           `/jobs/listings?limit=${limit}&page=1`,
         );
 
-        debugLog(
+        if (__DEV__ && Math.random() < 0.1) debugLog(
           '🔍 Jobs API raw response:',
           JSON.stringify(response).substring(0, 200),
         );
-        debugLog(
+        if (__DEV__ && Math.random() < 0.1) debugLog(
           '🔍 Response has data.listings?',
           !!(response as any)?.data?.listings,
         );
-        debugLog('🔍 Response has success?', !!(response as any).success);
+        if (__DEV__ && Math.random() < 0.1) debugLog('🔍 Response has success?', !!(response as any).success);
 
         // V5 API returns { success: true, data: { listings: [...] } }
         if (
@@ -682,13 +676,13 @@ class ApiService {
           (response as any)?.data?.listings
         ) {
           const jobListings = (response as any).data.listings;
-          debugLog('🔍 Found jobs:', jobListings.length);
-          debugLog('🔍 First job title:', jobListings[0]?.title);
+          // Removed debug logging for performance
+          // Removed debug logging for performance
           // Transform jobs data to match listing format
           const transformedListings = Array.isArray(jobListings)
             ? jobListings.map((job: any) => this.transformJobToListing(job))
             : [];
-          debugLog('🔍 Transformed jobs:', transformedListings.length);
+          // Removed debug logging for performance
           return {
             success: true,
             data: { listings: transformedListings },
@@ -697,17 +691,17 @@ class ApiService {
 
         // Handle error responses
         if ((response as any).success === false) {
-          debugLog('🔍 Jobs API returned error response');
+          // Removed debug logging for performance
           return response as ApiResponse<{ listings: Listing[] }>;
         }
 
-        debugLog('🔍 Jobs response did not match expected format');
+        // Removed debug logging for performance
       } catch (error) {
         errorLog('Failed to fetch jobs:', error);
       }
 
       // If we get here for jobs category, return error (don't fall through to entity fetch)
-      debugLog('🔍 Returning error for jobs category - no valid data found');
+      // Removed debug logging for performance
       return {
         success: false,
         error: 'Failed to load jobs',
@@ -728,8 +722,20 @@ class ApiService {
     };
 
     const entityType = categoryToEntityType[categoryKey] || categoryKey;
-    // debugLog('🔍 Entity type mapping:', `categoryKey: ${categoryKey}, entityType: ${entityType}`);
-
+    // Removed debug logging for performance
+    // Removed debug logging for performance
+    // Handle invalid entity types gracefully
+    const validEntityTypes = ['restaurant', 'synagogue', 'mikvah', 'store'];
+    if (!validEntityTypes.includes(entityType)) {
+      // Removed debug logging for performance
+      return {
+        success: false,
+        data: { listings: [] },
+        error: `No data available for ${categoryKey}`,
+      };
+    }
+    
+    // // Removed debug logging for performance
     if (this.isV5Api) {
       try {
         const response = await apiV5Service.getEntities(
@@ -741,44 +747,52 @@ class ApiService {
         );
 
         if (response.success && response.data) {
-          debugLog('🔍 Raw backend data sample:', response.data.entities[0]);
+          // Removed debug logging for performance
+          // Removed debug logging for performance
           const transformedListings = response.data.entities.map(entity =>
             this.transformEntityToLegacyListing(entity),
           );
-          debugLog('🔍 Transformed data sample:', transformedListings[0]);
+          // Removed debug logging for performance
+          // Removed debug logging for performance
           return {
             success: true,
             data: { listings: transformedListings },
           };
+        } else {
+          // Removed debug logging for performance
         }
       } catch (error) {
-        debugLog('V5 API not available, falling back to local data');
+        // Removed debug logging for performance
       }
     }
 
     // Use mapped entity type for fallback request
-    // debugLog('🔍 Making fallback request with entityType:', entityType);
+    // // Removed debug logging for performance
     const fallbackResponse = await this.request(
       `/entities?entityType=${entityType}&limit=${limit}&offset=${offset}`,
     );
-    // debugLog('🔍 Fallback response:', fallbackResponse);
-
+    // // Removed debug logging for performance
     if (fallbackResponse.success && fallbackResponse.data) {
       const data = fallbackResponse.data as any;
+      // Removed debug logging for performance
       if (data.entities) {
-        // debugLog('🔍 Raw entity sample from fallback:', data.entities[0]);
-
+        // Removed debug logging for performance
+        // Removed debug logging for performance
         // Transform the fallback data to match the expected format
         const transformedListings = data.entities.map((entity: any) =>
           this.transformEntityToLegacyListing(entity),
         );
-        // debugLog('🔍 Transformed fallback sample:', transformedListings[0]);
-
+        // Removed debug logging for performance
+        // Removed debug logging for performance
         return {
           success: true,
           data: { listings: transformedListings },
         };
+      } else {
+        // Removed debug logging for performance
       }
+    } else {
+      // Removed debug logging for performance
     }
 
     return {
@@ -792,12 +806,11 @@ class ApiService {
   async getListing(
     id: string,
   ): Promise<ApiResponse<{ listing: DetailedListing }>> {
-    debugLog('🔍 DEBUG: getListing called with id:', id);
-
+    // Removed debug logging for performance
     if (this.isV5Api) {
       // Try to get from entities endpoint first (legacy)
       try {
-        debugLog('🔍 Trying legacy entities endpoint:', `/entities/${id}`);
+        // Removed debug logging for performance
         const response = await this.request(`/entities/${id}`);
         if (response.success && response.data) {
           // Transform the entity data to match expected format
@@ -812,10 +825,7 @@ class ApiService {
           };
         }
       } catch (error) {
-        debugLog(
-          'Legacy entities endpoint failed, trying category-specific endpoints',
-          error,
-        );
+        // Removed debug logging for performance
       }
 
       // If entities endpoint fails, try category-specific endpoints
@@ -908,6 +918,8 @@ class ApiService {
 
   // Transform V5 entity to legacy listing format
   private transformEntityToLegacyListing(entity: any): DetailedListing {
+    // DEBUG: Log the raw entity data to see what we're getting
+    // Removed debug logging for performance
     // Transform business hours from backend format to frontend format
     const business_hours = entity.business_hours
       ? entity.business_hours.map((hour: any) => ({
@@ -930,18 +942,20 @@ class ApiService {
       : [];
 
     // Transform kosher certifications
-    const kosher_certifications = entity.kosher_level
+    const kosher_certifications = entity.kosher_type
       ? [
           {
-            level: entity.kosher_level,
-            certifying_body: entity.kosher_certification || 'Unknown',
-            certificate_number: entity.kosher_certificate_number || '',
-            expires_at: entity.kosher_expires_at,
+            level: entity.kosher_type, // Now from eatery_fields.kosher_type
+            certifying_body: entity.hechsher || 'Unknown', // Now from eatery_fields.hechsher
+            certificate_number: '', // No longer available in new schema
+            expires_at: null, // No longer available in new schema
           },
         ]
       : [];
 
-    return {
+
+    // DEBUG: Log the final transformed object to see what kosher_level we're getting
+    const transformed = {
       id: entity.id,
       title: entity.name,
       description: entity.description,
@@ -975,16 +989,30 @@ class ApiService {
       recent_reviews: entity.recent_reviews || [],
       kosher_certifications: kosher_certifications,
       // Eateries-specific fields (pass through from backend)
-      kosher_level: entity.kosher_level, // Dietary type: 'meat' | 'dairy' | 'parve'
-      kosher_certification: entity.kosher_certification,
+      kosher_level: entity.kosher_type, // Dietary type: 'meat' | 'dairy' | 'parve' (from eatery_fields)
+      kosher_certification: entity.hechsher, // Hechsher certification (from eatery_fields)
       price_min: entity.price_min,
       price_max: entity.price_max,
       price_range: entity.price_range,
+      // DEBUG: Log price data from API
+      ...(entity.price_range && { 
+        _debug_api_price_range: entity.price_range,
+        _debug_api_price_min: entity.price_min,
+        _debug_api_price_max: entity.price_max
+      }),
+      // DEBUG: Always log price data to see what's happening
+      _debug_always_price_range: entity.price_range,
+      _debug_always_price_min: entity.price_min,
+      _debug_always_price_max: entity.price_max,
       // Engagement metrics
       view_count: entity.view_count || 0,
       like_count: entity.like_count || 0,
       share_count: entity.share_count || 0,
     };
+
+    // DEBUG: Log the final transformed object to see what kosher_level we're getting
+    // Removed debug logging for performance
+    return transformed;
   }
 
   // Transform job to listing format

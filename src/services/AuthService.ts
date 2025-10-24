@@ -1,6 +1,6 @@
 import { safeAsyncStorage } from './SafeAsyncStorage';
 import { configService } from '../config/ConfigService';
-import { errorLog } from '../utils/logger';
+import { debugLog, errorLog } from '../utils/logger';
 
 export interface User {
   id: string;
@@ -148,9 +148,24 @@ class AuthService {
 
   async register(userData: RegisterData): Promise<AuthResponse> {
     try {
+      debugLog('📝 Registering user with data:', {
+        email: userData.email,
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        hasPhone: !!userData.phoneNumber,
+        hasCaptcha: !!userData.captchaToken,
+      });
+      
       const response = await this.makeRequest<AuthResponse>('/auth/register', {
         method: 'POST',
         body: JSON.stringify(userData),
+      });
+
+      debugLog('📝 Registration response:', {
+        success: response.success,
+        hasData: !!response.data,
+        error: response.error,
+        code: response.code,
       });
 
       if (response.success && response.data) {
@@ -160,6 +175,7 @@ class AuthService {
 
       throw new Error(response.error || 'Registration failed');
     } catch (error) {
+      errorLog('❌ Registration error in AuthService:', error);
       errorLog('Registration error:', error);
       throw error;
     }

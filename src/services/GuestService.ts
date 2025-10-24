@@ -175,9 +175,9 @@ class GuestService {
               if (match) {
                 const value = parseInt(match[1], 10);
                 const unit = match[2].toLowerCase();
-                if (unit.startsWith('hour')) {
+                if (typeof unit === 'string' && unit.startsWith('hour')) {
                   retryAfterSeconds = value * 3600;
-                } else if (unit.startsWith('minute')) {
+                } else if (typeof unit === 'string' && unit.startsWith('minute')) {
                   retryAfterSeconds = value * 60;
                 } else {
                   retryAfterSeconds = value;
@@ -280,7 +280,7 @@ class GuestService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          'X-Guest-Token': token,
         },
       });
 
@@ -309,7 +309,7 @@ class GuestService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          'X-Guest-Token': token,
         },
         body: JSON.stringify({ additionalHours }),
       });
@@ -330,7 +330,7 @@ class GuestService {
         await fetch(`${apiUrl}/guest/revoke`, {
           method: 'DELETE',
           headers: {
-            Authorization: `Bearer ${token}`,
+            'X-Guest-Token': token,
           },
         });
       }
@@ -421,7 +421,7 @@ class GuestService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          'X-Guest-Token': token,
         },
         body: JSON.stringify(userData),
       });
@@ -506,7 +506,7 @@ class GuestService {
 
     const headers = {
       ...options.headers,
-      Authorization: `Bearer ${token}`,
+      'X-Guest-Token': token,
     };
 
     return fetch(url, {
@@ -528,7 +528,7 @@ class GuestService {
         token ? 'present' : 'missing',
       );
     }
-    return token ? { Authorization: `Bearer ${token}` } : {};
+    return token ? { 'X-Guest-Token': token } : {};
   }
 }
 

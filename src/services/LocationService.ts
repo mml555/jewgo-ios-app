@@ -1,4 +1,4 @@
-import Geolocation from 'react-native-geolocation-service';
+import Geolocation from 'react-native';
 import {
   request,
   PERMISSIONS,

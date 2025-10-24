@@ -31,7 +31,6 @@ import { TabParamList } from '../types/navigation';
 // SCREENS
 import HomeScreen from '../screens/HomeScreen';
 import FavoritesScreen from '../screens/FavoritesScreen';
-import SpecialsScreen from '../screens/SpecialsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 
 // Custom LiveMap component that navigates to full-screen version with all entries
@@ -174,7 +173,11 @@ export default function RootTabs() {
             position="LEFT"
             component={FavoritesScreen}
           />
-          <CurvedBottomBar.Screen name="Specials" component={SpecialsScreen} />
+          <CurvedBottomBar.Screen
+            name="Specials"
+            component={HomeScreen}
+            initialParams={{ category: 'specials' }}
+          />
           <CurvedBottomBar.Screen
             name="LiveMap"
             position="RIGHT"

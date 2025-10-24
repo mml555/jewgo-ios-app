@@ -37,6 +37,32 @@ import {
   useResponsiveDimensions,
 } from '../utils/deviceAdaptation';
 
+const legacyToCanonicalCategory: Record<string, string> = {
+  eatery: 'restaurant',
+  shul: 'synagogue',
+  stores: 'store',
+};
+
+const canonicalToLegacyCategory: Record<string, string> = {
+  restaurant: 'eatery',
+  synagogue: 'shul',
+  store: 'stores',
+};
+
+const toCanonicalCategory = (category?: string | null): string | undefined => {
+  if (!category) {
+    return undefined;
+  }
+  return legacyToCanonicalCategory[category] || category;
+};
+
+const toLegacyCategory = (category?: string | null): string | undefined => {
+  if (!category) {
+    return undefined;
+  }
+  return canonicalToLegacyCategory[category] || category;
+};
+
 interface HomeScreenProps {
   onSearchChange?: (query: string) => void;
 }
@@ -58,7 +84,17 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
     : StickyLayout.categoryRailHeightDefault;
 
   // Core state
-  const [activeCategory, setActiveCategory] = useState('mikvah');
+  const [activeCategory, setActiveCategory] = useState(() => {
+    const params = route.params as { category?: string } | undefined;
+    const canonicalParam = toCanonicalCategory(params?.category);
+    if (canonicalParam) {
+      return canonicalParam;
+    }
+    if (route.name === 'Specials') {
+      return 'specials';
+    }
+    return 'mikvah';
+  });
   const [searchQuery, setSearchQuery] = useState('');
   const [jobMode, setJobMode] = useState<'seeking' | 'hiring'>('hiring');
 
@@ -86,12 +122,15 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
   // Handle category navigation from route params (from Favorites screen)
   useEffect(() => {
     const params = route.params as { category?: string } | undefined;
-    if (params?.category) {
-      setActiveCategory(params.category);
-      // Clear the param after handling it
-      navigation.setParams({ category: undefined } as any);
+    const canonicalParam = toCanonicalCategory(params?.category);
+    if (canonicalParam && canonicalParam !== activeCategory) {
+      setActiveCategory(canonicalParam);
+      const navWithParams = navigation as unknown as {
+        setParams?: (params: Record<string, unknown>) => void;
+      };
+      navWithParams.setParams?.({ category: undefined });
     }
-  }, [route.params, navigation]);
+  }, [route.params, navigation, activeCategory]);
 
   // Manage transition state during focus/blur
   useFocusEffect(
@@ -270,42 +309,46 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
     [onSearchChange],
   );
 
-  const handleCategoryChange = useCallback(
-    (category: string) => {
-      // Use InteractionManager to defer state updates
-      InteractionManager.runAfterInteractions(() => {
-        setActiveCategory(category);
+  const handleCategoryChange = useCallback((category: string) => {
+    const canonicalCategory = toCanonicalCategory(category) || 'mikvah';
+    // Use InteractionManager to defer state updates
+    InteractionManager.runAfterInteractions(() => {
+      setActiveCategory(canonicalCategory);
 
-        // Reset measurement on category change to allow re-locking
-        restHeaderHRef.current = 0;
-        setScrollHeaderH(0);
+      // Reset measurement on category change to allow re-locking
+      restHeaderHRef.current = 0;
+      setScrollHeaderH(0);
 
-        // Auto-center the real header Rail on next frame
-        if (headerRailRef.current) {
-          requestAnimationFrame(() => {
-            headerRailRef.current?.scrollToCategory(category);
-          });
-        }
-      });
-    },
-    [activeCategory],
-  );
+      // Auto-center the real header Rail on next frame
+      if (headerRailRef.current) {
+        requestAnimationFrame(() => {
+          headerRailRef.current?.scrollToCategory(canonicalCategory);
+        });
+      }
+    });
+  }, []);
 
-  const handleActionPress = useCallback((action: string) => {
-    // Handle job mode changes
-    if (action.startsWith('jobMode:')) {
-      const mode = action.split(':')[1] as 'seeking' | 'hiring';
-      setJobMode(mode);
+  const handleActionPress = useCallback((action?: string) => {
+    if (action === 'jobFeed') {
+      setJobMode('hiring');
+      return;
+    }
+
+    if (action === 'resumeFeed') {
+      setJobMode('seeking');
     }
   }, []);
 
   // Get appropriate add button text based on category
   const getAddButtonText = (category: string): string => {
-    const categoryMap: { [key: string]: string } = {
+    const categoryMap: Record<string, string> = {
       mikvah: 'Add Mikvah',
       eatery: 'Add Eatery',
+      restaurant: 'Add Eatery',
       shul: 'Add Shul',
+      synagogue: 'Add Shul',
       stores: 'Add Store',
+      store: 'Add Store',
       jobs: 'Add Job',
       events: 'Add Event',
     };
@@ -315,14 +358,15 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchChange }) => {
   const handleAddEntity = useCallback(() => {
     if (activeCategory === 'mikvah') {
       navigation.navigate('AddMikvah');
-    } else if (activeCategory === 'shul') {
+    } else if (activeCategory === 'synagogue' || activeCategory === 'shul') {
       navigation.navigate('AddSynagogue');
     } else if (activeCategory === 'jobs') {
       navigation.navigate('CreateJobV2');
     } else if (activeCategory === 'events') {
       navigation.navigate('CreateEvent');
     } else {
-      (navigation as any).navigate('AddCategory', { category: activeCategory });
+      const legacyCategory = toLegacyCategory(activeCategory) || activeCategory;
+      (navigation as any).navigate('AddCategory', { category: legacyCategory });
     }
   }, [navigation, activeCategory]);
 

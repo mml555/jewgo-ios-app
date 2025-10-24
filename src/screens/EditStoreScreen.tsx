@@ -170,7 +170,10 @@ const EditStoreScreen: React.FC = () => {
       newErrors.email = 'Please enter a valid email address';
     }
 
-    if (formData.website && !formData.website.startsWith('http')) {
+    if (
+      formData.website &&
+      !(typeof formData.website === 'string' && formData.website.startsWith('http'))
+    ) {
       newErrors.website = 'Website must start with http:// or https://';
     }
 

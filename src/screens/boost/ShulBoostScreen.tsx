@@ -29,9 +29,9 @@ export default function ShulBoostScreen() {
           desc: 'Wheelchair access and amenities displayed.',
         },
       ]}
-      ctaLabel="Coming Soon"
+      ctaLabel="⚡ $39.99/mo Click to pay"
       onClose={() => nav.goBack()}
-      onCTAPress={() => nav.navigate('Waitlist', { type: 'shul' })}
+      onCTAPress={() => nav.navigate('PaymentInfo')}
     />
   );
 }

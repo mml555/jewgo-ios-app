@@ -149,6 +149,7 @@ export type TabParamList = {
   Favorites: undefined;
   Specials:
     | {
+        category?: string;
         businessId?: string;
         businessName?: string;
       }

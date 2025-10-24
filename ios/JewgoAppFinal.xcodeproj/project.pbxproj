@@ -29,6 +29,7 @@
 		AD0A856F2EA826BF0081D529 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.m */; };
 		AE30D1ECA1484AC49B5D896C /* Nunito-LightItalic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 3DAD072EEA834FD987CBDE5E /* Nunito-LightItalic.ttf */; };
 		D1312E0E1BA0662F53E2CBDC /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
+		D1312E0F1BA0662F53E2CBDD /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		DFA35B43240B481F858B4CD3 /* Nunito-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 35778E98D1564F4C88A4B9CD /* Nunito-SemiBold.ttf */; };
 		E0761377C6374FE0B072850A /* Nunito-ExtraLight.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 9957A348107A49009643DF90 /* Nunito-ExtraLight.ttf */; };
 /* End PBXBuildFile section */
@@ -231,6 +232,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				D1312E0E1BA0662F53E2CBDC /* PrivacyInfo.xcprivacy in Resources */,
+				D1312E0F1BA0662F53E2CBDD /* Images.xcassets in Resources */,
 				5EDF7B70C490474099BB528B /* Nunito-Italic-VariableFont_wght.ttf in Resources */,
 				0761D68732974A518B09996E /* Nunito-VariableFont_wght.ttf in Resources */,
 				2F887B30D22B4334B552C59D /* Nunito-Black.ttf in Resources */,
@@ -303,13 +305,9 @@
 			inputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-JewgoAppFinal/Pods-JewgoAppFinal-resources-${CONFIGURATION}-input-files.xcfilelist",
 			);
-			inputPaths = (
-			);
 			name = "[CP] Copy Pods Resources";
 			outputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-JewgoAppFinal/Pods-JewgoAppFinal-resources-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -324,13 +322,9 @@
 			inputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-JewgoAppFinal/Pods-JewgoAppFinal-frameworks-${CONFIGURATION}-input-files.xcfilelist",
 			);
-			inputPaths = (
-			);
 			name = "[CP] Embed Pods Frameworks";
 			outputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-JewgoAppFinal/Pods-JewgoAppFinal-frameworks-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -358,7 +352,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CLANG_CXX_LANGUAGE_STANDARD = "$(inherited)";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_MODULE_VERIFIER = NO;
@@ -408,7 +402,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CLANG_CXX_LANGUAGE_STANDARD = "$(inherited)";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -532,7 +526,10 @@
 					"-DFOLLY_CFG_NO_COROUTINES=1",
 					"-DFOLLY_HAVE_CLOCK_GETTIME=1",
 				);
-				OTHER_LDFLAGS = "$(inherited)  ";
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					" ",
+				);
 				REACT_NATIVE_PATH = "${PODS_ROOT}/../../node_modules/react-native";
 				SDKROOT = iphoneos;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -617,7 +614,10 @@
 					"-DFOLLY_CFG_NO_COROUTINES=1",
 					"-DFOLLY_HAVE_CLOCK_GETTIME=1",
 				);
-				OTHER_LDFLAGS = "$(inherited)  ";
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					" ",
+				);
 				REACT_NATIVE_PATH = "${PODS_ROOT}/../../node_modules/react-native";
 				SDKROOT = iphoneos;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;

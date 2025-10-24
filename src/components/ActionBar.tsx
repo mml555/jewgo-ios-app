@@ -14,6 +14,16 @@ import {
 } from '../styles/designSystem';
 import { useResponsiveDimensions } from '../utils/deviceAdaptation';
 
+const canonicalToLegacyCategory: Record<string, string> = {
+  restaurant: 'eatery',
+  synagogue: 'shul',
+  store: 'stores',
+};
+
+const toLegacyCategory = (category: string): string => {
+  return canonicalToLegacyCategory[category] || category;
+};
+
 interface ActionBarProps {
   onActionPress?: (action: string) => void;
   currentCategory?: string;
@@ -57,11 +67,14 @@ const ActionBar: React.FC<ActionBarProps> = ({
       if (action === 'addCategory') {
         if (currentCategory === 'mikvah') {
           (navigation as any).navigate('AddMikvah');
-        } else if (currentCategory === 'shul') {
+        } else if (
+          currentCategory === 'synagogue' ||
+          currentCategory === 'shul'
+        ) {
           (navigation as any).navigate('AddSynagogue');
         } else {
           (navigation as any).navigate('AddCategory', {
-            category: currentCategory,
+            category: toLegacyCategory(currentCategory),
           });
         }
         return;
@@ -69,16 +82,18 @@ const ActionBar: React.FC<ActionBarProps> = ({
 
       if (action === 'boost') {
         const map: Record<string, string> = {
-          mikvah: 'MikvahBoost',
+          restaurant: 'EateryBoost',
           eatery: 'EateryBoost',
-          shul: 'ShulBoost',
-          stores: 'StoreBoost',
-          specials: 'SpecialsBoost',
-          shtetl: 'StoreBoost',
           events: 'EventBoost',
-          jobs: 'JobBoost',
+          // Everything else goes to SpecialsBoost
+          mikvah: 'SpecialsBoost',
+          shul: 'SpecialsBoost',
+          stores: 'SpecialsBoost',
+          specials: 'SpecialsBoost',
+          shtetl: 'SpecialsBoost',
+          jobs: 'SpecialsBoost',
         };
-        (navigation as any).navigate(map[currentCategory] || 'EateryBoost');
+        (navigation as any).navigate(map[currentCategory] || 'SpecialsBoost');
         return;
       }
 
@@ -86,14 +101,19 @@ const ActionBar: React.FC<ActionBarProps> = ({
         if (currentCategory === 'jobs') {
           (navigation as any).navigate('JobSeeking');
         } else {
-          (navigation as any).navigate('LiveMap', {
-            category: currentCategory,
+          (navigation as any).navigate('LiveMapAll', {
+            category: toLegacyCategory(currentCategory),
           });
         }
         return;
       }
 
-      onActionPress?.(action);
+      const normalizedAction =
+        typeof action === 'string' ? action.trim() : '';
+      if (!normalizedAction) {
+        return;
+      }
+      onActionPress?.(normalizedAction);
     },
     [currentCategory, navigation, onActionPress, openFiltersModal],
   );
@@ -116,14 +136,7 @@ const ActionBar: React.FC<ActionBarProps> = ({
             },
           ]}
           onLayout={event => {
-            const { width, height, x, y } = event.nativeEvent.layout;
-            console.log('🔍 ActionBar Job Mode Layout:', {
-              width,
-              height,
-              x,
-              y,
-              isTablet,
-            });
+            // Debug logging removed to prevent console spam
           }}
         >
           <TouchableOpacity
@@ -248,14 +261,7 @@ const ActionBar: React.FC<ActionBarProps> = ({
           },
         ]}
         onLayout={event => {
-          const { width, height, x, y } = event.nativeEvent.layout;
-          console.log('🔍 ActionBar Regular Mode Layout:', {
-            width,
-            height,
-            x,
-            y,
-            isTablet,
-          });
+          // Debug logging removed to prevent console spam
         }}
       >
         <TouchableOpacity
@@ -299,7 +305,13 @@ const ActionBar: React.FC<ActionBarProps> = ({
           onPress={() => handleActionPress('boost')}
           accessible
           accessibilityRole="button"
-          accessibilityLabel={`Join ${currentCategory} Boost`}
+          accessibilityLabel={
+            currentCategory === 'events' 
+              ? 'Join Events Boost'
+              : currentCategory === 'restaurant' || currentCategory === 'eatery'
+              ? 'Join Eatery Boost'
+              : 'Join Specials Boost'
+          }
           accessibilityHint={'Tap to view premium features for this category'}
           hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
         >
@@ -309,11 +321,11 @@ const ActionBar: React.FC<ActionBarProps> = ({
             adjustsFontSizeToFit
             minimumFontScale={0.7}
           >
-            Join{' '}
-            {currentCategory === 'stores'
-              ? 'Store'
-              : getCategoryName(currentCategory)}{' '}
-            Boost
+            {currentCategory === 'events' 
+              ? 'Join Events Boost'
+              : currentCategory === 'restaurant' || currentCategory === 'eatery'
+              ? 'Join Eatery Boost'
+              : 'Join Specials Boost'}
           </Text>
           <Icon name="star" size={14} color="#FFD700" />
         </TouchableOpacity>
@@ -383,6 +395,7 @@ const ActionBar: React.FC<ActionBarProps> = ({
 function getCategoryName(key: string) {
   const map: Record<string, string> = {
     mikvah: 'Mikvah',
+    restaurant: 'Eatery',
     eatery: 'Eatery',
     shul: 'Shul',
     stores: 'Store',
@@ -400,7 +413,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginTop: StickyLayout.laneGap, // Base margin, overridden dynamically
-    marginBottom: StickyLayout.laneGap, // 8px bottom
+    marginBottom: StickyLayout.overlayGridInset, // Added breathing room below ActionBar
     paddingBottom: 0,
     backgroundColor: 'transparent',
     gap: ResponsiveSpacing.xs,
@@ -408,7 +421,7 @@ const styles = StyleSheet.create({
   },
   jobRow: {
     marginTop: StickyLayout.laneGap, // Base margin, overridden dynamically (same as default)
-    marginBottom: StickyLayout.laneGap, // 8px bottom (same as default)
+    marginBottom: StickyLayout.overlayGridInset, // Match grid spacing in job view
   },
   jobPill: {
     flex: 1,

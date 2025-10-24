@@ -29,7 +29,7 @@ export default function SpecialsBoostScreen() {
       ]}
       ctaLabel="1 special free  •  then $9.99/special"
       onClose={() => nav.goBack()}
-      onCTAPress={() => nav.navigate('Checkout', { type: 'special' })}
+      onCTAPress={() => nav.navigate('PaymentInfo')}
     />
   );
 }

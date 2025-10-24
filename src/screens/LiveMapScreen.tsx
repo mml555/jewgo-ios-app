@@ -21,6 +21,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { Region } from 'react-native-maps';
 import { useFilters } from '../hooks/useFilters';
 import FiltersModal from '../components/FiltersModal';
+import CategoryFilterChip from '../components/CategoryFilterChip';
 import Icon from '../components/Icon';
 import { Spacing, Shadows } from '../styles/designSystem';
 import { useLocation, calculateDistance } from '../hooks/useLocation';
@@ -34,6 +35,63 @@ import { getResponsiveSpacing } from '../utils/deviceAdaptation';
 // for high-performance map experience on iOS
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+
+// Category configuration shared across the screen
+const CATEGORY_CONFIG = [
+  { key: 'restaurant', label: 'Restaurant', emoji: '🍽️', color: '#FF6B6B' },
+  { key: 'synagogue', label: 'Synagogue', emoji: '🕍', color: '#4ECDC4' },
+  { key: 'mikvah', label: 'Mikvah', emoji: '🛁', color: '#45B7D1' },
+  { key: 'store', label: 'Store', emoji: '🛒', color: '#FFEAA7' },
+  { key: 'schools', label: 'Schools', emoji: '🎓', color: '#96CEB4' },
+  { key: 'services', label: 'Services', emoji: '🔧', color: '#DDA0DD' },
+  { key: 'housing', label: 'Housing', emoji: '🏠', color: '#F7DC6F' },
+  { key: 'shtetl', label: 'Shtetl', emoji: '🏘️', color: '#98D8C8' },
+  { key: 'events', label: 'Events', emoji: '🎉', color: '#FFB6C1' },
+  { key: 'jobs', label: 'Jobs', emoji: '💼', color: '#DDA0DD' },
+];
+
+const FALLBACK_CATEGORY = 'mikvah';
+
+const categoryAliases: Record<string, string> = {
+  all: FALLBACK_CATEGORY,
+  eatery: 'restaurant',
+  eateries: 'restaurant',
+  restaurant: 'restaurant',
+  restaurants: 'restaurant',
+  shul: 'synagogue',
+  synagogue: 'synagogue',
+  synagogues: 'synagogue',
+  mikvah: 'mikvah',
+  mikva: 'mikvah',
+  mikvahs: 'mikvah',
+  store: 'store',
+  stores: 'store',
+  shop: 'store',
+  shops: 'store',
+  schools: 'schools',
+  school: 'schools',
+  services: 'services',
+  service: 'services',
+  housing: 'housing',
+  homes: 'housing',
+  shtetl: 'shtetl',
+  events: 'events',
+  jobs: 'jobs',
+  job: 'jobs',
+};
+
+const normalizeCategoryKey = (category?: string | null): string => {
+  if (!category) {
+    return FALLBACK_CATEGORY;
+  }
+
+  const normalized = category.trim().toLowerCase();
+  const mapped = categoryAliases[normalized] || normalized;
+
+  return CATEGORY_CONFIG.some(item => item.key === mapped)
+    ? mapped
+    : FALLBACK_CATEGORY;
+};
 
 interface MapListing {
   id: string;
@@ -55,8 +113,7 @@ interface MapListing {
 }
 
 const LiveMapScreen: React.FC = () => {
-  debugLog('🔍 LiveMapScreen: Component mounting');
-
+  // Removed debug logging for performance
   const navigation = useNavigation();
   const route = useRoute();
   const insets = useSafeAreaInsets();
@@ -79,71 +136,48 @@ const LiveMapScreen: React.FC = () => {
   // Get current category from route params, default to 'mikvah'
   // Safely extract category from params
   const params = route.params as { category?: string } | undefined;
-  const currentCategory = params?.category || 'mikvah';
-  const [selectedCategory, setSelectedCategory] =
-    useState<string>(currentCategory);
+  const routeCategory = params?.category;
+  const initialCategory = normalizeCategoryKey(routeCategory);
+  const [selectedCategory, setSelectedCategory] = useState<string>(
+    initialCategory,
+  );
   const [selectedListing, setSelectedListing] = useState<MapListing | null>(
     null,
   );
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [showCategoryFilters, setShowCategoryFilters] = useState(false);
   const mapViewRef = useRef<NativeMapViewRef>(null);
+  const lastRouteCategoryRef = useRef(initialCategory);
 
-  // Categories configuration - matching the keys from ActionBar
-  const categories = [
-    { key: 'all', label: 'All', emoji: '📍', color: '#74e1a0' },
-    {
-      key: 'eatery',
-      label: 'Eatery',
-      emoji: '🍽️',
-      color: '#FF6B6B',
-    },
-    { key: 'shul', label: 'Shul', emoji: '🕍', color: '#4ECDC4' },
-    {
-      key: 'mikvah',
-      label: 'Mikvah',
-      emoji: '🛁',
-      color: '#45B7D1',
-    },
-    { key: 'schools', label: 'Schools', emoji: '🎓', color: '#96CEB4' },
-    {
-      key: 'stores',
-      label: 'Stores',
-      emoji: '🛒',
-      color: '#FFEAA7',
-    },
-    { key: 'services', label: 'Services', emoji: '🔧', color: '#DDA0DD' },
-    { key: 'housing', label: 'Housing', emoji: '🏠', color: '#F7DC6F' },
-    { key: 'shtetl', label: 'Shtetl', emoji: '🏘️', color: '#98D8C8' },
-    {
-      key: 'events',
-      label: 'Events',
-      emoji: '🎉',
-      color: '#FFB6C1',
-    },
-    { key: 'jobs', label: 'Jobs', emoji: '💼', color: '#DDA0DD' },
-  ];
+  // Categories configuration - matching the actual database entity types
+  const categories = CATEGORY_CONFIG;
 
-  // Get data for the current category only
+  // Load listings for the active category
+  const categoryForData = selectedCategory || FALLBACK_CATEGORY;
   const { data: allListings } = useCategoryData({
-    categoryKey: selectedCategory,
+    categoryKey: categoryForData,
     query: '',
     pageSize: 100,
   });
 
   // Debug logging
-  debugLog('🗺️ LiveMapScreen - selectedCategory:', selectedCategory);
-  debugLog('🗺️ LiveMapScreen - allListings.length:', allListings?.length || 0);
-  debugLog(
+  // Removed debug logging for performance
+  // Removed debug logging for performance
+  // Removed debug logging for performance
+  // Removed debug logging for performance
+  if (__DEV__ && Math.random() < 0.1) debugLog('🗺️ LiveMapScreen - allListings sample:', allListings?.slice(0, 3).map(item => ({ title: item.title, category: item.category })));
+  if (__DEV__ && Math.random() < 0.1) debugLog(
     '🗺️ LiveMapScreen - category found:',
     categories.find(c => c.key === selectedCategory),
   );
 
   // Convert listings to map format with coordinates - only show current category
   const mapListings: MapListing[] = useMemo(() => {
-    debugLog(
-      '🗺️ Converting listings to map format - allListings:',
-      allListings,
+    // Removed debug logging for performance
+    if (__DEV__ && Math.random() < 0.1) debugLog(
+      '🗺️ Sample listing categories:',
+      allListings?.slice(0, 5).map(item => ({ title: item.title, category: item.category }))
     );
     // Only use real data from the API for the specific category - filter out items without valid coordinates
     const converted = allListings
@@ -160,12 +194,7 @@ const LiveMapScreen: React.FC = () => {
           Number(item.longitude) <= 180;
 
         if (!hasValidCoordinates) {
-          debugLog('🔍 Filtering out item without valid coordinates:', {
-            id: item.id,
-            title: item.title,
-            latitude: item.latitude,
-            longitude: item.longitude,
-          });
+          // Removed debug logging for performance
         }
 
         return hasValidCoordinates;
@@ -174,29 +203,31 @@ const LiveMapScreen: React.FC = () => {
         id: item.id || `valid-${index}`,
         title: item.title,
         description: item.description,
-        category: item.category,
+        category: normalizeCategoryKey(item.category),
         rating: item.rating,
         distance: '0.5 mi', // Default distance since CategoryItem doesn't have distance
         latitude: Number(item.latitude),
         longitude: Number(item.longitude),
         imageUrl: item.imageUrl, // Use imageUrl from CategoryItem
       }));
-    debugLog('🗺️ Converted mapListings:', converted);
+    // Removed debug logging for performance
     return converted;
   }, [allListings]);
 
   // Filter and sort listings based on search query and global filters
   const filteredListings = useMemo(() => {
-    debugLog(
-      '🗺️ FILTERING MAP DATA - original data.length:',
-      mapListings.length,
-      'location:',
-      !!location,
-      'filters:',
-      filters,
-    );
-
+    // Removed debug logging for performance
     const filtered = mapListings.filter(listing => {
+      // Category filter - show only the selected category
+      if (selectedCategory && listing.category !== selectedCategory) {
+        return false;
+      }
+
+      // Only log occasionally to avoid spam
+      if (Math.random() < 0.1) {
+        // Removed debug logging for performance
+      }
+
       // Search filter
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase().trim();
@@ -226,20 +257,9 @@ const LiveMapScreen: React.FC = () => {
         // For testing: if distance is extremely large (like iOS simulator SF to NYC),
         // don't apply distance filter to avoid filtering out all items
         if (distance > 2000) {
-          debugLog(
-            '🗺️ DISTANCE TOO LARGE FOR FILTERING:',
-            distance,
-            'miles - skipping distance filter',
-          );
+          // Removed debug logging for performance
         } else if (distance > filters.maxDistance) {
-          debugLog(
-            '🗺️ FILTERED OUT BY DISTANCE:',
-            listing.title,
-            'distance:',
-            distance,
-            'maxDistance:',
-            filters.maxDistance,
-          );
+          // Removed debug logging for performance
           return false;
         }
       }
@@ -249,14 +269,7 @@ const LiveMapScreen: React.FC = () => {
         filters.minRating > 0 &&
         (!listing.rating || listing.rating < filters.minRating)
       ) {
-        debugLog(
-          '🗺️ FILTERED OUT BY RATING:',
-          listing.title,
-          'rating:',
-          listing.rating,
-          'minRating:',
-          filters.minRating,
-        );
+        // Removed debug logging for performance
         return false;
       }
 
@@ -265,36 +278,19 @@ const LiveMapScreen: React.FC = () => {
         filters.priceRange !== 'any' &&
         listing.price !== filters.priceRange
       ) {
-        debugLog(
-          '🗺️ FILTERED OUT BY PRICE:',
-          listing.title,
-          'price:',
-          listing.price,
-          'priceRange:',
-          filters.priceRange,
-        );
+        // Removed debug logging for performance
         return false;
       }
 
       // Open now filter
       if (filters.openNow && !listing.isOpen) {
-        debugLog(
-          '🗺️ FILTERED OUT BY OPEN NOW:',
-          listing.title,
-          'isOpen:',
-          listing.isOpen,
-        );
+        // Removed debug logging for performance
         return false;
       }
 
       // Weekend filter
       if (filters.openWeekends && !listing.openWeekends) {
-        debugLog(
-          '🗺️ FILTERED OUT BY WEEKEND:',
-          listing.title,
-          'openWeekends:',
-          listing.openWeekends,
-        );
+        // Removed debug logging for performance
         return false;
       }
 
@@ -303,7 +299,7 @@ const LiveMapScreen: React.FC = () => {
 
     // Auto-sort by distance when location is available
     if (location) {
-      debugLog('🗺️ SORTING MAP DATA BY DISTANCE - location available');
+      // Removed debug logging for performance
       filtered.sort((a, b) => {
         // If both listings have coordinates, sort by distance
         if (a.latitude && a.longitude && b.latitude && b.longitude) {
@@ -335,12 +331,9 @@ const LiveMapScreen: React.FC = () => {
       });
     }
 
-    debugLog(
-      '🗺️ FILTERED AND SORTED MAP DATA - filtered.length:',
-      filtered.length,
-    );
+    // Removed debug logging for performance
     return filtered;
-  }, [mapListings, filters, searchQuery, location]);
+  }, [mapListings, filters, searchQuery, location, selectedCategory]);
 
   // Convert listings to MapPoint format for native map
   const mapPoints: MapPoint[] = useMemo(() => {
@@ -375,6 +368,28 @@ const LiveMapScreen: React.FC = () => {
     navigation.goBack();
   }, [navigation]);
 
+  // Category filter handlers
+  const handleCategoryToggle = useCallback((categoryKey: string) => {
+    setSelectedCategory(categoryKey);
+  }, []);
+
+  const toggleCategoryFilters = useCallback(() => {
+    setShowCategoryFilters(prev => !prev);
+  }, []);
+
+  // Track changes to navigation-provided category and sync selection state when it changes
+  useEffect(() => {
+    if (!routeCategory) {
+      return;
+    }
+
+    const normalizedParam = normalizeCategoryKey(routeCategory);
+    if (normalizedParam !== lastRouteCategoryRef.current) {
+      lastRouteCategoryRef.current = normalizedParam;
+      setSelectedCategory(normalizedParam);
+    }
+  }, [routeCategory]);
+
   const handleMarkerPress = useCallback(
     (point: MapPoint) => {
       const listing = filteredListings.find(l => l.id === point.id);
@@ -407,19 +422,19 @@ const LiveMapScreen: React.FC = () => {
 
   // Map control handlers
   const handleZoomIn = useCallback(() => {
-    debugLog('🗺️ Zoom in requested');
+    // Removed debug logging for performance
     mapViewRef.current?.zoomIn();
   }, []);
 
   const handleZoomOut = useCallback(() => {
-    debugLog('🗺️ Zoom out requested');
+    // Removed debug logging for performance
     mapViewRef.current?.zoomOut();
   }, []);
 
   const handleCenterOnLocation = useCallback(async () => {
     try {
       if (permissionGranted && location) {
-        debugLog('🗺️ Centering on user location:', location);
+        // Removed debug logging for performance
         mapViewRef.current?.centerOnLocation();
       } else {
         await getCurrentLocation();
@@ -429,7 +444,7 @@ const LiveMapScreen: React.FC = () => {
         }
       }
     } catch (error) {
-      debugLog('🗺️ Error centering on location:', error);
+      // Removed debug logging for performance
       Alert.alert(
         'Location Error',
         'Unable to get your current location. Please check your location settings.',
@@ -440,40 +455,26 @@ const LiveMapScreen: React.FC = () => {
 
   // Auto-request location permission on mount to trigger native iOS popup
   useEffect(() => {
-    debugLog(
-      '🔍 LiveMapScreen: useEffect triggered - permissionGranted:',
-      permissionGranted,
-      'locationLoading:',
-      locationLoading,
-    );
-
+    // Removed debug logging for performance
     const requestPermission = async () => {
-      debugLog('🔍 LiveMapScreen: requestPermission called');
+      // Removed debug logging for performance
       if (!permissionGranted && !locationLoading) {
-        debugLog('🔍 LiveMapScreen: Requesting location permission...');
+        // Removed debug logging for performance
         try {
           const result = await requestLocationPermission();
-          debugLog('🔍 LiveMapScreen: Permission request result:', result);
+          // Removed debug logging for performance
         } catch (error) {
-          debugLog(
-            '🔍 LiveMapScreen: Error requesting location permission:',
-            error,
-          );
+          // Removed debug logging for performance
         }
       } else {
-        debugLog(
-          '🔍 LiveMapScreen: Skipping permission request - permissionGranted:',
-          permissionGranted,
-          'locationLoading:',
-          locationLoading,
-        );
+        // Removed debug logging for performance
       }
     };
 
     // Small delay to ensure component is fully mounted
     const timer = setTimeout(requestPermission, 500);
     return () => {
-      debugLog('🔍 LiveMapScreen: Cleaning up timer');
+      // Removed debug logging for performance
       clearTimeout(timer);
     };
   }, [permissionGranted, locationLoading, requestLocationPermission]);
@@ -481,7 +482,7 @@ const LiveMapScreen: React.FC = () => {
   // Cleanup effect
   useEffect(() => {
     return () => {
-      debugLog('🔍 LiveMapScreen: Component unmounting');
+      // Removed debug logging for performance
     };
   }, []);
 
@@ -539,6 +540,48 @@ const LiveMapScreen: React.FC = () => {
         </View>
       </View>
 
+      {/* Category Filter Toggle Button */}
+      <View style={styles.categoryFilterContainer}>
+        <TouchableOpacity
+          style={styles.categoryFilterToggle}
+          onPress={toggleCategoryFilters}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel="Toggle category filters"
+          accessibilityHint="Tap to show or hide category filter options"
+        >
+          <Icon name="filter" size={16} color="#666" />
+          <Text style={styles.categoryFilterToggleText}>
+            {categories.find(c => c.key === selectedCategory)?.label ?? 'All Categories'}
+          </Text>
+          <Icon 
+            name={showCategoryFilters ? "chevron-left" : "chevron-right"} 
+            size={14} 
+            color="#666" 
+          />
+        </TouchableOpacity>
+      </View>
+
+      {/* Category Filter Chips */}
+      {showCategoryFilters && (
+        <View style={styles.categoryFilterChips}>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.categoryChipsContainer}
+          >
+            {categories.map(category => (
+              <CategoryFilterChip
+                key={category.key}
+                category={category}
+                isActive={category.key === selectedCategory}
+                onPress={handleCategoryToggle}
+              />
+            ))}
+          </ScrollView>
+        </View>
+      )}
+
       {/* Header - Back button and banner below search bar */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={handleBackPress}>
@@ -547,11 +590,10 @@ const LiveMapScreen: React.FC = () => {
 
         <View style={styles.headerContent}>
           <Text style={styles.headerTitle}>
-            {selectedCategory === 'all'
-              ? 'Live Map'
-              : `${
-                  categories.find(c => c.key === selectedCategory)?.label
-                } Map`}
+            {`${
+              categories.find(c => c.key === selectedCategory)?.label ||
+              'Live'
+            } Map`}
           </Text>
           <Text style={styles.headerSubtitle}>
             {filteredListings.length} places found
@@ -857,7 +899,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     marginHorizontal: 16,
     width: screenWidth - 32,
-    maxHeight: screenHeight * 0.6,
+    maxHeight: screenHeight * 0.75,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.25,
@@ -885,11 +927,11 @@ const styles = StyleSheet.create({
   },
   popupTag: {
     position: 'absolute',
-    top: 12,
-    left: 12,
+    top: 16,
+    left: 16,
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderRadius: 8,
   },
   popupTagText: {
@@ -913,13 +955,13 @@ const styles = StyleSheet.create({
     color: '#FF6B6B',
   },
   popupContent: {
-    padding: 16,
+    padding: 24,
   },
   popupHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   popupTitleRow: {
     flexDirection: 'row',
@@ -949,7 +991,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 16,
+    marginBottom: 20,
   },
   popupDescription: {
     fontSize: 14,
@@ -983,8 +1025,8 @@ const styles = StyleSheet.create({
   },
   popupCloseButton: {
     position: 'absolute',
-    top: 12,
-    right: 12,
+    top: 16,
+    right: 16,
     width: 32,
     height: 32,
     borderRadius: 16,
@@ -1093,6 +1135,42 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666666',
     fontWeight: '500',
+  },
+  // Category Filter Styles
+  categoryFilterContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5EA',
+  },
+  categoryFilterToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#F2F2F7',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+  },
+  categoryFilterToggleText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#292b2d',
+    flex: 1,
+    marginLeft: 8,
+  },
+  categoryFilterChips: {
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5EA',
+    paddingVertical: 12,
+  },
+  categoryChipsContainer: {
+    paddingHorizontal: 16,
+    paddingRight: 16,
   },
   // Map Controls Styles
   mapControls: {

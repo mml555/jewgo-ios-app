@@ -6,6 +6,12 @@ const router = express.Router();
 // GET /api/v5/specials - Get all specials
 router.get('/', SpecialsController.getAllSpecials);
 
+// DEBUG: GET /api/v5/specials/debug - Debug endpoint (must be before /:id route)
+router.get('/debug', SpecialsController.debugSpecials);
+
+// SIMPLE: GET /api/v5/specials/simple - Simple endpoint with mock data (must be before /:id route)
+router.get('/simple', SpecialsController.getSimpleSpecials);
+
 // GET /api/v5/specials/active - Get active specials (must be before /:id route)
 router.get('/active', SpecialsController.getActiveSpecials);
 

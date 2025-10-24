@@ -45,8 +45,8 @@ class EntityControllerNormalized {
           e.review_count,
           e.is_verified,
           e.is_active,
-          r.kosher_level,
-          r.kosher_certification,
+          ef.kosher_type,
+          ef.hechsher,
           ef.price_min,
           ef.price_max,
           ef.price_range,
@@ -54,8 +54,7 @@ class EntityControllerNormalized {
           e.updated_at,
           u.first_name as owner_first_name,
           u.last_name as owner_last_name
-        FROM entities_normalized e
-        LEFT JOIN restaurants_normalized r ON e.id = r.entity_id
+        FROM entities e
         LEFT JOIN eatery_fields ef ON e.id = ef.entity_id
         LEFT JOIN users u ON e.owner_id = u.id
         WHERE e.is_active = true
@@ -95,17 +94,17 @@ class EntityControllerNormalized {
         params.push(isVerified === 'true');
       }
 
-      // NEW: Dietary type filter (kosher_level now contains meat/dairy/parve)
+      // NEW: Dietary type filter (kosher_type now contains meat/dairy/parve)
       if (kosherLevel) {
         paramCount++;
-        query += ` AND e.kosher_level = $${paramCount}`;
+        query += ` AND ef.kosher_type = $${paramCount}`;
         params.push(kosherLevel);
       }
 
       // NEW: Hechsher certification filter
       if (kosherCertification) {
         paramCount++;
-        query += ` AND e.kosher_certification = $${paramCount}`;
+        query += ` AND ef.hechsher = $${paramCount}`;
         params.push(kosherCertification);
       }
 
@@ -299,32 +298,37 @@ class EntityControllerNormalized {
       switch (entityType) {
         case 'mikvah':
           specializedQuery =
-            'SELECT * FROM mikvahs_normalized WHERE entity_id = $1';
+            'SELECT * FROM mikvah_fields WHERE entity_id = $1';
           break;
         case 'synagogue':
           specializedQuery =
-            'SELECT * FROM synagogues_normalized WHERE entity_id = $1';
+            'SELECT * FROM synagogue_fields WHERE entity_id = $1';
           break;
         case 'restaurant':
           specializedQuery = `
             SELECT 
-              r.*,
               ef.price_min,
               ef.price_max,
               ef.price_range,
               ef.kosher_type,
               ef.hechsher,
               ef.kosher_tags,
-              ef.short_description,
               ef.amenities
-            FROM restaurants_normalized r
-            LEFT JOIN eatery_fields ef ON r.entity_id = ef.entity_id
-            WHERE r.entity_id = $1
+            FROM eatery_fields ef
+            WHERE ef.entity_id = $1
           `;
           break;
         case 'store':
           specializedQuery =
-            'SELECT * FROM stores_normalized WHERE entity_id = $1';
+            'SELECT * FROM store_fields WHERE entity_id = $1';
+          break;
+        case 'event':
+          specializedQuery =
+            'SELECT * FROM event_fields WHERE entity_id = $1';
+          break;
+        case 'job':
+          specializedQuery =
+            'SELECT * FROM job_fields WHERE entity_id = $1';
           break;
         default:
           return {};

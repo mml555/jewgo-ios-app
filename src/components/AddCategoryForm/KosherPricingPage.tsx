@@ -212,7 +212,7 @@ const KosherPricingPage: React.FC<KosherPricingPageProps> = memo(
                   style={styles.priceInput}
                   value={formData.price_min?.toString() || ''}
                   onChangeText={value =>
-                    handleInputChange('price_min', parseFloat(value) || 0)
+                    handleInputChange('price_min', value)
                   }
                   placeholder="e.g., 5"
                   keyboardType="numeric"
@@ -226,7 +226,7 @@ const KosherPricingPage: React.FC<KosherPricingPageProps> = memo(
                   style={styles.priceInput}
                   value={formData.price_max?.toString() || ''}
                   onChangeText={value =>
-                    handleInputChange('price_max', parseFloat(value) || 0)
+                    handleInputChange('price_max', value)
                   }
                   placeholder="e.g., 20"
                   keyboardType="numeric"

@@ -24,9 +24,9 @@ class Logger {
 
   constructor(
     config: LoggerConfig = {
-      level: __DEV__ ? LogLevel.DEBUG : LogLevel.WARN,
+      level: __DEV__ ? LogLevel.WARN : LogLevel.ERROR, // Reduced logging in dev
       enableConsole: __DEV__,
-      maxMessages: 1000,
+      maxMessages: 100, // Reduced from 1000 to 100
     },
   ) {
     this.config = config;
@@ -171,13 +171,19 @@ export const logNavigation = logger.navigation.bind(logger);
 export const logUserAction = logger.userAction.bind(logger);
 export const logPerformance = logger.performance.bind(logger);
 
-// Direct logging helpers - no double filtering
+// Direct logging helpers - optimized for production
 export const debugLog = (message: string, ...args: any[]) => {
-  logger.debug(message, ...args);
+  // Only log debug in development and with throttling
+  if (__DEV__ && Math.random() < 0.1) { // Only 10% of debug logs
+    logger.debug(message, ...args);
+  }
 };
 
 export const infoLog = (message: string, ...args: any[]) => {
-  logger.info(message, ...args);
+  // Throttle info logs to prevent spam
+  if (Math.random() < 0.5) { // Only 50% of info logs
+    logger.info(message, ...args);
+  }
 };
 
 export const warnLog = (message: string, ...args: any[]) => {

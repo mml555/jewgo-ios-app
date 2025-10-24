@@ -34,9 +34,9 @@ interface Category {
 
 const CATEGORIES: Category[] = [
   { id: 'mikvah', name: 'Mikvah', iconName: 'pool' },
-  { id: 'eatery', name: 'Eatery', iconName: 'restaurant' },
-  { id: 'shul', name: 'Shul', iconName: 'synagogue' },
-  { id: 'stores', name: 'Stores', iconName: 'shopping-bag' },
+  { id: 'restaurant', name: 'Eatery', iconName: 'restaurant' },
+  { id: 'synagogue', name: 'Synagogue', iconName: 'synagogue' },
+  { id: 'store', name: 'Store', iconName: 'shopping-bag' },
   { id: 'specials', name: 'Specials', iconName: 'gift' },
   { id: 'shtetl', name: 'Shtetl', iconName: 'users' },
   { id: 'events', name: 'Events', iconName: 'calendar' },
@@ -132,20 +132,7 @@ const CategoryRail: React.FC<CategoryRailProps> = ({
     Math.floor((availableWidth - totalSpacing) / CATEGORIES.length), // Fill available space
   );
 
-  // Debug logging for responsive chip width calculation
-  if (__DEV__) {
-    console.log('🔍 CategoryRail Responsive Debug:', {
-      screenWidth,
-      availableWidth,
-      totalSpacing,
-      calculatedWidth: Math.floor(
-        (availableWidth - totalSpacing) / CATEGORIES.length,
-      ),
-      responsiveChipWidth,
-      isTablet,
-      categoriesCount: CATEGORIES.length,
-    });
-  }
+  // Debug logging removed to prevent console spam
   const responsiveChipSpacing = isTablet ? 16 : CHIP_SPACING; // More spacing on iPad
   const responsiveChipHeight = isTablet ? 100 : 80; // Taller buttons on iPad
   const responsiveTopMargin = isTablet ? 16 : StickyLayout.laneGap; // More space on iPad
@@ -185,9 +172,6 @@ const CategoryRail: React.FC<CategoryRailProps> = ({
 
     // Adjust for scroll offset
     const finalX = PixelRatio.roundToNearestPixel(x - scrollOffset);
-    console.log(
-      `Indicator position: activeIndex=${activeIndex}, x=${finalX}, scrollOffset=${scrollOffset}, category=${CATEGORIES[activeIndex]?.name}`,
-    );
 
     return finalX;
   }, [

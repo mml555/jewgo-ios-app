@@ -28,7 +28,7 @@ export default function EventBoostScreen() {
       ]}
       ctaLabel="$39.99 per event  •  Get started"
       onClose={() => nav.goBack()}
-      onCTAPress={() => nav.navigate('Checkout', { type: 'event' })}
+      onCTAPress={() => nav.navigate('PaymentInfo')}
     />
   );
 }

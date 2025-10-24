@@ -301,9 +301,8 @@ class ApiV5Service {
     }
 
     const queryString = queryParams.toString();
-    // Convert singular entity types to plural for the API endpoints
-    const pluralEntityType = entityType + 's';
-    const endpoint = `/${pluralEntityType}${
+    // Entity type is already plural, use it directly
+    const endpoint = `/${entityType}${
       queryString ? `?${queryString}` : ''
     }`;
 

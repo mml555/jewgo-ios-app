@@ -271,30 +271,12 @@ export const getGridColumns = (): number => {
       columns = landscape ? 4 : 3; // Increased from 3/2 to 4/3
     }
 
-    if (__DEV__) {
-      console.log('🔍 getGridColumns Debug (Tablet):', {
-        deviceType,
-        landscape,
-        screenWidth: width,
-        screenHeight,
-        aspectRatio: screenHeight / width,
-        columns,
-      });
-    }
+    // Debug logging removed to prevent console spam
     return columns;
   }
 
   // All mobile phones get 2 columns
-  if (__DEV__) {
-    console.log('🔍 getGridColumns Debug (Phone):', {
-      deviceType,
-      landscape,
-      screenWidth: width,
-      screenHeight,
-      aspectRatio: screenHeight / width,
-      columns: 2,
-    });
-  }
+  // Debug logging removed to prevent console spam
   return 2;
 };
 
@@ -313,10 +295,7 @@ export const getGridCardDimensions = (
   // Adjust gap for tablets to ensure better distribution, but keep padding consistent with headers
   const adjustedHorizontalPadding = horizontalPadding; // Use the passed padding to match headers
 
-  const adjustedCardGap =
-    deviceType === DeviceType.TABLET
-      ? Math.max(cardGap, 16) // Increased gap for better spacing with 4 larger cards
-      : cardGap;
+  const adjustedCardGap = cardGap; // Use consistent gap across all devices
 
   // Use total horizontal padding (both sides)
   const availableWidth = width - adjustedHorizontalPadding;
@@ -329,20 +308,7 @@ export const getGridCardDimensions = (
   const minCardWidth = deviceType === DeviceType.TABLET ? 180 : 150;
   const finalCardWidth = Math.max(cardWidth, minCardWidth);
 
-  if (__DEV__) {
-    console.log('🔍 getGridCardDimensions Debug:', {
-      screenWidth: width,
-      deviceType,
-      horizontalPadding: adjustedHorizontalPadding,
-      cardGap: adjustedCardGap,
-      columns,
-      availableWidth,
-      totalGapWidth,
-      cardWidth,
-      finalCardWidth,
-      imageHeight: finalCardWidth / aspectRatio,
-    });
-  }
+  // Debug logging removed to prevent console spam
 
   return {
     columns,

@@ -5,7 +5,7 @@ export function isOpenNow(operatingHours?: BusinessHours): boolean {
   if (!operatingHours) return false;
   
   const now = new Date();
-  const currentDay = now.toLocaleLowerCase().substring(0, 3); // 'mon', 'tue', etc.
+  const currentDay = now.toLocaleDateString('en-US', { weekday: 'short' }).toLowerCase(); // 'mon', 'tue', etc.
   const currentTime = now.getHours() * 100 + now.getMinutes(); // HHMM format
   
   const todayHours = operatingHours[currentDay];

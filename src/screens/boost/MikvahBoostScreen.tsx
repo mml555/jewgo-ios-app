@@ -29,9 +29,9 @@ export default function MikvahBoostScreen() {
           desc: 'Higher placement on the map near users.',
         },
       ]}
-      ctaLabel="Coming Soon"
+      ctaLabel="⚡ $49.99/mo Click to pay"
       onClose={() => nav.goBack()}
-      onCTAPress={() => nav.navigate('Waitlist', { type: 'mikvah' })}
+      onCTAPress={() => nav.navigate('PaymentInfo')}
     />
   );
 }

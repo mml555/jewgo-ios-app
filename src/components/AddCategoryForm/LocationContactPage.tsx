@@ -103,7 +103,10 @@ const LocationContactPage: React.FC<LocationContactPageProps> = ({
   const handleWebsiteChange = useCallback(
     (text: string) => {
       // Auto-add https:// if not present
-      if (text && !text.startsWith('http://') && !text.startsWith('https://')) {
+      if (
+        text &&
+        !(typeof text === 'string' && (text.startsWith('http://') || text.startsWith('https://')))
+      ) {
         text = 'https://' + text;
       }
       handleInputChange('website', text);

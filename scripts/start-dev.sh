@@ -180,7 +180,7 @@ start_metro() {
     
     # Start Metro bundler in background
     print_status "Starting Metro bundler on port 8081..."
-    npx react-native start > logs/metro.log 2>&1 &
+    npx metro start > logs/metro.log 2>&1 &
     METRO_PID=$!
     
     # Save PID for cleanup

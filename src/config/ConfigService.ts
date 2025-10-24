@@ -40,7 +40,13 @@ export class ConfigService {
   private loadConfig(): EnvironmentConfig {
     // Load API URL from environment variable
     // Make sure .env file is configured with the correct API_BASE_URL
-    const apiBaseUrl = API_BASE_URL;
+    let apiBaseUrl = API_BASE_URL;
+
+    // Override API URL for development if it's pointing to a remote server
+    if (__DEV__ && apiBaseUrl && apiBaseUrl.includes('192.168.40.237')) {
+      apiBaseUrl = 'http://localhost:3001/api/v5';
+      debugLog('🔧 Overriding API URL for development:', apiBaseUrl);
+    }
 
     // Validate and log the API URL being used
     if (!apiBaseUrl) {

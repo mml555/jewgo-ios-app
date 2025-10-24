@@ -52,13 +52,9 @@ import JobSeekerProfilesScreen from '../screens/jobs/JobSeekerProfilesScreen';
 import JobSeekerDetailScreenV2 from '../screens/jobs/JobSeekerDetailScreen';
 import CreateJobSeekerProfileScreen from '../screens/jobs/CreateJobSeekerProfileScreen';
 // Boost screens
-import MikvahBoostScreen from '../screens/boost/MikvahBoostScreen';
 import EateryBoostScreen from '../screens/boost/EateryBoostScreen';
-import ShulBoostScreen from '../screens/boost/ShulBoostScreen';
-import StoreBoostScreen from '../screens/boost/StoreBoostScreen';
 import SpecialsBoostScreen from '../screens/boost/SpecialsBoostScreen';
 import EventBoostScreen from '../screens/boost/EventBoostScreen';
-import JobBoostScreen from '../screens/boost/JobBoostScreen';
 
 const Stack = createStackNavigator<AppStackParamList>();
 
@@ -182,13 +178,9 @@ const AppNavigator: React.FC = () => {
       <Stack.Screen name="ReviewQueue" component={ReviewQueueScreen} />
       <Stack.Screen name="FlaggedContent" component={FlaggedContentScreen} />
       {/* Boost Screens */}
-      <Stack.Screen name="MikvahBoost" component={MikvahBoostScreen} />
       <Stack.Screen name="EateryBoost" component={EateryBoostScreen} />
-      <Stack.Screen name="ShulBoost" component={ShulBoostScreen} />
-      <Stack.Screen name="StoreBoost" component={StoreBoostScreen} />
       <Stack.Screen name="SpecialsBoost" component={SpecialsBoostScreen} />
       <Stack.Screen name="EventBoost" component={EventBoostScreen} />
-      <Stack.Screen name="JobBoost" component={JobBoostScreen} />
     </Stack.Navigator>
   );
 };

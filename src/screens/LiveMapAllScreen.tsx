@@ -22,14 +22,50 @@ import {
   State,
 } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { Region } from 'react-native-maps';
 import { useFilters } from '../hooks/useFilters';
 import FiltersModal from '../components/FiltersModal';
 import Icon from '../components/Icon';
 import { Spacing, Shadows, BorderRadius } from '../styles/designSystem';
+import { getDietaryLabel } from '../utils/eateryHelpers';
+
+// Map old kosher level format to new dietary format
+const mapKosherLevelToDietary = (kosherLevel?: string, category?: string): 'meat' | 'dairy' | 'parve' | undefined => {
+  // Debug logging
+  if (__DEV__) {
+    console.log('🔍 mapKosherLevelToDietary called:', {
+      kosherLevel,
+      category,
+      isEateryCategory: category?.toLowerCase().includes('eatery') || category?.toLowerCase().includes('restaurant')
+    });
+  }
+  
+  // Only process eatery/restaurant categories
+  if (category?.toLowerCase().includes('eatery') || category?.toLowerCase().includes('restaurant')) {
+    if (kosherLevel) {
+      // Map specific kosher levels to dietary types
+      const lowerKosherLevel = kosherLevel.toLowerCase();
+      if (lowerKosherLevel.includes('meat') || lowerKosherLevel === 'glatt') {
+        return 'meat';
+      }
+      if (lowerKosherLevel.includes('dairy') || lowerKosherLevel.includes('chalav')) {
+        return 'dairy';
+      }
+      if (lowerKosherLevel.includes('parve') || lowerKosherLevel.includes('pas')) {
+        return 'parve';
+      }
+    }
+    
+    // Default to parve for eateries without specific kosher level
+    return 'parve';
+  }
+  
+  // For non-eateries, default to parve
+  return 'parve';
+};
 import { useLocation } from '../hooks/useLocation';
-import { useCategoryData } from '../hooks/useCategoryData';
+import { useCategoryData, CategoryItem } from '../hooks/useCategoryData';
 import { debugLog } from '../utils/logger';
 import { NativeMapView, NativeMapViewRef } from '../features/map/NativeMapView';
 import { MapPoint } from '../features/map/types';
@@ -55,16 +91,19 @@ interface MapListing {
   city?: string;
   state?: string;
   zip_code?: string;
+  kosher_level?: 'meat' | 'dairy' | 'parve';
+  kosherLevel?: 'glatt' | 'chalav-yisrael' | 'pas-yisrael';
 }
 
 const LiveMapAllScreen: React.FC = () => {
-  debugLog('🔍 LiveMapAllScreen: Component mounting');
-  debugLog(
-    '🔍 LiveMapAllScreen: Component mounting - this should appear in logs',
-  );
 
   const navigation = useNavigation();
+  const route = useRoute();
   const insets = useSafeAreaInsets();
+  
+  // Get category parameter from route
+  const routeParams = route.params as { category?: string } | undefined;
+  const initialCategory = routeParams?.category || 'all';
 
   const {
     filters,
@@ -82,16 +121,17 @@ const LiveMapAllScreen: React.FC = () => {
     loading: locationLoading,
   } = useLocation();
 
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory);
   const [selectedListing, setSelectedListing] = useState<MapListing | null>(
     null,
   );
   const [currentEntityIndex, setCurrentEntityIndex] = useState<number>(0);
+  const lastRouteCategoryRef = useRef(initialCategory);
 
   // Reduced debug logging for performance
   useEffect(() => {
     if (__DEV__ && selectedListing) {
-      console.log('🔍 selectedListing:', selectedListing.title);
+
     }
   }, [selectedListing]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -225,11 +265,21 @@ const LiveMapAllScreen: React.FC = () => {
       ...(jobsData.data || []),
     ];
 
+    // Remove duplicates by ID to prevent duplicate keys in map markers
+    const uniqueMap = new Map<string, CategoryItem>();
+    combined.forEach(item => {
+      if (!uniqueMap.has(item.id)) {
+        uniqueMap.set(item.id, item);
+      }
+    });
+
+    const uniqueListings = Array.from(uniqueMap.values());
+
     // Reduced logging for performance
-    if (__DEV__ && combined.length > 0) {
-      console.log('🔍 All listings:', combined.length);
+    if (__DEV__ && uniqueListings.length > 0) {
+
     }
-    return combined;
+    return uniqueListings;
   }, [
     eateryData.data,
     shulData.data,
@@ -262,14 +312,6 @@ const LiveMapAllScreen: React.FC = () => {
 
   // Convert listings to map format with coordinates
   const mapListings: MapListing[] = useMemo(() => {
-    console.log(
-      '🔍 Converting allListings to mapListings - allListings.length:',
-      allListings.length,
-    );
-    debugLog(
-      '🗺️ Converting all listings to map format - count:',
-      allListings.length,
-    );
 
     const converted = allListings
       .filter(item => {
@@ -285,12 +327,7 @@ const LiveMapAllScreen: React.FC = () => {
           Number(item.longitude) <= 180;
 
         if (!hasValidCoordinates) {
-          console.log('🔍 Filtering out item without valid coordinates:', {
-            id: item.id,
-            title: item.title,
-            latitude: item.latitude,
-            longitude: item.longitude,
-          });
+
         }
 
         return hasValidCoordinates;
@@ -306,29 +343,45 @@ const LiveMapAllScreen: React.FC = () => {
           latitude: Number(item.latitude),
           longitude: Number(item.longitude),
           imageUrl: item.imageUrl || undefined,
+          address: item.address,
+          city: item.city,
+          state: item.state,
+          zip_code: item.zip_code,
+          price: item.price,
+          kosher_level: item.kosher_level,
+          kosherLevel: item.kosherLevel,
         };
       });
 
-    console.log('🔍 Converted mapListings:', converted.length);
-    debugLog('🗺️ Converted mapListings:', converted.length);
     return converted;
   }, [allListings]);
 
   // Filter listings based on selected category, search query, and filters
   const filteredListings = useMemo(() => {
-    console.log(
-      `🔍 Starting filter process - mapListings: ${
-        mapListings.length
-      }, location: ${location ? 'available' : 'not available'}, maxDistance: ${
-        filters.maxDistance
-      }`,
-    );
-    console.log('🔍 Filter values:', filters);
 
     let filtered = mapListings.filter(listing => {
-      // Category filter
-      if (selectedCategory !== 'all' && listing.category !== selectedCategory) {
-        return false;
+      // Category filter - handle mapping between UI categories and API categories
+      if (selectedCategory !== 'all') {
+        // Map UI category keys to API category names
+        const categoryMapping: Record<string, string> = {
+          'eatery': 'restaurant',
+          'shul': 'synagogue', 
+          'mikvah': 'mikvah',
+          'stores': 'store',
+          'schools': 'schools',
+          'services': 'services', 
+          'housing': 'housing',
+          'shtetl': 'shtetl',
+          'events': 'events',
+          'jobs': 'jobs'
+        };
+        
+        const expectedCategory = categoryMapping[selectedCategory] || selectedCategory;
+
+        if (listing.category !== expectedCategory) {
+
+          return false;
+        }
       }
 
       // Search query filter
@@ -423,36 +476,56 @@ const LiveMapAllScreen: React.FC = () => {
     console.log(
       `🔍 Filter process complete - filtered: ${filtered.length} (from ${mapListings.length})`,
     );
-    debugLog(
-      '🗺️ FILTERED AND SORTED MAP DATA - filtered.length:',
-      filtered.length,
-    );
+
     return filtered;
   }, [mapListings, filters, searchQuery, location, selectedCategory]);
 
   // Convert listings to MapPoint format for native map
   const mapPoints: MapPoint[] = useMemo(() => {
-    console.log(
-      '🔍 Converting filteredListings to mapPoints - filteredListings.length:',
-      filteredListings.length,
-    );
 
-    const points = filteredListings.map(listing => ({
-      id: listing.id,
-      latitude: listing.latitude,
-      longitude: listing.longitude,
-      rating: listing.rating || null,
-      title: listing.title,
-      description: listing.description,
-      category: listing.category,
-      imageUrl: listing.imageUrl,
-      address: listing.address,
-      city: listing.city,
-      state: listing.state,
-      zip_code: listing.zip_code,
-    }));
+    // Create a Map to ensure unique entries by ID
+    const uniqueMap = new Map<string, MapPoint>();
+    
+    filteredListings.forEach(listing => {
+      // Only add if we don't already have this ID
+      if (!uniqueMap.has(listing.id)) {
+        const mappedKosherLevel = mapKosherLevelToDietary(listing.kosherLevel, listing.category);
+        const finalKosherLevel = listing.kosher_level || mappedKosherLevel;
+        
+        // Debug logging for map points
+        if (__DEV__) {
+          console.log('🔍 Map point creation:', {
+            id: listing.id,
+            title: listing.title,
+            category: listing.category,
+            kosherLevel: listing.kosherLevel,
+            kosher_level: listing.kosher_level,
+            mappedKosherLevel,
+            finalKosherLevel,
+            isEatery: listing.category?.toLowerCase().includes('eatery') || listing.category?.toLowerCase().includes('restaurant')
+          });
+        }
+        
+        uniqueMap.set(listing.id, {
+          id: listing.id,
+          latitude: listing.latitude,
+          longitude: listing.longitude,
+          rating: listing.rating || null,
+          title: listing.title,
+          description: listing.description,
+          category: listing.category,
+          imageUrl: listing.imageUrl,
+          address: listing.address,
+          city: listing.city,
+          state: listing.state,
+          zip_code: listing.zip_code,
+          kosher_level: finalKosherLevel,
+        });
+      }
+    });
 
-    console.log('🔍 Final mapPoints:', points.length);
+    const points = Array.from(uniqueMap.values());
+
     return points;
   }, [filteredListings]);
 
@@ -471,55 +544,6 @@ const LiveMapAllScreen: React.FC = () => {
     // Navigate back to the main tabs instead of going back to LiveMapTabComponent
     (navigation as any).navigate('MainTabs');
   }, [navigation]);
-
-  const handleMarkerPress = useCallback(
-    (point: MapPoint) => {
-      console.log('🔍 handleMarkerPress called with point:', point);
-
-      const listing = filteredListings.find(l => l.id === point.id);
-      if (listing) {
-        console.log('🔍 Found listing in filteredListings:', listing);
-        setSelectedListing(listing);
-      } else {
-        console.log('🔍 No listing found for marker press, skipping');
-      }
-
-      // After setting the selected listing, find its index in nearby entities
-      // This will be used for swipe navigation
-      setTimeout(() => {
-        const nearbyPoints = getNearbyEntities();
-        const pointIndex = nearbyPoints.findIndex(p => p.id === point.id);
-        console.log(
-          '🔍 Found point index:',
-          pointIndex,
-          'in nearby points:',
-          nearbyPoints.length,
-        );
-        setCurrentEntityIndex(pointIndex >= 0 ? pointIndex : 0);
-      }, 0);
-    },
-    [filteredListings, getNearbyEntities],
-  );
-
-  const handleClosePopup = useCallback(() => {
-    setSelectedListing(null);
-  }, []);
-
-  const handleViewDetails = useCallback(
-    (listing: MapListing) => {
-      console.log('🔍 Navigating to ListingDetail with:', {
-        itemId: listing.id,
-        categoryKey: listing.category,
-        title: listing.title,
-      });
-      (navigation as any).navigate('ListingDetail', {
-        itemId: listing.id,
-        categoryKey: listing.category,
-      });
-      setSelectedListing(null);
-    },
-    [navigation],
-  );
 
   // Get nearby entities within 15 miles of the current selection
   const getNearbyEntities = useCallback(() => {
@@ -549,58 +573,141 @@ const LiveMapAllScreen: React.FC = () => {
       return distance <= maxDistance;
     });
 
-    console.log(
-      `🔍 Found ${nearbyPoints.length} entities within ${maxDistance} miles of ${selectedListing.title}`,
-    );
     return nearbyPoints;
   }, [selectedListing, mapPoints]);
 
+  const handleMarkerPress = useCallback(
+    (point: MapPoint) => {
+
+      const listing = filteredListings.find(l => l.id === point.id);
+      if (listing) {
+
+        setSelectedListing(listing);
+      } else {
+
+      }
+
+      // After setting the selected listing, find its index in nearby entities
+      // This will be used for swipe navigation
+      setTimeout(() => {
+        const nearbyPoints = getNearbyEntities();
+        const pointIndex = nearbyPoints.findIndex(p => p.id === point.id);
+
+        setCurrentEntityIndex(pointIndex >= 0 ? pointIndex : 0);
+      }, 0);
+    },
+    [filteredListings, getNearbyEntities],
+  );
+
+  const handleClosePopup = useCallback(() => {
+    setSelectedListing(null);
+  }, []);
+
+  const handleViewDetails = useCallback(
+    (listing: MapListing) => {
+
+      (navigation as any).navigate('ListingDetail', {
+        itemId: listing.id,
+        categoryKey: listing.category,
+      });
+      setSelectedListing(null);
+    },
+    [navigation],
+  );
+
+  // Helper function to calculate optimal region for nearby points
+  const calculateOptimalRegion = useCallback((points: any[]) => {
+    if (points.length === 0) return null;
+
+    if (points.length === 1) {
+      // Single point - use focused zoom
+      return {
+        latitude: points[0].latitude,
+        longitude: points[0].longitude,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      };
+    }
+
+    // Multiple points - calculate bounds to show all
+    const latitudes = points.map(p => p.latitude);
+    const longitudes = points.map(p => p.longitude);
+
+    const minLat = Math.min(...latitudes);
+    const maxLat = Math.max(...latitudes);
+    const minLng = Math.min(...longitudes);
+    const maxLng = Math.max(...longitudes);
+
+    // Calculate center
+    const centerLat = (minLat + maxLat) / 2;
+    const centerLng = (minLng + maxLng) / 2;
+
+    // Calculate deltas
+    const latDelta = Math.max(maxLat - minLat, 0.01);
+    const lngDelta = Math.max(maxLng - minLng, 0.01);
+
+    // If pins are very close together (small deltas), zoom in more
+    // If pins are far apart, zoom out to show all
+    const isCloseTogether = latDelta < 0.02 && lngDelta < 0.02; // Less than ~1 mile apart
+    
+    if (isCloseTogether) {
+      // Pins are close together - zoom in for detail
+      return {
+        latitude: centerLat,
+        longitude: centerLng,
+        latitudeDelta: 0.005, // Zoomed in
+        longitudeDelta: 0.005, // Zoomed in
+      };
+    } else {
+      // Pins are spread out - show all with minimal padding
+      return {
+        latitude: centerLat,
+        longitude: centerLng,
+        latitudeDelta: latDelta * 1.1, // Minimal padding
+        longitudeDelta: lngDelta * 1.1, // Minimal padding
+      };
+    }
+  }, []);
+
   // Swipe navigation functions
   const navigateToNextEntity = useCallback(() => {
-    console.log(
-      '🔍 navigateToNextEntity called - currentIndex:',
-      currentEntityIndex,
-    );
 
     const nearbyPoints = getNearbyEntities();
 
     if (nearbyPoints.length === 0) {
-      console.log('🔍 No nearby points available for navigation');
+
       return;
     }
 
     const nextIndex = (currentEntityIndex + 1) % nearbyPoints.length;
-    console.log(
-      '🔍 Next index:',
-      nextIndex,
-      'out of',
-      nearbyPoints.length,
-      'nearby points',
-    );
+
     setCurrentEntityIndex(nextIndex);
 
     const nextPoint = nearbyPoints[nextIndex];
-    console.log('🔍 Next point:', nextPoint);
+
     const nextListing = filteredListings.find(l => l.id === nextPoint.id);
 
     if (nextListing) {
-      console.log('🔍 Found next listing:', nextListing);
+
       setSelectedListing(nextListing);
+      
+      // Calculate optimal region to show all nearby points
+      const optimalRegion = calculateOptimalRegion(nearbyPoints);
+      if (mapViewRef.current && optimalRegion) {
+
+        mapViewRef.current.animateToRegion(optimalRegion, 500); // 500ms animation
+      }
     } else {
-      console.log('🔍 No listing found for next entity, skipping');
+
     }
-  }, [currentEntityIndex, getNearbyEntities, filteredListings]);
+  }, [currentEntityIndex, getNearbyEntities, filteredListings, calculateOptimalRegion]);
 
   const navigateToPreviousEntity = useCallback(() => {
-    console.log(
-      '🔍 navigateToPreviousEntity called - currentIndex:',
-      currentEntityIndex,
-    );
 
     const nearbyPoints = getNearbyEntities();
 
     if (nearbyPoints.length === 0) {
-      console.log('🔍 No nearby points available for navigation');
+
       return;
     }
 
@@ -608,52 +715,47 @@ const LiveMapAllScreen: React.FC = () => {
       currentEntityIndex === 0
         ? nearbyPoints.length - 1
         : currentEntityIndex - 1;
-    console.log(
-      '🔍 Previous index:',
-      prevIndex,
-      'out of',
-      nearbyPoints.length,
-      'nearby points',
-    );
+
     setCurrentEntityIndex(prevIndex);
 
     const prevPoint = nearbyPoints[prevIndex];
-    console.log('🔍 Previous point:', prevPoint);
+
     const prevListing = filteredListings.find(l => l.id === prevPoint.id);
 
     if (prevListing) {
-      console.log('🔍 Found previous listing:', prevListing);
+
       setSelectedListing(prevListing);
+      
+      // Calculate optimal region to show all nearby points
+      const optimalRegion = calculateOptimalRegion(nearbyPoints);
+      if (mapViewRef.current && optimalRegion) {
+
+        mapViewRef.current.animateToRegion(optimalRegion, 500); // 500ms animation
+      }
     } else {
-      console.log('🔍 No listing found for previous entity, skipping');
+
     }
-  }, [currentEntityIndex, getNearbyEntities, filteredListings]);
+  }, [currentEntityIndex, getNearbyEntities, filteredListings, calculateOptimalRegion]);
 
   // Handle swipe gesture
   const handleSwipeGesture = useCallback(
     (event: any) => {
-      console.log('🔍 Gesture event received:', event.nativeEvent);
-      const { translationX, state } = event.nativeEvent;
 
-      console.log('🔍 Swipe gesture detected:', { translationX, state });
+      const { translationX, state } = event.nativeEvent;
 
       if (state === State.END) {
         const swipeThreshold = 50; // Minimum swipe distance
-        console.log('🔍 Gesture ended, checking threshold:', {
-          translationX,
-          swipeThreshold,
-        });
 
         if (translationX > swipeThreshold) {
           // Swipe right - go to previous entity
-          console.log('🔍 Swipe right detected, going to previous entity');
+
           navigateToPreviousEntity();
         } else if (translationX < -swipeThreshold) {
           // Swipe left - go to next entity
-          console.log('🔍 Swipe left detected, going to next entity');
+
           navigateToNextEntity();
         } else {
-          console.log('🔍 Swipe distance too small:', translationX);
+
         }
       }
     },
@@ -691,87 +793,48 @@ const LiveMapAllScreen: React.FC = () => {
   }, []);
 
   const handleCenterOnLocation = useCallback(() => {
-    console.log(
-      '🔍 handleCenterOnLocation called - mapViewRef:',
-      !!mapViewRef.current,
-      'location:',
-      location,
-    );
-    debugLog(
-      '🔍 handleCenterOnLocation called - mapViewRef:',
-      !!mapViewRef.current,
-      'location:',
-      location,
-    );
 
     if (mapViewRef.current) {
-      console.log('🔍 Centering map on location');
-      debugLog('🔍 Centering map on location');
+
       mapViewRef.current.centerOnLocation();
     } else {
-      console.log('🔍 Cannot center - mapViewRef not available');
-      debugLog('🔍 Cannot center - mapViewRef not available');
+
     }
   }, [location]);
 
+  // Update selected category when route params change
+  useEffect(() => {
+    if (!routeParams?.category) {
+      return;
+    }
+
+    if (routeParams.category !== lastRouteCategoryRef.current) {
+      lastRouteCategoryRef.current = routeParams.category;
+      setSelectedCategory(routeParams.category);
+    }
+  }, [routeParams?.category]);
+
   // Auto-request location permission on mount to trigger native iOS popup
   useEffect(() => {
-    console.log(
-      '🔍 LiveMapAllScreen: useEffect triggered - permissionGranted:',
-      permissionGranted,
-      'locationLoading:',
-      locationLoading,
-    );
-    debugLog(
-      '🔍 LiveMapAllScreen: useEffect triggered - permissionGranted:',
-      permissionGranted,
-      'locationLoading:',
-      locationLoading,
-    );
 
     const requestPermission = async () => {
-      console.log('🔍 LiveMapAllScreen: requestPermission called');
-      debugLog('🔍 LiveMapAllScreen: requestPermission called');
+
       if (!permissionGranted && !locationLoading) {
-        console.log('🔍 LiveMapAllScreen: Requesting location permission...');
-        debugLog('🔍 LiveMapAllScreen: Requesting location permission...');
+
         try {
           const result = await requestLocationPermission();
-          console.log(
-            '🔍 LiveMapAllScreen: Permission request result:',
-            result,
-          );
-          debugLog('🔍 LiveMapAllScreen: Permission request result:', result);
+
         } catch (error) {
-          console.log(
-            '🔍 LiveMapAllScreen: Error requesting location permission:',
-            error,
-          );
-          debugLog(
-            '🔍 LiveMapAllScreen: Error requesting location permission:',
-            error,
-          );
+
         }
       } else {
-        console.log(
-          '🔍 LiveMapAllScreen: Skipping permission request - permissionGranted:',
-          permissionGranted,
-          'locationLoading:',
-          locationLoading,
-        );
-        debugLog(
-          '🔍 LiveMapAllScreen: Skipping permission request - permissionGranted:',
-          permissionGranted,
-          'locationLoading:',
-          locationLoading,
-        );
+
       }
     };
 
     // Small delay to ensure component is fully mounted
     const timer = setTimeout(requestPermission, 500);
     return () => {
-      debugLog('🔍 LiveMapAllScreen: Cleaning up timer');
       clearTimeout(timer);
     };
   }, [permissionGranted, locationLoading, requestLocationPermission]);
@@ -779,22 +842,9 @@ const LiveMapAllScreen: React.FC = () => {
   // Cleanup effect
   useEffect(() => {
     return () => {
-      debugLog('🔍 LiveMapAllScreen: Component unmounting');
+      // Component cleanup
     };
   }, []);
-
-  console.log(
-    '🔍 LiveMapAllScreen: Rendering - mapPoints:',
-    mapPoints?.length,
-    'permissionGranted:',
-    permissionGranted,
-  );
-  debugLog(
-    '🔍 LiveMapAllScreen: Rendering - mapPoints:',
-    mapPoints?.length,
-    'permissionGranted:',
-    permissionGranted,
-  );
 
   return (
     <GestureHandlerRootView style={styles.container}>
@@ -914,10 +964,7 @@ const LiveMapAllScreen: React.FC = () => {
       {/* Selected listing popup */}
       {selectedListing &&
         (() => {
-          console.log(
-            '🔍 Rendering popup for selectedListing:',
-            selectedListing,
-          );
+
           return (
             <View style={styles.popupContainer}>
               <View style={styles.popup}>
@@ -942,26 +989,57 @@ const LiveMapAllScreen: React.FC = () => {
                           `https://picsum.photos/300/225?random=${selectedListing.id}`,
                       }}
                       style={styles.popupImage}
-                      onLoad={() =>
-                        console.log(
-                          '🔍 Image loaded successfully for:',
-                          selectedListing.title,
-                        )
-                      }
-                      onError={() =>
-                        console.log(
-                          '🔍 Image failed to load:',
-                          selectedListing.imageUrl,
-                        )
-                      }
+                      onLoad={() => {
+                        // Image loaded successfully
+                      }}
+                      onError={() => {
+                        // Image failed to load
+                      }}
                     />
 
                     {/* Tag on top left - matches CategoryCard */}
                     <View style={styles.popupTagContainer}>
                       <Text style={styles.popupTagText}>
-                        {selectedListing.kosherLevel ||
-                          selectedListing.category ||
-                          'Kosher'}
+                        {(() => {
+                          // Debug logging
+                          if (__DEV__) {
+                            console.log('🔍 Tag mapping debug:', {
+                              category: selectedListing.category,
+                              kosher_level: selectedListing.kosher_level,
+                              kosherLevel: selectedListing.kosherLevel,
+                              isEatery: selectedListing.category?.toLowerCase() === 'eatery',
+                              isRestaurant: selectedListing.category?.toLowerCase() === 'restaurant',
+                              isDining: selectedListing.category?.toLowerCase() === 'dining',
+                            });
+                          }
+                          
+                          const isEatery = selectedListing.category?.toLowerCase() === 'eatery' || 
+                                          selectedListing.category?.toLowerCase() === 'restaurant' ||
+                                          selectedListing.category?.toLowerCase() === 'dining';
+                          
+                          if (isEatery) {
+                            // Use kosher_level if available, otherwise map from kosherLevel
+                            const dietaryType = selectedListing.kosher_level || 
+                                              mapKosherLevelToDietary(selectedListing.kosherLevel, selectedListing.category);
+                            
+                            // Debug the mapping process
+                            if (__DEV__) {
+                              console.log('🔍 Dietary mapping debug:', {
+                                kosher_level: selectedListing.kosher_level,
+                                kosherLevel: selectedListing.kosherLevel,
+                                category: selectedListing.category,
+                                mappedDietaryType: dietaryType,
+                                finalLabel: dietaryType ? getDietaryLabel(dietaryType) : 'Kosher'
+                              });
+                            }
+                            
+                            return dietaryType 
+                              ? getDietaryLabel(dietaryType)
+                              : 'Kosher';
+                          }
+                          
+                          return selectedListing.category || 'Kosher';
+                        })()}
                       </Text>
                     </View>
 
@@ -1222,7 +1300,7 @@ const styles = StyleSheet.create({
   },
   popup: {
     backgroundColor: '#FFFFFF',
-    borderRadius: BorderRadius.xl,
+    borderRadius: 24,
     overflow: 'hidden',
     ...Shadows.lg,
     width: '100%',
@@ -1231,8 +1309,8 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     position: 'absolute',
-    top: Spacing.sm,
-    right: Spacing.sm,
+    top: Spacing.md,
+    right: Spacing.md,
     width: 32,
     height: 32,
     borderRadius: 16,
@@ -1253,11 +1331,11 @@ const styles = StyleSheet.create({
   },
   popupTagContainer: {
     position: 'absolute',
-    top: Spacing.sm,
-    left: Spacing.sm, // Moved to left corner
+    top: Spacing.md,
+    left: Spacing.md, // Moved to left corner
     backgroundColor: '#FFFFFF', // White background
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
     borderRadius: BorderRadius.full, // Pill shape
   },
   popupTagText: {
@@ -1283,15 +1361,18 @@ const styles = StyleSheet.create({
     fontFamily: 'Nunito-Medium',
   },
   popupContent: {
-    padding: Spacing.sm,
-    paddingBottom: Spacing.sm, // Tight fit to content
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.sm + 4,
+    paddingHorizontal: Spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   popupTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: '#1A1A1A',
     flex: 1,
-    marginRight: Spacing.sm,
+    marginRight: Spacing.md,
     fontFamily: 'Nunito-SemiBold',
   },
   popupFooter: {
@@ -1340,7 +1421,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: Spacing.xs,
+    marginBottom: Spacing.sm,
   },
   popupRatingContainer: {
     flexDirection: 'row',
@@ -1360,12 +1441,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    width: '100%',
   },
   popupPriceText: {
     fontSize: 14,
     fontWeight: '600',
     color: '#1A1A1A',
     fontFamily: 'Nunito-SemiBold',
+    marginRight: Spacing.sm,
   },
   popupDistanceText: {
     fontSize: 14,

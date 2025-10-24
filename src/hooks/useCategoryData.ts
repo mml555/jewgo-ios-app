@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { apiService, Listing } from '../services/api';
 import { debugLog, errorLog, warnLog } from '../utils/logger';
 import { useAuth } from '../contexts/AuthContext';
+import { specialsService } from '../services/SpecialsService';
+import { ActiveSpecial } from '../types/specials';
 
 // Helper function to get the correct image URL from database or fallback to placeholder
 const getImageUrl = (listing: Listing): string => {
@@ -10,16 +12,19 @@ const getImageUrl = (listing: Listing): string => {
     const imageUrl = listing.images[0];
 
     // Validate URL
-    if (
-      imageUrl &&
-      typeof imageUrl === 'string' &&
-      imageUrl.trim().length > 0
-    ) {
-      // Check if it's a valid URL
-      if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
-        return imageUrl;
+      if (
+        imageUrl &&
+        typeof imageUrl === 'string' &&
+        imageUrl.trim().length > 0
+      ) {
+        const trimmedUrl = imageUrl.trim();
+        if (
+          typeof trimmedUrl === 'string' &&
+          (trimmedUrl.startsWith('http://') || trimmedUrl.startsWith('https://'))
+        ) {
+          return imageUrl;
+        }
       }
-    }
   }
 
   // Fallback to placeholder only if no valid images exist
@@ -90,9 +95,9 @@ const generateMockData = (
 ): CategoryItem[] => {
   const categoryNames: Record<string, string> = {
     mikvah: 'Mikvah',
-    eatery: 'Eatery',
-    shul: 'Shul',
-    stores: 'Stores',
+    restaurant: 'Restaurant',
+    synagogue: 'Synagogue',
+    store: 'Store',
     shtetl: 'Shtetl',
     events: 'Events',
     jobs: 'Jobs',
@@ -100,9 +105,9 @@ const generateMockData = (
 
   const categoryEmojis: Record<string, string> = {
     mikvah: '🛁',
-    eatery: '🍽️',
-    shul: '🕍',
-    stores: '🏪',
+    restaurant: '🍽️',
+    synagogue: '🕍',
+    store: '🏪',
     shtetl: '🏘️',
     events: '🎉',
     jobs: '💼',
@@ -262,7 +267,7 @@ const cleanupStaleRequests = () => {
     // This is a safety mechanism to prevent requests from being stuck forever
     const requestAge = now - (promise as any).timestamp;
     if (requestAge > STALE_TIMEOUT) {
-      debugLog(`🧹 Cleaning up stale request: ${key}`);
+
       inFlightRequests.delete(key);
     }
   }
@@ -270,14 +275,29 @@ const cleanupStaleRequests = () => {
   for (const [key, promise] of activeRequests.entries()) {
     const requestAge = now - (promise as any).timestamp;
     if (requestAge > STALE_TIMEOUT) {
-      debugLog(`🧹 Cleaning up stale active request: ${key}`);
+
       activeRequests.delete(key);
     }
   }
 };
 
-// Run cleanup every 10 seconds
-setInterval(cleanupStaleRequests, 10000);
+// Global cleanup interval - will be managed by the hook
+let globalCleanupInterval: NodeJS.Timeout | null = null;
+
+// Initialize global cleanup if not already running
+const initializeGlobalCleanup = () => {
+  if (!globalCleanupInterval) {
+    globalCleanupInterval = setInterval(cleanupStaleRequests, 10000);
+  }
+};
+
+// Cleanup global interval
+const cleanupGlobalInterval = () => {
+  if (globalCleanupInterval) {
+    clearInterval(globalCleanupInterval);
+    globalCleanupInterval = null;
+  }
+};
 
 export const useCategoryData = ({
   categoryKey,
@@ -287,6 +307,17 @@ export const useCategoryData = ({
   const { hasAnyAuth, isInitializing } = useAuth();
   const [data, setData] = useState<CategoryItem[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // Initialize global cleanup on first use
+  useEffect(() => {
+    initializeGlobalCleanup();
+    
+    return () => {
+      // Only cleanup if this is the last instance
+      // Note: In a real app, you'd want a more sophisticated reference counting system
+      cleanupGlobalInterval();
+    };
+  }, []);
   const [refreshing, setRefreshing] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -320,7 +351,7 @@ export const useCategoryData = ({
       initialLoadRef.current = true; // Mark as loaded from cache
     } else {
       // Reset for new category/query
-      // debugLog('🔥 RESETTING DATA FOR NEW CATEGORY/QUERY:', cacheKey);
+
       setData([]);
       setCurrentPage(1);
       setHasMore(true);
@@ -330,12 +361,12 @@ export const useCategoryData = ({
 
       // Clean up any stale requests for this category when switching
       for (const key of inFlightRequests.keys()) {
-        if (key.startsWith(`${categoryKey}-`)) {
+        if (typeof key === 'string' && key.startsWith(`${categoryKey}-`)) {
           inFlightRequests.delete(key);
         }
       }
       for (const key of activeRequests.keys()) {
-        if (key.startsWith(`${categoryKey}-`)) {
+        if (typeof key === 'string' && key.startsWith(`${categoryKey}-`)) {
           activeRequests.delete(key);
         }
       }
@@ -381,6 +412,7 @@ export const useCategoryData = ({
       price_min: listing.price_min,
       price_max: listing.price_max,
       price_range: listing.price_range,
+      // DEBUG: Log price data transformation
       // Pass through additional API fields
       entity_type: listing.category_id,
       address: listing.address,
@@ -412,6 +444,61 @@ export const useCategoryData = ({
     return safeItem;
   }, []);
 
+  const transformSpecial = useCallback((special: ActiveSpecial): CategoryItem => {
+    const latitude = Array.isArray(special.location?.coordinates)
+      ? special.location?.coordinates[1]
+      : undefined;
+    const longitude = Array.isArray(special.location?.coordinates)
+      ? special.location?.coordinates[0]
+      : undefined;
+
+    const hasValidCoords =
+      typeof latitude === 'number' &&
+      !Number.isNaN(latitude) &&
+      typeof longitude === 'number' &&
+      !Number.isNaN(longitude);
+
+    const fallbackImage = `https://picsum.photos/300/225?special=${special.id}`;
+
+    return {
+      id: String(special.id),
+      title: special.title || special.businessName || 'Special',
+      description:
+        special.description ||
+        special.discountLabel ||
+        'Limited time offer',
+      imageUrl: special.imageUrl || fallbackImage,
+      category: special.category || 'Specials',
+      rating:
+        typeof special.rating === 'number' && !Number.isNaN(special.rating)
+          ? special.rating
+          : undefined,
+      latitude: hasValidCoords ? (latitude as number) : undefined,
+      longitude: hasValidCoords ? (longitude as number) : undefined,
+      coordinate: hasValidCoords
+        ? {
+            latitude: latitude as number,
+            longitude: longitude as number,
+          }
+        : undefined,
+      price: special.discountLabel,
+      zip_code: undefined,
+      isOpen: true,
+      openWeekends: true,
+      kosherLevel: 'glatt',
+      hasParking: false,
+      hasWifi: false,
+      hasAccessibility: false,
+      hasDelivery: false,
+      entity_type: special.category,
+      address: [special.city, special.state].filter(Boolean).join(', '),
+      city: special.city,
+      state: special.state,
+      review_count: special.reviewCount,
+      image_url: special.imageUrl,
+    };
+  }, []);
+
   const loadMore = useCallback(async () => {
     if (loadingRef.current || !hasMoreRef.current) {
       return;
@@ -423,15 +510,13 @@ export const useCategoryData = ({
 
     // Check if this exact request is already in flight
     if (inFlightRequests.has(requestKey)) {
-      debugLog(`🚫 Skipping duplicate fetch for ${requestKey}`);
+
       try {
         // Wait for the existing request to complete and return its result
         return await inFlightRequests.get(requestKey);
       } catch (error) {
         // If the existing request failed, clean it up and continue with new request
-        debugLog(
-          `🔄 Previous request failed, cleaning up and retrying: ${requestKey}`,
-        );
+
         inFlightRequests.delete(requestKey);
         activeRequests.delete(`${categoryKey}-active`);
       }
@@ -440,21 +525,17 @@ export const useCategoryData = ({
     // Check for active requests in the same category to prevent rate limiting
     const categoryRequestKey = `${categoryKey}-active`;
     if (activeRequests.has(categoryRequestKey)) {
-      debugLog(
-        `🚫 Throttling request for ${categoryKey} - previous request still active`,
-      );
+
       try {
         // Wait for the existing request to complete and return its result
         return await activeRequests.get(categoryRequestKey);
       } catch (error) {
         // If the existing request failed, clean it up and continue with new request
-        debugLog(
-          `🔄 Previous category request failed, cleaning up and retrying: ${categoryKey}`,
-        );
+
         activeRequests.delete(categoryRequestKey);
         // Also clean up any stale in-flight requests for this category
         for (const key of inFlightRequests.keys()) {
-          if (key.startsWith(`${categoryKey}-`)) {
+          if (typeof key === 'string' && key.startsWith(`${categoryKey}-`)) {
             inFlightRequests.delete(key);
           }
         }
@@ -466,6 +547,85 @@ export const useCategoryData = ({
     setError(null);
 
     try {
+      if (categoryKey === 'specials') {
+        const page = currentPageRef.current;
+        const requestPromise = specialsService.getActiveSpecials({
+          page,
+          limit: pageSize,
+        });
+
+        (requestPromise as any).timestamp = Date.now();
+        inFlightRequests.set(requestKey, requestPromise);
+        activeRequests.set(categoryRequestKey, requestPromise);
+
+        const response = await requestPromise;
+
+        if (response.success && response.data) {
+          let specialsList = response.data.specials || [];
+
+          if (!Array.isArray(specialsList)) {
+            warnLog('Specials response data is not an array:', specialsList);
+            specialsList = [];
+          }
+
+          if (queryRef.current) {
+            const query = queryRef.current.toLowerCase();
+            specialsList = specialsList.filter((special: ActiveSpecial) => {
+              const title = special.title?.toLowerCase() ?? '';
+              const business = special.businessName?.toLowerCase() ?? '';
+              const description = special.description?.toLowerCase() ?? '';
+              return (
+                title.includes(query) ||
+                business.includes(query) ||
+                description.includes(query)
+              );
+            });
+          }
+
+          const newData: CategoryItem[] = specialsList.map(transformSpecial);
+
+          if (newData.length > 0) {
+            setData(prevData => {
+              const existingIds = new Set(prevData.map(item => item.id));
+              const uniqueNewData = newData.filter(
+                item => !existingIds.has(item.id),
+              );
+              const updatedData = [...prevData, ...uniqueNewData];
+
+              const cacheKey = `${categoryKey}-${queryRef.current}`;
+              const newPage = currentPage + 1;
+              const newHasMore = newData.length >= pageSize;
+
+              categoryDataCache.set(cacheKey, {
+                data: updatedData,
+                currentPage: newPage,
+                hasMore: newHasMore,
+                lastQuery: queryRef.current,
+              });
+
+              return updatedData;
+            });
+            setCurrentPage(prev => prev + 1);
+          }
+
+          if (newData.length < pageSize) {
+            setHasMore(false);
+            const cacheKey = `${categoryKey}-${queryRef.current}`;
+            const cachedData = categoryDataCache.get(cacheKey);
+            if (cachedData) {
+              cachedData.hasMore = false;
+              categoryDataCache.set(cacheKey, cachedData);
+            }
+          }
+        } else {
+          warnLog('Specials API failed:', response.error);
+          setError(response.error || 'No specials available');
+          setHasMore(false);
+        }
+
+        return;
+      }
+
       // Try to fetch from API first with category-specific call and pagination
       const requestPromise = apiService.getListingsByCategory(
         categoryKey,
@@ -487,9 +647,7 @@ export const useCategoryData = ({
 
       // Handle special redirect for specials category
       if (response.success && (response as any).redirectTo === 'specials') {
-        debugLog(
-          '🎁 Specials category detected - should redirect to Specials tab',
-        );
+
         // Return empty data to prevent API errors
         setData([]);
         setLoading(false);
@@ -514,7 +672,7 @@ export const useCategoryData = ({
         if (queryRef.current) {
           const query = queryRef.current.toLowerCase();
           filteredListings = filteredListings.filter(
-            (listing: any) =>
+            (listing: Listing) =>
               listing.title.toLowerCase().includes(query) ||
               listing.description.toLowerCase().includes(query),
           );
@@ -606,7 +764,7 @@ export const useCategoryData = ({
       const categoryRequestKey = `${categoryKey}-active`;
       activeRequests.delete(categoryRequestKey);
     }
-  }, [categoryKey, pageSize, transformListing]); // Use refs for currentPage and hasMore to avoid recreating
+  }, [categoryKey, pageSize, transformListing, transformSpecial]); // Use refs for currentPage and hasMore to avoid recreating
 
   // Cleanup in-flight requests when component unmounts or category changes
   useEffect(() => {
@@ -621,13 +779,13 @@ export const useCategoryData = ({
 
       // Also clean up any stale requests for this category (with different offsets)
       for (const key of inFlightRequests.keys()) {
-        if (key.startsWith(`${categoryKey}-`)) {
+        if (typeof key === 'string' && key.startsWith(`${categoryKey}-`)) {
           inFlightRequests.delete(key);
         }
       }
 
       for (const key of activeRequests.keys()) {
-        if (key.startsWith(`${categoryKey}-`)) {
+        if (typeof key === 'string' && key.startsWith(`${categoryKey}-`)) {
           activeRequests.delete(key);
         }
       }
@@ -648,7 +806,7 @@ export const useCategoryData = ({
     ) {
       // Only log very occasionally to reduce console noise
       if (__DEV__ && Math.random() < 0.1) {
-        debugLog('🔐 useCategoryData: Starting data load for', categoryKey);
+
       }
       initialLoadRef.current = true;
       loadMore();
@@ -666,17 +824,64 @@ export const useCategoryData = ({
     // Clear cache for this category/query combination
     const cacheKey = `${categoryKey}-${queryRef.current}`;
     categoryDataCache.delete(cacheKey);
-    debugLog('🔥 CLEARED CACHE FOR REFRESH:', cacheKey);
 
     try {
+      if (categoryKey === 'specials') {
+        const response = await specialsService.getActiveSpecials({
+          page: 1,
+          limit: pageSize,
+        });
+
+        if (response.success && response.data) {
+          let specialsList = response.data.specials || [];
+
+          if (!Array.isArray(specialsList)) {
+            warnLog('Specials refresh data is not an array:', specialsList);
+            specialsList = [];
+          }
+
+          if (queryRef.current) {
+            const query = queryRef.current.toLowerCase();
+            specialsList = specialsList.filter((special: ActiveSpecial) => {
+              const title = special.title?.toLowerCase() ?? '';
+              const business = special.businessName?.toLowerCase() ?? '';
+              const description = special.description?.toLowerCase() ?? '';
+              return (
+                title.includes(query) ||
+                business.includes(query) ||
+                description.includes(query)
+              );
+            });
+          }
+
+          const newData: CategoryItem[] = specialsList.map(transformSpecial);
+
+          if (newData.length === 0) {
+            setData([]);
+            setCurrentPage(1);
+            setHasMore(false);
+          } else {
+            setData(newData);
+            setCurrentPage(2);
+            setHasMore(newData.length === pageSize);
+          }
+        } else {
+          warnLog('Specials refresh failed:', response.error);
+          setError(response.error || 'Failed to refresh specials');
+          setData([]);
+          setCurrentPage(1);
+          setHasMore(false);
+        }
+
+        return;
+      }
+
       // Try to fetch from API first with category-specific call
       const response = await apiService.getListingsByCategory(categoryKey);
 
       // Handle special redirect for specials category
       if (response.success && (response as any).redirectTo === 'specials') {
-        debugLog(
-          '🎁 Specials category detected during refresh - should redirect to Specials tab',
-        );
+
         // Return empty data to prevent API errors
         setData([]);
         setRefreshing(false);
@@ -700,7 +905,7 @@ export const useCategoryData = ({
         if (queryRef.current) {
           const query = queryRef.current.toLowerCase();
           filteredListings = filteredListings.filter(
-            (listing: any) =>
+            (listing: Listing) =>
               listing.title.toLowerCase().includes(query) ||
               listing.description.toLowerCase().includes(query),
           );
@@ -732,7 +937,7 @@ export const useCategoryData = ({
     } finally {
       setRefreshing(false);
     }
-  }, [categoryKey, pageSize, transformListing]);
+  }, [categoryKey, pageSize, transformListing, transformSpecial]);
 
   return {
     data,

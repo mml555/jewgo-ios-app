@@ -786,13 +786,13 @@ export const ResponsiveTypography = {
 export const StickyLayout = {
   searchBarHeight: 56, // TopBar/SearchBar fixed height (visual, without safe area)
   laneGap: 4, // 10px gap between search bar and ActionBar
-  railActionGap: 12, // Gap between category rail and action bar when in rest state
+  railActionGap: 16, // Enlarged gap between category rail and ActionBar for breathing room
   actionBarHeight: 32, // ActionBar height when shown in Lane B
   scrollBuffer: 6, // Hysteresis buffer to prevent threshold flicker
   stickyHysteresis: 0, // pixels - no hysteresis for instant, smooth transitions
   categoryRailHeightDefault: 50, // Further reduced to account for Boost/Filter lane (8+50+12+48=118px)
   locationBannerHeightDefault: 80, // Conservative fallback for LocationBanner
-  overlayGridInset: 4, // Extra grid offset when ActionBar is sticky to avoid overlap
+  overlayGridInset: 12, // Match the search-to-rail gap so grid clears ActionBar evenly
   overlayFadeHeight: 6, // Height of the gradient fade between ActionBar and grid
   stickyRevealOffset: 60, // pixels - show sticky bar earlier for better UX
 };

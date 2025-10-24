@@ -13,6 +13,7 @@ export interface MapPoint {
   city?: string;
   state?: string;
   zip_code?: string;
+  kosher_level?: 'meat' | 'dairy' | 'parve';
 }
 
 export interface GeoJSONPoint {

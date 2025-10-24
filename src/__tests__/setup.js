@@ -56,8 +56,8 @@ jest.mock('react-native-permissions', () => ({
   },
 }));
 
-// Mock react-native-geolocation-service
-jest.mock('react-native-geolocation-service', () => ({
+// Mock @react-native-community/geolocation
+jest.mock('@react-native-community/geolocation', () => ({
   getCurrentPosition: jest.fn(() =>
     Promise.resolve({
       coords: {

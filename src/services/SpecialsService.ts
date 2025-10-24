@@ -532,25 +532,63 @@ class SpecialsService {
     sortBy?: string;
     sortOrder?: 'asc' | 'desc';
   }): Promise<ApiResponse<{ specials: ActiveSpecial[] }>> {
-    const queryParams = new URLSearchParams();
+    try {
+      const queryParams = new URLSearchParams();
 
-    if (params?.page) {
-      queryParams.append('page', params.page.toString());
-    }
-    if (params?.limit) {
-      queryParams.append('limit', params.limit.toString());
-    }
-    if (params?.sortBy) {
-      queryParams.append('sortBy', params.sortBy);
-    }
-    if (params?.sortOrder) {
-      queryParams.append('sortOrder', params.sortOrder);
-    }
+      if (params?.page) {
+        queryParams.append('page', params.page.toString());
+      }
+      if (params?.limit) {
+        queryParams.append('limit', params.limit.toString());
+      }
+      if (params?.sortBy) {
+        queryParams.append('sortBy', params.sortBy);
+      }
+      if (params?.sortOrder) {
+        queryParams.append('sortOrder', params.sortOrder);
+      }
 
-    const queryString = queryParams.toString();
-    const endpoint = `/specials/active${queryString ? `?${queryString}` : ''}`;
+      const queryString = queryParams.toString();
+      const endpoint = `/specials/active${queryString ? `?${queryString}` : ''}`;
 
-    return this.request<{ specials: ActiveSpecial[] }>(endpoint);
+      const response = await this.request<{ specials: ActiveSpecial[] }>(endpoint);
+      
+      // If the main endpoint fails, try the simple endpoint as fallback
+      if (!response.success) {
+        console.log('Main specials endpoint failed, trying simple endpoint...');
+        return this.getSimpleSpecials();
+      }
+      
+      return response;
+    } catch (error) {
+      console.log('Specials endpoint error, falling back to simple endpoint...', error);
+      return this.getSimpleSpecials();
+    }
+  }
+
+  // Get simple specials (fallback endpoint with mock data)
+  async getSimpleSpecials(): Promise<ApiResponse<{ specials: ActiveSpecial[] }>> {
+    try {
+      const endpoint = `/specials/simple`;
+      const response = await this.request<ActiveSpecial[]>(endpoint);
+      
+      if (response.success && response.data) {
+        return {
+          success: true,
+          data: { specials: response.data },
+          message: 'Specials loaded from fallback endpoint'
+        };
+      }
+      
+      return response;
+    } catch (error) {
+      errorLog('Simple specials endpoint failed:', error);
+      return {
+        success: false,
+        error: 'Failed to load specials from fallback endpoint',
+        message: 'Unable to connect to specials service'
+      };
+    }
   }
 
   // Get restaurants with specials (ultra-fast using materialized view)

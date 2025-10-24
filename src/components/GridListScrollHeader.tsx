@@ -4,6 +4,8 @@ import CategoryRail from './CategoryRail';
 import ActionBar from './ActionBar';
 import { Colors, StickyLayout } from '../styles/designSystem';
 
+const RAIL_INDICATOR_OVERHANG = 6; // Matches CategoryRail indicator offset (bottom: -6)
+
 export interface GridListScrollHeaderProps {
   activeCategory: string;
   onCategoryChange: (category: string) => void;
@@ -44,40 +46,18 @@ const GridListScrollHeader = forwardRef<
       },
     }));
 
-    console.log('📋 GridListScrollHeader rendering:', {
-      activeCategory,
-      showActionBarInHeader,
-      hasOnMeasured: !!onMeasured,
-    });
+    // Debug logging removed to prevent console spam
 
     return (
       <View
         style={styles.container}
         onLayout={e => {
           const { width, height, x, y } = e.nativeEvent.layout;
-          console.log('🔍 GridListScrollHeader onLayout called:', {
-            hasEvent: !!e,
-            hasNativeEvent: !!(e && e.nativeEvent),
-            hasLayout: !!(e && e.nativeEvent && e.nativeEvent.layout),
-            hasOnMeasured: !!onMeasured,
-            activeCategory,
-            showActionBarInHeader,
-            width,
-            height,
-            x,
-            y,
-          });
+          // Debug logging removed to prevent console spam
 
           if (e && e.nativeEvent && e.nativeEvent.layout && onMeasured) {
-            console.log('📏 GridListScrollHeader measured:', {
-              height,
-              activeCategory,
-              showActionBarInHeader,
-            });
             // Call onMeasured with the full event object, not just the height
             onMeasured(e);
-          } else {
-            console.log('⚠️ GridListScrollHeader onLayout conditions not met');
           }
         }}
       >
@@ -93,13 +73,7 @@ const GridListScrollHeader = forwardRef<
           <View
             style={styles.actionBarWrapper}
             onLayout={event => {
-              const { width, height, x, y } = event.nativeEvent.layout;
-              console.log('🔍 ActionBar Wrapper Layout:', {
-                width,
-                height,
-                x,
-                y,
-              });
+              // Debug logging removed to prevent console spam
             }}
           >
             <ActionBar
@@ -130,7 +104,7 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: Colors.background.primary,
     paddingTop: 0, // No padding - children handle their own spacing
-    paddingBottom: StickyLayout.laneGap, // 8px bottom to create 16px gap with ActionBar's 8px bottom margin
+    paddingBottom: StickyLayout.overlayGridInset, // Add breathing room between ActionBar and grid content
   },
   actionBarWrapper: {
     // Ensure ActionBar gets full width like grid cards
@@ -138,11 +112,14 @@ const styles = StyleSheet.create({
     // Add horizontal padding to match grid cards (6px each side)
     paddingHorizontal: 6,
     // Add top margin to create spacing from CategoryRail
-    marginTop: 14, // Space between CategoryRail and ActionBar
+    marginTop:
+      StickyLayout.railActionGap +
+      RAIL_INDICATOR_OVERHANG -
+      StickyLayout.laneGap, // Adjust for indicator drop and ActionBar internal margin
   },
   actionBarPlaceholder: {
-    marginTop: StickyLayout.laneGap, // 8px top
-    marginBottom: StickyLayout.laneGap, // 8px bottom
+    marginTop: StickyLayout.railActionGap + RAIL_INDICATOR_OVERHANG,
+    marginBottom: StickyLayout.overlayGridInset,
   },
 });
 

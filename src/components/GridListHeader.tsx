@@ -3,7 +3,9 @@ import { View, StyleSheet } from 'react-native';
 import CategoryRail from './CategoryRail';
 import ActionBar from './ActionBar';
 import TopBar from './TopBar';
-import { Colors } from '../styles/designSystem';
+import { Colors, StickyLayout } from '../styles/designSystem';
+
+const RAIL_INDICATOR_OVERHANG = 6; // Matches CategoryRail indicator offset (bottom: -6)
 
 export interface GridListHeaderProps {
   activeCategory: string;
@@ -86,6 +88,7 @@ const GridListHeader = forwardRef<GridListHeaderRef, GridListHeaderProps>(
             accessible
             importantForAccessibility="yes"
             accessibilityElementsHidden={false}
+            style={styles.actionBarContainer}
           >
             <ActionBar
               onActionPress={onActionPress}
@@ -116,6 +119,12 @@ GridListHeader.displayName = 'GridListHeader';
 const styles = StyleSheet.create({
   container: {
     backgroundColor: Colors.background.primary,
+  },
+  actionBarContainer: {
+    marginTop:
+      StickyLayout.railActionGap +
+      RAIL_INDICATOR_OVERHANG -
+      StickyLayout.laneGap,
   },
 });
 

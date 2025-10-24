@@ -106,18 +106,18 @@ const SpecialDetailScreen: React.FC = () => {
     const getCategoryKey = (entityType?: string, category?: string): string => {
       // Map entity types to category keys
       const entityTypeToCategoryKey: Record<string, string> = {
-        restaurant: 'eatery',
-        synagogue: 'shul',
+        restaurant: 'restaurant',
+        synagogue: 'synagogue',
         mikvah: 'mikvah',
-        store: 'stores',
+        store: 'store',
       };
 
-      // First try entity type, then category, then default to eatery
+      // First try entity type, then category, then default to restaurant
       const businessEntityType = special?.category || entityType || category;
       return (
         entityTypeToCategoryKey[
           businessEntityType as keyof typeof entityTypeToCategoryKey
-        ] || 'eatery'
+        ] || 'restaurant'
       );
     };
 

@@ -99,13 +99,6 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
     }
   }, [categoryKey, navigation]);
 
-  // Redirect to Specials tab for specials category
-  React.useEffect(() => {
-    if (categoryKey === 'specials') {
-      debugLog('Specials category selected - handled by tab navigator');
-    }
-  }, [categoryKey, navigation]);
-
   // Use the grid data hook
   const gridData = useGridData({
     categoryKey,
@@ -225,7 +218,7 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
       // Calculate responsive card dimensions
       const gridDimensions = getGridCardDimensions(
         isTablet ? 32 : 32, // iPad: 16px each side for breathing room, Phone: 16px each side = 32px total
-        isTablet ? 16 : 12, // Gap between cards - increased for iPad with 4 larger cards
+        12, // Consistent gap between cards across all devices
         4 / 3, // aspect ratio
       );
 
@@ -446,7 +439,7 @@ const CategoryGridScreen: React.FC<CategoryGridScreenProps> = ({
       {
         paddingBottom: listBottomPadding,
         paddingTop: isTablet ? 16 : 8, // Add spacing between action bar and grid
-        paddingHorizontal: isTablet ? 6 : 6, // Add edge padding for breathing room
+        paddingHorizontal: isTablet ? 16 : 16, // Consistent edge padding for breathing room
       },
     ],
     isInitialLoading,
@@ -474,8 +467,8 @@ const styles = StyleSheet.create({
     marginBottom: 12, // Gap between rows
   },
   rowMultiColumn: {
-    gap: 16, // Increased gap between cards on tablets for 4 larger cards
-    marginBottom: 24, // Larger gap between rows on tablets
+    gap: 12, // Consistent gap between cards - matches getGridCardDimensions
+    marginBottom: 12, // Consistent gap between rows
     // Ensure even distribution of cards across the width
     alignItems: 'flex-start',
   },
@@ -635,7 +628,7 @@ export const useCategoryGridRenderProps = (
       // Calculate responsive card dimensions
       const gridDimensions = getGridCardDimensions(
         isTablet ? 32 : 32, // iPad: 16px each side for breathing room, Phone: 16px each side = 32px total
-        isTablet ? 16 : 12, // Gap between cards - increased for iPad with 4 larger cards
+        12, // Consistent gap between cards across all devices
         4 / 3, // aspect ratio
       );
 
@@ -835,7 +828,7 @@ export const useCategoryGridRenderProps = (
       {
         paddingBottom: listBottomPadding,
         paddingTop: isTablet ? 16 : 8, // Add spacing between action bar and grid
-        paddingHorizontal: isTablet ? 6 : 6, // Add edge padding for breathing room
+        paddingHorizontal: isTablet ? 16 : 16, // Consistent edge padding for breathing room
       },
     ],
     isInitialLoading,

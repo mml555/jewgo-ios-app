@@ -239,7 +239,10 @@ const ReviewsModal: React.FC<ReviewsModalProps> = ({
               <TouchableOpacity
                 style={[
                   styles.sortButton,
-                  sortBy.startsWith('rating_') && styles.sortButtonActive,
+                  typeof sortBy === 'string' &&
+                  sortBy.startsWith('rating_')
+                    ? styles.sortButtonActive
+                    : null,
                 ]}
                 onPress={() => setShowRatingDropdown(!showRatingDropdown)}
                 activeOpacity={0.7}
@@ -247,7 +250,10 @@ const ReviewsModal: React.FC<ReviewsModalProps> = ({
                 <Text
                   style={[
                     styles.sortButtonText,
-                    sortBy.startsWith('rating_') && styles.sortButtonTextActive,
+                    typeof sortBy === 'string' &&
+                    sortBy.startsWith('rating_')
+                      ? styles.sortButtonTextActive
+                      : null,
                   ]}
                 >
                   Sort by Rating

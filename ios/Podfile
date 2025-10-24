@@ -41,22 +41,22 @@ post_install do |installer|
 
   min_ios = '15.1'
 
-  installer.generated_projects.each do |project|
-    project.build_configurations.each do |config|
-      config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'gnu++20'
-      config.build_settings['OTHER_CPLUSPLUSFLAGS'] = '$(inherited) -std=gnu++20'
-      # Allow CocoaPods embed scripts (rsync) under Xcode 15/16 sandboxing
-      config.build_settings['ENABLE_USER_SCRIPT_SANDBOXING'] = 'NO'
-    end
-  end
+      installer.generated_projects.each do |project|
+        project.build_configurations.each do |config|
+          config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'gnu++20'
+          config.build_settings['OTHER_CPLUSPLUSFLAGS'] = '$(inherited) -std=gnu++20'
+          # Allow CocoaPods embed scripts (rsync) under Xcode 15/16 sandboxing
+          config.build_settings['ENABLE_USER_SCRIPT_SANDBOXING'] = 'NO'
+        end
+      end
 
-  installer.pods_project.targets.each do |t|
-    t.build_configurations.each do |cfg|
-      s = cfg.build_settings
-      s['IPHONEOS_DEPLOYMENT_TARGET'] = min_ios
-      s['CLANG_CXX_LANGUAGE_STANDARD'] = 'gnu++20'
-      s['CLANG_CXX_LIBRARY'] = 'libc++'
-      s['OTHER_CPLUSPLUSFLAGS'] = '$(inherited) -std=gnu++20'
+      installer.pods_project.targets.each do |t|
+        t.build_configurations.each do |cfg|
+          s = cfg.build_settings
+          s['IPHONEOS_DEPLOYMENT_TARGET'] = min_ios
+          s['CLANG_CXX_LANGUAGE_STANDARD'] = 'gnu++20'
+          s['CLANG_CXX_LIBRARY'] = 'libc++'
+          s['OTHER_CPLUSPLUSFLAGS'] = '$(inherited) -std=gnu++20'
       # Don't exclude arm64 for simulator - M1+ Macs need it
       # s['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'arm64'
       s['ENABLE_BITCODE'] = 'NO'
