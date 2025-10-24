@@ -3,6 +3,7 @@
 ## Current Status
 
 ✅ **reCAPTCHA Working**: Token is being generated successfully
+
 ```
 ✅ reCAPTCHA v3 token received: test-token-v3-1761202408227
 🔐 Captcha token state changed: Token received
@@ -13,6 +14,7 @@
 ## Issue
 
 The registration is failing but the error object is empty, making it hard to debug. The logs show:
+
 ```
 [ERROR] Registration error: {}
 ```
@@ -20,12 +22,15 @@ The registration is failing but the error object is empty, making it hard to deb
 ## Possible Causes
 
 ### 1. Wrong API Base URL
+
 The logs show the app is using:
+
 ```
 API Base URL: http://localhost:3001/api/v5
 ```
 
 But `.env` file has:
+
 ```
 API_BASE_URL=http://192.168.40.237:3001/api/v5
 ```
@@ -33,24 +38,29 @@ API_BASE_URL=http://192.168.40.237:3001/api/v5
 **Solution**: The app needs to be rebuilt to load the new environment variables.
 
 ### 2. Backend Not Running
+
 The backend might not be running on `http://192.168.40.237:3001`
 
 **Check**:
+
 ```bash
 curl http://192.168.40.237:3001/api/v5/health
 ```
 
 ### 3. Network Error
+
 The simulator might not be able to reach the backend server.
 
 **Check**: Try accessing the backend from the simulator's browser.
 
 ### 4. Backend Rejecting Test Token
+
 The backend might not be configured to accept test tokens in development.
 
 ## Debug Logging Added
 
 ### RegisterScreen.tsx
+
 ```typescript
 catch (error: any) {
   console.log('❌ Registration error details:', {
@@ -64,6 +74,7 @@ catch (error: any) {
 ```
 
 ### AuthService.ts
+
 ```typescript
 async register(userData: RegisterData): Promise<AuthResponse> {
   console.log('📝 Registering user with data:', {
@@ -73,7 +84,7 @@ async register(userData: RegisterData): Promise<AuthResponse> {
     hasPhone: !!userData.phoneNumber,
     hasCaptcha: !!userData.captchaToken,
   });
-  
+
   const response = await this.makeRequest<AuthResponse>('/auth/register', {
     method: 'POST',
     body: JSON.stringify(userData),
@@ -92,6 +103,7 @@ async register(userData: RegisterData): Promise<AuthResponse> {
 ## Next Steps
 
 ### 1. Rebuild the App
+
 The environment variables are cached. Rebuild to load the correct API URL:
 
 ```bash
@@ -102,6 +114,7 @@ npx react-native run-ios --simulator="iPhone 17 Pro" --reset-cache
 ```
 
 ### 2. Check Backend is Running
+
 ```bash
 # In backend directory
 npm start
@@ -111,14 +124,18 @@ curl http://192.168.40.237:3001/api/v5/health
 ```
 
 ### 3. Test Registration Again
+
 After rebuilding, try registration again and check the console for:
+
 ```
 📝 Registering user with data: { ... }
 📝 Registration response: { ... }
 ```
 
 ### 4. Check Backend Logs
+
 Look at the backend console for incoming requests:
+
 ```
 POST /api/v5/auth/register
 ```
@@ -167,7 +184,10 @@ The backend should accept test tokens in development:
 
 ```javascript
 // backend/src/auth/providers/ReCaptchaProvider.js or similar
-if (process.env.NODE_ENV === 'development' && token.startsWith('test-token-v3-')) {
+if (
+  process.env.NODE_ENV === 'development' &&
+  token.startsWith('test-token-v3-')
+) {
   return {
     success: true,
     score: 1.0,
@@ -184,6 +204,7 @@ if (process.env.NODE_ENV === 'development' && token.startsWith('test-token-v3-')
 ## Summary
 
 The reCAPTCHA is working correctly. The registration is failing due to either:
+
 1. Wrong API URL (needs rebuild)
 2. Backend not running
 3. Network connectivity issue

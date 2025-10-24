@@ -14,7 +14,12 @@ import { useNavigation } from '@react-navigation/native';
 import TopBar from '../components/TopBar';
 import { specialsService } from '../services/SpecialsService';
 import { Special } from '../types/specials';
-import { Colors, Spacing, BorderRadius, Typography } from '../styles/designSystem';
+import {
+  Colors,
+  Spacing,
+  BorderRadius,
+  Typography,
+} from '../styles/designSystem';
 import { getGridColumns } from '../utils/deviceAdaptation';
 
 const SpecialsScreen: React.FC = () => {
@@ -37,9 +42,9 @@ const SpecialsScreen: React.FC = () => {
       setError(null);
 
       const response = await specialsService.getActiveSpecials();
-      
+
       console.log('Specials API Response:', response);
-      
+
       if (response.success && response.data) {
         setSpecials(response.data.specials || response.data);
       } else {
@@ -49,31 +54,31 @@ const SpecialsScreen: React.FC = () => {
           {
             id: '1',
             title: '20% Off Pizza',
-            business: { name: 'Milano\'s Pizza' },
+            business: { name: "Milano's Pizza" },
             discountLabel: '20% OFF',
-            heroImageUrl: 'https://picsum.photos/300/200?random=1'
+            heroImageUrl: 'https://picsum.photos/300/200?random=1',
           },
           {
-            id: '2', 
+            id: '2',
             title: 'Free Appetizer',
             business: { name: 'Kosher Kitchen' },
             discountLabel: 'FREE APP',
-            heroImageUrl: 'https://picsum.photos/300/200?random=2'
+            heroImageUrl: 'https://picsum.photos/300/200?random=2',
           },
           {
             id: '3',
             title: 'Buy 1 Get 1 Free',
             business: { name: 'Kosher Corner' },
             discountLabel: 'BOGO',
-            heroImageUrl: 'https://picsum.photos/300/200?random=3'
+            heroImageUrl: 'https://picsum.photos/300/200?random=3',
           },
           {
             id: '4',
             title: '15% Off Desserts',
             business: { name: 'Sweet Treats' },
             discountLabel: '15% OFF',
-            heroImageUrl: 'https://picsum.photos/300/200?random=4'
-          }
+            heroImageUrl: 'https://picsum.photos/300/200?random=4',
+          },
         ]);
         setError(null);
       }
@@ -100,41 +105,50 @@ const SpecialsScreen: React.FC = () => {
     // For now, we'll just store the query - filtering can be added later
   }, []);
 
-
-  const renderSpecial = useCallback(({ item }: { item: Special }) => (
-    <TouchableOpacity style={styles.specialCard} activeOpacity={0.8}>
-      <Image
-        source={{ 
-          uri: item.heroImageUrl || item.image_url || 'https://picsum.photos/300/200?random=' + item.id 
-        }}
-        style={styles.specialImage}
-        resizeMode="cover"
-      />
-      <View style={styles.specialContent}>
-        <Text style={styles.specialTitle} numberOfLines={2}>
-          {item.title}
-        </Text>
-        <Text style={styles.specialBusiness} numberOfLines={1}>
-          {item.business?.name || item.business_name || 'Business'}
-        </Text>
-        <Text style={styles.specialDiscount}>
-          {item.discountLabel}
-        </Text>
-      </View>
-    </TouchableOpacity>
-  ), []);
+  const renderSpecial = useCallback(
+    ({ item }: { item: Special }) => (
+      <TouchableOpacity style={styles.specialCard} activeOpacity={0.8}>
+        <Image
+          source={{
+            uri:
+              item.heroImageUrl ||
+              item.image_url ||
+              'https://picsum.photos/300/200?random=' + item.id,
+          }}
+          style={styles.specialImage}
+          resizeMode="cover"
+        />
+        <View style={styles.specialContent}>
+          <Text style={styles.specialTitle} numberOfLines={2}>
+            {item.title}
+          </Text>
+          <Text style={styles.specialBusiness} numberOfLines={1}>
+            {item.business?.name || item.business_name || 'Business'}
+          </Text>
+          <Text style={styles.specialDiscount}>{item.discountLabel}</Text>
+        </View>
+      </TouchableOpacity>
+    ),
+    [],
+  );
 
   const keyExtractor = useCallback((item: Special) => item.id.toString(), []);
 
-  const columnWrapperStyle = useMemo(() => ({
-    justifyContent: 'space-between' as const,
-    paddingHorizontal: Spacing.md,
-  }), []);
+  const columnWrapperStyle = useMemo(
+    () => ({
+      justifyContent: 'space-between' as const,
+      paddingHorizontal: Spacing.md,
+    }),
+    [],
+  );
 
-  const contentContainerStyle = useMemo(() => ({
-    paddingBottom: Math.max(insets.bottom + Spacing.md, Spacing.lg),
-    paddingTop: Spacing.md,
-  }), [insets.bottom]);
+  const contentContainerStyle = useMemo(
+    () => ({
+      paddingBottom: Math.max(insets.bottom + Spacing.md, Spacing.lg),
+      paddingTop: Spacing.md,
+    }),
+    [insets.bottom],
+  );
 
   if (loading) {
     return (

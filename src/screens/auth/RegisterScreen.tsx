@@ -310,14 +310,15 @@ const RegisterScreen: React.FC = () => {
         response: error?.response,
       });
       errorLog('Registration error:', error);
-      
-      let errorMessage = 'An error occurred during registration. Please try again.';
+
+      let errorMessage =
+        'An error occurred during registration. Please try again.';
       if (error?.message) {
         errorMessage = error.message;
       } else if (typeof error === 'string') {
         errorMessage = error;
       }
-      
+
       Alert.alert('Registration Failed', errorMessage, [{ text: 'OK' }]);
     }
   }, [
@@ -729,9 +730,17 @@ const RegisterScreen: React.FC = () => {
 
             {/* Debug: Show captcha status */}
             {__DEV__ && (
-              <View style={{ padding: 10, backgroundColor: '#f0f0f0', marginVertical: 10, borderRadius: 5 }}>
+              <View
+                style={{
+                  padding: 10,
+                  backgroundColor: '#f0f0f0',
+                  marginVertical: 10,
+                  borderRadius: 5,
+                }}
+              >
                 <Text style={{ fontSize: 12, color: '#666' }}>
-                  🔐 Captcha Status: {captchaToken ? '✅ Token Ready' : '⏳ Waiting...'}
+                  🔐 Captcha Status:{' '}
+                  {captchaToken ? '✅ Token Ready' : '⏳ Waiting...'}
                 </Text>
               </View>
             )}

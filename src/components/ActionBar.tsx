@@ -108,8 +108,7 @@ const ActionBar: React.FC<ActionBarProps> = ({
         return;
       }
 
-      const normalizedAction =
-        typeof action === 'string' ? action.trim() : '';
+      const normalizedAction = typeof action === 'string' ? action.trim() : '';
       if (!normalizedAction) {
         return;
       }
@@ -306,7 +305,7 @@ const ActionBar: React.FC<ActionBarProps> = ({
           accessible
           accessibilityRole="button"
           accessibilityLabel={
-            currentCategory === 'events' 
+            currentCategory === 'events'
               ? 'Join Events Boost'
               : currentCategory === 'restaurant' || currentCategory === 'eatery'
               ? 'Join Eatery Boost'
@@ -321,7 +320,7 @@ const ActionBar: React.FC<ActionBarProps> = ({
             adjustsFontSizeToFit
             minimumFontScale={0.7}
           >
-            {currentCategory === 'events' 
+            {currentCategory === 'events'
               ? 'Join Events Boost'
               : currentCategory === 'restaurant' || currentCategory === 'eatery'
               ? 'Join Eatery Boost'

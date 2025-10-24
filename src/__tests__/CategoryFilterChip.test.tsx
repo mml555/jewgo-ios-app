@@ -22,7 +22,7 @@ describe('CategoryFilterChip', () => {
         category={mockCategory}
         isActive={false}
         onPress={mockOnPress}
-      />
+      />,
     );
 
     expect(getByText('Eatery')).toBeTruthy();
@@ -35,7 +35,7 @@ describe('CategoryFilterChip', () => {
         category={mockCategory}
         isActive={true}
         onPress={mockOnPress}
-      />
+      />,
     );
 
     expect(getByText('Eatery')).toBeTruthy();
@@ -48,7 +48,7 @@ describe('CategoryFilterChip', () => {
         category={mockCategory}
         isActive={false}
         onPress={mockOnPress}
-      />
+      />,
     );
 
     fireEvent.press(getByText('Eatery'));
@@ -62,7 +62,7 @@ describe('CategoryFilterChip', () => {
         isActive={false}
         onPress={mockOnPress}
         compact={true}
-      />
+      />,
     );
 
     expect(getByText('Eatery')).toBeTruthy();

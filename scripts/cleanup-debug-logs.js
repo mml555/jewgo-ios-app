@@ -27,29 +27,29 @@ const patterns = [
   {
     pattern: /debugLog\([^)]*\);?\s*\n/g,
     replacement: '// Removed debug logging for performance\n',
-    description: 'Remove debug logs'
+    description: 'Remove debug logs',
   },
   {
     pattern: /console\.log\([^)]*\);?\s*\n/g,
     replacement: '// Removed console.log for performance\n',
-    description: 'Remove console.log statements'
+    description: 'Remove console.log statements',
   },
   {
     pattern: /infoLog\([^)]*\);?\s*\n/g,
     replacement: '// Removed info logging for performance\n',
-    description: 'Remove info logs'
+    description: 'Remove info logs',
   },
   // Optimize remaining debug logs with throttling
   {
     pattern: /debugLog\(/g,
     replacement: 'if (__DEV__ && Math.random() < 0.1) debugLog(',
-    description: 'Throttle remaining debug logs'
-  }
+    description: 'Throttle remaining debug logs',
+  },
 ];
 
 function cleanupFile(filePath) {
   const fullPath = path.join(process.cwd(), filePath);
-  
+
   if (!fs.existsSync(fullPath)) {
     console.log(`⚠️  File not found: ${filePath}`);
     return;
@@ -63,7 +63,9 @@ function cleanupFile(filePath) {
     if (matches) {
       content = content.replace(pattern, replacement);
       changes += matches.length;
-      console.log(`✅ ${description}: ${matches.length} matches in ${filePath}`);
+      console.log(
+        `✅ ${description}: ${matches.length} matches in ${filePath}`,
+      );
     }
   });
 

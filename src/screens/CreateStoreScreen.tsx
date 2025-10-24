@@ -115,7 +115,10 @@ const CreateStoreScreen: React.FC = () => {
 
     if (
       formData.website &&
-      !(typeof formData.website === 'string' && formData.website.startsWith('http'))
+      !(
+        typeof formData.website === 'string' &&
+        formData.website.startsWith('http')
+      )
     ) {
       newErrors.website = 'Website must start with http:// or https://';
     }

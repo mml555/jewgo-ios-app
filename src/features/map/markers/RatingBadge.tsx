@@ -21,15 +21,15 @@ export const RatingBadge = memo(function RatingBadge({
       color,
       selected,
       backgroundColor: selected ? color : '#FFFFFF',
-      finalBackgroundColor: selected ? color : '#FFFFFF'
+      finalBackgroundColor: selected ? color : '#FFFFFF',
     });
   }
 
   // Create explicit style for selected state
-  const pillStyle = selected 
+  const pillStyle = selected
     ? [styles.pill, { backgroundColor: color }]
     : [styles.pill, { backgroundColor: '#FFFFFF' }];
-  
+
   return (
     <Pressable
       onPress={onPress}
@@ -60,17 +60,18 @@ export const RatingBadge = memo(function RatingBadge({
           },
         ]}
       >
-        <Text style={[styles.star, { color: selected ? '#FFFFFF' : color }]}>★</Text>
+        <Text style={[styles.star, { color: selected ? '#FFFFFF' : color }]}>
+          ★
+        </Text>
         <Text style={[styles.rating, { color: selected ? '#FFFFFF' : color }]}>
           {rating == null ? '—' : rating.toFixed(1)}
         </Text>
       </View>
 
       {/* Tail pointing down */}
-      <View style={[
-        styles.tail,
-        { backgroundColor: selected ? color : '#FFFFFF' }
-      ]} />
+      <View
+        style={[styles.tail, { backgroundColor: selected ? color : '#FFFFFF' }]}
+      />
     </Pressable>
   );
 });

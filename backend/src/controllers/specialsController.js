@@ -7,7 +7,7 @@ let pool = null;
 function getPool() {
   if (!pool) {
     const { Pool } = require('pg');
-    
+
     // Support both DATABASE_URL (for Neon/Heroku-style) and individual env vars
     const dbConfig = process.env.DATABASE_URL
       ? {
@@ -23,12 +23,15 @@ function getPool() {
           database: process.env.DB_NAME || 'jewgo_dev',
           user: process.env.DB_USER || 'jewgo_user',
           password: process.env.DB_PASSWORD || 'jewgo_password',
-          ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
+          ssl:
+            process.env.DB_SSL === 'true'
+              ? { rejectUnauthorized: false }
+              : false,
           max: 20,
           idleTimeoutMillis: 30000,
           connectionTimeoutMillis: 2000,
         };
-    
+
     pool = new Pool(dbConfig);
   }
   return pool;
@@ -45,16 +48,16 @@ class SpecialsController {
         WHERE table_name = 'specials' 
         ORDER BY ordinal_position
       `);
-      
+
       res.json({
         success: true,
-        data: result.rows
+        data: result.rows,
       });
     } catch (error) {
       logger.error('Debug specials error:', error);
       res.status(500).json({
         success: false,
-        error: error.message
+        error: error.message,
       });
     }
   }
@@ -67,42 +70,42 @@ class SpecialsController {
         {
           id: '1',
           title: '20% Off Pizza',
-          business: { name: 'Milano\'s Pizza' },
+          business: { name: "Milano's Pizza" },
           discountLabel: '20% OFF',
-          heroImageUrl: 'https://picsum.photos/300/200?random=1'
+          heroImageUrl: 'https://picsum.photos/300/200?random=1',
         },
         {
-          id: '2', 
+          id: '2',
           title: 'Free Appetizer',
           business: { name: 'Kosher Kitchen' },
           discountLabel: 'FREE APP',
-          heroImageUrl: 'https://picsum.photos/300/200?random=2'
+          heroImageUrl: 'https://picsum.photos/300/200?random=2',
         },
         {
           id: '3',
           title: 'Buy 1 Get 1 Free',
           business: { name: 'Kosher Corner' },
           discountLabel: 'BOGO',
-          heroImageUrl: 'https://picsum.photos/300/200?random=3'
+          heroImageUrl: 'https://picsum.photos/300/200?random=3',
         },
         {
           id: '4',
           title: '15% Off Desserts',
           business: { name: 'Sweet Treats' },
           discountLabel: '15% OFF',
-          heroImageUrl: 'https://picsum.photos/300/200?random=4'
-        }
+          heroImageUrl: 'https://picsum.photos/300/200?random=4',
+        },
       ];
-      
+
       res.json({
         success: true,
-        data: mockSpecials
+        data: mockSpecials,
       });
     } catch (error) {
       logger.error('Simple specials error:', error);
       res.status(500).json({
         success: false,
-        error: error.message
+        error: error.message,
       });
     }
   }

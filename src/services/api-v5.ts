@@ -302,9 +302,7 @@ class ApiV5Service {
 
     const queryString = queryParams.toString();
     // Entity type is already plural, use it directly
-    const endpoint = `/${entityType}${
-      queryString ? `?${queryString}` : ''
-    }`;
+    const endpoint = `/${entityType}${queryString ? `?${queryString}` : ''}`;
 
     return this.request<{ entities: T[] }>(endpoint);
   }

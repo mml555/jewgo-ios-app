@@ -105,7 +105,10 @@ const LocationContactPage: React.FC<LocationContactPageProps> = ({
       // Auto-add https:// if not present
       if (
         text &&
-        !(typeof text === 'string' && (text.startsWith('http://') || text.startsWith('https://')))
+        !(
+          typeof text === 'string' &&
+          (text.startsWith('http://') || text.startsWith('https://'))
+        )
       ) {
         text = 'https://' + text;
       }

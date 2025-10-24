@@ -12,19 +12,19 @@ const getImageUrl = (listing: Listing): string => {
     const imageUrl = listing.images[0];
 
     // Validate URL
+    if (
+      imageUrl &&
+      typeof imageUrl === 'string' &&
+      imageUrl.trim().length > 0
+    ) {
+      const trimmedUrl = imageUrl.trim();
       if (
-        imageUrl &&
-        typeof imageUrl === 'string' &&
-        imageUrl.trim().length > 0
+        typeof trimmedUrl === 'string' &&
+        (trimmedUrl.startsWith('http://') || trimmedUrl.startsWith('https://'))
       ) {
-        const trimmedUrl = imageUrl.trim();
-        if (
-          typeof trimmedUrl === 'string' &&
-          (trimmedUrl.startsWith('http://') || trimmedUrl.startsWith('https://'))
-        ) {
-          return imageUrl;
-        }
+        return imageUrl;
       }
+    }
   }
 
   // Fallback to placeholder only if no valid images exist
@@ -267,7 +267,6 @@ const cleanupStaleRequests = () => {
     // This is a safety mechanism to prevent requests from being stuck forever
     const requestAge = now - (promise as any).timestamp;
     if (requestAge > STALE_TIMEOUT) {
-
       inFlightRequests.delete(key);
     }
   }
@@ -275,7 +274,6 @@ const cleanupStaleRequests = () => {
   for (const [key, promise] of activeRequests.entries()) {
     const requestAge = now - (promise as any).timestamp;
     if (requestAge > STALE_TIMEOUT) {
-
       activeRequests.delete(key);
     }
   }
@@ -311,7 +309,7 @@ export const useCategoryData = ({
   // Initialize global cleanup on first use
   useEffect(() => {
     initializeGlobalCleanup();
-    
+
     return () => {
       // Only cleanup if this is the last instance
       // Note: In a real app, you'd want a more sophisticated reference counting system
@@ -444,60 +442,61 @@ export const useCategoryData = ({
     return safeItem;
   }, []);
 
-  const transformSpecial = useCallback((special: ActiveSpecial): CategoryItem => {
-    const latitude = Array.isArray(special.location?.coordinates)
-      ? special.location?.coordinates[1]
-      : undefined;
-    const longitude = Array.isArray(special.location?.coordinates)
-      ? special.location?.coordinates[0]
-      : undefined;
+  const transformSpecial = useCallback(
+    (special: ActiveSpecial): CategoryItem => {
+      const latitude = Array.isArray(special.location?.coordinates)
+        ? special.location?.coordinates[1]
+        : undefined;
+      const longitude = Array.isArray(special.location?.coordinates)
+        ? special.location?.coordinates[0]
+        : undefined;
 
-    const hasValidCoords =
-      typeof latitude === 'number' &&
-      !Number.isNaN(latitude) &&
-      typeof longitude === 'number' &&
-      !Number.isNaN(longitude);
+      const hasValidCoords =
+        typeof latitude === 'number' &&
+        !Number.isNaN(latitude) &&
+        typeof longitude === 'number' &&
+        !Number.isNaN(longitude);
 
-    const fallbackImage = `https://picsum.photos/300/225?special=${special.id}`;
+      const fallbackImage = `https://picsum.photos/300/225?special=${special.id}`;
 
-    return {
-      id: String(special.id),
-      title: special.title || special.businessName || 'Special',
-      description:
-        special.description ||
-        special.discountLabel ||
-        'Limited time offer',
-      imageUrl: special.imageUrl || fallbackImage,
-      category: special.category || 'Specials',
-      rating:
-        typeof special.rating === 'number' && !Number.isNaN(special.rating)
-          ? special.rating
+      return {
+        id: String(special.id),
+        title: special.title || special.businessName || 'Special',
+        description:
+          special.description || special.discountLabel || 'Limited time offer',
+        imageUrl: special.imageUrl || fallbackImage,
+        category: special.category || 'Specials',
+        rating:
+          typeof special.rating === 'number' && !Number.isNaN(special.rating)
+            ? special.rating
+            : undefined,
+        latitude: hasValidCoords ? (latitude as number) : undefined,
+        longitude: hasValidCoords ? (longitude as number) : undefined,
+        coordinate: hasValidCoords
+          ? {
+              latitude: latitude as number,
+              longitude: longitude as number,
+            }
           : undefined,
-      latitude: hasValidCoords ? (latitude as number) : undefined,
-      longitude: hasValidCoords ? (longitude as number) : undefined,
-      coordinate: hasValidCoords
-        ? {
-            latitude: latitude as number,
-            longitude: longitude as number,
-          }
-        : undefined,
-      price: special.discountLabel,
-      zip_code: undefined,
-      isOpen: true,
-      openWeekends: true,
-      kosherLevel: 'glatt',
-      hasParking: false,
-      hasWifi: false,
-      hasAccessibility: false,
-      hasDelivery: false,
-      entity_type: special.category,
-      address: [special.city, special.state].filter(Boolean).join(', '),
-      city: special.city,
-      state: special.state,
-      review_count: special.reviewCount,
-      image_url: special.imageUrl,
-    };
-  }, []);
+        price: special.discountLabel,
+        zip_code: undefined,
+        isOpen: true,
+        openWeekends: true,
+        kosherLevel: 'glatt',
+        hasParking: false,
+        hasWifi: false,
+        hasAccessibility: false,
+        hasDelivery: false,
+        entity_type: special.category,
+        address: [special.city, special.state].filter(Boolean).join(', '),
+        city: special.city,
+        state: special.state,
+        review_count: special.reviewCount,
+        image_url: special.imageUrl,
+      };
+    },
+    [],
+  );
 
   const loadMore = useCallback(async () => {
     if (loadingRef.current || !hasMoreRef.current) {
@@ -510,7 +509,6 @@ export const useCategoryData = ({
 
     // Check if this exact request is already in flight
     if (inFlightRequests.has(requestKey)) {
-
       try {
         // Wait for the existing request to complete and return its result
         return await inFlightRequests.get(requestKey);
@@ -525,7 +523,6 @@ export const useCategoryData = ({
     // Check for active requests in the same category to prevent rate limiting
     const categoryRequestKey = `${categoryKey}-active`;
     if (activeRequests.has(categoryRequestKey)) {
-
       try {
         // Wait for the existing request to complete and return its result
         return await activeRequests.get(categoryRequestKey);
@@ -647,7 +644,6 @@ export const useCategoryData = ({
 
       // Handle special redirect for specials category
       if (response.success && (response as any).redirectTo === 'specials') {
-
         // Return empty data to prevent API errors
         setData([]);
         setLoading(false);
@@ -806,7 +802,6 @@ export const useCategoryData = ({
     ) {
       // Only log very occasionally to reduce console noise
       if (__DEV__ && Math.random() < 0.1) {
-
       }
       initialLoadRef.current = true;
       loadMore();
@@ -881,7 +876,6 @@ export const useCategoryData = ({
 
       // Handle special redirect for specials category
       if (response.success && (response as any).redirectTo === 'specials') {
-
         // Return empty data to prevent API errors
         setData([]);
         setRefreshing(false);

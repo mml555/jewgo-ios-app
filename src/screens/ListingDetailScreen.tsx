@@ -31,27 +31,39 @@ import { getDietaryColor, getDietaryLabel } from '../utils/eateryHelpers';
 import ReviewsModal from '../components/ReviewsModal';
 
 // Map old kosher level format to new dietary format
-const mapKosherLevelToDietary = (kosherLevel?: string, category?: string): 'meat' | 'dairy' | 'parve' | undefined => {
+const mapKosherLevelToDietary = (
+  kosherLevel?: string,
+  category?: string,
+): 'meat' | 'dairy' | 'parve' | undefined => {
   // Only process eatery/restaurant categories
-  if (category?.toLowerCase().includes('eatery') || category?.toLowerCase().includes('restaurant')) {
+  if (
+    category?.toLowerCase().includes('eatery') ||
+    category?.toLowerCase().includes('restaurant')
+  ) {
     if (kosherLevel) {
       // Map specific kosher levels to dietary types
       const lowerKosherLevel = kosherLevel.toLowerCase();
       if (lowerKosherLevel.includes('meat') || lowerKosherLevel === 'glatt') {
         return 'meat';
       }
-      if (lowerKosherLevel.includes('dairy') || lowerKosherLevel.includes('chalav')) {
+      if (
+        lowerKosherLevel.includes('dairy') ||
+        lowerKosherLevel.includes('chalav')
+      ) {
         return 'dairy';
       }
-      if (lowerKosherLevel.includes('parve') || lowerKosherLevel.includes('pas')) {
+      if (
+        lowerKosherLevel.includes('parve') ||
+        lowerKosherLevel.includes('pas')
+      ) {
         return 'parve';
       }
     }
-    
+
     // Default to parve for eateries without specific kosher level
     return 'parve';
   }
-  
+
   // For non-eateries, default to parve
   return 'parve';
 };
@@ -819,25 +831,37 @@ const ListingDetailScreen: React.FC = () => {
               {/* Kosher Level Tag */}
               {(() => {
                 // Use kosher_level if available, otherwise map from kosherLevel
-                const dietaryType = item.kosher_level || 
-                                  mapKosherLevelToDietary(item.kosherLevel, item.category_id);
-                
-                return dietaryType && (
-                  <View style={[styles.featureTag, { backgroundColor: getDietaryColor(dietaryType) }]}>
-                    <Text style={[styles.featureTagText, { color: '#FFFFFF' }]}>
-                      {getDietaryLabel(dietaryType)}
-                    </Text>
-                  </View>
+                const dietaryType =
+                  item.kosher_level ||
+                  mapKosherLevelToDietary(item.kosherLevel, item.category_id);
+
+                return (
+                  dietaryType && (
+                    <View
+                      style={[
+                        styles.featureTag,
+                        { backgroundColor: getDietaryColor(dietaryType) },
+                      ]}
+                    >
+                      <Text
+                        style={[styles.featureTagText, { color: '#FFFFFF' }]}
+                      >
+                        {getDietaryLabel(dietaryType)}
+                      </Text>
+                    </View>
+                  )
                 );
               })()}
-              
+
               {/* Kosher Agency Tag */}
               {item.kosher_certification && (
                 <View style={[styles.featureTag, styles.featureTagSecondary]}>
-                  <Text style={styles.featureTagText}>{item.kosher_certification}</Text>
+                  <Text style={styles.featureTagText}>
+                    {item.kosher_certification}
+                  </Text>
                 </View>
               )}
-              
+
               {/* Additional Kosher Details */}
               {item.kosher_tags && item.kosher_tags.length > 0 && (
                 <View style={[styles.featureTag, styles.featureTagAccent]}>

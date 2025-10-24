@@ -297,8 +297,7 @@ class EntityControllerNormalized {
 
       switch (entityType) {
         case 'mikvah':
-          specializedQuery =
-            'SELECT * FROM mikvah_fields WHERE entity_id = $1';
+          specializedQuery = 'SELECT * FROM mikvah_fields WHERE entity_id = $1';
           break;
         case 'synagogue':
           specializedQuery =
@@ -319,16 +318,13 @@ class EntityControllerNormalized {
           `;
           break;
         case 'store':
-          specializedQuery =
-            'SELECT * FROM store_fields WHERE entity_id = $1';
+          specializedQuery = 'SELECT * FROM store_fields WHERE entity_id = $1';
           break;
         case 'event':
-          specializedQuery =
-            'SELECT * FROM event_fields WHERE entity_id = $1';
+          specializedQuery = 'SELECT * FROM event_fields WHERE entity_id = $1';
           break;
         case 'job':
-          specializedQuery =
-            'SELECT * FROM job_fields WHERE entity_id = $1';
+          specializedQuery = 'SELECT * FROM job_fields WHERE entity_id = $1';
           break;
         default:
           return {};

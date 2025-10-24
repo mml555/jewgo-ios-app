@@ -177,7 +177,10 @@ class GuestService {
                 const unit = match[2].toLowerCase();
                 if (typeof unit === 'string' && unit.startsWith('hour')) {
                   retryAfterSeconds = value * 3600;
-                } else if (typeof unit === 'string' && unit.startsWith('minute')) {
+                } else if (
+                  typeof unit === 'string' &&
+                  unit.startsWith('minute')
+                ) {
                   retryAfterSeconds = value * 60;
                 } else {
                   retryAfterSeconds = value;

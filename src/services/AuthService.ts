@@ -155,7 +155,7 @@ class AuthService {
         hasPhone: !!userData.phoneNumber,
         hasCaptcha: !!userData.captchaToken,
       });
-      
+
       const response = await this.makeRequest<AuthResponse>('/auth/register', {
         method: 'POST',
         body: JSON.stringify(userData),

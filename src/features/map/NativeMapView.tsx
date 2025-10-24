@@ -100,19 +100,22 @@ export const NativeMapView = forwardRef<NativeMapViewRef, NativeMapViewProps>(
     // Debounced region change to prevent thrashing
     const debouncedUpdate = useRef<NodeJS.Timeout | null>(null);
 
-    const handleRegionChangeComplete = useStableCallback((newRegion: Region) => {
-      if (isSameRegion(region, newRegion)) return;
-      
-      if (debouncedUpdate.current) {
-        clearTimeout(debouncedUpdate.current);
-      }
-      
-      debouncedUpdate.current = setTimeout(
-        () => setRegion(newRegion),
-        120 // Simple debounce
-      );
-    });
+    const handleRegionChangeComplete = useStableCallback(
+      (newRegion: Region) => {
+        if (isSameRegion(region, newRegion)) {
+          return;
+        }
 
+        if (debouncedUpdate.current) {
+          clearTimeout(debouncedUpdate.current);
+        }
+
+        debouncedUpdate.current = setTimeout(
+          () => setRegion(newRegion),
+          120, // Simple debounce
+        );
+      },
+    );
 
     const handleMarkerPress = useCallback(
       (point: MapPoint) => {
@@ -177,12 +180,15 @@ export const NativeMapView = forwardRef<NativeMapViewRef, NativeMapViewProps>(
     }, []);
 
     // Handle animate to region
-    const handleAnimateToRegion = useCallback((newRegion: Region, duration: number = 1000) => {
-      if (mapRef.current) {
-        mapRef.current.animateToRegion(newRegion, duration);
-        setRegion(newRegion);
-      }
-    }, []);
+    const handleAnimateToRegion = useCallback(
+      (newRegion: Region, duration: number = 1000) => {
+        if (mapRef.current) {
+          mapRef.current.animateToRegion(newRegion, duration);
+          setRegion(newRegion);
+        }
+      },
+      [],
+    );
 
     // Expose zoom functions to parent component
     useImperativeHandle(
@@ -193,7 +199,12 @@ export const NativeMapView = forwardRef<NativeMapViewRef, NativeMapViewProps>(
         centerOnLocation: handleCenterLocation,
         animateToRegion: handleAnimateToRegion,
       }),
-      [handleZoomIn, handleZoomOut, handleCenterLocation, handleAnimateToRegion],
+      [
+        handleZoomIn,
+        handleZoomOut,
+        handleCenterLocation,
+        handleAnimateToRegion,
+      ],
     );
 
     const markers = useMemo(

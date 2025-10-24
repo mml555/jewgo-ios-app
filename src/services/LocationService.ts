@@ -105,7 +105,10 @@ class LocationService {
   // Cache location
   private async cacheLocation(location: LocationData): Promise<void> {
     try {
-      await safeAsyncStorage.setItem(LOCATION_CACHE_KEY, JSON.stringify(location));
+      await safeAsyncStorage.setItem(
+        LOCATION_CACHE_KEY,
+        JSON.stringify(location),
+      );
       this.updateState({ lastKnownLocation: location });
     } catch (error) {
       warnLog('Failed to cache location:', error);

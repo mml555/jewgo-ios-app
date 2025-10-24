@@ -36,7 +36,7 @@ export const ListingMarker = memo(function ListingMarker({
   }, []);
 
   const { latitude, longitude, rating, kosher_level } = point;
-  
+
   // Debug logging
   if (__DEV__) {
     console.log('🔍 ListingMarker Debug:', {
@@ -48,12 +48,13 @@ export const ListingMarker = memo(function ListingMarker({
       selectedId: selected ? 'SELECTED' : 'NOT_SELECTED',
     });
   }
-  
+
   // Use kosher level color only when selected, otherwise use rating color
-  const color = selected && kosher_level 
-    ? getDietaryColor(kosher_level)
-    : getRatingColor(rating);
-    
+  const color =
+    selected && kosher_level
+      ? getDietaryColor(kosher_level)
+      : getRatingColor(rating);
+
   if (__DEV__) {
     console.log('🔍 Color decision:', {
       selected,

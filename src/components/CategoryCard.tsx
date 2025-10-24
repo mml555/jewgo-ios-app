@@ -39,34 +39,43 @@ import {
   getGridCardDimensions,
   useResponsiveDimensions,
 } from '../utils/deviceAdaptation';
-import {
-  getDietaryColor,
-  getDietaryLabel,
-} from '../utils/eateryHelpers';
+import { getDietaryColor, getDietaryLabel } from '../utils/eateryHelpers';
 import { DietaryChip } from './eateries/DietaryChip';
 
 // Map old kosher level format to new dietary format
-const mapKosherLevelToDietary = (kosherLevel?: string, category?: string): 'meat' | 'dairy' | 'parve' | undefined => {
+const mapKosherLevelToDietary = (
+  kosherLevel?: string,
+  category?: string,
+): 'meat' | 'dairy' | 'parve' | undefined => {
   // Only process eatery/restaurant categories
-  if (category?.toLowerCase().includes('eatery') || category?.toLowerCase().includes('restaurant')) {
+  if (
+    category?.toLowerCase().includes('eatery') ||
+    category?.toLowerCase().includes('restaurant')
+  ) {
     if (kosherLevel) {
       // Map specific kosher levels to dietary types
       const lowerKosherLevel = kosherLevel.toLowerCase();
       if (lowerKosherLevel.includes('meat') || lowerKosherLevel === 'glatt') {
         return 'meat';
       }
-      if (lowerKosherLevel.includes('dairy') || lowerKosherLevel.includes('chalav')) {
+      if (
+        lowerKosherLevel.includes('dairy') ||
+        lowerKosherLevel.includes('chalav')
+      ) {
         return 'dairy';
       }
-      if (lowerKosherLevel.includes('parve') || lowerKosherLevel.includes('pas')) {
+      if (
+        lowerKosherLevel.includes('parve') ||
+        lowerKosherLevel.includes('pas')
+      ) {
         return 'parve';
       }
     }
-    
+
     // Default to parve for eateries without specific kosher level
     return 'parve';
   }
-  
+
   // For non-eateries, default to parve
   return 'parve';
 };
@@ -92,7 +101,6 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
   cardWidth,
   imageHeight,
 }) => {
-
   // Get responsive dimensions
   const { width: screenWidth, isTablet } = useResponsiveDimensions();
   const gridDimensions = getGridCardDimensions(
@@ -175,7 +183,6 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
         // Only update state if component is still mounted and not aborted
         if (isMountedRef.current && !abortController.signal.aborted) {
           if (__DEV__) {
-
           }
           setIsFavorited(status);
         }
@@ -236,7 +243,6 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
   const handlePress = useCallback(() => {
     // Prevent duplicate navigation if already navigating
     if (isNavigatingRef.current) {
-
       return;
     }
 
@@ -261,14 +267,17 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
 
     // Events category navigates to EventDetail screen
     if (categoryKey === 'events') {
-
-      (navigation as { navigate: (screen: string, params?: any) => void }).navigate('EventDetail', {
+      (
+        navigation as { navigate: (screen: string, params?: any) => void }
+      ).navigate('EventDetail', {
         eventId: item.id,
       });
     } else {
       // All other categories navigate to ListingDetail screen
 
-      (navigation as { navigate: (screen: string, params?: any) => void }).navigate('ListingDetail', {
+      (
+        navigation as { navigate: (screen: string, params?: any) => void }
+      ).navigate('ListingDetail', {
         itemId: item.id,
         categoryKey: categoryKey,
       });
@@ -279,7 +288,6 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
   const handleHeartPress = useCallback(async () => {
     try {
       if (__DEV__) {
-
       }
 
       // Prepare entity data for the favorites service
@@ -304,13 +312,11 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
         setIsFavorited(newFavorited);
 
         if (__DEV__) {
-
         }
 
         // Notify parent component about the toggle
         if (onFavoriteToggle) {
           if (__DEV__) {
-
           }
           onFavoriteToggle(item.id, newFavorited);
         }
@@ -353,7 +359,6 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
             accessibilityLabel={`Image for ${item.title}`}
             onError={() => {
               if (__DEV__) {
-
               }
 
               // Clear any existing timeout
@@ -377,7 +382,6 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
             }}
             onLoadEnd={() => {
               if (__DEV__) {
-
               }
               if (isMountedRef.current) {
                 setImageError(false);
@@ -418,15 +422,15 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
         {/* Tag on top left - show kosher level for eateries, category for others */}
         <View style={styles.tagContainer}>
           <Text style={styles.tagText}>
-            {categoryKey === 'eatery' || item.category?.toLowerCase() === 'eatery'
+            {categoryKey === 'eatery' ||
+            item.category?.toLowerCase() === 'eatery'
               ? (() => {
                   // Use kosher_level if available, otherwise map from kosherLevel
-                  const dietaryType = item.kosher_level || 
-                                    mapKosherLevelToDietary(item.kosherLevel, item.category);
-                  
-                  return dietaryType 
-                    ? getDietaryLabel(dietaryType)
-                    : 'Kosher';
+                  const dietaryType =
+                    item.kosher_level ||
+                    mapKosherLevelToDietary(item.kosherLevel, item.category);
+
+                  return dietaryType ? getDietaryLabel(dietaryType) : 'Kosher';
                 })()
               : String(item.category || 'Unknown')}
           </Text>
@@ -480,15 +484,29 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
             {(() => {
               if (categoryKey === 'eatery') {
                 // DEBUG: Log the price data
-                if (__DEV__ && Math.random() < 0.1) debugLog('🔍 CategoryCard price debug:', {
-                  price_range: item.price_range,
-                  price_min: item.price_min,
-                  price_max: item.price_max,
-                  title: item.title,
-                  debug_always_price_range: (item as CategoryItem & { _debug_always_price_range?: boolean })._debug_always_price_range,
-                  debug_always_price_min: (item as CategoryItem & { _debug_always_price_min?: number })._debug_always_price_min,
-                  debug_always_price_max: (item as CategoryItem & { _debug_always_price_max?: number })._debug_always_price_max
-                });
+                if (__DEV__ && Math.random() < 0.1) {
+                  debugLog('🔍 CategoryCard price debug:', {
+                    price_range: item.price_range,
+                    price_min: item.price_min,
+                    price_max: item.price_max,
+                    title: item.title,
+                    debug_always_price_range: (
+                      item as CategoryItem & {
+                        _debug_always_price_range?: boolean;
+                      }
+                    )._debug_always_price_range,
+                    debug_always_price_min: (
+                      item as CategoryItem & {
+                        _debug_always_price_min?: number;
+                      }
+                    )._debug_always_price_min,
+                    debug_always_price_max: (
+                      item as CategoryItem & {
+                        _debug_always_price_max?: number;
+                      }
+                    )._debug_always_price_max,
+                  });
+                }
                 // Use price_range as primary field, no fallback formatting
                 return item.price_range || '';
               }
@@ -729,7 +747,6 @@ export const CategoryCardWithMemo = memo(
     cardWidth,
     imageHeight,
   }: CategoryCardProps) => {
-
     return (
       <CategoryCard
         item={item}

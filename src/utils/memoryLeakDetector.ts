@@ -42,7 +42,9 @@ class MemoryLeakDetector {
   }
 
   registerComponent(componentName: string, instanceId: string): void {
-    if (!this.config.enableMonitoring) return;
+    if (!this.config.enableMonitoring) {
+      return;
+    }
 
     const instance: ComponentInstance = {
       componentName,
@@ -57,7 +59,9 @@ class MemoryLeakDetector {
   }
 
   unregisterComponent(instanceId: string): void {
-    if (!this.config.enableMonitoring) return;
+    if (!this.config.enableMonitoring) {
+      return;
+    }
 
     const instance = this.componentInstances.get(instanceId);
     if (instance) {
@@ -74,7 +78,9 @@ class MemoryLeakDetector {
   }
 
   registerEventListener(instanceId: string, eventType: string): void {
-    if (!this.config.enableMonitoring) return;
+    if (!this.config.enableMonitoring) {
+      return;
+    }
 
     const instance = this.componentInstances.get(instanceId);
     if (instance) {
@@ -85,7 +91,9 @@ class MemoryLeakDetector {
   }
 
   unregisterEventListener(instanceId: string, eventType: string): void {
-    if (!this.config.enableMonitoring) return;
+    if (!this.config.enableMonitoring) {
+      return;
+    }
 
     const instance = this.componentInstances.get(instanceId);
     if (instance) {
@@ -96,7 +104,9 @@ class MemoryLeakDetector {
   }
 
   registerTimer(instanceId: string, timerType: string): void {
-    if (!this.config.enableMonitoring) return;
+    if (!this.config.enableMonitoring) {
+      return;
+    }
 
     const instance = this.componentInstances.get(instanceId);
     if (instance) {
@@ -107,7 +117,9 @@ class MemoryLeakDetector {
   }
 
   unregisterTimer(instanceId: string, timerType: string): void {
-    if (!this.config.enableMonitoring) return;
+    if (!this.config.enableMonitoring) {
+      return;
+    }
 
     const instance = this.componentInstances.get(instanceId);
     if (instance) {
@@ -133,12 +145,16 @@ class MemoryLeakDetector {
 
     // Check for too many component instances
     if (this.componentInstances.size > this.config.maxComponentInstances) {
-      issues.push(`Too many component instances: ${this.componentInstances.size}`);
+      issues.push(
+        `Too many component instances: ${this.componentInstances.size}`,
+      );
     }
 
     // Check for too many event listeners
     if (this.globalEventListeners.size > this.config.maxEventListeners) {
-      issues.push(`Too many event listeners: ${this.globalEventListeners.size}`);
+      issues.push(
+        `Too many event listeners: ${this.globalEventListeners.size}`,
+      );
     }
 
     // Check for too many timers
@@ -149,8 +165,13 @@ class MemoryLeakDetector {
     // Check for long-running components
     for (const [instanceId, instance] of this.componentInstances) {
       const age = now - instance.mountTime;
-      if (age > 300000) { // 5 minutes
-        issues.push(`Long-running component: ${instance.componentName} (${Math.round(age / 1000)}s)`);
+      if (age > 300000) {
+        // 5 minutes
+        issues.push(
+          `Long-running component: ${instance.componentName} (${Math.round(
+            age / 1000,
+          )}s)`,
+        );
       }
     }
 
@@ -164,13 +185,15 @@ class MemoryLeakDetector {
       componentInstances: this.componentInstances.size,
       eventListeners: this.globalEventListeners.size,
       timers: this.globalTimers.size,
-      components: Array.from(this.componentInstances.values()).map(instance => ({
-        name: instance.componentName,
-        age: Date.now() - instance.mountTime,
-        eventListeners: instance.eventListeners.size,
-        timers: instance.timers.size,
-        subscriptions: instance.subscriptions.size,
-      })),
+      components: Array.from(this.componentInstances.values()).map(
+        instance => ({
+          name: instance.componentName,
+          age: Date.now() - instance.mountTime,
+          eventListeners: instance.eventListeners.size,
+          timers: instance.timers.size,
+          subscriptions: instance.subscriptions.size,
+        }),
+      ),
     };
   }
 
@@ -194,11 +217,13 @@ export const memoryLeakDetector = new MemoryLeakDetector();
 
 // React hook for automatic leak detection
 export const useMemoryLeakDetection = (componentName: string) => {
-  const instanceId = React.useRef(`${componentName}-${Date.now()}-${Math.random()}`).current;
+  const instanceId = React.useRef(
+    `${componentName}-${Date.now()}-${Math.random()}`,
+  ).current;
 
   React.useEffect(() => {
     memoryLeakDetector.registerComponent(componentName, instanceId);
-    
+
     return () => {
       memoryLeakDetector.unregisterComponent(instanceId);
     };

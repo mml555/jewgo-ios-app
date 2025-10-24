@@ -22,41 +22,41 @@ const fixPatterns = [
   {
     pattern: /^\s*\/\/ Removed console\.log for performance\s*$/gm,
     replacement: '',
-    description: 'Remove orphaned console.log comments'
+    description: 'Remove orphaned console.log comments',
   },
   {
     pattern: /^\s*\/\/ Removed debug logging for performance\s*$/gm,
     replacement: '',
-    description: 'Remove orphaned debug logging comments'
+    description: 'Remove orphaned debug logging comments',
   },
   {
     pattern: /^\s*\/\/ \/\/ Removed debug logging for performance\s*$/gm,
     replacement: '',
-    description: 'Remove double-commented debug logging'
+    description: 'Remove double-commented debug logging',
   },
   // Fix incomplete if statements
   {
     pattern: /if \(__DEV__\) \/\/ Removed console\.log for performance\s*\n/g,
     replacement: '',
-    description: 'Remove incomplete if statements'
+    description: 'Remove incomplete if statements',
   },
   // Remove empty comment blocks
   {
     pattern: /^\s*\/\/ Removed .* for performance\s*$/gm,
     replacement: '',
-    description: 'Remove all performance comment lines'
+    description: 'Remove all performance comment lines',
   },
   // Clean up multiple consecutive comment lines
   {
     pattern: /(\/\/ Removed .* for performance\s*\n){2,}/g,
     replacement: '',
-    description: 'Remove consecutive performance comments'
-  }
+    description: 'Remove consecutive performance comments',
+  },
 ];
 
 function fixFile(filePath) {
   const fullPath = path.join(process.cwd(), filePath);
-  
+
   if (!fs.existsSync(fullPath)) {
     console.log(`⚠️  File not found: ${filePath}`);
     return;
@@ -70,7 +70,9 @@ function fixFile(filePath) {
     if (matches) {
       content = content.replace(pattern, replacement);
       changes += matches.length;
-      console.log(`✅ ${description}: ${matches.length} matches in ${filePath}`);
+      console.log(
+        `✅ ${description}: ${matches.length} matches in ${filePath}`,
+      );
     }
   });
 

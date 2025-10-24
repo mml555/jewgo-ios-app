@@ -31,36 +31,50 @@ import { Spacing, Shadows, BorderRadius } from '../styles/designSystem';
 import { getDietaryLabel } from '../utils/eateryHelpers';
 
 // Map old kosher level format to new dietary format
-const mapKosherLevelToDietary = (kosherLevel?: string, category?: string): 'meat' | 'dairy' | 'parve' | undefined => {
+const mapKosherLevelToDietary = (
+  kosherLevel?: string,
+  category?: string,
+): 'meat' | 'dairy' | 'parve' | undefined => {
   // Debug logging
   if (__DEV__) {
     console.log('🔍 mapKosherLevelToDietary called:', {
       kosherLevel,
       category,
-      isEateryCategory: category?.toLowerCase().includes('eatery') || category?.toLowerCase().includes('restaurant')
+      isEateryCategory:
+        category?.toLowerCase().includes('eatery') ||
+        category?.toLowerCase().includes('restaurant'),
     });
   }
-  
+
   // Only process eatery/restaurant categories
-  if (category?.toLowerCase().includes('eatery') || category?.toLowerCase().includes('restaurant')) {
+  if (
+    category?.toLowerCase().includes('eatery') ||
+    category?.toLowerCase().includes('restaurant')
+  ) {
     if (kosherLevel) {
       // Map specific kosher levels to dietary types
       const lowerKosherLevel = kosherLevel.toLowerCase();
       if (lowerKosherLevel.includes('meat') || lowerKosherLevel === 'glatt') {
         return 'meat';
       }
-      if (lowerKosherLevel.includes('dairy') || lowerKosherLevel.includes('chalav')) {
+      if (
+        lowerKosherLevel.includes('dairy') ||
+        lowerKosherLevel.includes('chalav')
+      ) {
         return 'dairy';
       }
-      if (lowerKosherLevel.includes('parve') || lowerKosherLevel.includes('pas')) {
+      if (
+        lowerKosherLevel.includes('parve') ||
+        lowerKosherLevel.includes('pas')
+      ) {
         return 'parve';
       }
     }
-    
+
     // Default to parve for eateries without specific kosher level
     return 'parve';
   }
-  
+
   // For non-eateries, default to parve
   return 'parve';
 };
@@ -96,11 +110,10 @@ interface MapListing {
 }
 
 const LiveMapAllScreen: React.FC = () => {
-
   const navigation = useNavigation();
   const route = useRoute();
   const insets = useSafeAreaInsets();
-  
+
   // Get category parameter from route
   const routeParams = route.params as { category?: string } | undefined;
   const initialCategory = routeParams?.category || 'all';
@@ -121,7 +134,8 @@ const LiveMapAllScreen: React.FC = () => {
     loading: locationLoading,
   } = useLocation();
 
-  const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory);
+  const [selectedCategory, setSelectedCategory] =
+    useState<string>(initialCategory);
   const [selectedListing, setSelectedListing] = useState<MapListing | null>(
     null,
   );
@@ -131,7 +145,6 @@ const LiveMapAllScreen: React.FC = () => {
   // Reduced debug logging for performance
   useEffect(() => {
     if (__DEV__ && selectedListing) {
-
     }
   }, [selectedListing]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -277,7 +290,6 @@ const LiveMapAllScreen: React.FC = () => {
 
     // Reduced logging for performance
     if (__DEV__ && uniqueListings.length > 0) {
-
     }
     return uniqueListings;
   }, [
@@ -312,7 +324,6 @@ const LiveMapAllScreen: React.FC = () => {
 
   // Convert listings to map format with coordinates
   const mapListings: MapListing[] = useMemo(() => {
-
     const converted = allListings
       .filter(item => {
         // Only include items with valid coordinates
@@ -327,7 +338,6 @@ const LiveMapAllScreen: React.FC = () => {
           Number(item.longitude) <= 180;
 
         if (!hasValidCoordinates) {
-
         }
 
         return hasValidCoordinates;
@@ -358,28 +368,27 @@ const LiveMapAllScreen: React.FC = () => {
 
   // Filter listings based on selected category, search query, and filters
   const filteredListings = useMemo(() => {
-
     let filtered = mapListings.filter(listing => {
       // Category filter - handle mapping between UI categories and API categories
       if (selectedCategory !== 'all') {
         // Map UI category keys to API category names
         const categoryMapping: Record<string, string> = {
-          'eatery': 'restaurant',
-          'shul': 'synagogue', 
-          'mikvah': 'mikvah',
-          'stores': 'store',
-          'schools': 'schools',
-          'services': 'services', 
-          'housing': 'housing',
-          'shtetl': 'shtetl',
-          'events': 'events',
-          'jobs': 'jobs'
+          eatery: 'restaurant',
+          shul: 'synagogue',
+          mikvah: 'mikvah',
+          stores: 'store',
+          schools: 'schools',
+          services: 'services',
+          housing: 'housing',
+          shtetl: 'shtetl',
+          events: 'events',
+          jobs: 'jobs',
         };
-        
-        const expectedCategory = categoryMapping[selectedCategory] || selectedCategory;
+
+        const expectedCategory =
+          categoryMapping[selectedCategory] || selectedCategory;
 
         if (listing.category !== expectedCategory) {
-
           return false;
         }
       }
@@ -482,16 +491,18 @@ const LiveMapAllScreen: React.FC = () => {
 
   // Convert listings to MapPoint format for native map
   const mapPoints: MapPoint[] = useMemo(() => {
-
     // Create a Map to ensure unique entries by ID
     const uniqueMap = new Map<string, MapPoint>();
-    
+
     filteredListings.forEach(listing => {
       // Only add if we don't already have this ID
       if (!uniqueMap.has(listing.id)) {
-        const mappedKosherLevel = mapKosherLevelToDietary(listing.kosherLevel, listing.category);
+        const mappedKosherLevel = mapKosherLevelToDietary(
+          listing.kosherLevel,
+          listing.category,
+        );
         const finalKosherLevel = listing.kosher_level || mappedKosherLevel;
-        
+
         // Debug logging for map points
         if (__DEV__) {
           console.log('🔍 Map point creation:', {
@@ -502,10 +513,12 @@ const LiveMapAllScreen: React.FC = () => {
             kosher_level: listing.kosher_level,
             mappedKosherLevel,
             finalKosherLevel,
-            isEatery: listing.category?.toLowerCase().includes('eatery') || listing.category?.toLowerCase().includes('restaurant')
+            isEatery:
+              listing.category?.toLowerCase().includes('eatery') ||
+              listing.category?.toLowerCase().includes('restaurant'),
           });
         }
-        
+
         uniqueMap.set(listing.id, {
           id: listing.id,
           latitude: listing.latitude,
@@ -578,13 +591,10 @@ const LiveMapAllScreen: React.FC = () => {
 
   const handleMarkerPress = useCallback(
     (point: MapPoint) => {
-
       const listing = filteredListings.find(l => l.id === point.id);
       if (listing) {
-
         setSelectedListing(listing);
       } else {
-
       }
 
       // After setting the selected listing, find its index in nearby entities
@@ -605,7 +615,6 @@ const LiveMapAllScreen: React.FC = () => {
 
   const handleViewDetails = useCallback(
     (listing: MapListing) => {
-
       (navigation as any).navigate('ListingDetail', {
         itemId: listing.id,
         categoryKey: listing.category,
@@ -617,7 +626,9 @@ const LiveMapAllScreen: React.FC = () => {
 
   // Helper function to calculate optimal region for nearby points
   const calculateOptimalRegion = useCallback((points: any[]) => {
-    if (points.length === 0) return null;
+    if (points.length === 0) {
+      return null;
+    }
 
     if (points.length === 1) {
       // Single point - use focused zoom
@@ -649,7 +660,7 @@ const LiveMapAllScreen: React.FC = () => {
     // If pins are very close together (small deltas), zoom in more
     // If pins are far apart, zoom out to show all
     const isCloseTogether = latDelta < 0.02 && lngDelta < 0.02; // Less than ~1 mile apart
-    
+
     if (isCloseTogether) {
       // Pins are close together - zoom in for detail
       return {
@@ -671,11 +682,9 @@ const LiveMapAllScreen: React.FC = () => {
 
   // Swipe navigation functions
   const navigateToNextEntity = useCallback(() => {
-
     const nearbyPoints = getNearbyEntities();
 
     if (nearbyPoints.length === 0) {
-
       return;
     }
 
@@ -688,26 +697,26 @@ const LiveMapAllScreen: React.FC = () => {
     const nextListing = filteredListings.find(l => l.id === nextPoint.id);
 
     if (nextListing) {
-
       setSelectedListing(nextListing);
-      
+
       // Calculate optimal region to show all nearby points
       const optimalRegion = calculateOptimalRegion(nearbyPoints);
       if (mapViewRef.current && optimalRegion) {
-
         mapViewRef.current.animateToRegion(optimalRegion, 500); // 500ms animation
       }
     } else {
-
     }
-  }, [currentEntityIndex, getNearbyEntities, filteredListings, calculateOptimalRegion]);
+  }, [
+    currentEntityIndex,
+    getNearbyEntities,
+    filteredListings,
+    calculateOptimalRegion,
+  ]);
 
   const navigateToPreviousEntity = useCallback(() => {
-
     const nearbyPoints = getNearbyEntities();
 
     if (nearbyPoints.length === 0) {
-
       return;
     }
 
@@ -723,24 +732,25 @@ const LiveMapAllScreen: React.FC = () => {
     const prevListing = filteredListings.find(l => l.id === prevPoint.id);
 
     if (prevListing) {
-
       setSelectedListing(prevListing);
-      
+
       // Calculate optimal region to show all nearby points
       const optimalRegion = calculateOptimalRegion(nearbyPoints);
       if (mapViewRef.current && optimalRegion) {
-
         mapViewRef.current.animateToRegion(optimalRegion, 500); // 500ms animation
       }
     } else {
-
     }
-  }, [currentEntityIndex, getNearbyEntities, filteredListings, calculateOptimalRegion]);
+  }, [
+    currentEntityIndex,
+    getNearbyEntities,
+    filteredListings,
+    calculateOptimalRegion,
+  ]);
 
   // Handle swipe gesture
   const handleSwipeGesture = useCallback(
     (event: any) => {
-
       const { translationX, state } = event.nativeEvent;
 
       if (state === State.END) {
@@ -755,7 +765,6 @@ const LiveMapAllScreen: React.FC = () => {
 
           navigateToNextEntity();
         } else {
-
         }
       }
     },
@@ -793,12 +802,9 @@ const LiveMapAllScreen: React.FC = () => {
   }, []);
 
   const handleCenterOnLocation = useCallback(() => {
-
     if (mapViewRef.current) {
-
       mapViewRef.current.centerOnLocation();
     } else {
-
     }
   }, [location]);
 
@@ -816,19 +822,12 @@ const LiveMapAllScreen: React.FC = () => {
 
   // Auto-request location permission on mount to trigger native iOS popup
   useEffect(() => {
-
     const requestPermission = async () => {
-
       if (!permissionGranted && !locationLoading) {
-
         try {
           const result = await requestLocationPermission();
-
-        } catch (error) {
-
-        }
+        } catch (error) {}
       } else {
-
       }
     };
 
@@ -964,7 +963,6 @@ const LiveMapAllScreen: React.FC = () => {
       {/* Selected listing popup */}
       {selectedListing &&
         (() => {
-
           return (
             <View style={styles.popupContainer}>
               <View style={styles.popup}>
@@ -1007,21 +1005,35 @@ const LiveMapAllScreen: React.FC = () => {
                               category: selectedListing.category,
                               kosher_level: selectedListing.kosher_level,
                               kosherLevel: selectedListing.kosherLevel,
-                              isEatery: selectedListing.category?.toLowerCase() === 'eatery',
-                              isRestaurant: selectedListing.category?.toLowerCase() === 'restaurant',
-                              isDining: selectedListing.category?.toLowerCase() === 'dining',
+                              isEatery:
+                                selectedListing.category?.toLowerCase() ===
+                                'eatery',
+                              isRestaurant:
+                                selectedListing.category?.toLowerCase() ===
+                                'restaurant',
+                              isDining:
+                                selectedListing.category?.toLowerCase() ===
+                                'dining',
                             });
                           }
-                          
-                          const isEatery = selectedListing.category?.toLowerCase() === 'eatery' || 
-                                          selectedListing.category?.toLowerCase() === 'restaurant' ||
-                                          selectedListing.category?.toLowerCase() === 'dining';
-                          
+
+                          const isEatery =
+                            selectedListing.category?.toLowerCase() ===
+                              'eatery' ||
+                            selectedListing.category?.toLowerCase() ===
+                              'restaurant' ||
+                            selectedListing.category?.toLowerCase() ===
+                              'dining';
+
                           if (isEatery) {
                             // Use kosher_level if available, otherwise map from kosherLevel
-                            const dietaryType = selectedListing.kosher_level || 
-                                              mapKosherLevelToDietary(selectedListing.kosherLevel, selectedListing.category);
-                            
+                            const dietaryType =
+                              selectedListing.kosher_level ||
+                              mapKosherLevelToDietary(
+                                selectedListing.kosherLevel,
+                                selectedListing.category,
+                              );
+
                             // Debug the mapping process
                             if (__DEV__) {
                               console.log('🔍 Dietary mapping debug:', {
@@ -1029,15 +1041,17 @@ const LiveMapAllScreen: React.FC = () => {
                                 kosherLevel: selectedListing.kosherLevel,
                                 category: selectedListing.category,
                                 mappedDietaryType: dietaryType,
-                                finalLabel: dietaryType ? getDietaryLabel(dietaryType) : 'Kosher'
+                                finalLabel: dietaryType
+                                  ? getDietaryLabel(dietaryType)
+                                  : 'Kosher',
                               });
                             }
-                            
-                            return dietaryType 
+
+                            return dietaryType
                               ? getDietaryLabel(dietaryType)
                               : 'Kosher';
                           }
-                          
+
                           return selectedListing.category || 'Kosher';
                         })()}
                       </Text>

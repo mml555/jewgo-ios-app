@@ -174,14 +174,16 @@ export const logPerformance = logger.performance.bind(logger);
 // Direct logging helpers - optimized for production
 export const debugLog = (message: string, ...args: any[]) => {
   // Only log debug in development and with throttling
-  if (__DEV__ && Math.random() < 0.1) { // Only 10% of debug logs
+  if (__DEV__ && Math.random() < 0.1) {
+    // Only 10% of debug logs
     logger.debug(message, ...args);
   }
 };
 
 export const infoLog = (message: string, ...args: any[]) => {
   // Throttle info logs to prevent spam
-  if (Math.random() < 0.5) { // Only 50% of info logs
+  if (Math.random() < 0.5) {
+    // Only 50% of info logs
     logger.info(message, ...args);
   }
 };

@@ -239,8 +239,7 @@ const ReviewsModal: React.FC<ReviewsModalProps> = ({
               <TouchableOpacity
                 style={[
                   styles.sortButton,
-                  typeof sortBy === 'string' &&
-                  sortBy.startsWith('rating_')
+                  typeof sortBy === 'string' && sortBy.startsWith('rating_')
                     ? styles.sortButtonActive
                     : null,
                 ]}
@@ -250,8 +249,7 @@ const ReviewsModal: React.FC<ReviewsModalProps> = ({
                 <Text
                   style={[
                     styles.sortButtonText,
-                    typeof sortBy === 'string' &&
-                    sortBy.startsWith('rating_')
+                    typeof sortBy === 'string' && sortBy.startsWith('rating_')
                       ? styles.sortButtonTextActive
                       : null,
                   ]}

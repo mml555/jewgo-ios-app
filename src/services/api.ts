@@ -270,8 +270,10 @@ class ApiService {
         ...authHeaders,
         ...options.headers,
       };
-      
-      if (__DEV__ && Math.random() < 0.1) debugLog('🔐 Final request headers:', Object.keys(finalHeaders));
+
+      if (__DEV__ && Math.random() < 0.1) {
+        debugLog('🔐 Final request headers:', Object.keys(finalHeaders));
+      }
 
       const response = await fetch(url, {
         headers: finalHeaders,
@@ -659,15 +661,21 @@ class ApiService {
           `/jobs/listings?limit=${limit}&page=1`,
         );
 
-        if (__DEV__ && Math.random() < 0.1) debugLog(
-          '🔍 Jobs API raw response:',
-          JSON.stringify(response).substring(0, 200),
-        );
-        if (__DEV__ && Math.random() < 0.1) debugLog(
-          '🔍 Response has data.listings?',
-          !!(response as any)?.data?.listings,
-        );
-        if (__DEV__ && Math.random() < 0.1) debugLog('🔍 Response has success?', !!(response as any).success);
+        if (__DEV__ && Math.random() < 0.1) {
+          debugLog(
+            '🔍 Jobs API raw response:',
+            JSON.stringify(response).substring(0, 200),
+          );
+        }
+        if (__DEV__ && Math.random() < 0.1) {
+          debugLog(
+            '🔍 Response has data.listings?',
+            !!(response as any)?.data?.listings,
+          );
+        }
+        if (__DEV__ && Math.random() < 0.1) {
+          debugLog('🔍 Response has success?', !!(response as any).success);
+        }
 
         // V5 API returns { success: true, data: { listings: [...] } }
         if (
@@ -734,7 +742,7 @@ class ApiService {
         error: `No data available for ${categoryKey}`,
       };
     }
-    
+
     // // Removed debug logging for performance
     if (this.isV5Api) {
       try {
@@ -953,7 +961,6 @@ class ApiService {
         ]
       : [];
 
-
     // DEBUG: Log the final transformed object to see what kosher_level we're getting
     const transformed = {
       id: entity.id,
@@ -995,10 +1002,10 @@ class ApiService {
       price_max: entity.price_max,
       price_range: entity.price_range,
       // DEBUG: Log price data from API
-      ...(entity.price_range && { 
+      ...(entity.price_range && {
         _debug_api_price_range: entity.price_range,
         _debug_api_price_min: entity.price_min,
-        _debug_api_price_max: entity.price_max
+        _debug_api_price_max: entity.price_max,
       }),
       // DEBUG: Always log price data to see what's happening
       _debug_always_price_range: entity.price_range,

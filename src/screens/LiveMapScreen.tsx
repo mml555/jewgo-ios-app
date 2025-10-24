@@ -138,9 +138,8 @@ const LiveMapScreen: React.FC = () => {
   const params = route.params as { category?: string } | undefined;
   const routeCategory = params?.category;
   const initialCategory = normalizeCategoryKey(routeCategory);
-  const [selectedCategory, setSelectedCategory] = useState<string>(
-    initialCategory,
-  );
+  const [selectedCategory, setSelectedCategory] =
+    useState<string>(initialCategory);
   const [selectedListing, setSelectedListing] = useState<MapListing | null>(
     null,
   );
@@ -166,19 +165,32 @@ const LiveMapScreen: React.FC = () => {
   // Removed debug logging for performance
   // Removed debug logging for performance
   // Removed debug logging for performance
-  if (__DEV__ && Math.random() < 0.1) debugLog('🗺️ LiveMapScreen - allListings sample:', allListings?.slice(0, 3).map(item => ({ title: item.title, category: item.category })));
-  if (__DEV__ && Math.random() < 0.1) debugLog(
-    '🗺️ LiveMapScreen - category found:',
-    categories.find(c => c.key === selectedCategory),
-  );
+  if (__DEV__ && Math.random() < 0.1) {
+    debugLog(
+      '🗺️ LiveMapScreen - allListings sample:',
+      allListings
+        ?.slice(0, 3)
+        .map(item => ({ title: item.title, category: item.category })),
+    );
+  }
+  if (__DEV__ && Math.random() < 0.1) {
+    debugLog(
+      '🗺️ LiveMapScreen - category found:',
+      categories.find(c => c.key === selectedCategory),
+    );
+  }
 
   // Convert listings to map format with coordinates - only show current category
   const mapListings: MapListing[] = useMemo(() => {
     // Removed debug logging for performance
-    if (__DEV__ && Math.random() < 0.1) debugLog(
-      '🗺️ Sample listing categories:',
-      allListings?.slice(0, 5).map(item => ({ title: item.title, category: item.category }))
-    );
+    if (__DEV__ && Math.random() < 0.1) {
+      debugLog(
+        '🗺️ Sample listing categories:',
+        allListings
+          ?.slice(0, 5)
+          .map(item => ({ title: item.title, category: item.category })),
+      );
+    }
     // Only use real data from the API for the specific category - filter out items without valid coordinates
     const converted = allListings
       .filter(item => {
@@ -552,12 +564,13 @@ const LiveMapScreen: React.FC = () => {
         >
           <Icon name="filter" size={16} color="#666" />
           <Text style={styles.categoryFilterToggleText}>
-            {categories.find(c => c.key === selectedCategory)?.label ?? 'All Categories'}
+            {categories.find(c => c.key === selectedCategory)?.label ??
+              'All Categories'}
           </Text>
-          <Icon 
-            name={showCategoryFilters ? "chevron-left" : "chevron-right"} 
-            size={14} 
-            color="#666" 
+          <Icon
+            name={showCategoryFilters ? 'chevron-left' : 'chevron-right'}
+            size={14}
+            color="#666"
           />
         </TouchableOpacity>
       </View>
@@ -565,8 +578,8 @@ const LiveMapScreen: React.FC = () => {
       {/* Category Filter Chips */}
       {showCategoryFilters && (
         <View style={styles.categoryFilterChips}>
-          <ScrollView 
-            horizontal 
+          <ScrollView
+            horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.categoryChipsContainer}
           >
@@ -591,8 +604,7 @@ const LiveMapScreen: React.FC = () => {
         <View style={styles.headerContent}>
           <Text style={styles.headerTitle}>
             {`${
-              categories.find(c => c.key === selectedCategory)?.label ||
-              'Live'
+              categories.find(c => c.key === selectedCategory)?.label || 'Live'
             } Map`}
           </Text>
           <Text style={styles.headerSubtitle}>
